@@ -7,8 +7,8 @@ import { useGuard } from '@/hooks/useGuard'
 import { PeriodSelector } from '@/components/PeriodSelector'
 import { MonthlyConditionsDisplay } from '@/components/MonthlyConditionsDisplay'
 
-export default function FFVVCondicionesMensualesPage() {
-  const { authorized } = useGuard('MODULE_FFVV')
+export default function TiendasCondicionesMensualesPage() {
+  const { authorized } = useGuard('MODULE_TIENDAS')
 
   if (authorized === null) return null
 

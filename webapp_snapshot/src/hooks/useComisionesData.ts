@@ -121,7 +121,7 @@ export function useComisionesData() {
             }
             
             // Legacy/Fallback mapping
-            const mapped = mapObjectiveGroup(row['Productos FFVV']);
+            const mapped = mapObjectiveGroup(row['Productos Tiendas']);
             if (mapped && ALL_GROUPS.includes(mapped)) {
                 // Si allGroups no cubría este producto, inyectamos o sumamos
                 const val1 = parseVal(row[obj1Col]);
@@ -151,16 +151,16 @@ export function useComisionesData() {
                 const comCol = milestone === 2 ? 'Comisiones Objetivo 2' : 'Comisiones Objetivo 1';
                 
                 if (isValueGroup) {
-                    const gRow = condiciones.find((r:any) => mapObjectiveGroup(r['Productos FFVV']) === gName);
+                    const gRow = condiciones.find((r:any) => mapObjectiveGroup(r['Productos Tiendas']) === gName);
                     // Regla TI/TMA: (Volumen euros) * (Tasa tarifa % / 100)
                     if (gRow) comisionCalculada = qtty * (parseVal(gRow[comCol]) / 100);
                 } else {
                     const ventasDelGrupo = sSales.filter(venta => getGroupVisual(venta.producto, venta.detalle || venta.sheet || venta.categoria) === gName);
                     comisionCalculada = ventasDelGrupo.reduce((acc, venta) => {
                         const pNorm = String(venta.producto).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-                        // Cruzar con Tarifas Excel (Condiciones FFVV) buscando la fila exacta del producto de esa familia
+                        // Cruzar con Tarifas Excel (Condiciones Tiendas) buscando la fila exacta del producto de esa familia
                         const filaTarifa = condiciones.find((r:any) => {
-                            const rP = String(r['Productos FFVV']).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                            const rP = String(r['Productos Tiendas']).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
                             return rP === pNorm;
                         });
                         return acc + (filaTarifa ? parseVal(filaTarifa[comCol]) : 0);

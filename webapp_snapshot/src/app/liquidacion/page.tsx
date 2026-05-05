@@ -1921,7 +1921,7 @@ export default function LiquidacionesPage() {
                 subtitle="Control de comisiones y objetivos mensuales integrados."
                 showBack={true}
                 onBack={currentView !== 'menu' ? () => setCurrentView('menu') : undefined}
-                backFallback="/ffvv"
+                backFallback="/tiendas"
                 helpContent={
                   <div>
                     <h4 style={{ margin: '0 0 12px 0', color: 'var(--mercedes-cyan)', fontSize: 15 }}>Manual: Liquidación / Tablas de Pago</h4>

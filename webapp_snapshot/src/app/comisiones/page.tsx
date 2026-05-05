@@ -31,7 +31,7 @@ const SIMULATOR_CONFIG = {
         EXTRAS_SIMULATED: [
             { name: 'Extra FD Nuevo + TMA o Micro 4 Unidades a 5€', amount: 20 },
             { name: 'Extra FD Nuevo o en Planta + TMA o Micro + Respaldo 5G + TGT 8 Unidades a 30€', amount: 240 },
-            { name: 'Respaldo 5G 15 Unidades entre todo Plus 3 mínimo por FFVV Bolsa económica de 40€', amount: 40 },
+            { name: 'Respaldo 5G 15 Unidades entre todo Plus 3 mínimo por Tiendas Bolsa económica de 40€', amount: 40 },
             { name: 'Bolsa económica de 200€ al trimestre aprobando la nota. Total mensual: 66,66€', amount: 66.66 },
             { name: 'Extra FD (BAF >=120% FD>=80%) 10 € por FD Total 30€', amount: 30 }
         ]

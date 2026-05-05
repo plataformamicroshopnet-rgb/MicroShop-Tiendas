@@ -7,7 +7,7 @@ const prisma = new PrismaClient()
 
 export async function POST(request: Request) {
     const session = await getSession()
-    if (!session || !canEdit(session.user, 'MODULE_JEFE_FFVV')) {
+    if (!session || !canEdit(session.user, 'MODULE_JEFE_TIENDAS')) {
         return NextResponse.json({ error: 'No autorizado para ejecutar clonaciones.' }, { status: 403 })
     }
 

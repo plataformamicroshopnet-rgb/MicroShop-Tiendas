@@ -4,17 +4,18 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { PageHeader } from '@/components/PageHeader'
 import { FilePlus } from 'lucide-react'
-import { VENDEDORES, CODIGOS_TRAMITACION } from '@/lib/constants'
+import { TIENDAS_COMERCIALES, VENDEDORES, CODIGOS_TRAMITACION } from '@/lib/constants'
 import { useGuard } from '@/hooks/useGuard'
 import { usePeriod } from '@/components/PeriodProvider'
 
 export default function NuevaVentaPage() {
-  const { authorized } = useGuard('MODULE_FFVV', 'CREATE_SALES')
+  const { authorized } = useGuard('MODULE_TIENDAS', 'CREATE_SALES')
   const { activePeriodKey } = usePeriod()
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState('')
   const [error, setError] = useState('')
   const [catalogs, setCatalogs] = useState<Record<string, any[]>>({})
+  const [selectedTienda, setSelectedTienda] = useState('')
 
   const [formData, setFormData] = useState({
     vendedor: '',
@@ -155,6 +156,7 @@ export default function NuevaVentaPage() {
       const data = await res.json()
       if (res.ok && data.success) {
         setSuccess('¡VENTA AÑADIDA CON ÉXITO!')
+        setSelectedTienda('')
         setFormData({
           vendedor: '', nombreCliente: '', codigo: '', nif: '', anotaciones: '',
           productos: [{ categoria: '', producto: '', telf: '', noCliente: '', pendiente: 'No', importe: '' }]
@@ -195,10 +197,26 @@ export default function NuevaVentaPage() {
           <h3 style={{ marginBottom: 16, color: 'var(--light-text)' }}>Cabecera</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
             <div className="form-group">
-              <label className="form-label">Vendedor</label>
-              <select className="form-select" value={formData.vendedor} onChange={e => handleInputChange('vendedor', e.target.value)} required>
+              <label className="form-label">Tienda</label>
+              <select className="form-select" value={selectedTienda} onChange={e => { setSelectedTienda(e.target.value); handleInputChange('vendedor', ''); }} required>
                 <option value="">Selecciona...</option>
-                {VENDEDORES.map(v => <option key={v} value={v}>{v}</option>)}
+                {Object.keys(TIENDAS_COMERCIALES).map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Comercial</label>
+              <select className="form-select" value={formData.vendedor} onChange={e => handleInputChange('vendedor', e.target.value)} disabled={!selectedTienda} required>
+                <option value="">Selecciona...</option>
+                {selectedTienda && (
+                  <>
+                    <optgroup label={`Asignados a ${selectedTienda}`}>
+                      {TIENDAS_COMERCIALES[selectedTienda].map(v => <option key={v} value={v}>{v}</option>)}
+                    </optgroup>
+                    <optgroup label="Otras Tiendas">
+                      {VENDEDORES.filter(v => !TIENDAS_COMERCIALES[selectedTienda].includes(v)).map(v => <option key={v} value={v}>{v}</option>)}
+                    </optgroup>
+                  </>
+                )}
               </select>
             </div>
             <div className="form-group">

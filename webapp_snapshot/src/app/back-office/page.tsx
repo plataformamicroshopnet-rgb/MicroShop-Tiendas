@@ -10,7 +10,7 @@ import { canEdit } from '@/lib/permissions'
 export default function BackOfficePage() {
   const { authorized, user } = useGuard('MODULE_BACK_OFFICE')
 
-  const hasEditAccess = canEdit(user, 'MODULE_FFVV')
+  const hasEditAccess = canEdit(user, 'MODULE_TIENDAS')
 
   const [isEditMode, setIsEditMode] = useState(false)
   const [cardOrder, setCardOrder] = useState<string[]>([])
@@ -49,10 +49,10 @@ export default function BackOfficePage() {
       border: '1px solid rgba(245, 158, 11, 0.2)'
     },
     {
-      title: 'Visitas FFVV',
+      title: 'Visitas Tiendas',
       description: 'Gestiona y registra las visitas presenciales realizadas por la Fuerza de Ventas.',
       icon: MapPin,
-      href: '/visitas-ffvv',
+      href: '/visitas-tiendas',
       color: 'rgba(37, 99, 235, 0.1)',
       textColor: '#2563eb'
     },

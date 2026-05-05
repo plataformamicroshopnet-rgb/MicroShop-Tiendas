@@ -338,8 +338,8 @@ function OperationsContent() {
   const vendorFilter = searchParams.get('vendedor')
   const grupoFilter = searchParams.get('grupo')
 
-  const canEdit = canEditMacro(user, 'MODULE_FFVV');
-  const canCancel = canEditMacro(user, 'MODULE_FFVV') || can(user, 'CANCEL_SALES');
+  const canEdit = canEditMacro(user, 'MODULE_TIENDAS');
+  const canCancel = canEditMacro(user, 'MODULE_TIENDAS') || can(user, 'CANCEL_SALES');
 
   const fetchSales = () => {
     if (!activePeriodKey) return;
@@ -944,7 +944,7 @@ function OperationsContent() {
 }
 
 export default function OperationsPage() {
-  const { authorized } = useGuard('MODULE_FFVV')
+  const { authorized } = useGuard('MODULE_TIENDAS')
   return (
     <Suspense fallback={<div style={{ padding: 20 }}>Cargando operaciones...</div>}>
       <OperationsContent />

@@ -27,7 +27,7 @@ export function PeriodSelector() {
   if (pathname === '/login' || !user || isLoadingPeriods) return null
 
   // Restricciones de Visibilidad de la Fase C1 (Permitimos a quienes tienen permiso de lectura o edición de módulos compatibles)
-  const canSeeSelector = canView(user, 'MODULE_FFVV') || canView(user, 'MODULE_CUMPLIMIENTO') || canView(user, 'MODULE_BACK_OFFICE') || canView(user, 'MODULE_ADMIN') || canView(user, 'MODULE_JEFE_FFVV');
+  const canSeeSelector = canView(user, 'MODULE_TIENDAS') || canView(user, 'MODULE_CUMPLIMIENTO') || canView(user, 'MODULE_BACK_OFFICE') || canView(user, 'MODULE_ADMIN') || canView(user, 'MODULE_JEFE_TIENDAS');
   if (!canSeeSelector) return null
 
   // Restricciones de Selección de Periodos Reales de la BD

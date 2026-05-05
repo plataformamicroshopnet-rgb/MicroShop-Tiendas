@@ -48,7 +48,7 @@ export default function ReadOnlyCatalog({ category, title, iconColor }: ReadOnly
     <div style={{ padding: 20, paddingBottom: 60 }}>
       {/* HEADER LOCAL */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24, marginTop: 12, flexWrap: 'wrap' }}>
-        <Link href="/ffvv" className="btn btn-secondary" style={{ padding: '8px 12px' }}>
+        <Link href="/tiendas" className="btn btn-secondary" style={{ padding: '8px 12px' }}>
           <ChevronLeft size={20} />
           Volver
         </Link>

@@ -16,8 +16,8 @@ export default function TrackingDashboard() {
   const periodYear = activePeriodKey ? Number(activePeriodKey.split('_')[0]) : new Date().getFullYear()
   const periodMonth = activePeriodKey ? Number(activePeriodKey.split('_')[1]) : new Date().getMonth() + 1
   
-  const { user } = useGuard('MODULE_JEFE_FFVV')
-  const canEditFlag = user ? canEdit(user, 'MODULE_JEFE_FFVV') : false
+  const { user } = useGuard('MODULE_JEFE_TIENDAS')
+  const canEditFlag = user ? canEdit(user, 'MODULE_JEFE_TIENDAS') : false
   const isReadOnly = activePeriodStatus === 'HISTORIC' || !canEditFlag
   
   const [groups, setGroups] = useState<any[]>([])

@@ -6,12 +6,12 @@ import { PhoneCall, MapPin, Eye, Filter, User, Calendar, CheckSquare, Printer, M
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 import Link from 'next/link'
 import { can } from '@/lib/permissions'
-import { normalizeRole, getFFVVCode } from '@/lib/appConfig'
+import { normalizeRole, getTiendasCode } from '@/lib/appConfig'
 
 type ActionType = 'Teléfono' | 'Teams' | 'Presencial' | 'NoCliente';
 
 interface ClientEntry {
-    codigoFFVV: string;
+    codigoTiendas: string;
     objetoVisita: string;
     cif: string;
     empresa: string;
@@ -24,7 +24,7 @@ interface ClientEntry {
 
 interface Movement {
     cif: string;
-    codigoFFVV?: string;
+    codigoTiendas?: string;
     action: ActionType;
     date: string;
     year: number;
@@ -52,7 +52,7 @@ export default function CumplimientoTelefonicaPage() {
     const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
     const [selectedTrimestre, setSelectedTrimestre] = useState(Math.floor(currentDate.getMonth() / 3) + 1);
     const [loading, setLoading] = useState(false);
-    const [selectedFFVV, setSelectedFFVV] = useState<string>('');
+    const [selectedTiendas, setSelectedTiendas] = useState<string>('');
     const [expandedBlock, setExpandedBlock] = useState<string | null>(null);
     const [selectedClientes, setSelectedClientes] = useState<string[]>([]);
     const [previewModalData, setPreviewModalData] = useState<ClientEntry[] | null>(null);
@@ -83,7 +83,7 @@ export default function CumplimientoTelefonicaPage() {
                     isComercialRef.current = roleNorm === 'COMERCIAL';
                     if (roleNorm === 'COMERCIAL') {
                         // Aquí lo fijamos asíncronamente con el traductor (sin `validCodes` aún porque el motor de datos quizás no ha terminado)
-                        setSelectedFFVV(getFFVVCode(d.user.codigoComercial));
+                        setSelectedTiendas(getTiendasCode(d.user.codigoComercial));
                     }
                 }
             })
@@ -98,13 +98,13 @@ export default function CumplimientoTelefonicaPage() {
 
     useEffect(() => {
         setLoading(true);
-        fetch(`/api/visitas-ffvv?year=${selectedYear}&trimestre=${selectedTrimestre}`)
+        fetch(`/api/visitas-tiendas?year=${selectedYear}&trimestre=${selectedTrimestre}`)
             .then(r => r.json())
             .then(d => {
                 if (d.clients) setData(d);
                 else setData({ clients: [], movements: [] });
                 if (!isComercialRef.current) {
-                    setSelectedFFVV('');
+                    setSelectedTiendas('');
                 }
             })
             .catch(e => console.error(e))
@@ -133,29 +133,29 @@ export default function CumplimientoTelefonicaPage() {
             .catch(e => console.error(e));
     }, [selectedYear, selectedTrimestre]);
 
-    const uniqueCodes = Array.from(new Set(data.clients.map(c => c.codigoFFVV).filter(Boolean))).sort();
+    const uniqueCodes = Array.from(new Set(data.clients.map(c => c.codigoTiendas).filter(Boolean))).sort();
 
     // VALIDADOR DINÁMICO: Ejecuta la traducción de nuevo en cuanto cargan los datos para registrar el log de consola si falla el fallback
     useEffect(() => {
         if (isComercial && user?.codigoComercial && uniqueCodes.length > 0) {
-            getFFVVCode(user.codigoComercial, uniqueCodes);
+            getTiendasCode(user.codigoComercial, uniqueCodes);
         }
     }, [isComercial, user?.codigoComercial, uniqueCodes]);
 
     // 1. Filtrado Base (Motor)
-    const activeClients = selectedFFVV ? data.clients.filter(c => c.codigoFFVV === selectedFFVV) : data.clients;
+    const activeClients = selectedTiendas ? data.clients.filter(c => c.codigoTiendas === selectedTiendas) : data.clients;
     const activeMovements = data.movements.filter(m => m.year === selectedYear && m.trimestre === selectedTrimestre);
 
     // 2. Poblaciones (A CUCHILLO)
-    const isLuisActive = selectedFFVV === 'FV1WFXCU';
+    const isLuisActive = selectedTiendas === 'FV1WFXCU';
     const carteraClients = activeClients.filter(c =>
         c.objetoVisita?.toUpperCase() === 'S' || 
         c.objetoVisita?.toUpperCase() === 'N' ||
-        (isLuisActive && c.codigoFFVV === 'FV1WFXCU') // EXCEPCIÓN LUIS
+        (isLuisActive && c.codigoTiendas === 'FV1WFXCU') // EXCEPCIÓN LUIS
     );
     const fueraCarteraClients = activeClients.filter(c =>
         !c.objetoVisita || c.objetoVisita.trim() === ''
-    ).filter(c => !(isLuisActive && c.codigoFFVV === 'FV1WFXCU'));
+    ).filter(c => !(isLuisActive && c.codigoTiendas === 'FV1WFXCU'));
 
     // Helpers
     const getClientMoves = (cif: string) => activeMovements.filter(m => m.cif === cif);
@@ -219,7 +219,7 @@ export default function CumplimientoTelefonicaPage() {
             const lastMove = realMoves.filter(m => m.cif === cif && m.action === action).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
             const found = activeClients.find(c => c.cif === cif);
             const base = found || {
-                codigoFFVV: selectedFFVV || '',
+                codigoTiendas: selectedTiendas || '',
                 objetoVisita: '?',
                 cif: cif,
                 empresa: 'Cliente Desconocido (Fuera Base)',
@@ -488,7 +488,7 @@ export default function CumplimientoTelefonicaPage() {
                 title={<><PhoneCall className="text-cyan" size={28} /> Evolución Visitas Gevico</>}
                 subtitle="Métricas y listado de actividad prioritaria."
                 showBack={true}
-                backFallback={fromParam === 'ffvv' ? '/ffvv' : (fromParam === 'backoffice' ? '/back-office' : (isComercial ? '/ffvv' : '/back-office'))}
+                backFallback={fromParam === 'tiendas' ? '/tiendas' : (fromParam === 'backoffice' ? '/back-office' : (isComercial ? '/tiendas' : '/back-office'))}
                 helpContent={
                   <div>
                     <h4 style={{ margin: '0 0 12px 0', color: 'var(--mercedes-cyan)', fontSize: 15 }}>Manual: Evolución Gevico</h4>
@@ -501,13 +501,13 @@ export default function CumplimientoTelefonicaPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         {isComercial ? (
-                            <span style={{ color: 'var(--light-text)', fontSize: 13, fontWeight: 700 }}>Mi Cartera ({getFFVVCode(user?.codigoComercial)})</span>
+                            <span style={{ color: 'var(--light-text)', fontSize: 13, fontWeight: 700 }}>Mi Cartera ({getTiendasCode(user?.codigoComercial)})</span>
                         ) : (
                             <>
-                                <span style={{ color: 'var(--light-text)', fontSize: 13, fontWeight: 600 }}>C.FFVV:</span>
+                                <span style={{ color: 'var(--light-text)', fontSize: 13, fontWeight: 600 }}>C.Tiendas:</span>
                                 <select 
-                                    value={selectedFFVV} 
-                                    onChange={e => setSelectedFFVV(e.target.value)} 
+                                    value={selectedTiendas} 
+                                    onChange={e => setSelectedTiendas(e.target.value)} 
                                     className="form-select" 
                                     style={{ padding: '0 8px', height: 36, fontSize: 13 }}
                                 >
@@ -557,7 +557,7 @@ export default function CumplimientoTelefonicaPage() {
                                 <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--light-text)' }}>Métrica Telefónica</h2>
                             </div>
                             <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--light-text)', opacity: 0.9, letterSpacing: 0.5 }}>
-                                {selectedFFVV ? (NOMBRES_COMERCIALES[selectedFFVV] || '—') : ''}
+                                {selectedTiendas ? (NOMBRES_COMERCIALES[selectedTiendas] || '—') : ''}
                             </div>
                         </div>
                         <div style={{ fontSize: 12, color: 'var(--medium-gray)', marginTop: -12 }}>

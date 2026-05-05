@@ -38,12 +38,12 @@ export default function BottomNav() {
   }
 
   const navItems: NavItem[] = [
-    { name: 'Inicio', href: '/', icon: LayoutDashboard, permission: 'MODULE_FFVV', matchPaths: ['/'] },
-    { name: 'Tiendas Hub', href: '/ffvv', icon: Briefcase, permission: 'MODULE_FFVV', matchPaths: ['/ffvv'] },
-    { name: 'Jefe Tiendas', href: '/seguimiento-ventas', icon: LineChart, permission: 'MODULE_JEFE_FFVV', matchPaths: ['/seguimiento-ventas'] },
+    { name: 'Inicio', href: '/', icon: LayoutDashboard, permission: 'MODULE_TIENDAS', matchPaths: ['/'] },
+    { name: 'Tiendas Hub', href: '/tiendas', icon: Briefcase, permission: 'MODULE_TIENDAS', matchPaths: ['/tiendas'] },
+    { name: 'Jefe Tiendas', href: '/seguimiento-ventas', icon: LineChart, permission: 'MODULE_JEFE_TIENDAS', matchPaths: ['/seguimiento-ventas'] },
     { name: 'Back Office', href: '/back-office', icon: FolderOpen, permission: 'MODULE_BACK_OFFICE', matchPaths: ['/back-office'] },
     { name: 'Liquidaciones', href: '/liquidacion', icon: Euro, permission: 'MODULE_LIQUIDACION', matchPaths: ['/liquidacion'] },
-    { name: 'Dirección', href: '/direccion-ffvv', icon: Building2, permission: 'MODULE_DIRECCION', matchPaths: ['/direccion-ffvv'] },
+    { name: 'Dirección', href: '/direccion-tiendas', icon: Building2, permission: 'MODULE_DIRECCION', matchPaths: ['/direccion-tiendas'] },
     { name: 'Admin', href: '/admin', icon: Settings, permission: 'MODULE_ADMIN', matchPaths: ['/admin'] },
   ]
 

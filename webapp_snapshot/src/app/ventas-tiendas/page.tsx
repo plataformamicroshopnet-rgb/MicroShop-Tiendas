@@ -9,8 +9,8 @@ import { useGuard } from '@/hooks/useGuard'
 import { usePeriod } from '@/components/PeriodProvider'
 import { normalizeRole } from '@/lib/appConfig'
 
-export default function VentasFFVVPage() {
-  const { authorized, user } = useGuard('MODULE_FFVV')
+export default function VentasTiendasPage() {
+  const { authorized, user } = useGuard('MODULE_TIENDAS')
   const { activePeriodKey } = usePeriod()
   const [comerciales, setComerciales] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -198,10 +198,10 @@ export default function VentasFFVVPage() {
       `}} />
 
       <PageHeader 
-        title={<><Briefcase size={28} color="#2563eb" /> Ventas FFVV</>}
+        title={<><Briefcase size={28} color="#2563eb" /> Ventas Tiendas</>}
         subtitle="Resumen de actividad comercial."
         showBack={true}
-        backFallback="/ffvv"
+        backFallback="/tiendas"
         helpContent={
           <div>
             <h4 style={{ margin: '0 0 12px 0', color: 'var(--mercedes-cyan)', fontSize: 15 }}>Manual: Ventas Individuales</h4>

@@ -6,8 +6,8 @@ import Link from 'next/link'
 import { getDefaultPermissions } from '@/lib/permissions'
 import { PageHeader } from '@/components/PageHeader'
 export const MODULE_DEFS = [
-  { id: 'MODULE_FFVV', label: 'Ventas Tiendas (Operaciones)' },
-  { id: 'MODULE_JEFE_FFVV', label: 'Jefe Tiendas (Sustituye a SS)' },
+  { id: 'MODULE_TIENDAS', label: 'Ventas Tiendas (Operaciones)' },
+  { id: 'MODULE_JEFE_TIENDAS', label: 'Jefe Tiendas (Sustituye a SS)' },
   { id: 'MODULE_BACK_OFFICE', label: 'Back Office (Grabaciones)' },
   { id: 'MODULE_CUMPLIMIENTO', label: 'Progresión y Agenda B2B' },
   { id: 'MODULE_COMISIONES', label: 'Comisiones de Equipo' },
@@ -169,7 +169,7 @@ export default function AdminUsuariosPage() {
         helpContent={
           <div>
             <h4 style={{ margin: '0 0 12px 0', color: 'var(--mercedes-cyan)', fontSize: 15 }}>Manual: Gestión de Usuarios</h4>
-            <p style={{ margin: 0, lineHeight: 1.5 }}>Centro de identidades y seguridad. Aquí tienes el control absoluto de quién entra a la plataforma. Puedes dar de alta a nuevos comerciales, bloquear accesos de antiguos empleados, resetear contraseñas olvidadas de forma manual y establecer el nivel jerárquico (Comercial raso, Jefe FFVV o Administrador).</p>
+            <p style={{ margin: 0, lineHeight: 1.5 }}>Centro de identidades y seguridad. Aquí tienes el control absoluto de quién entra a la plataforma. Puedes dar de alta a nuevos comerciales, bloquear accesos de antiguos empleados, resetear contraseñas olvidadas de forma manual y establecer el nivel jerárquico (Comercial raso, Jefe Tiendas o Administrador).</p>
           </div>
         }
       />
@@ -244,10 +244,10 @@ export default function AdminUsuariosPage() {
                       const activePerms = isUnmigrated ? getDefaultPermissions(u.role) : u.permissions;
                       
                       // Resolutores Granulares Legacy+Modern
-                      const hasView = activePerms.includes(`${perm.id}:view`) || activePerms.includes(`${perm.id}:edit`) || activePerms.includes(perm.id) || (perm.id === 'MODULE_FFVV' && (activePerms.includes('EDIT_SALES') || activePerms.includes('CREATE_SALES')));
+                      const hasView = activePerms.includes(`${perm.id}:view`) || activePerms.includes(`${perm.id}:edit`) || activePerms.includes(perm.id) || (perm.id === 'MODULE_TIENDAS' && (activePerms.includes('EDIT_SALES') || activePerms.includes('CREATE_SALES')));
                       
                       let hasEdit = activePerms.includes(`${perm.id}:edit`);
-                      if (perm.id === 'MODULE_FFVV' && (activePerms.includes('EDIT_SALES') || activePerms.includes('CREATE_SALES'))) hasEdit = true;
+                      if (perm.id === 'MODULE_TIENDAS' && (activePerms.includes('EDIT_SALES') || activePerms.includes('CREATE_SALES'))) hasEdit = true;
                       if (perm.id === 'MANAGE_MAGAZINES' && activePerms.includes('MANAGE_MAGAZINES')) hasEdit = true;
                       if (perm.id === 'MANAGE_CATALOG' && activePerms.includes('MANAGE_CATALOG')) hasEdit = true;
                       if (perm.id === 'MODULE_ADMIN' && activePerms.includes('MODULE_ADMIN')) hasEdit = true;
@@ -277,7 +277,7 @@ export default function AdminUsuariosPage() {
                           } else {
                               // Añadir Edit (y forzar View)
                               const next = [...activePerms, `${perm.id}:edit`, `${perm.id}:view`, perm.id];
-                              if (perm.id === 'MODULE_FFVV') { next.push('EDIT_SALES'); next.push('CREATE_SALES'); }
+                              if (perm.id === 'MODULE_TIENDAS') { next.push('EDIT_SALES'); next.push('CREATE_SALES'); }
                               const uniqueNext = Array.from(new Set(next));
                               togglePermission(u.username, activePerms, uniqueNext, u.role);
                           }

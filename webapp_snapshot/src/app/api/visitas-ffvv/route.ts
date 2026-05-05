@@ -15,7 +15,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: 'Faltan parámetros year y trimestre' }, { status: 400 })
     }
 
-    const key = `visitas_ffvv_${year}_${trim}`
+    const key = `visitas_tiendas_${year}_${trim}`
     const setting = await prisma.appSetting.findUnique({ where: { key } })
     
     if (setting && setting.value) {
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Faltan parámetros' }, { status: 400 })
     }
 
-    const key = `visitas_ffvv_${year}_${trimestre}`
+    const key = `visitas_tiendas_${year}_${trimestre}`
     
     await prisma.appSetting.upsert({
       where: { key },

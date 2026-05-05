@@ -8,7 +8,7 @@ import { PeriodSelector } from '@/components/PeriodSelector'
 import { MonthlyConditionsDisplay } from '@/components/MonthlyConditionsDisplay'
 
 export default function SeguimientoCondicionesMensualesPage() {
-  const { authorized } = useGuard('MODULE_JEFE_FFVV')
+  const { authorized } = useGuard('MODULE_JEFE_TIENDAS')
 
   if (authorized === null) return null
 

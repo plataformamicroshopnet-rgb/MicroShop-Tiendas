@@ -50,7 +50,7 @@ function resolveGrupo(prod: any): string {
 export async function POST(request: Request) {
   try {
     const session = await getSession()
-    if (!session || !canEdit(session.user, 'MODULE_FFVV')) {
+    if (!session || !canEdit(session.user, 'MODULE_TIENDAS')) {
       return NextResponse.json({ success: false, error: 'No autorizado / Solo Lectura' }, { status: 403 })
     }
 

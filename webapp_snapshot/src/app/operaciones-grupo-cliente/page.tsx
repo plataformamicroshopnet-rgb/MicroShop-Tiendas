@@ -282,7 +282,7 @@ function SectionTable({
 
 // ── Main page content ─────────────────────────────────────────────────
 function GrupoClienteContent() {
-  const { authorized } = useGuard('MODULE_FFVV')
+  const { authorized } = useGuard('MODULE_TIENDAS')
   const { activePeriodKey, availablePeriods } = usePeriod()
   const [sales, setSales]           = useState<any[]>([])
   const [importesPyme, setImportesPyme] = useState<any[]>([])

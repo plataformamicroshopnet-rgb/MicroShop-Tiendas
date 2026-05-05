@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useGuard } from '@/hooks/useGuard'
 import { PageHeader } from '@/components/PageHeader'
 export default function SeguimientoVentasPage() {
-  const { authorized } = useGuard('MODULE_JEFE_FFVV')
+  const { authorized } = useGuard('MODULE_JEFE_TIENDAS')
   const router = useRouter()
 
   const [isEditMode, setIsEditMode] = useState(false)
@@ -53,7 +53,7 @@ export default function SeguimientoVentasPage() {
       textColor: '#ec4899'
     },
     {
-      title: 'Comisiones FFVV Completas',
+      title: 'Comisiones Tiendas Completas',
       description: 'Liquidación grupal y métricas completas de todas las comisiones.',
       icon: Calculator,
       action: () => router.push('/comisiones'),
@@ -64,7 +64,7 @@ export default function SeguimientoVentasPage() {
       title: 'Evolución Visitas Gevico',
       description: 'Panel de seguimiento de volumen de visitas y avance trimestral.',
       icon: Building2,
-      action: () => router.push('/cumplimiento-telefonica?from=jefeffvv'),
+      action: () => router.push('/cumplimiento-telefonica?from=jefetiendas'),
       color: 'rgba(16, 185, 129, 0.1)',
       textColor: '#10b981'
     },
@@ -76,7 +76,7 @@ export default function SeguimientoVentasPage() {
       color: 'rgba(245, 158, 11, 0.1)',
     },
     {
-      title: 'Condiciones y Extras FFVV',
+      title: 'Condiciones y Extras Tiendas',
       description: 'Consultar tabla de objetivos, comisiones y KPIs extendidos',
       icon: Briefcase,
       action: () => router.push('/seguimiento-ventas/condiciones-plus'),

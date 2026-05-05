@@ -8,7 +8,7 @@ import { ALL_GROUPS } from '@/lib/comisiones'
 import { useGuard } from '@/hooks/useGuard'
 import { PeriodSelector } from '@/components/PeriodSelector'
 
-export default function DireccionFFVVPage() {
+export default function DireccionTiendasPage() {
     const { authorized } = useGuard('MODULE_DIRECCION')
     const {
         loading,

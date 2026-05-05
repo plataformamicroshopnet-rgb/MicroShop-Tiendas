@@ -10,7 +10,7 @@ import { useGuard } from '@/hooks/useGuard'
 type ActionType = 'Teléfono' | 'Teams' | 'Presencial' | 'NoCliente';
 
 interface ClientEntry {
-  codigoFFVV: string;
+  codigoTiendas: string;
   medio: string;
   objetoVisita: string;
   cif: string;
@@ -23,7 +23,7 @@ interface ClientEntry {
 
 interface Movement {
   cif: string;
-  codigoFFVV?: string;
+  codigoTiendas?: string;
   action: ActionType;
   date: string; 
   year: number;
@@ -44,7 +44,7 @@ const PRIORITY: Record<string, number> = {
   'NoCliente': 1
 };
 
-export default function VisitasFFVVPage() {
+export default function VisitasTiendasPage() {
   const { authorized } = useGuard('MODULE_CUMPLIMIENTO')
   const currentDate = new Date();
   
@@ -79,7 +79,7 @@ export default function VisitasFFVVPage() {
       .catch(() => {});
 
     setLoading(true);
-    fetch(`/api/visitas-ffvv?year=${selectedYear}&trimestre=${selectedTrimestre}`)
+    fetch(`/api/visitas-tiendas?year=${selectedYear}&trimestre=${selectedTrimestre}`)
       .then(r => r.json())
       .then(d => {
           if (d.clients) setData(d);
@@ -100,7 +100,7 @@ export default function VisitasFFVVPage() {
   const saveData = async (newData: DataStore) => {
     setData(newData); 
     try {
-        await fetch('/api/visitas-ffvv', {
+        await fetch('/api/visitas-tiendas', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ year: selectedYear, trimestre: selectedTrimestre, data: newData })
@@ -138,7 +138,7 @@ export default function VisitasFFVVPage() {
 
   const startNewClient = () => {
       setEditingClientCif('__NEW__');
-      setDraftClient({ codigoFFVV: '', medio: '', objetoVisita: '', cif: '', empresa: '', direccion: '', cp: '', tandem: '' });
+      setDraftClient({ codigoTiendas: '', medio: '', objetoVisita: '', cif: '', empresa: '', direccion: '', cp: '', tandem: '' });
   };
 
   const startInlineEdit = (c: ClientEntry) => {
@@ -157,10 +157,10 @@ export default function VisitasFFVVPage() {
 
   const saveInlineEdit = async (isNew: boolean) => {
       const rawCif = draftClient.cif?.trim() || '';
-      const rawCodigoFFVV = draftClient.codigoFFVV?.trim() || '';
+      const rawCodigoTiendas = draftClient.codigoTiendas?.trim() || '';
 
-      if (!rawCif || !rawCodigoFFVV) {
-          alert("El CIF y el Código FFVV son obligatorios.");
+      if (!rawCif || !rawCodigoTiendas) {
+          alert("El CIF y el Código Tiendas son obligatorios.");
           return;
       }
 
@@ -210,7 +210,7 @@ export default function VisitasFFVVPage() {
                 const cif = String(row[cifIdx] || '').trim();
                 if (cif !== '') {
                     newClients.push({
-                        codigoFFVV: String(row[0] || '').trim(),
+                        codigoTiendas: String(row[0] || '').trim(),
                         medio: cifIdx === 3 ? String(row[1] || '').trim() : 'N/A',
                         objetoVisita: String(row[objIdx] || '').trim(),
                         cif: cif,
@@ -257,7 +257,7 @@ export default function VisitasFFVVPage() {
                 const cif = String(row[cifIdx] || '').trim();
                 if (cif !== '') {
                     parsedClients.push({
-                        codigoFFVV: String(row[0] || '').trim(),
+                        codigoTiendas: String(row[0] || '').trim(),
                         medio: cifIdx === 3 ? String(row[1] || '').trim() : 'N/A',
                         objetoVisita: String(row[objIdx] || '').trim(),
                         cif: cif,
@@ -300,13 +300,13 @@ export default function VisitasFFVVPage() {
 
         rows.forEach(row => {
             if (row.length >= 4 && row[1]?.trim() !== '') {
-                const codigoFFVV = String(row[0]).trim();
+                const codigoTiendas = String(row[0]).trim();
                 const cif = String(row[1]).trim();
                 const rawDate = String(row[2]).trim();
                 const rawAction = String(row[3]).trim();
                 
                 const baseClient = data.clients.find(c => c.cif === cif);
-                if (baseClient && baseClient.codigoFFVV !== codigoFFVV && codigoFFVV !== '') {
+                if (baseClient && baseClient.codigoTiendas !== codigoTiendas && codigoTiendas !== '') {
                     erroresIncoherencia++;
                     return; 
                 }
@@ -321,7 +321,7 @@ export default function VisitasFFVVPage() {
                 const { year, trimestre, mesInterno } = parseDateToTrimestre(rawDate);
 
                 if (year === selectedYear && trimestre === selectedTrimestre) {
-                    newMovements.push({ cif, action, date: rawDate, year, trimestre, mesInterno, codigoFFVV });
+                    newMovements.push({ cif, action, date: rawDate, year, trimestre, mesInterno, codigoTiendas });
                 }
             }
         });
@@ -333,7 +333,7 @@ export default function VisitasFFVVPage() {
         }
 
         await saveData({ ...data, movements: [...data.movements, ...newMovements] });
-        const extraMsg2 = erroresIncoherencia > 0 ? '\nSe ignoraron ' + erroresIncoherencia + ' registros por incoherencia de CIF y Código FFVV contra la base actual.' : '';
+        const extraMsg2 = erroresIncoherencia > 0 ? '\nSe ignoraron ' + erroresIncoherencia + ' registros por incoherencia de CIF y Código Tiendas contra la base actual.' : '';
         alert('¡Inyectadas ' + newMovements.length + ' acciones!' + extraMsg2);
     } catch (err) { alert("Error de portapapeles."); }
   };
@@ -349,7 +349,7 @@ export default function VisitasFFVVPage() {
           const clientMatch = data.clients.find(c => c.cif === cif);
           newMovements.push({
               cif,
-              codigoFFVV: clientMatch?.codigoFFVV,
+              codigoTiendas: clientMatch?.codigoTiendas,
               action,
               date: new Date().toISOString().split('T')[0], 
               year: selectedYear,
@@ -417,14 +417,14 @@ export default function VisitasFFVVPage() {
 
   const filteredClients = data.clients.filter(c => {
       const t = searchTerm.toLowerCase();
-      return c.cif.toLowerCase().includes(t) || c.empresa.toLowerCase().includes(t) || c.codigoFFVV.toLowerCase().includes(t);
+      return c.cif.toLowerCase().includes(t) || c.empresa.toLowerCase().includes(t) || c.codigoTiendas.toLowerCase().includes(t);
   });
 
-  const uniqueCodes = Array.from(new Set(data.clients.map(c => c.codigoFFVV).filter(Boolean)));
+  const uniqueCodes = Array.from(new Set(data.clients.map(c => c.codigoTiendas).filter(Boolean)));
 
   const handleConfirmExport = async () => {
     console.log("=== INICIANDO EXPORTACIÓN CON FILTROS ===");
-    console.log("1. C.FFVV marcados:", exportCodes);
+    console.log("1. C.Tiendas marcados:", exportCodes);
     console.log("2. Meses marcados:", exportMonths);
     console.log("3. Fechas:", dateFrom, "->", dateTo);
     console.log("4. Impacto máximo esperado:", exportActionFilter || 'Todos');
@@ -451,11 +451,11 @@ export default function VisitasFFVVPage() {
     console.log("6. Movements DESPUÉS de filtro fechas:", allFilteredMovements.length);
 
     if (exportCodes.length === 0) {
-        alert("Debes seleccionar al menos un C.FFVV para exportar.");
+        alert("Debes seleccionar al menos un C.Tiendas para exportar.");
         return;
     }
     
-    let exportable = filteredClients.filter(c => exportCodes.includes(c.codigoFFVV));
+    let exportable = filteredClients.filter(c => exportCodes.includes(c.codigoTiendas));
 
     if (exportNoContactados) {
         exportable = exportable.filter(c => {
@@ -485,7 +485,7 @@ export default function VisitasFFVVPage() {
         const sheet = workbook.addWorksheet(`Visitas T${selectedTrimestre}`);
 
         const columns: any[] = [
-            { header: 'Código FFVV', key: 'codigo', width: 14 },
+            { header: 'Código Tiendas', key: 'codigo', width: 14 },
             { header: 'Objeto de Visita', key: 'objeto', width: 20 },
             { header: 'CIF', key: 'cif', width: 15 },
             { header: 'Nombre de la Empresa', key: 'empresa', width: 35 },
@@ -516,7 +516,7 @@ export default function VisitasFFVVPage() {
             const actM3 = cMoves.filter(m => m.mesInterno === 3).sort((a,b) => PRIORITY[b.action] - PRIORITY[a.action])[0]?.action || null;
 
             const rowData: any = {
-                codigo: c.codigoFFVV,
+                codigo: c.codigoTiendas,
                 objeto: c.objetoVisita,
                 cif: c.cif,
                 empresa: c.empresa,
@@ -597,7 +597,7 @@ export default function VisitasFFVVPage() {
           return (
               <tr key={isNew ? '__NEW__' : c.cif} style={{ backgroundColor: '#eff6ff', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', position: 'relative', zIndex: 20 }}>
                   <td style={{ padding: '6px 8px', borderBottom: '1px solid #dbeafe', minWidth: 90, maxWidth: 110 }}>
-                      <input value={draftClient.codigoFFVV || ''} onChange={e => handleDraftChange('codigoFFVV', e.target.value)} style={{...inputStyle, border: '1px solid #3b82f6'}} placeholder="C.FFVV*" autoFocus />
+                      <input value={draftClient.codigoTiendas || ''} onChange={e => handleDraftChange('codigoTiendas', e.target.value)} style={{...inputStyle, border: '1px solid #3b82f6'}} placeholder="C.Tiendas*" autoFocus />
                   </td>
                   <td style={{ padding: '6px 8px', borderBottom: '1px solid #dbeafe', width: 48, minWidth: 48, maxWidth: 56, textAlign: 'center', overflow: 'hidden' }}>
                       <input value={draftClient.objetoVisita || ''} onChange={e => handleDraftChange('objetoVisita', e.target.value)} style={{...inputStyle, textAlign: 'center', padding: '4px 2px'}} placeholder="O.V." />
@@ -666,7 +666,7 @@ export default function VisitasFFVVPage() {
              title={canEditFlag ? "Doble clic en cualquier parte de la fila para editar el cliente" : ""}
              className="table-row-hover"
           >
-              <td style={{ padding: '5px 8px', fontWeight: 600, color: 'var(--text-main)', borderBottom: '1px solid var(--active-bg)', minWidth: 90, maxWidth: 110, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.codigoFFVV}</td>
+              <td style={{ padding: '5px 8px', fontWeight: 600, color: 'var(--text-main)', borderBottom: '1px solid var(--active-bg)', minWidth: 90, maxWidth: 110, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.codigoTiendas}</td>
               <td style={{ padding: '5px 8px', color: '#374151', borderBottom: '1px solid var(--active-bg)', width: 48, minWidth: 48, maxWidth: 56, textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.objetoVisita}</td>
               <td style={{ padding: '5px 8px', fontWeight: 700, color: getClientCifColor(c.cif), borderBottom: '1px solid var(--active-bg)', fontFamily: 'monospace' }}>{c.cif}</td>
               <td style={{ padding: '5px 8px', color: 'var(--text-main)', fontWeight: 600, borderBottom: '1px solid var(--active-bg)', maxWidth: 180, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.empresa}</td>
@@ -700,7 +700,7 @@ export default function VisitasFFVVPage() {
                     
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                         <div>
-                            <label style={{ display: 'block', fontSize: 12, color: '#4b5563', marginBottom: 4, fontWeight: 600 }}>Códigos FFVV</label>
+                            <label style={{ display: 'block', fontSize: 12, color: '#4b5563', marginBottom: 4, fontWeight: 600 }}>Códigos Tiendas</label>
                             <div style={{ maxHeight: 110, overflowY: 'auto', border: '1px solid var(--border-strong)', borderRadius: 6, padding: '6px 8px', display: 'flex', flexDirection: 'column', gap: 6 }}>
                                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, cursor: 'pointer' }}>
                                    <input type="checkbox" checked={exportCodes.length === uniqueCodes.length && uniqueCodes.length > 0} onChange={() => setExportCodes(exportCodes.length === uniqueCodes.length ? [] : uniqueCodes)} /> <strong>Todos</strong>
@@ -775,7 +775,7 @@ export default function VisitasFFVVPage() {
 
       {/* HEADER BAR */}
       <PageHeader 
-          title={<><MapPin className="text-cyan" size={28} /> Visitas FFVV Trimestral</>}
+          title={<><MapPin className="text-cyan" size={28} /> Visitas Tiendas Trimestral</>}
           subtitle="Control presencial y virtual de la cartera."
           showBack={true}
           backFallback="/back-office"
@@ -796,7 +796,7 @@ export default function VisitasFFVVPage() {
                               onClick={startNewClient} 
                               className="btn-primary" 
                               style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', fontSize: 13, height: 36 }}
-                              title="Abre un formulario inline en la parte superior de la tabla para registrar manualmente un cliente nuevo. Campos obligatorios: CIF y Código FFVV. El CIF debe ser único (no puede existir otro cliente con el mismo CIF en este trimestre). Útil para altas puntuales de 1 a 3 clientes."
+                              title="Abre un formulario inline en la parte superior de la tabla para registrar manualmente un cliente nuevo. Campos obligatorios: CIF y Código Tiendas. El CIF debe ser único (no puede existir otro cliente con el mismo CIF en este trimestre). Útil para altas puntuales de 1 a 3 clientes."
                           >
                               <PlusCircle size={16} /> Nuevo Cliente
                           </button>
@@ -828,18 +828,18 @@ export default function VisitasFFVVPage() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
             <div style={{ position: 'relative', width: 300 }}>
                 <Search size={14} color="#6b7280" style={{ position: 'absolute', left: 10, top: 8 }} />
-                <input type="text" placeholder="Buscar por CIF, Empresa o C.FFVV..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} style={{ width: '100%', padding: '6px 10px 6px 30px', borderRadius: 6, border: '1px solid var(--border-strong)', backgroundColor: 'var(--active-bg)', color: 'var(--text-main)', fontSize: 11 }}/>
+                <input type="text" placeholder="Buscar por CIF, Empresa o C.Tiendas..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} style={{ width: '100%', padding: '6px 10px 6px 30px', borderRadius: 6, border: '1px solid var(--border-strong)', backgroundColor: 'var(--active-bg)', color: 'var(--text-main)', fontSize: 11 }}/>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 {canEditFlag && (
                     <>
-                        <button onClick={handleImportClients} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--border-strong)', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 11 }} title="⚠️ DESTRUCTIVO: Reemplaza al 100% toda la cartera del trimestre activo con los datos del portapapeles. Los clientes anteriores se pierden (pero sus visitas/acciones se conservan). Copia desde Excel las columnas: C.FFVV | O.V. | CIF | Empresa | Dirección | CP | Tandem. Úsalo al inicio de cada trimestre para cargar la cartera completa desde cero.">
+                        <button onClick={handleImportClients} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--border-strong)', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 11 }} title="⚠️ DESTRUCTIVO: Reemplaza al 100% toda la cartera del trimestre activo con los datos del portapapeles. Los clientes anteriores se pierden (pero sus visitas/acciones se conservan). Copia desde Excel las columnas: C.Tiendas | O.V. | CIF | Empresa | Dirección | CP | Tandem. Úsalo al inicio de cada trimestre para cargar la cartera completa desde cero.">
                             <TableIcon size={12} color="#0284c7" /> Pegar Base
                         </button>
-                        <button onClick={handleAddClients} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid #a3e635', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 11 }} title="✅ ACUMULATIVO: Añade clientes nuevos del portapapeles a los ya existentes sin borrar ninguno. Si algún CIF del portapapeles ya existe en la base, ese registro se ignora automáticamente (no duplica). Mismo formato que Pegar Base: C.FFVV | O.V. | CIF | Empresa | Dirección | CP | Tandem. Ideal para altas de 4 o más clientes en mitad del trimestre.">
+                        <button onClick={handleAddClients} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid #a3e635', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 11 }} title="✅ ACUMULATIVO: Añade clientes nuevos del portapapeles a los ya existentes sin borrar ninguno. Si algún CIF del portapapeles ya existe en la base, ese registro se ignora automáticamente (no duplica). Mismo formato que Pegar Base: C.Tiendas | O.V. | CIF | Empresa | Dirección | CP | Tandem. Ideal para altas de 4 o más clientes en mitad del trimestre.">
                             <PlusCircle size={12} color="#65a30d" /> Añadir Clientes
                         </button>
-                        <button onClick={handleImportActions} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--border-strong)', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 11 }} title="✅ ACUMULATIVO: Importa en bloque los registros de visitas/contactos realizados. Copia desde Excel o Salesforce las columnas: Código FFVV | CIF | Fecha | Tipo de Acción. Solo acepta acciones cuya fecha corresponda al trimestre activo. Normaliza automáticamente: 'Visita'→Presencial, 'Teams'→Teams, resto→Teléfono. Los registros anteriores NO se borran, se suman. Úsalo mensualmente cuando tengas el reporte de actividad.">
+                        <button onClick={handleImportActions} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--border-strong)', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 11 }} title="✅ ACUMULATIVO: Importa en bloque los registros de visitas/contactos realizados. Copia desde Excel o Salesforce las columnas: Código Tiendas | CIF | Fecha | Tipo de Acción. Solo acepta acciones cuya fecha corresponda al trimestre activo. Normaliza automáticamente: 'Visita'→Presencial, 'Teams'→Teams, resto→Teléfono. Los registros anteriores NO se borran, se suman. Úsalo mensualmente cuando tengas el reporte de actividad.">
                             <Upload size={12} color="#059669" /> Pegar Acciones (lote)
                         </button>
                     </>
@@ -851,7 +851,7 @@ export default function VisitasFFVVPage() {
                       onClick={() => { setExportCodes(uniqueCodes); setExportMonths([1, 2, 3]); setDateFrom(''); setDateTo(''); setExportActionFilter(''); setExportModal(true); }} 
                       disabled={!hasExportPermission}
                       style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', backgroundColor: 'var(--text-main)', color: 'var(--bg-card)', border: 'none', borderRadius: 6, cursor: hasExportPermission ? 'pointer' : 'not-allowed', fontWeight: 600, fontSize: 11, opacity: hasExportPermission ? 1 : 0.4 }}
-                      title={!hasExportPermission ? "No tienes permisos de descarga maestra. Contacta con el administrador para que te asigne el permiso EXPORT_EXCEL." : "Abre el exportador avanzado: filtra por Código FFVV, meses del trimestre, rango de fechas e impacto máximo alcanzado. Genera un archivo Excel (.xlsx) con la lista de clientes y sus acciones registradas. También permite exportar solo los clientes NO contactados en los meses seleccionados."}
+                      title={!hasExportPermission ? "No tienes permisos de descarga maestra. Contacta con el administrador para que te asigne el permiso EXPORT_EXCEL." : "Abre el exportador avanzado: filtra por Código Tiendas, meses del trimestre, rango de fechas e impacto máximo alcanzado. Genera un archivo Excel (.xlsx) con la lista de clientes y sus acciones registradas. También permite exportar solo los clientes NO contactados en los meses seleccionados."}
                     >
                         <Download size={12} /> Exportar Excel
                     </button>
@@ -875,7 +875,7 @@ export default function VisitasFFVVPage() {
             <table style={{ minWidth: 1000, width: '100%', borderCollapse: 'separate', borderSpacing: 0, fontSize: 11 }}>
                 <thead style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--active-bg)', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
                     <tr style={{ color: '#4b5563', textTransform: 'uppercase', fontSize: 10 }}>
-                        <th style={{ padding: '5px 8px', textAlign: 'left', fontWeight: 700, borderBottom: '1px solid var(--border-strong)', minWidth: 90, maxWidth: 110 }}>C.FFVV</th>
+                        <th style={{ padding: '5px 8px', textAlign: 'left', fontWeight: 700, borderBottom: '1px solid var(--border-strong)', minWidth: 90, maxWidth: 110 }}>C.Tiendas</th>
                         <th style={{ padding: '5px 8px', textAlign: 'center', fontWeight: 700, borderBottom: '1px solid var(--border-strong)', width: 48, minWidth: 48, maxWidth: 56, whiteSpace: 'nowrap', overflow: 'hidden' }}>O.V.</th>
                         <th style={{ padding: '5px 8px', textAlign: 'left', fontWeight: 700, borderBottom: '1px solid var(--border-strong)' }}>CIF</th>
                         <th style={{ padding: '5px 8px', textAlign: 'left', fontWeight: 700, borderBottom: '1px solid var(--border-strong)', maxWidth: 180 }}>Empresa</th>

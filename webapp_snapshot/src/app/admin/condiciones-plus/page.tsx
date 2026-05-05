@@ -10,7 +10,7 @@ import { PeriodSelector } from '@/components/PeriodSelector'
 
 // --- COLUMNAS FIJAS ESTIPULADAS ---
 const FIXED_COLUMNS = [
-  'Productos FFVV',
+  'Productos Tiendas',
   'Objetivo1 Plus',
   'Objetivo2 Plus',
   'Objetivo1 Básico',
@@ -88,7 +88,7 @@ export default function CondicionesPlusPage() {
 
     if (isGroupedCol && groupName) {
       for (let i = 0; i < newRows.length; i++) {
-        const pName = newRows[i]['Productos FFVV']?.trim() || ''
+        const pName = newRows[i]['Productos Tiendas']?.trim() || ''
         if (pName && getGroup(pName) === groupName) {
           newRows[i] = { ...newRows[i], [colName]: value }
         }
@@ -122,7 +122,7 @@ export default function CondicionesPlusPage() {
         body: JSON.stringify({ columns: FIXED_COLUMNS, rows })
       })
       if (response.ok) {
-        alert('Condiciones FFVV guardadas correctamente.')
+        alert('Condiciones Tiendas guardadas correctamente.')
       } else {
         alert('Error al guardar.')
       }
@@ -147,7 +147,7 @@ export default function CondicionesPlusPage() {
     
     for (let i = 0; i < lines.length; i++) {
       const rowString = lines[i]
-      if (i === 0 && rowString.toLowerCase().includes('productos ffvv')) continue
+      if (i === 0 && rowString.toLowerCase().includes('productos tiendas')) continue
 
       const cells = rowString.split('\t')
       const rowData: Record<string, string> = {}
@@ -160,7 +160,7 @@ export default function CondicionesPlusPage() {
       })
       
       if (hasData) {
-        const prodName = rowData['Productos FFVV'] || ''
+        const prodName = rowData['Productos Tiendas'] || ''
         const currentGroup = prodName ? getGroup(prodName) : `empty_paste_${i}`
         
         if (currentGroup === lastGroup && prodName) {
@@ -288,13 +288,13 @@ export default function CondicionesPlusPage() {
       )}
 
       <PageHeader 
-          title={<><Database className="text-cyan" size={28} /> Condiciones y Extras FFVV</>}
+          title={<><Database className="text-cyan" size={28} /> Condiciones y Extras Tiendas</>}
           subtitle="Configuración de variables del módulo Plus."
           showBack={true}
           backFallback="/admin"
           helpContent={
             <div>
-              <h4 style={{ margin: '0 0 12px 0', color: 'var(--mercedes-cyan)', fontSize: 15 }}>Manual: Condiciones y Extras FFVV</h4>
+              <h4 style={{ margin: '0 0 12px 0', color: 'var(--mercedes-cyan)', fontSize: 15 }}>Manual: Condiciones y Extras Tiendas</h4>
               <p style={{ margin: 0, lineHeight: 1.5 }}>Configurador avanzado B2B. Desde aquí gestionas el catálogo de productos extendido, márgenes de beneficios adicionales, y las reglas que determinan cómo escalan las comisiones de Pyme en base al volumen de captación y portfolio total.</p>
             </div>
           }
@@ -322,7 +322,7 @@ export default function CondicionesPlusPage() {
                     let colWidth: string | number | undefined = undefined;
                     let inlinePadding = '12px 16px';
 
-                    if (idx === 0) colWidth = '24%'; // Productos FFVV
+                    if (idx === 0) colWidth = '24%'; // Productos Tiendas
                     else if (idx >= 1 && idx <= 4) { colWidth = '8%'; inlinePadding = '12px 6px'; } // Objetivos
                     else if (idx >= 5 && idx <= 8) { colWidth = '11%'; inlinePadding = '12px 6px'; }
                     
@@ -352,11 +352,11 @@ export default function CondicionesPlusPage() {
                   </tr>
                 ) : (
                   rows.map((row, i) => {
-                    const prodName = row['Productos FFVV']?.trim() || ''
+                    const prodName = row['Productos Tiendas']?.trim() || ''
                     // Aislamos las filas vacías para evitar que se combinen accidentalmente entre sí
                     const currentGroup = prodName ? getGroup(prodName) : `empty_${i}`
                     
-                    const prodNamePrev = i > 0 ? rows[i - 1]['Productos FFVV']?.trim() || '' : ''
+                    const prodNamePrev = i > 0 ? rows[i - 1]['Productos Tiendas']?.trim() || '' : ''
                     const prevGroup = i > 0 ? (prodNamePrev ? getGroup(prodNamePrev) : `empty_${i - 1}`) : null
                     
                     const isGroupStart = currentGroup !== prevGroup
@@ -365,7 +365,7 @@ export default function CondicionesPlusPage() {
                     if (isGroupStart && prodName) {
                       let j = i + 1
                       while (j < rows.length) {
-                        const nextProd = rows[j]['Productos FFVV']?.trim() || ''
+                        const nextProd = rows[j]['Productos Tiendas']?.trim() || ''
                         if (nextProd && getGroup(nextProd) === currentGroup) {
                           rowSpanCount++
                           j++

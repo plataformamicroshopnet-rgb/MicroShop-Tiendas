@@ -7,7 +7,7 @@ import { usePeriod } from '@/components/PeriodProvider'
 import { PeriodSelector } from '@/components/PeriodSelector'
 
 const FIXED_COLUMNS = [
-  'Productos FFVV',
+  'Productos Tiendas',
   'Objetivo1 Plus',
   'Objetivo2 Plus',
   'Objetivo1 Básico',
@@ -76,7 +76,7 @@ export function CondicionesPlusDisplay({ title, parentHref }: { title?: string, 
   return (
     <div style={{ padding: 20 }}>
       <PageHeader 
-          title={<><Database className="text-cyan" size={28} /> {title || "Condiciones y Extras FFVV"}</>}
+          title={<><Database className="text-cyan" size={28} /> {title || "Condiciones y Extras Tiendas"}</>}
           subtitle="Consulta de la tabla de objetivos, comisiones y KPIs extendidos del periodo."
           showBack={true}
           backFallback={parentHref || "/"}
@@ -90,7 +90,7 @@ export function CondicionesPlusDisplay({ title, parentHref }: { title?: string, 
                   let colWidth: string | number | undefined = undefined;
                   let inlinePadding = '12px 16px';
 
-                  if (idx === 0) colWidth = '24%'; // Productos FFVV
+                  if (idx === 0) colWidth = '24%'; // Productos Tiendas
                   else if (idx >= 1 && idx <= 4) { colWidth = '8%'; inlinePadding = '12px 6px'; } // Objetivos
                   else if (idx >= 5 && idx <= 8) { colWidth = '11%'; inlinePadding = '12px 6px'; }
                   
@@ -114,9 +114,9 @@ export function CondicionesPlusDisplay({ title, parentHref }: { title?: string, 
                 </tr>
               ) : (
                 rows.map((row, i) => {
-                  const prodName = row['Productos FFVV']?.trim() || ''
+                  const prodName = row['Productos Tiendas']?.trim() || ''
                   const currentGroup = prodName ? getGroup(prodName) : `empty_${i}`
-                  const prodNamePrev = i > 0 ? rows[i - 1]['Productos FFVV']?.trim() || '' : ''
+                  const prodNamePrev = i > 0 ? rows[i - 1]['Productos Tiendas']?.trim() || '' : ''
                   const prevGroup = i > 0 ? (prodNamePrev ? getGroup(prodNamePrev) : `empty_${i - 1}`) : null
                   
                   const isGroupStart = currentGroup !== prevGroup
@@ -125,7 +125,7 @@ export function CondicionesPlusDisplay({ title, parentHref }: { title?: string, 
                   if (isGroupStart && prodName) {
                     let j = i + 1
                     while (j < rows.length) {
-                      const nextProd = rows[j]['Productos FFVV']?.trim() || ''
+                      const nextProd = rows[j]['Productos Tiendas']?.trim() || ''
                       if (nextProd && getGroup(nextProd) === currentGroup) {
                         rowSpanCount++
                         j++

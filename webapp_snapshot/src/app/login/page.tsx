@@ -44,7 +44,7 @@ export default function LoginPage() {
     <div className="login-container">
       <div className="login-card">
         <div className="login-header">
-          <h1>MicroShop <span className="text-cyan">FFVV</span></h1>
+          <h1>MicroShop <span className="text-cyan">Tiendas</span></h1>
           <p>Acceso a Plataforma de Gestión <strong style={{ color: 'orange', display: 'block', marginTop: 8 }}>BUILD TEST RAILWAY (SNAPSHOT) 2026-03-23-X</strong></p>
         </div>
         

@@ -34,7 +34,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     const session = await getSession()
-    if (!session || !canEdit(session.user, 'MODULE_JEFE_FFVV')) {
+    if (!session || !canEdit(session.user, 'MODULE_JEFE_TIENDAS')) {
         return NextResponse.json({ error: 'No autorizado / Solo Lectura' }, { status: 403 })
     }
 

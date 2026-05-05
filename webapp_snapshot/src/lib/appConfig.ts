@@ -79,7 +79,7 @@ export function normalizeRole(rawRole: string | undefined | null): string {
  * corporativa de Telefónica (GEVICO) que usan los excels de Cumplimiento.
  * Ej: "Plus NFG" -> "FV1WFNFG"
  */
-export function getFFVVCode(codigoComercial: string | undefined, validCodes?: string[]): string {
+export function getTiendasCode(codigoComercial: string | undefined, validCodes?: string[]): string {
   if (!codigoComercial) return '';
   
   // Si ya tiene el formato GEVICO nativo, pasa directo

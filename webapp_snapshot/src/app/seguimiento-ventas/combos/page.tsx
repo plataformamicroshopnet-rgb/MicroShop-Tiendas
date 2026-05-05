@@ -19,7 +19,7 @@ const CYAN  = '#e8f4fd'
 const CYAN2 = '#cce4f6'
 
 export default function CombosPage() {
-  const { authorized } = useGuard('MODULE_JEFE_FFVV')
+  const { authorized } = useGuard('MODULE_JEFE_TIENDAS')
   const { activePeriodKey } = usePeriod()
   const [allSales, setAllSales] = useState<any[]>([])
   const [loading, setLoading]  = useState(true)

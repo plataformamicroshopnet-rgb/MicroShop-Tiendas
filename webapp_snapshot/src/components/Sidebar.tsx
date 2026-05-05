@@ -43,12 +43,12 @@ export default function Sidebar() {
   }
 
   const navItems: NavItem[] = [
-    { name: 'Dashboard', href: '/', icon: LayoutDashboard, permission: 'MODULE_FFVV' },
-    { name: 'Tiendas Hub', href: '/ffvv', icon: Briefcase, permission: 'MODULE_FFVV' },
-    { name: 'Jefe Tiendas', href: '/seguimiento-ventas', icon: LineChart, permission: 'MODULE_JEFE_FFVV' },
+    { name: 'Dashboard', href: '/', icon: LayoutDashboard, permission: 'MODULE_TIENDAS' },
+    { name: 'Tiendas Hub', href: '/tiendas', icon: Briefcase, permission: 'MODULE_TIENDAS' },
+    { name: 'Jefe Tiendas', href: '/seguimiento-ventas', icon: LineChart, permission: 'MODULE_JEFE_TIENDAS' },
     { name: 'Back Office', href: '/back-office', icon: FolderOpen, permission: 'MODULE_BACK_OFFICE' },
     { name: 'Liquidaciones', href: '/liquidacion', icon: Euro, permission: 'MODULE_LIQUIDACION' },
-    { name: 'Dirección Tiendas', href: '/direccion-ffvv', icon: Building2, permission: 'MODULE_DIRECCION' },
+    { name: 'Dirección Tiendas', href: '/direccion-tiendas', icon: Building2, permission: 'MODULE_DIRECCION' },
     { name: 'Admin', href: '/admin', icon: Settings, permission: 'MODULE_ADMIN' },
   ]
 

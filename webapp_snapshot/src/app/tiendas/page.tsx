@@ -6,8 +6,8 @@ import { useRouter } from 'next/navigation'
 import { useGuard } from '@/hooks/useGuard'
 import { PeriodSelector } from '@/components/PeriodSelector'
 
-export default function FFVVHubPage() {
-  const { authorized } = useGuard('MODULE_FFVV')
+export default function TiendasHubPage() {
+  const { authorized } = useGuard('MODULE_TIENDAS')
   const router = useRouter()
 
   const [isEditMode, setIsEditMode] = useState(false)
@@ -15,7 +15,7 @@ export default function FFVVHubPage() {
 
   useEffect(() => {
     // Cargar el orden guardado localmente al abrir la pantalla
-    const savedOrder = localStorage.getItem('ffvv_hub_card_order')
+    const savedOrder = localStorage.getItem('tiendas_hub_card_order')
     if (savedOrder) {
       try {
         setCardOrder(JSON.parse(savedOrder))
@@ -27,10 +27,10 @@ export default function FFVVHubPage() {
 
   const cards = [
     {
-      title: 'Ventas FFVV',
+      title: 'Ventas Tiendas',
       description: 'Acceso al módulo principal de registro, tracking y gestión de ventas del canal.',
       icon: Briefcase,
-      action: () => router.push('/ventas-ffvv'),
+      action: () => router.push('/ventas-tiendas'),
       bgIcon: 'linear-gradient(135deg, rgba(59,130,246,0.15) 0%, rgba(37,99,235,0.2) 100%)',
       colorIcon: '#3b82f6',
       isMain: true
@@ -48,7 +48,7 @@ export default function FFVVHubPage() {
       title: 'Ofertas Ti',
       description: 'Repositorio de promociones y ofertas especiales del portafolio TI.',
       icon: Smartphone,
-      action: () => router.push('/ffvv/ofertas-ti'),
+      action: () => router.push('/tiendas/ofertas-ti'),
       bgIcon: 'linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(5,150,105,0.2) 100%)',
       colorIcon: '#10b981',
       isMain: false
@@ -57,7 +57,7 @@ export default function FFVVHubPage() {
       title: 'Ofertas TMA',
       description: 'Promociones, subsidios y campañas exclusivas del entorno TMA.',
       icon: ShieldCheck,
-      action: () => router.push('/ffvv/ofertas-tma'),
+      action: () => router.push('/tiendas/ofertas-tma'),
       bgIcon: 'linear-gradient(135deg, rgba(168,85,247,0.15) 0%, rgba(147,51,234,0.2) 100%)',
       colorIcon: '#a855f7',
       isMain: false
@@ -66,7 +66,7 @@ export default function FFVVHubPage() {
       title: 'Ofertas Micro',
       description: 'Iniciativas y terminales subvencionados para la división Micro.',
       icon: Tag,
-      action: () => router.push('/ffvv/ofertas-micro'),
+      action: () => router.push('/tiendas/ofertas-micro'),
       bgIcon: 'linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(220,38,38,0.2) 100%)',
       colorIcon: '#ef4444',
       isMain: false
@@ -75,7 +75,7 @@ export default function FFVVHubPage() {
       title: 'Evolución Visitas Gevico',
       description: 'Estado del cumplimento mensual/trimestral de visitas, cobertura, agenda y progresión en clientes B2B.',
       icon: Target,
-      action: () => router.push('/cumplimiento-telefonica?from=ffvv'),
+      action: () => router.push('/cumplimiento-telefonica?from=tiendas'),
       bgIcon: 'linear-gradient(135deg, rgba(139,92,246,0.15) 0%, rgba(124,58,237,0.2) 100%)',
       colorIcon: '#8b5cf6',
       isMain: false
@@ -93,16 +93,16 @@ export default function FFVVHubPage() {
       title: 'Condiciones, Comisiones Extras del mes y Penalizaciones',
       description: 'Consulta de condiciones, bonificaciones especiales y notas asignadas a este periodo.',
       icon: Target,
-      action: () => router.push('/ffvv/condiciones-mensuales'),
+      action: () => router.push('/tiendas/condiciones-mensuales'),
       bgIcon: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.2) 100%)',
       colorIcon: '#f59e0b',
       isMain: false
     },
     {
-      title: 'Condiciones y Extras FFVV',
+      title: 'Condiciones y Extras Tiendas',
       description: 'Consultar tabla de objetivos, comisiones y KPIs extendidos',
       icon: Briefcase,
-      action: () => router.push('/ffvv/condiciones-plus'),
+      action: () => router.push('/tiendas/condiciones-plus'),
       bgIcon: 'linear-gradient(135deg, rgba(0, 173, 239, 0.15) 0%, rgba(0, 150, 200, 0.2) 100%)',
       colorIcon: 'var(--mercedes-cyan)',
       isMain: false
@@ -138,13 +138,13 @@ export default function FFVVHubPage() {
   const saveOrder = () => {
     // Si aún no hay custom, construimos uno basado en el array oficial actual
     const currentOrder = cardOrder.length > 0 ? cardOrder : cards.map(c => c.title);
-    localStorage.setItem('ffvv_hub_card_order', JSON.stringify(currentOrder));
+    localStorage.setItem('tiendas_hub_card_order', JSON.stringify(currentOrder));
     setIsEditMode(false);
   }
 
   const cancelEdit = () => {
     // Restaurar desde local storage
-    const savedOrder = localStorage.getItem('ffvv_hub_card_order')
+    const savedOrder = localStorage.getItem('tiendas_hub_card_order')
     if (savedOrder) setCardOrder(JSON.parse(savedOrder))
     else setCardOrder([])
     setIsEditMode(false)
@@ -234,7 +234,7 @@ export default function FFVVHubPage() {
                   <div style={{ background: 'var(--text-main)', color: 'var(--bg-card)', padding: 10, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 16px -4px rgba(15,23,42,0.3)' }}>
                       <Briefcase size={22} />
                   </div> 
-                  Hub Comercial FFVV
+                  Hub Comercial Tiendas
               </h1>
               <p className="ds-subtitle" style={{ margin: 0, color: 'var(--text-muted)', fontWeight: 500, maxWidth: 650 }}>
                   Tablero de control federado. Gestiona el tracking de Fuerza de Ventas, monitoriza comisiones e implementa subsidios.
