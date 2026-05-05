@@ -6,8 +6,8 @@ import Link from 'next/link'
 import { getDefaultPermissions } from '@/lib/permissions'
 import { PageHeader } from '@/components/PageHeader'
 export const MODULE_DEFS = [
-  { id: 'MODULE_FFVV', label: 'Ventas FFVV (Operaciones)' },
-  { id: 'MODULE_JEFE_FFVV', label: 'Jefe FFVV (Sustituye a SS)' },
+  { id: 'MODULE_FFVV', label: 'Ventas Tiendas (Operaciones)' },
+  { id: 'MODULE_JEFE_FFVV', label: 'Jefe Tiendas (Sustituye a SS)' },
   { id: 'MODULE_BACK_OFFICE', label: 'Back Office (Grabaciones)' },
   { id: 'MODULE_CUMPLIMIENTO', label: 'Progresión y Agenda B2B' },
   { id: 'MODULE_COMISIONES', label: 'Comisiones de Equipo' },

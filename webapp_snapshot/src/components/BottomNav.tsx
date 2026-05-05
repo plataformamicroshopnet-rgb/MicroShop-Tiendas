@@ -39,8 +39,8 @@ export default function BottomNav() {
 
   const navItems: NavItem[] = [
     { name: 'Inicio', href: '/', icon: LayoutDashboard, permission: 'MODULE_FFVV', matchPaths: ['/'] },
-    { name: 'FFVV Hub', href: '/ffvv', icon: Briefcase, permission: 'MODULE_FFVV', matchPaths: ['/ffvv'] },
-    { name: 'Jefe FFVV', href: '/seguimiento-ventas', icon: LineChart, permission: 'MODULE_JEFE_FFVV', matchPaths: ['/seguimiento-ventas'] },
+    { name: 'Tiendas Hub', href: '/ffvv', icon: Briefcase, permission: 'MODULE_FFVV', matchPaths: ['/ffvv'] },
+    { name: 'Jefe Tiendas', href: '/seguimiento-ventas', icon: LineChart, permission: 'MODULE_JEFE_FFVV', matchPaths: ['/seguimiento-ventas'] },
     { name: 'Back Office', href: '/back-office', icon: FolderOpen, permission: 'MODULE_BACK_OFFICE', matchPaths: ['/back-office'] },
     { name: 'Liquidaciones', href: '/liquidacion', icon: Euro, permission: 'MODULE_LIQUIDACION', matchPaths: ['/liquidacion'] },
     { name: 'Dirección', href: '/direccion-ffvv', icon: Building2, permission: 'MODULE_DIRECCION', matchPaths: ['/direccion-ffvv'] },

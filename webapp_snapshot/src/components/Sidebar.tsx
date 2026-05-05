@@ -44,11 +44,11 @@ export default function Sidebar() {
 
   const navItems: NavItem[] = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard, permission: 'MODULE_FFVV' },
-    { name: 'FFVV Hub', href: '/ffvv', icon: Briefcase, permission: 'MODULE_FFVV' },
-    { name: 'Jefe FFVV', href: '/seguimiento-ventas', icon: LineChart, permission: 'MODULE_JEFE_FFVV' },
+    { name: 'Tiendas Hub', href: '/ffvv', icon: Briefcase, permission: 'MODULE_FFVV' },
+    { name: 'Jefe Tiendas', href: '/seguimiento-ventas', icon: LineChart, permission: 'MODULE_JEFE_FFVV' },
     { name: 'Back Office', href: '/back-office', icon: FolderOpen, permission: 'MODULE_BACK_OFFICE' },
     { name: 'Liquidaciones', href: '/liquidacion', icon: Euro, permission: 'MODULE_LIQUIDACION' },
-    { name: 'Dirección FFVV', href: '/direccion-ffvv', icon: Building2, permission: 'MODULE_DIRECCION' },
+    { name: 'Dirección Tiendas', href: '/direccion-ffvv', icon: Building2, permission: 'MODULE_DIRECCION' },
     { name: 'Admin', href: '/admin', icon: Settings, permission: 'MODULE_ADMIN' },
   ]
 
@@ -57,7 +57,7 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
-        <h2>MicroShop <span className="text-cyan">FFVV</span></h2>
+        <h2>MicroShop <span className="text-cyan">Tiendas</span></h2>
       </div>
       <nav className="sidebar-nav">
         {navItems.filter(item => {

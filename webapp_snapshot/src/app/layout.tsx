@@ -7,7 +7,7 @@ import { PeriodProvider } from '@/components/PeriodProvider'
 import ClientTracker from '@/components/ClientTracker'
 
 export const metadata: Metadata = {
-  title: 'MicroShop FFVV',
+  title: 'MicroShop Tiendas',
   description: 'Sistema Profesional de Gestión de Ventas',
   icons: {
     icon: '/icon.png',
@@ -35,7 +35,7 @@ export default function RootLayout({
               <Sidebar />
               <main className="main-content">
                 <div className="topbar">
-                  <span style={{ fontWeight: 800, fontSize: 18 }}>MicroShop <span style={{ color: 'var(--mercedes-cyan)' }}>FFVV</span></span>
+                  <span style={{ fontWeight: 800, fontSize: 18 }}>MicroShop <span style={{ color: 'var(--mercedes-cyan)' }}>Tiendas</span></span>
                 </div>
                 {children}
               </main>

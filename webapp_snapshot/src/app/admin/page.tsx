@@ -30,7 +30,7 @@ export default function AdminDashboardPage() {
 
   const cards = [
     {
-      title: 'Condiciones y Extras FFVV',
+      title: 'Condiciones y Extras Tiendas',
       description: 'Configurar tabla de objetivos, comisiones y KPIs extendidos',
       icon: Briefcase,
       action: () => router.push('/admin/condiciones-plus'),
