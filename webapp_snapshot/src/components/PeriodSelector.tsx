@@ -1,0 +1,176 @@
+'use client'
+
+import React, { useEffect, useState } from 'react'
+import { Calendar } from 'lucide-react'
+import { usePeriod } from './PeriodProvider'
+import { can, canView } from '@/lib/permissions'
+import { usePathname } from 'next/navigation'
+
+export function PeriodSelector() {
+  const { activePeriodKey, setActivePeriodKey, availablePeriods, isLoadingPeriods } = usePeriod()
+  const [user, setUser] = useState<any>(null)
+  const pathname = usePathname()
+
+  useEffect(() => {
+    if (pathname !== '/login') {
+      fetch('/api/auth/me')
+        .then(res => res.json())
+        .then(data => {
+          if (data.authenticated) {
+            setUser(data.user)
+          }
+        })
+        .catch(err => console.error("Error fetching auth:", err))
+    }
+  }, [pathname])
+
+  if (pathname === '/login' || !user || isLoadingPeriods) return null
+
+  // Restricciones de Visibilidad de la Fase C1 (Permitimos a quienes tienen permiso de lectura o edición de módulos compatibles)
+  const canSeeSelector = canView(user, 'MODULE_FFVV') || canView(user, 'MODULE_CUMPLIMIENTO') || canView(user, 'MODULE_BACK_OFFICE') || canView(user, 'MODULE_ADMIN') || canView(user, 'MODULE_JEFE_FFVV');
+  if (!canSeeSelector) return null
+
+  // Restricciones de Selección de Periodos Reales de la BD
+  // Si no hay periodos en la DB, mostramos al menos el actual por defecto
+  const renderPeriods = availablePeriods.length > 0 
+    ? availablePeriods 
+    : [{ period_key: activePeriodKey, name: 'Mes Actual (Generado)' }]
+
+  const formatPeriodName = (key: string, name?: string | null) => {
+    if (name) return name
+    const [year, month] = key.split('_')
+    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+    return `${months[parseInt(month) - 1]} ${year}`
+  }
+
+  // Identificar el status visualmente
+  const currentSelectedPeriod = availablePeriods.find(p => p.period_key === activePeriodKey)
+  const isCurrentlyActive = currentSelectedPeriod?.status === 'ACTIVE'
+
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{__html: `
+        .period-selector-wrapper {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: var(--bg-card);
+          border: 1px solid var(--border-light);
+          box-shadow: 0 4px 10px -2px rgba(0,0,0,0.1);
+
+          /* Mobile: Circular Button */
+          position: relative;
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          padding: 0;
+          gap: 0;
+          transition: all 0.2s ease;
+        }
+
+        .period-selector-select {
+          /* Mobile: Invisible Hit Area overlayting the circle */
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          opacity: 0;
+          cursor: pointer;
+          -webkit-appearance: none;
+          -moz-appearance: none;
+          appearance: none;
+          z-index: 10;
+        }
+
+        .period-selector-icon {
+          width: 18px;
+          height: 18px;
+        }
+
+        /* Mobile: Badge dot top right */
+        .period-selector-dot {
+          position: absolute;
+          top: -2px;
+          right: -2px;
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          border: 2px solid var(--bg-card);
+          z-index: 5;
+        }
+        
+        @media (min-width: 768px) {
+          .period-selector-wrapper {
+            position: static;
+            width: auto;
+            height: auto;
+            border-radius: 10px;
+            padding: 6px 12px;
+            gap: 8px;
+            box-shadow: 0 2px 6px -1px rgba(0,0,0,0.05);
+          }
+          .period-selector-select {
+            /* Desktop: Restore visible select natively */
+            position: static;
+            width: auto;
+            height: auto;
+            opacity: 1;
+            z-index: auto;
+            background: transparent;
+            color: var(--text-main);
+            border: none;
+            outline: none;
+            font-size: 14px;
+            font-weight: 700;
+            padding-right: 12px;
+            background-image: linear-gradient(45deg, transparent 50%, var(--text-main) 50%), linear-gradient(135deg, var(--text-main) 50%, transparent 50%);
+            background-position: calc(100% - 4px) calc(1em + 0px), calc(100% - 0px) calc(1em + 0px);
+            background-size: 4px 4px, 4px 4px;
+            background-repeat: no-repeat;
+          }
+          .period-selector-icon {
+            width: 16px;
+            height: 16px;
+          }
+          .period-selector-dot {
+            position: static;
+            width: 8px;
+            height: 8px;
+            border: none;
+            margin-right: 2px;
+          }
+        }
+      `}} />
+      <div className="period-selector-wrapper">
+        {/* Indicador visual de estado temporal (ACTIVE vs HISTORIC_EDITABLE) */}
+        <div 
+          className="period-selector-dot"
+          title={isCurrentlyActive ? "Periodo de Trabajo: ACTIVO" : "Periodo de Trabajo: HISTÓRICO"}
+          style={{
+            background: isCurrentlyActive ? '#34C759' : '#8E8E93',
+            boxShadow: isCurrentlyActive ? '0 0 6px rgba(52, 199, 89, 0.6)' : 'none',
+          }}
+        />
+        <Calendar className="period-selector-icon" color="var(--text-main)" />
+        <select 
+          className="period-selector-select"
+          value={activePeriodKey}
+          onChange={(e) => setActivePeriodKey(e.target.value)}
+        >
+          {renderPeriods.map(p => (
+            <option key={p.period_key} value={p.period_key} style={{ color: 'var(--text-main)' }}>
+              {formatPeriodName(p.period_key, (p as any).name)}
+            </option>
+          ))}
+          {/* Asegurar que el mes actual nativo se pueda elegir si aún no existe en DB */}
+          {!renderPeriods.find(p => p.period_key === activePeriodKey) && (
+            <option value={activePeriodKey} style={{ color: 'var(--text-main)' }}>
+              {formatPeriodName(activePeriodKey)}
+            </option>
+          )}
+        </select>
+      </div>
+    </>
+  )
+}

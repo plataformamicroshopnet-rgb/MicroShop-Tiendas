@@ -1,0 +1,478 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model WorkPeriod {
+  id         String   @id @default(uuid())
+  period_key String   @unique // Ej: "2026_03"
+  year       Int
+  month      Int
+  status     String   @default("DRAFT") // DRAFT, ACTIVE, HISTORIC
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Reglas de Negocio del Periodo (Fase Crítica)
+  pymeMultiplier Float @default(5)
+  tramo1Limit    Float @default(50)
+  tramo2Limit    Float @default(80)
+  tramo3Limit    Float @default(100)
+
+  // Umbrales de Cumplimiento de Visitas (Fase 3 - Visitas)
+  visitasM1Contactos Float @default(25)
+  visitasM1Visitas   Float @default(10)
+  visitasM2Contactos Float @default(55)
+  visitasM2Visitas   Float @default(30)
+  visitasM3Contactos Float @default(90)
+  visitasM3Visitas   Float @default(50)
+
+  objectives       Objective[]
+  catalogs         ProductCatalog[]
+  importePyme    ImportePyme[]
+  importePlus    ImportePlus[]
+  sales            Sale[]
+  extraRules       ExtraRule[]
+  extraAssignments ExtraAssignment[]
+
+  @@unique([year, month])
+}
+
+model User {
+  id              String   @id @default(uuid())
+  username        String   @unique
+  password        String
+  role            String
+  permissions     String // JSON stringified array of permissions
+  codigoComercial String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ProductCatalog {
+  id        String @id @default(uuid())
+  categoria String
+  producto  String
+  mensual   String
+  anual     String
+
+  validFrom String? // Formato: "DD/MM/YYYY"
+  validTo   String? // Formato: "DD/MM/YYYY"
+
+  periodId String?
+  period   WorkPeriod? @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Sale {
+  id            String  @id @default(uuid())
+  sheet         String // "OP", "Venta Fija", or "Venta Móvil" to maintain backward compatibility
+  vendedor      String
+  fecha         String // formatted DD/MM/YYYY
+  codigo        String?
+  producto      String?
+  nif           String?
+  nombreCliente String?
+  potencial     String?
+  telf          String?
+  pendiente     String?
+  anulado       String?
+  anotaciones   String?
+  grupo         String?
+  cuota         Float?
+  detalle       String?
+
+  periodId String?
+  period   WorkPeriod? @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Objective {
+  id      String  @id @default(uuid())
+  profile String // "PYME" or "CAPTADOR"
+  month   String // "YYYYMM"
+  objKey  String // The specific objective name/key
+  value   Float
+  grupo   String? // Grupo name assignment
+
+  periodId String?
+  period   WorkPeriod? @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model CondicionPlus {
+  id                String   @id @default(uuid())
+  concepto          String
+  importeObj1       Float    @default(0)
+  importeObj2       Float    @default(0)
+  extrasTodaEmpresa Float    @default(0)
+  objTodaEmpresa    Float    @default(0)
+  objetivo1         Float    @default(0)
+  objetivo2         Float    @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model ImportePyme {
+  id                          String  @id @default(uuid())
+  concepto                    String // BLOQUES DE COBRO PYMES
+  objetivoUds                 Float? // OBJETIVO UDS / €
+  totalObjetivos              Float? // Total Objetivos manual/calc
+  objetivoPlus100             Float? // Objetivo todo Plus al 100%
+  comisionNacionalMenos50     Float? // Objetivo <50% (FD 45%)
+  comisionNacionalEntre50Y80  Float? // Objetivo >=50% <80% (FD -3%)
+  comisionNacionalEntre80Y100 Float? // Objetivo >=80% =<100% (FD -3%)
+  comisionNacionalMas100      Float? // Objetivo >100% (FD -3%) Maximo 120%
+  operacionesAsignadas        String? // Comma mapping string
+  grupo                       String? // Grupo de bloques
+  isPercentage                Boolean @default(false)
+
+  periodId String?
+  period   WorkPeriod? @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ImportePlus {
+  id                          String  @id @default(uuid())
+  concepto                    String // BLOQUES DE COBRO PLUS
+  objetivoUds                 Float? // OBJETIVO UDS / €
+  totalObjetivos              Float? // Total Objetivos manual/calc
+  objetivoPlus100             Float? // Objetivo todo Plus al 100%
+  comisionNacionalMenos50     Float? // Objetivo <50% (FD 45%)
+  comisionNacionalEntre50Y80  Float? // Objetivo >=50% <80% (FD -3%)
+  comisionNacionalEntre80Y100 Float? // Objetivo >=80% =<100% (FD -3%)
+  comisionNacionalMas100      Float? // Objetivo >100% (FD -3%) Maximo 120%
+  operacionesAsignadas        String? // Comma mapping string
+  grupo                       String? // Grupo de bloques
+  isPercentage                Boolean @default(false)
+
+  periodId String?
+  period   WorkPeriod? @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AgendaEntry {
+  id              String   @id @default(uuid())
+  codigoComercial String
+  fecha           DateTime
+
+  ventas  Int @default(0)
+  visitas Int @default(0)
+  teams   Int @default(0)
+
+  estado        String  @default("ACTIVO")
+  observaciones String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([codigoComercial, fecha])
+  @@index([fecha])
+}
+
+model Magazine {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  month       Int
+  year        Int
+  description String?
+  pdfUrl      String
+  coverUrl    String?
+  isPublished Boolean  @default(false)
+  isFeatured  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  views MagazineView[]
+}
+
+model MagazineView {
+  id         String   @id @default(cuid())
+  magazineId String
+  userId     String
+  openedAt   DateTime @default(now())
+  pageViews  String? // Storing stringified JSON
+
+  magazine Magazine @relation(fields: [magazineId], references: [id], onDelete: Cascade)
+}
+
+// -----------------------------------------------------------------------------
+// Seguimiento Diario FFVV (Dashboard)
+// -----------------------------------------------------------------------------
+
+model TrackingPeriod {
+  id     String @id @default(cuid())
+  month  Int
+  year   Int
+  status String @default("OPEN") // OPEN o CLOSED
+
+  groups TrackingGroup[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  @@unique([month, year])
+}
+
+model TrackingGroup {
+  id       String         @id @default(cuid())
+  periodId String
+  period   TrackingPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  name  String // ej: "FD", "BAF + 5G"
+  order Int
+
+  // Opcionales para los resúmenes de Pyme/Básico (inputs manuales)
+  pymeVal   Float?
+  basicoVal Float?
+
+  rows TrackingRow[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+}
+
+model TrackingRow {
+  id      String        @id @default(cuid())
+  groupId String
+  group   TrackingGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  comercialName  String
+  objectiveMonth Float  @default(0)
+  week1          Float  @default(0)
+  week2          Float  @default(0)
+  week3          Float  @default(0)
+  week4          Float  @default(0)
+  order          Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+}
+
+// -----------------------------------------------------------------------------
+// Condiciones, Comisiones Extras y Penalizaciones (Módulo Editorial)
+// -----------------------------------------------------------------------------
+
+model MonthlyCondition {
+  id        String   @id @default(cuid())
+  periodKey String   // Ej: "2026_03"
+  type      String   // "CONDICION", "COMISION_EXTRA", "PENALIZACION", "NOTA"
+  text      String
+  amount    String?  // Ej: "+200€", "-50€", etc.
+  order     Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([periodKey])
+}
+
+// -----------------------------------------------------------------------------
+// Extras Plus y Básico (Incentivos Automáticos y Manuales)
+// -----------------------------------------------------------------------------
+
+model ExtraRule {
+  id                  String   @id @default(uuid())
+  name                String
+  channelType         String   // "PLUS" | "BASICO"
+  description         String?
+  combinationLabel    String   // Ej: "FD + TMA"
+  requiredGroups      String   // JSON string array: '["FD", "TMA"]'
+  payoutMode          String   // "ONCE_PER_CUSTOMER" | "PER_VALID_COMBINATION"
+  sameClientRequired  Boolean  @default(true)
+  sameSellerRequired  Boolean  @default(true)
+  minOccurrences      Int      @default(1)
+  maxPayoutUnits      Int?     // Tope máximo de veces por comercial/cliente
+  telecomRewardAmount Float    @default(0) // Importe Telefónica
+  sellerRewardAmount  Float    @default(0) // Importe Comercial
+  validFrom           DateTime?
+  validTo             DateTime?
+  isActive            Boolean  @default(true)
+  
+  periodId            String?
+  period              WorkPeriod? @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  assignments         ExtraAssignment[]
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model ExtraAssignment {
+  id                  String   @id @default(uuid())
+  ruleId              String?  // Null si es Manual
+  rule                ExtraRule? @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+  periodId            String
+  period              WorkPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  sourceType          String   // "AUTOMATIC" | "MANUAL"
+  seller              String
+  sellerId            String?
+  customerNif         String?
+  customerName        String?
+  
+  triggerKey          String   @unique // Hash anti-duplicados
+  triggerSummary      String?  // Ej: "Regla FD + TMA aplicada (Ventas: X, Y)"
+  sourceSaleIds       String?  // JSON string array con los IDs reales de las ventas de la tabla Sale
+  
+  telecomRewardAmount Float
+  sellerRewardAmount  Float
+
+  status              String   @default("PENDING") // PENDING | LIQUIDATED | CANCELLED
+  notes               String?
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  @@index([periodId, seller])
+}
+
+model ManualExtraTemplate {
+  id                  String   @id @default(uuid())
+  name                String
+  channelType         String   // "PLUS" | "BASICO"
+  defaultAmount       Float
+  description         String?
+  isActive            Boolean  @default(true)
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+
+
+// -----------------------------------------------------------------------------
+// Rastreo y Auditoria de Usuarios (Tracking Log)
+// -----------------------------------------------------------------------------
+
+model UserActivity {
+  id           String   @id @default(cuid())
+  userId       String?
+  username     String?
+  role         String?
+  path         String
+  action       String?  @default("VIEW") // VIEW, CREATE, UPDATE, DELETE, ERROR
+  device       String?  @default("DESKTOP") // DESKTOP, MOBILE
+  errorDetails String?
+  createdAt    DateTime @default(now())
+
+  @@index([username])
+  @@index([createdAt])
+}
+
+// -----------------------------------------------------------------------------
+// Historiales Acumulados Mensuales (Trazabilidad a largo plazo)
+// -----------------------------------------------------------------------------
+
+model TopRouteHistory {
+  id        String   @id @default(cuid())
+  month     Int      
+  year      Int      
+  path      String   
+  views     Int      
+  createdAt DateTime @default(now())
+
+  @@unique([month, year, path]) 
+}
+
+model TopUserHistory {
+  id        String   @id @default(cuid())
+  month     Int      
+  year      Int      
+  username  String   
+  sessions  Int      // Visitas unicas al sistema (estimado)
+  actions   Int      // Total de clics registrados
+  createdAt DateTime @default(now())
+
+  @@unique([month, year, username]) 
+}
+
+// -----------------------------------------------------------------------------
+// Libro Mayor y Conciliaciones (Aislado)
+// -----------------------------------------------------------------------------
+
+model VentaLibroMayor {
+  id               String   @id @default(cuid())
+  fechaVenta       DateTime
+  origen           String
+  nifCliente       String
+  producto         String
+  comisionEsperada Float
+  estadoPago       String   @default("PENDIENTE") // PENDIENTE, PAGADO, RECLAMACION
+  
+  // Relación con Liquidación
+  liquidacionId    String?
+  liquidacion      LiquidacionTelef? @relation(fields: [liquidacionId], references: [id], onDelete: SetNull)
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([nifCliente])
+}
+
+model RemesaTelefonica {
+  id              String   @id @default(cuid())
+  nombreArchivo   String
+  mesLiquidacion  String   // ej. '2026-03'
+  concepto        String?
+  fechaSubida     DateTime @default(now())
+  totalImporte    Float
+  totalLineas     Int
+  esTotal         Boolean  @default(false)
+
+  liquidaciones   LiquidacionTelef[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model LiquidacionTelef {
+  id                String   @id @default(cuid())
+  fechaLiquidacion  DateTime
+  nifCliente        String
+  productoLiquidado String
+  importePagado     Float
+
+  tienda            String?
+  comercial         String?
+
+  // Filtros Extra - Auditoría de Tiendas (MEXCAL)
+  movimiento        String?
+  concepto          String?
+  resImagen         String?
+  resFormacion      String?
+  resCalidad        String?
+  penalizacion      String?
+
+  // Relacion documental con el archivo subido en Lote
+  remesaId          String?
+  remesa            RemesaTelefonica? @relation(fields: [remesaId], references: [id], onDelete: Cascade)
+  
+  // Una liquidación puede englobar varias ventas
+  ventasVinculadas  VentaLibroMayor[]
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([nifCliente])
+}

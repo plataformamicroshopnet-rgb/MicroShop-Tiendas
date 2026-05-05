@@ -1,0 +1,58 @@
+[
+  {
+    "id": "cmn3i3idm00deq592hyepcsof",
+    "title": "Revista Marzo 2026",
+    "slug": "revista-marzo-2026",
+    "month": 3,
+    "year": 2026,
+    "description": null,
+    "pdfUrl": "/revistas_uploads/1774289368654_Revista_Marzo_2026.pdf",
+    "coverUrl": "/revistas_uploads/1774289391855_Portada_Marzo_2026.png",
+    "isPublished": true,
+    "isFeatured": true,
+    "createdAt": "2026-03-23T18:09:59.243Z",
+    "updatedAt": "2026-03-23T18:10:31.063Z"
+  },
+  {
+    "id": "cmn3ia7b200dfq592oigwsrvh",
+    "title": "Revista Enero 2026",
+    "slug": "revista-enero-2026",
+    "month": 3,
+    "year": 2026,
+    "description": null,
+    "pdfUrl": "/revistas_uploads/1774289662799_Revista_Enero_2026.pdf",
+    "coverUrl": "/revistas_uploads/1774289671328_Portada_Enero_2026.png",
+    "isPublished": true,
+    "isFeatured": false,
+    "createdAt": "2026-03-23T18:15:11.486Z",
+    "updatedAt": "2026-03-23T18:15:15.763Z"
+  },
+  {
+    "id": "cmn3iayyd00dgq592zkljai2n",
+    "title": "Revista Noviembre 2025",
+    "slug": "revista-noviembre-2025",
+    "month": 3,
+    "year": 2026,
+    "description": null,
+    "pdfUrl": "/revistas_uploads/1774289726454_Revista_Noviembre_2025.pdf",
+    "coverUrl": "/revistas_uploads/1774289743349_Portada_Noviembre_2025.png",
+    "isPublished": true,
+    "isFeatured": false,
+    "createdAt": "2026-03-23T18:15:47.317Z",
+    "updatedAt": "2026-03-23T18:15:51.309Z"
+  },
+  {
+    "id": "cmn6dtk0m0000knp514hk04v3",
+    "title": "Enero borrar",
+    "slug": "enero-borrar",
+    "month": 3,
+    "year": 2026,
+    "description": null,
+    "pdfUrl": "/revistas_uploads/1774463593897_Revista_Enero_2026.pdf",
+    "coverUrl": "/revistas_uploads/1774463611829_Portada_Enero_2026.png",
+    "isPublished": true,
+    "isFeatured": false,
+    "createdAt": "2026-03-25T18:33:34.870Z",
+    "updatedAt": "2026-03-25T18:33:40.391Z"
+  }
+]

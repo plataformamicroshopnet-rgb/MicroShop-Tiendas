@@ -1,0 +1,92 @@
+[
+  {
+    "id": "227eca97-2d29-4491-97ad-57ce592823fc",
+    "username": "Admin",
+    "password": "adminpassword",
+    "role": "ADMIN",
+    "permissions": "[\"MODULE_FFVV\",\"MODULE_JEFE_FFVV\",\"MODULE_BACK_OFFICE\",\"MODULE_CUMPLIMIENTO\",\"MODULE_COMISIONES\",\"MODULE_LIQUIDACION\",\"MODULE_DIRECCION\",\"MODULE_ADMIN\",\"CREATE_SALES\",\"EDIT_SALES\",\"CANCEL_SALES\",\"PRINT\",\"EXPORT_EXCEL\",\"MANAGE_CATALOG\",\"CLOSE_MONTH\",\"VIEW_ALL_FINANCIALS\",\"MANAGE_MAGAZINES\"]",
+    "codigoComercial": null,
+    "createdAt": "2026-03-15T17:14:33.375Z",
+    "updatedAt": "2026-03-22T18:05:11.965Z"
+  },
+  {
+    "id": "efa9a11c-6564-4270-a4f7-f70c2eb52fb2",
+    "username": "Diego",
+    "password": "passdiego",
+    "role": "JEFE DE VENTAS",
+    "permissions": "[\"MODULE_JEFE_FFVV\",\"MODULE_CUMPLIMIENTO\",\"MODULE_COMISIONES\",\"PRINT\",\"EXPORT_EXCEL\",\"MANAGE_MAGAZINES\",\"BATCH_OVERRIDE\",\"MODULE_CUMPLIMIENTO:edit\",\"MODULE_CUMPLIMIENTO:view\",\"MODULE_DIRECCION:view\",\"MODULE_DIRECCION\",\"MODULE_FFVV:view\",\"MODULE_FFVV\"]",
+    "codigoComercial": null,
+    "createdAt": "2026-03-15T17:14:33.384Z",
+    "updatedAt": "2026-03-31T19:36:16.065Z"
+  },
+  {
+    "id": "9c0241a3-8378-4c29-9bc7-3c8976f8ec57",
+    "username": "Luis",
+    "password": "passluis",
+    "role": "COMERCIAL CAPTADOR",
+    "permissions": "[\"MODULE_FFVV\",\"MODULE_CUMPLIMIENTO\",\"PRINT\",\"MODULE_COMISIONES\",\"MANAGE_MAGAZINES\",\"EXPORT_EXCEL\"]",
+    "codigoComercial": "Básico XCU",
+    "createdAt": "2026-03-15T17:14:33.391Z",
+    "updatedAt": "2026-03-29T14:48:31.580Z"
+  },
+  {
+    "id": "592a35d7-467b-4e4a-8e43-1b7ed9d0c0dd",
+    "username": "Elena",
+    "password": "passelena",
+    "role": "COMERCIAL PYME",
+    "permissions": "[\"MODULE_FFVV\",\"MODULE_CUMPLIMIENTO\",\"PRINT\",\"MODULE_COMISIONES\",\"MANAGE_MAGAZINES\"]",
+    "codigoComercial": "Plus 1SK",
+    "createdAt": "2026-03-15T17:14:33.398Z",
+    "updatedAt": "2026-03-26T07:09:42.522Z"
+  },
+  {
+    "id": "2b175d27-9438-4c21-ab61-6eb31d58e1d1",
+    "username": "Javier",
+    "password": "passjavier",
+    "role": "COMERCIAL PYME",
+    "permissions": "[\"MODULE_FFVV\",\"MODULE_CUMPLIMIENTO\",\"PRINT\",\"MODULE_COMISIONES\",\"EXPORT_EXCEL\",\"MANAGE_MAGAZINES\",\"MANAGE_CATALOG:view\",\"MANAGE_CATALOG\",\"MANAGE_MAGAZINES:view\"]",
+    "codigoComercial": "Plus NFG",
+    "createdAt": "2026-03-15T17:14:33.404Z",
+    "updatedAt": "2026-03-30T18:25:32.667Z"
+  },
+  {
+    "id": "21bc10b6-a300-4d7d-9f80-898c619109f7",
+    "username": "Juan Carlos",
+    "password": "passjuancarlos",
+    "role": "COMERCIAL PYME",
+    "permissions": "[\"MODULE_FFVV\",\"MODULE_CUMPLIMIENTO\",\"PRINT\",\"MODULE_COMISIONES\",\"EXPORT_EXCEL\",\"MANAGE_MAGAZINES\",\"MANAGE_CATALOG:view\",\"MANAGE_CATALOG\"]",
+    "codigoComercial": "Plus N7D",
+    "createdAt": "2026-03-15T17:14:33.411Z",
+    "updatedAt": "2026-03-30T18:25:59.969Z"
+  },
+  {
+    "id": "ebf0bd5e-e0c0-4722-9a39-7cf09a687911",
+    "username": "Belén",
+    "password": "passbelen",
+    "role": "COMERCIAL PYME",
+    "permissions": "[\"MODULE_FFVV\",\"MODULE_CUMPLIMIENTO\",\"PRINT\",\"MODULE_COMISIONES\",\"EXPORT_EXCEL\",\"MANAGE_MAGAZINES\"]",
+    "codigoComercial": "Plus K2Z",
+    "createdAt": "2026-03-15T17:14:33.419Z",
+    "updatedAt": "2026-03-22T18:24:30.641Z"
+  },
+  {
+    "id": "48037e2d-04c4-42c5-bac2-f94e507289fd",
+    "username": "Maite",
+    "password": "passmaite",
+    "role": "COMERCIAL PYME",
+    "permissions": "[\"MODULE_FFVV\",\"MODULE_CUMPLIMIENTO\",\"PRINT\",\"MODULE_COMISIONES\",\"EXPORT_EXCEL\",\"MANAGE_MAGAZINES:view\",\"MANAGE_MAGAZINES\"]",
+    "codigoComercial": "Plus ZF7",
+    "createdAt": "2026-03-15T17:14:33.425Z",
+    "updatedAt": "2026-03-31T19:57:05.968Z"
+  },
+  {
+    "id": "4f20647b-0756-48cd-8da2-02d732f8d860",
+    "username": "Cris",
+    "password": "passbackoffice",
+    "role": "BACK OFFICE",
+    "permissions": "[\"MODULE_BACK_OFFICE\",\"MODULE_CUMPLIMIENTO\",\"CANCEL_SALES\",\"PRINT\",\"EXPORT_EXCEL\",\"MODULE_FFVV\",\"MODULE_COMISIONES\",\"MODULE_LIQUIDACION\",\"VIEW_ALL_FINANCIALS\",\"MANAGE_MAGAZINES\",\"MODULE_BACK_OFFICE:edit\",\"MODULE_BACK_OFFICE:view\",\"MODULE_CUMPLIMIENTO:view\",\"MODULE_COMISIONES:view\",\"MODULE_LIQUIDACION:view\",\"MANAGE_MAGAZINES:view\",\"MODULE_FFVV:edit\",\"MODULE_FFVV:view\",\"EDIT_SALES\",\"CREATE_SALES\",\"MODULE_CUMPLIMIENTO:edit\"]",
+    "codigoComercial": null,
+    "createdAt": "2026-03-15T17:14:33.431Z",
+    "updatedAt": "2026-04-03T07:05:40.350Z"
+  }
+]

@@ -1,0 +1,47 @@
+[
+  {
+    "username": "Admin",
+    "role": "ADMIN",
+    "codigo": null
+  },
+  {
+    "username": "Diego",
+    "role": "JEFE DE VENTAS",
+    "codigo": null
+  },
+  {
+    "username": "Luis",
+    "role": "COMERCIAL CAPTADOR",
+    "codigo": "Básico XCU"
+  },
+  {
+    "username": "Elena",
+    "role": "COMERCIAL PYME",
+    "codigo": "Plus 1SK"
+  },
+  {
+    "username": "Javier",
+    "role": "COMERCIAL PYME",
+    "codigo": "Plus NFG"
+  },
+  {
+    "username": "Juan Carlos",
+    "role": "COMERCIAL PYME",
+    "codigo": "Plus N7D"
+  },
+  {
+    "username": "Belén",
+    "role": "COMERCIAL PYME",
+    "codigo": "Plus K2Z"
+  },
+  {
+    "username": "Maite",
+    "role": "COMERCIAL PYME",
+    "codigo": "Plus ZF7"
+  },
+  {
+    "username": "Cris",
+    "role": "BACK OFFICE",
+    "codigo": null
+  }
+]
