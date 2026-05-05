@@ -235,7 +235,7 @@ function CommercialDashboard({ data, activeExtras = [], isComercial }: { data: a
                 <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--medium-gray)' }}>Producto</th>
                 <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--medium-gray)' }}>Nombre del Cliente</th>
                 <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--medium-gray)' }}>NIF</th>
-                <th style={{ padding: '12px 16px', textAlign: 'center', color: 'var(--medium-gray)' }}>Cliente</th>
+
                 <th style={{ padding: '12px 16px', textAlign: 'center', color: 'var(--medium-gray)' }}>Teléfono</th>
                 <th style={{ padding: '12px 16px', textAlign: 'center', color: 'var(--medium-gray)' }}>Pte.</th>
                 <th style={{ padding: '12px 16px', textAlign: 'center', color: 'var(--medium-gray)' }}>Anul.</th>
@@ -252,7 +252,7 @@ function CommercialDashboard({ data, activeExtras = [], isComercial }: { data: a
                   <td style={{ padding: '12px 16px' }}>{sale.producto}</td>
                   <td style={{ padding: '12px 16px' }}>{sale.nombreCliente || '-'}</td>
                   <td style={{ padding: '12px 16px' }}>{sale.nif}</td>
-                  <td style={{ padding: '12px 16px', textAlign: 'center', color: 'var(--medium-gray)' }}>{sale.potencial}</td>
+
                   <td style={{ padding: '12px 16px', textAlign: 'center' }}>{sale.telf}</td>
                   <td style={{ padding: '12px 16px', textAlign: 'center' }}>{sale.pendiente}</td>
                   <td style={{ padding: '12px 16px', textAlign: 'center' }}>{sale.anulado}</td>
@@ -280,7 +280,7 @@ function CommercialDashboard({ data, activeExtras = [], isComercial }: { data: a
                   </td>
                   <td style={{ padding: '12px 16px', color: '#059669' }}>{ex.customerName}</td>
                   <td style={{ padding: '12px 16px', color: '#059669' }}>{ex.customerNif || '-'}</td>
-                  <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669' }}>-</td>
+
                   <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669' }}>-</td>
                   <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669' }}>No</td>
                   <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669' }}>No</td>
@@ -624,11 +624,11 @@ function OperationsContent() {
               Vendedor: s.vendedor || '-',
               Fecha: s.fecha || '-',
               Código: s.codigo || '-',
-              Grupo: s.grupo || '-',
+              Grupo: s.imei || '-',
               Producto: s.producto || '-',
               NombreCliente: s.nombreCliente || '-',
               NIF: s.nif || '-',
-              Cliente: s.potencial ? 'Si' : 'No',
+
               Teléfono: s.telf || '-',
               Pte: s.pendiente === 'Si' && s.anulado !== 'Si' && s.pendiente !== 'Anulado' ? 'Si' : 'No',
               Anulado: (s.anulado === 'Si' || s.pendiente === 'Anulado') ? 'Si' : 'No',
@@ -642,11 +642,11 @@ function OperationsContent() {
               Vendedor: ex.seller || '-',
               Fecha: new Date(ex.createdAt).toLocaleDateString() || '-',
               Código: resolveRawCode(ex),
-              Grupo: 'EXTRA TELEFÓNICA',
+              Grupo: '-',
               Producto: ex.rule?.name || 'Incentivo Manual',
               NombreCliente: ex.customerName || '-',
               NIF: ex.customerNif || '-',
-              Cliente: '-',
+
               Teléfono: '-',
               Pte: 'No',
               Anulado: 'No',
@@ -658,12 +658,12 @@ function OperationsContent() {
       sheet.columns = [
         { header: 'Vendedor', key: 'Vendedor', width: 15 },
         { header: 'Fecha', key: 'Fecha', width: 12 },
-        { header: 'Código', key: 'Código', width: 15 },
-        { header: 'Grupo', key: 'Grupo', width: 15 },
+        { header: 'Tienda', key: 'Código', width: 15 },
+        { header: 'IMEI', key: 'Grupo', width: 20 },
         { header: 'Producto', key: 'Producto', width: 30 },
         { header: 'Nombre Cliente', key: 'NombreCliente', width: 30 },
         { header: 'NIF', key: 'NIF', width: 15 },
-        { header: 'Cliente', key: 'Cliente', width: 10 },
+
         { header: 'Teléfono', key: 'Teléfono', width: 15 },
         { header: 'Pte', key: 'Pte', width: 8 },
         { header: 'Anulado', key: 'Anulado', width: 10 },
@@ -799,12 +799,12 @@ function OperationsContent() {
               <tr style={{ backgroundColor: 'var(--active-bg)', boxShadow: '0 1px 0 var(--table-border)' }}>
                 <th style={{ padding: '16px', textAlign: 'left', color: 'var(--medium-gray)' }}>Vendedor</th>
                 <th style={{ padding: '16px', textAlign: 'left', color: 'var(--medium-gray)' }}>Fecha</th>
-                <th style={{ padding: '16px', textAlign: 'left', color: 'var(--medium-gray)' }}>Código</th>
-                <th style={{ padding: '16px', textAlign: 'left', color: 'var(--medium-gray)' }}>Grupo</th>
+                <th style={{ padding: '16px', textAlign: 'left', color: 'var(--medium-gray)' }}>Tienda</th>
+                <th style={{ padding: '16px', textAlign: 'left', color: 'var(--medium-gray)' }}>IMEI</th>
                 <th style={{ padding: '16px', textAlign: 'left', color: 'var(--medium-gray)' }}>Producto</th>
                 <th style={{ padding: '16px', textAlign: 'left', color: 'var(--medium-gray)' }}>Nombre del Cliente</th>
                 <th style={{ padding: '16px', textAlign: 'left', color: 'var(--medium-gray)' }}>NIF</th>
-                <th style={{ padding: '16px', textAlign: 'center', color: 'var(--medium-gray)' }}>Cliente</th>
+
                 <th style={{ padding: '16px', textAlign: 'center', color: 'var(--medium-gray)' }}>Teléfono</th>
                 <th style={{ padding: '16px', textAlign: 'center', color: 'var(--medium-gray)' }}>Pte.</th>
                 <th style={{ padding: '16px', textAlign: 'center', color: 'var(--medium-gray)' }}>Anul.</th>
@@ -833,7 +833,7 @@ function OperationsContent() {
                       {editingId === sale.id ? <input value={editForm.codigo} onChange={e => handleEditChange('codigo', e.target.value)} style={{ width: 80, padding: 4 }} /> : sale.codigo}
                     </td>
                     <td style={{ padding: '16px', color: 'var(--medium-gray)', fontWeight: 600 }}>
-                      {sale.grupo || '-'}
+                      {editingId === sale.id ? <input value={editForm.imei || ''} onChange={e => handleEditChange('imei', e.target.value)} style={{ width: 120, padding: 4 }} /> : (sale.imei || '-')}
                     </td>
                     <td style={{ padding: '16px' }}>
                       {editingId === sale.id ? <input value={editForm.producto} onChange={e => handleEditChange('producto', e.target.value)} style={{ width: 120, padding: 4 }} /> : sale.producto}
@@ -844,15 +844,7 @@ function OperationsContent() {
                     <td style={{ padding: '16px' }}>
                        {editingId === sale.id ? <input value={editForm.nif} onChange={e => handleEditChange('nif', e.target.value)} style={{ width: 90, padding: 4 }} /> : sale.nif}
                     </td>
-                    <td style={{ padding: '16px', textAlign: 'center', color: 'var(--medium-gray)' }}>
-                      {editingId === sale.id ? (
-                        <select value={editForm.potencial} onChange={e => handleEditChange('potencial', e.target.value)} style={{ padding: 4 }}>
-                          <option value="Si">Si</option>
-                          <option value="No">No</option>
-                          <option value="">-</option>
-                        </select>
-                      ) : sale.potencial}
-                    </td>
+
                     <td style={{ padding: '16px', textAlign: 'center' }}>
                        {editingId === sale.id ? <input value={editForm.telf} onChange={e => handleEditChange('telf', e.target.value)} style={{ width: 90, padding: 4 }} /> : sale.telf}
                     </td>
@@ -924,7 +916,7 @@ function OperationsContent() {
                   <td style={{ padding: '12px 16px', color: '#059669' }}>{ex.customerName}</td>
                   <td style={{ padding: '12px 16px', color: '#059669' }}>{ex.customerNif || '-'}</td>
                   <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669' }}>-</td>
-                  <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669' }}>-</td>
+
                   <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669' }}>No</td>
                   <td style={{ padding: '12px 16px', textAlign: 'center', color: '#059669' }}>No</td>
                   <td style={{ padding: '12px 16px', color: '#059669', fontSize: 12 }}>EXTRA TELEFÓNICA ({resolveRawCode(ex)})</td>

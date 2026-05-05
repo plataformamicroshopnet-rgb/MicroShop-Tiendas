@@ -2,11 +2,12 @@ export const TIENDAS_COMERCIALES: Record<string, string[]> = {
   "Auxiliadora 45": ["Cristina", "Elena", "Gabriel"],
   "Correhuela": ["Carmen"],
   "Villamayor": ["Carlos", "Nuria"],
-  "Béjar": ["Vanesa", "Lara"]
+  "Béjar": ["Vanesa", "Lara"],
+  "O2": ["Marta"]
 };
 
 export const VENDEDORES = [
-  "Cristina", "Elena", "Gabriel", "Carmen", "Carlos", "Nuria", "Vanesa", "Lara"
+  "Cristina", "Elena", "Gabriel", "Carmen", "Carlos", "Nuria", "Vanesa", "Lara", "Marta"
 ];
 
 export const CODIGOS_TRAMITACION = [

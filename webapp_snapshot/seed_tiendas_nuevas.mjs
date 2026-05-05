@@ -20,7 +20,8 @@ async function main() {
     { name: 'Carlos', pindi: 'PINDI0023996', tienda: 'Villamayor' },
     { name: 'Nuria', pindi: 'PINDI0051346', tienda: 'Villamayor' },
     { name: 'Vanesa', pindi: 'PINDI0023994', tienda: 'Béjar' },
-    { name: 'Lara', pindi: 'PINDI0023995', tienda: 'Béjar' }
+    { name: 'Lara', pindi: 'PINDI0023995', tienda: 'Béjar' },
+    { name: 'Marta', pindi: 'PINDI_MARTA', tienda: 'O2' }
   ];
 
   const defaultPermissions = JSON.stringify([

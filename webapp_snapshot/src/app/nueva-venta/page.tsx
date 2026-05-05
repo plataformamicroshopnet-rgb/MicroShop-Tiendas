@@ -41,7 +41,8 @@ export default function NuevaVentaPage() {
         fabricante: '',
         subcategoria: '',
         gama: '',
-        isLibre: false
+        isLibre: false,
+        isSwap: false
       }
     ]
   })
@@ -144,7 +145,6 @@ export default function NuevaVentaPage() {
         if (seguroVal === 'Smartphone') seguroPrice = 200;
         else if (seguroVal === 'Tablet') seguroPrice = 50;
         else if (seguroVal === 'Reacondicionado') seguroPrice = 150;
-        else if (seguroVal === 'Swap') seguroPrice = 0; // Swap can be overridden or kept 0
         newProducts[index].seguroImporte = seguroPrice;
       }
       
@@ -180,7 +180,8 @@ export default function NuevaVentaPage() {
           fabricante: '',
           subcategoria: '',
           gama: '',
-          isLibre: false
+          isLibre: false,
+          isSwap: false
         }
       ]
     }))
@@ -213,7 +214,7 @@ export default function NuevaVentaPage() {
         setSelectedTienda('')
         setFormData({
           vendedor: '', nombreCliente: '', codigo: '', nif: '', telefonoMovil: '', telefonoFijo: '', boletin: '', anotaciones: '',
-          productos: [{ categoria: '', producto: '', telf: '', noCliente: '', pendiente: 'No', importe: '', imei: '', rentConCoste: 'No', seguro: '', seguroImporte: 0, fabricante: '', subcategoria: '', gama: '', isLibre: false }]
+          productos: [{ categoria: '', producto: '', telf: '', noCliente: '', pendiente: 'No', importe: '', imei: '', rentConCoste: 'No', seguro: '', seguroImporte: 0, fabricante: '', subcategoria: '', gama: '', isLibre: false, isSwap: false }]
         })
       } else {
         setError(data.error || 'Error al guardar la venta')
@@ -247,56 +248,75 @@ export default function NuevaVentaPage() {
       <form onSubmit={handleSubmit} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
         
         {/* 1. Cabecera */}
-        <div style={{ backgroundColor: 'var(--active-bg)', padding: '16px', borderRadius: '8px', borderLeft: '4px solid var(--mercedes-cyan)' }}>
-          <h3 style={{ marginBottom: 16, color: 'var(--light-text)' }}>Cabecera</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-            <div className="form-group">
-              <label className="form-label">Tienda</label>
-              <select className="form-select" value={selectedTienda} onChange={e => { setSelectedTienda(e.target.value); handleInputChange('vendedor', ''); }} required>
-                <option value="">Selecciona...</option>
-                {Object.keys(TIENDAS_COMERCIALES).map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
+        <div style={{ backgroundColor: 'var(--active-bg)', padding: '12px', borderRadius: '8px', borderLeft: '4px solid var(--mercedes-cyan)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <h3 style={{ margin: 0, color: 'var(--light-text)', fontSize: '16px' }}>Cabecera</h3>
+          
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'stretch' }}>
+            {/* COLUMNA 1: ASIGNACIÓN COMERCIAL */}
+            <div style={{ flex: '1', minWidth: '200px', backgroundColor: '#B8D5F6', borderRadius: '8px', padding: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <h4 style={{ margin: '0 0 4px 0', color: '#1B3D6A', fontSize: '13px', fontWeight: 'bold' }}>Asignación Comercial</h4>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ color: '#1B3D6A' }}>Tienda</label>
+                <select className="form-select" value={selectedTienda} onChange={e => { setSelectedTienda(e.target.value); handleInputChange('vendedor', ''); }} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
+                  <option value="">Selecciona...</option>
+                  {Object.keys(TIENDAS_COMERCIALES).map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ color: '#1B3D6A' }}>Comercial</label>
+                <select className="form-select" value={formData.vendedor} onChange={e => handleInputChange('vendedor', e.target.value)} disabled={!selectedTienda} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
+                  <option value="">Selecciona...</option>
+                  {selectedTienda && (
+                    <>
+                      <optgroup label={`Asignados a ${selectedTienda}`}>
+                        {TIENDAS_COMERCIALES[selectedTienda].map(v => <option key={v} value={v}>{v}</option>)}
+                      </optgroup>
+                      <optgroup label="Otras Tiendas">
+                        {VENDEDORES.filter(v => !TIENDAS_COMERCIALES[selectedTienda].includes(v)).map(v => <option key={v} value={v}>{v}</option>)}
+                      </optgroup>
+                    </>
+                  )}
+                </select>
+              </div>
             </div>
-            <div className="form-group">
-              <label className="form-label">Comercial</label>
-              <select className="form-select" value={formData.vendedor} onChange={e => handleInputChange('vendedor', e.target.value)} disabled={!selectedTienda} required>
-                <option value="">Selecciona...</option>
-                {selectedTienda && (
-                  <>
-                    <optgroup label={`Asignados a ${selectedTienda}`}>
-                      {TIENDAS_COMERCIALES[selectedTienda].map(v => <option key={v} value={v}>{v}</option>)}
-                    </optgroup>
-                    <optgroup label="Otras Tiendas">
-                      {VENDEDORES.filter(v => !TIENDAS_COMERCIALES[selectedTienda].includes(v)).map(v => <option key={v} value={v}>{v}</option>)}
-                    </optgroup>
-                  </>
-                )}
-              </select>
+
+            {/* COLUMNA 2: DATOS DEL CLIENTE */}
+            <div style={{ flex: '2', minWidth: '350px', backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <h4 style={{ margin: '0 0 4px 0', fontSize: '13px', fontWeight: 'bold', color: '#333' }}>Datos del Cliente</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ color: '#555' }}>Nombre del cliente</label>
+                  <input type="text" className="form-input" maxLength={40} value={formData.nombreCliente} onChange={e => handleInputChange('nombreCliente', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ color: '#555' }}>NIF del Titular</label>
+                  <input type="text" className="form-input" maxLength={9} value={formData.nif} onChange={e => handleInputChange('nif', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ color: '#555' }}>Teléfono Móvil</label>
+                  <input type="text" className="form-input" maxLength={9} value={formData.telefonoMovil} onChange={e => handleInputChange('telefonoMovil', e.target.value)} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ color: '#555' }}>Teléfono Fijo</label>
+                  <input type="text" className="form-input" maxLength={9} value={formData.telefonoFijo} onChange={e => handleInputChange('telefonoFijo', e.target.value)} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
+                </div>
+              </div>
             </div>
-            <div className="form-group">
-              <label className="form-label">Nombre del cliente</label>
-              <input type="text" className="form-input" maxLength={40} value={formData.nombreCliente} onChange={e => handleInputChange('nombreCliente', e.target.value)} required />
+
+            {/* COLUMNA 3: OPERACIÓN */}
+            <div style={{ flex: '1.5', minWidth: '250px', backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <h4 style={{ margin: '0 0 4px 0', fontSize: '13px', fontWeight: 'bold', color: '#333' }}>Operación</h4>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ color: '#555' }}>Boletín</label>
+                <input type="text" className="form-input" maxLength={16} value={formData.boletin} onChange={e => handleInputChange('boletin', e.target.value)} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
+              </div>
+              <div className="form-group" style={{ marginBottom: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
+                <label className="form-label" style={{ color: '#555' }}>Anotaciones Generales</label>
+                <textarea className="form-textarea" value={formData.anotaciones} onChange={e => handleInputChange('anotaciones', e.target.value)} style={{ flex: 1, minHeight: '40px', backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A', resize: 'none' }}></textarea>
+              </div>
             </div>
-            <div className="form-group">
-              <label className="form-label">NIF del Titular</label>
-              <input type="text" className="form-input" maxLength={9} value={formData.nif} onChange={e => handleInputChange('nif', e.target.value)} required />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Teléfono Móvil</label>
-              <input type="text" className="form-input" maxLength={9} value={formData.telefonoMovil} onChange={e => handleInputChange('telefonoMovil', e.target.value)} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Teléfono Fijo</label>
-              <input type="text" className="form-input" maxLength={9} value={formData.telefonoFijo} onChange={e => handleInputChange('telefonoFijo', e.target.value)} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Boletín</label>
-              <input type="text" className="form-input" maxLength={16} value={formData.boletin} onChange={e => handleInputChange('boletin', e.target.value)} />
-            </div>
-          </div>
-          <div className="form-group" style={{ marginTop: 16 }}>
-            <label className="form-label">Anotaciones Generales</label>
-            <textarea className="form-textarea" rows={2} value={formData.anotaciones} onChange={e => handleInputChange('anotaciones', e.target.value)}></textarea>
           </div>
         </div>
 
@@ -313,9 +333,9 @@ export default function NuevaVentaPage() {
                 </div>
                 
                 {prod.categoria === 'RENT' ? (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'stretch' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'stretch' }}>
                     {/* COLUMNA 1: TIPO DE VENTA */}
-                    <div style={{ flex: '1', minWidth: '250px', backgroundColor: '#B8D5F6', borderRadius: '8px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ flex: '1', minWidth: '250px', backgroundColor: '#B8D5F6', borderRadius: '8px', padding: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <h4 style={{ margin: 0, color: '#1B3D6A', fontSize: '15px', fontWeight: 'bold' }}><span style={{ color: '#1050A4' }}>{index + 1}</span> Tipo de Venta</h4>
                       
                       <div>
@@ -344,7 +364,7 @@ export default function NuevaVentaPage() {
                     </div>
 
                     {/* COLUMNA 2: DETALLES DE LA VENTA / PRODUCTO */}
-                    <div style={{ flex: '2', minWidth: '350px', backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ flex: '2', minWidth: '350px', backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: '#333' }}>DETALLES DE LA VENTA / PRODUCTO</h4>
                       </div>
@@ -360,7 +380,7 @@ export default function NuevaVentaPage() {
                       <div style={{ height: 1, backgroundColor: '#E0E0E0', margin: '8px 0' }}></div>
                       <h5 style={{ margin: 0, fontSize: '13px', color: '#666' }}>Detalles del Producto</h5>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1fr', gap: '12px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1fr', gap: '6px' }}>
                         <div>
                           <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>Gama</label>
                           <input type="text" className="form-input" value={prod.gama} readOnly style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
@@ -378,12 +398,15 @@ export default function NuevaVentaPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
                         <input type="checkbox" checked={prod.isLibre || false} onChange={e => handleProductChange(index, 'isLibre', e.target.checked)} style={{ cursor: 'pointer', width: 16, height: 16 }} />
                         <label style={{ fontSize: 13, color: '#555' }}>¿Libre?</label>
+                        
+                        <input type="checkbox" checked={prod.isSwap || false} onChange={e => handleProductChange(index, 'isSwap', e.target.checked)} style={{ cursor: 'pointer', width: 16, height: 16, marginLeft: '12px' }} />
+                        <label style={{ fontSize: 13, color: '#555' }}>¿Swap?</label>
                       </div>
                     </div>
 
                     {/* COLUMNA 3: ESTADO Y FINANZAS */}
-                    <div style={{ flex: '1', minWidth: '250px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      <div style={{ backgroundColor: '#B8D5F6', borderRadius: '8px', padding: '16px' }}>
+                    <div style={{ flex: '1', minWidth: '250px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ backgroundColor: '#B8D5F6', borderRadius: '8px', padding: '8px' }}>
                         <label style={{ fontSize: 13, color: '#1B3D6A', display: 'block', marginBottom: 4 }}>Cuota Total</label>
                         <div style={{ position: 'relative' }}>
                           <input type="number" step="0.01" className="form-input" value={prod.importe !== '' && prod.importe !== undefined ? Number(prod.importe).toFixed(2) : ''} onChange={e => handleProductChange(index, 'importe', e.target.value)} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A', fontWeight: 'bold', width: '100%', paddingRight: 24 }} />
@@ -391,10 +414,10 @@ export default function NuevaVentaPage() {
                         </div>
                       </div>
 
-                      <div style={{ backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', flex: 1 }}>
-                        <h5 style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: 'bold', color: '#333' }}>Estado</h5>
+                      <div style={{ backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', flex: 1 }}>
+                        <h5 style={{ margin: '0 0 6px 0', fontSize: '13px', fontWeight: 'bold', color: '#333' }}>Estado</h5>
                         
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '6px' }}>
                           <div>
                             <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>¿Pendiente?</label>
                             <select className="form-select" value={prod.pendiente} onChange={e => handleProductChange(index, 'pendiente', e.target.value)} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
@@ -412,7 +435,7 @@ export default function NuevaVentaPage() {
                           </div>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
                           <div>
                             <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>Seguro</label>
                             <select className="form-select" value={prod.seguro} onChange={e => handleProductChange(index, 'seguro', e.target.value)} disabled={prod.isLibre} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
@@ -420,7 +443,6 @@ export default function NuevaVentaPage() {
                               <option value="Smartphone">Smartphone</option>
                               <option value="Tablet">Tablet</option>
                               <option value="Reacondicionado">Reacondicionado</option>
-                              <option value="Swap">Swap</option>
                             </select>
                           </div>
                           <div>
@@ -435,84 +457,93 @@ export default function NuevaVentaPage() {
                     </div>
                   </div>
                 ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '12px', alignItems: 'end' }}>
-                    {/* Categoría */}
-                    <div className="form-group" style={{ marginBottom: 0, minWidth: 120 }}>
-                      <label className="form-label" style={{ fontSize: 13 }}><strong className="text-cyan">{index + 1}</strong> Tipo de Venta</label>
-                      <select className="form-select" value={prod.categoria} onChange={e => handleProductChange(index, 'categoria', e.target.value)} required>
-                        <option value="">Selecciona...</option>
-                        {Object.keys(catalogs)
-                          .filter(cat => cat !== 'Fija' && cat !== 'Móvil')
-                          .map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                      </select>
-                    </div>
-
-                    {/* Producto */}
-                    <div className="form-group" style={{ marginBottom: 0, minWidth: 160, gridColumn: 'span 2' }}>
-                      <label className="form-label" style={{ fontSize: 13 }}>Producto</label>
-                      <select className="form-select" value={prod.producto} onChange={e => handleProductChange(index, 'producto', e.target.value)} disabled={!prod.categoria} required>
-                        <option value="">Selecciona...</option>
-                        {prod.categoria && catalogs[prod.categoria]
-                          ?.filter((p: any, i: number, self: any[]) => self.findIndex(t => t.producto === p.producto) === i)
-                          .map((p: any, i: number) => <option key={p.id || i} value={p.producto}>{p.producto}</option>)}
-                      </select>
-                    </div>
-
-                    {/* Importe */}
-                    <div className="form-group" style={{ marginBottom: 0, maxWidth: 100 }}>
-                      <label className="form-label" style={{ fontSize: 13 }}>Importe</label>
-                      <div style={{ position: 'relative', display: 'inline-block' }}>
-                        <input 
-                          type="number" 
-                          step="0.01"
-                          className="form-input" 
-                          style={{ color: 'var(--mercedes-cyan)', fontWeight: 'bold', width: '100%', paddingRight: 24 }}
-                          value={prod.importe !== '' && prod.importe !== undefined ? Number(prod.importe).toFixed(2) : ''} 
-                          onChange={e => handleProductChange(index, 'importe', e.target.value)} 
-                        />
-                        <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--medium-gray)', fontSize: 13, pointerEvents: 'none' }}>€</span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'stretch' }}>
+                    
+                    {/* COLUMNA 1: CLASIFICACIÓN */}
+                    <div style={{ flex: '1', minWidth: '150px', backgroundColor: '#B8D5F6', borderRadius: '8px', padding: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label className="form-label" style={{ color: '#1B3D6A' }}><strong style={{ color: '#1050A4', marginRight: 4 }}>{index + 1}</strong> Tipo de Venta</label>
+                        <select className="form-select" value={prod.categoria} onChange={e => handleProductChange(index, 'categoria', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
+                          <option value="">Selecciona...</option>
+                          {Object.keys(catalogs)
+                            .filter(cat => cat !== 'Fija' && cat !== 'Móvil')
+                            .map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                        </select>
                       </div>
                     </div>
 
-                    {/* Teléfono */}
-                    <div className="form-group" style={{ marginBottom: 0, maxWidth: 120 }}>
-                      <label className="form-label" style={{ fontSize: 13 }}>Teléfono</label>
-                      <input 
-                        type="text" 
-                        className="form-input" 
-                        maxLength={9} 
-                        value={prod.telf} 
-                        onChange={e => handleProductChange(index, 'telf', e.target.value)} 
-                        onPaste={e => {
-                          const pasted = e.clipboardData.getData('text');
-                          if (pasted.length > 9) {
-                            e.preventDefault();
-                            handleProductChange(index, 'telf', pasted);
-                          }
-                        }}
-                        required 
-                      />
+                    {/* COLUMNA 2: DETALLES PRODUCTO */}
+                    <div style={{ flex: '2', minWidth: '300px', backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '6px' }}>
+                        <div className="form-group" style={{ marginBottom: 0 }}>
+                          <label className="form-label" style={{ color: '#555' }}>Producto</label>
+                          <select className="form-select" value={prod.producto} onChange={e => handleProductChange(index, 'producto', e.target.value)} disabled={!prod.categoria} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
+                            <option value="">Selecciona...</option>
+                            {prod.categoria && catalogs[prod.categoria]
+                              ?.filter((p: any, i: number, self: any[]) => self.findIndex(t => t.producto === p.producto) === i)
+                              .map((p: any, i: number) => <option key={p.id || i} value={p.producto}>{p.producto}</option>)}
+                          </select>
+                        </div>
+                        <div className="form-group" style={{ marginBottom: 0 }}>
+                          <label className="form-label" style={{ color: '#555' }}>Teléfono</label>
+                          <input 
+                            type="text" 
+                            className="form-input" 
+                            maxLength={9} 
+                            value={prod.telf} 
+                            onChange={e => handleProductChange(index, 'telf', e.target.value)} 
+                            onPaste={e => {
+                              const pasted = e.clipboardData.getData('text');
+                              if (pasted.length > 9) {
+                                e.preventDefault();
+                                handleProductChange(index, 'telf', pasted);
+                              }
+                            }}
+                            required 
+                            style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}
+                          />
+                        </div>
+                      </div>
                     </div>
 
-                    {/* NO Cliente */}
-                    <div className="form-group" style={{ marginBottom: 0, maxWidth: 90 }}>
-                      <label className="form-label" style={{ fontSize: 13 }}>Cliente</label>
-                      <select className="form-select" value={prod.noCliente} onChange={e => handleProductChange(index, 'noCliente', e.target.value)}>
-                        <option value="">Selecciona...</option>
-                        <option value="Si">Si</option>
-                        <option value="No">No</option>
-                      </select>
+                    {/* COLUMNA 3: FINANZAS / ESTADO */}
+                    <div style={{ flex: '1.5', minWidth: '250px', backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
+                        <div className="form-group" style={{ marginBottom: 0 }}>
+                          <label className="form-label" style={{ color: '#555' }}>Importe</label>
+                          <div style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
+                            <input 
+                              type="number" 
+                              step="0.01"
+                              className="form-input" 
+                              style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A', fontWeight: 'bold', width: '100%', paddingRight: 24 }}
+                              value={prod.importe !== '' && prod.importe !== undefined ? Number(prod.importe).toFixed(2) : ''} 
+                              onChange={e => handleProductChange(index, 'importe', e.target.value)} 
+                            />
+                            <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: '#1B3D6A', fontSize: 13, pointerEvents: 'none' }}>€</span>
+                          </div>
+                        </div>
+
+                        <div className="form-group" style={{ marginBottom: 0 }}>
+                          <label className="form-label" style={{ color: '#555' }}>Cliente</label>
+                          <select className="form-select" value={prod.noCliente} onChange={e => handleProductChange(index, 'noCliente', e.target.value)} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
+                            <option value="">---</option>
+                            <option value="Si">Si</option>
+                            <option value="No">No</option>
+                          </select>
+                        </div>
+
+                        <div className="form-group" style={{ marginBottom: 0 }}>
+                          <label className="form-label" style={{ color: '#555' }}>¿Pendiente?</label>
+                          <select className="form-select" value={prod.pendiente} onChange={e => handleProductChange(index, 'pendiente', e.target.value)} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
+                            <option value="No">No</option>
+                            <option value="Si">Sí</option>
+                            <option value="Anulado">Anul.</option>
+                          </select>
+                        </div>
+                      </div>
                     </div>
 
-                    {/* Pendiente */}
-                    <div className="form-group" style={{ marginBottom: 0, maxWidth: 100 }}>
-                      <label className="form-label" style={{ fontSize: 13 }}>¿Pendiente?</label>
-                      <select className="form-select" value={prod.pendiente} onChange={e => handleProductChange(index, 'pendiente', e.target.value)}>
-                        <option value="No">No</option>
-                        <option value="Si">Sí</option>
-                        <option value="Anulado">Anulado</option>
-                      </select>
-                    </div>
                   </div>
                 )}
               </div>

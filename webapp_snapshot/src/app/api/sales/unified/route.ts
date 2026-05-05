@@ -120,6 +120,7 @@ export async function POST(request: Request) {
         seguro: prod.seguro || null,
         seguroImporte: prod.seguroImporte ? parseFloat(prod.seguroImporte.toString().replace(',','.')) : null,
         isLibre: prod.isLibre === true,
+        isSwap: prod.isSwap === true,
         periodId: activePeriod?.id || null
       })
     }

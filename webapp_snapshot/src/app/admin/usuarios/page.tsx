@@ -194,7 +194,7 @@ export default function AdminUsuariosPage() {
                 <strong style={{ fontSize: 18 }}>{u.username}</strong>
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                   <span style={{ fontSize: 11, backgroundColor: 'rgba(0,173,239,0.2)', color: 'var(--mercedes-cyan)', padding: '4px 8px', borderRadius: 6, fontWeight: 'bold' }}>
-                    {u.role}
+                    {u.role === 'JEFE DE VENTAS' ? 'JEFE DE TIENDAS' : u.role}
                   </span>
                   <div style={{ display: 'flex', gap: 4 }}>
                     <button onClick={() => handleOpenUserModal(u)} style={{ background: 'none', border: 'none', color: 'var(--text-color)', cursor: 'pointer', padding: 4, opacity: 0.7 }}>
@@ -390,7 +390,7 @@ export default function AdminUsuariosPage() {
                   }}
                 >
                   <option value="COMERCIAL">COMERCIAL (Estándar)</option>
-                  <option value="JEFE DE VENTAS">JEFE DE VENTAS</option>
+                  <option value="JEFE DE VENTAS">JEFE DE TIENDAS</option>
                   <option value="BACK OFFICE">BACK OFFICE</option>
                   <option value="ADMIN">ADMINISTRADOR</option>
                   <option value="CUSTOM">Otro (Personalizado)...</option>
