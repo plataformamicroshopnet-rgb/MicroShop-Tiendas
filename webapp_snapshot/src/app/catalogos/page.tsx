@@ -65,6 +65,9 @@ function TooltipBox({ title, content, children, position }: {
 type ProductItem = {
   id: string
   producto: string
+  subcategoria?: string
+  fabricante?: string
+  gama?: string
   cuota?: number
   cuotaMensual?: number
   cuotaAnual?: number
@@ -73,7 +76,7 @@ type ProductItem = {
   importStatus?: 'new' | 'updated' | 'missing' | 'unchanged'
 }
 
-const CATEGORIES = ['Fija y Móvil', 'Ti', 'TMA', 'Micro']
+const CATEGORIES = ['Fija y Móvil', 'Ti', 'RENT', 'Micro']
 
 export default function CatalogosPage() {
   const { authorized } = useGuard('MODULE_ADMIN', 'MANAGE_CATALOG')
@@ -92,7 +95,7 @@ export default function CatalogosPage() {
   const previousPeriod = currentIndex > 0 ? sortedPeriods[currentIndex - 1] : null
 
   const [catalogs, setCatalogs] = useState<Record<string, ProductItem[]>>({
-    "Fija y Móvil": [], "Ti": [], "TMA": [], "Micro": []
+    "Fija y Móvil": [], "Ti": [], "RENT": [], "Micro": []
   })
   const [activeTab, setActiveTab] = useState('Fija y Móvil')
   const isProductTab = CATEGORIES.includes(activeTab)
@@ -111,7 +114,7 @@ export default function CatalogosPage() {
       .then(res => res.json())
       .then(data => {
         if (data.success) {
-          const mapped: Record<string, ProductItem[]> = { "Fija y Móvil": [], "Ti": [], "TMA": [], "Micro": [] }
+          const mapped: Record<string, ProductItem[]> = { "Fija y Móvil": [], "Ti": [], "RENT": [], "Micro": [] }
           for (const [cat, items] of Object.entries(data.catalogs as Record<string, any[]>)) {
              if (!mapped[cat]) mapped[cat] = [];
              mapped[cat] = [...mapped[cat], ...items.map((it: any) => ({
@@ -120,6 +123,9 @@ export default function CatalogosPage() {
                  cuota: Number(String(it.mensual || it.cuota || 0).replace(',','.')),
                  cuotaMensual: Number(String(it.mensual || 0).replace(',','.')),
                  cuotaAnual: Number(String(it.anual || 0).replace(',','.')),
+                 subcategoria: it.subcategoria || '',
+                 fabricante: it.fabricante || '',
+                 gama: it.gama || '',
                  validFrom: it.validFrom || '',
                  validTo: it.validTo || ''
              }))]
@@ -159,6 +165,9 @@ export default function CatalogosPage() {
              producto: it.producto,
              mensual: String(it.cuotaMensual !== undefined ? it.cuotaMensual : (it.cuota || '')),
              anual: String(it.cuotaAnual || ''),
+             subcategoria: it.subcategoria || '',
+             fabricante: it.fabricante || '',
+             gama: it.gama || '',
              validFrom: it.validFrom || null,
              validTo: it.validTo || null
           }
@@ -226,6 +235,9 @@ export default function CatalogosPage() {
                       cuota: Number(String(it.mensual || it.cuota || 0).replace(',','.')),
                       cuotaMensual: Number(String(it.mensual || 0).replace(',','.')),
                       cuotaAnual: Number(String(it.anual || 0).replace(',','.')),
+                      subcategoria: it.subcategoria || '',
+                      fabricante: it.fabricante || '',
+                      gama: it.gama || '',
                       validFrom: it.validFrom || '',
                       validTo: it.validTo || ''
                   }))
@@ -253,7 +265,7 @@ export default function CatalogosPage() {
         const res = await fetch(`/api/catalogs?legacyOnly=1`)
         const data = await res.json()
         if (data.success) {
-            const mapped: Record<string, ProductItem[]> = { "Fija y Móvil": [], "Ti": [], "TMA": [], "Micro": [] }
+            const mapped: Record<string, ProductItem[]> = { "Fija y Móvil": [], "Ti": [], "RENT": [], "Micro": [] }
             let totalItems = 0
             for (const [cat, items] of Object.entries(data.catalogs as Record<string, any[]>)) {
                 if (!mapped[cat]) mapped[cat] = [];
@@ -263,6 +275,9 @@ export default function CatalogosPage() {
                     cuota: Number(String(it.mensual || it.cuota || 0).replace(',','.')),
                     cuotaMensual: Number(String(it.mensual || 0).replace(',','.')),
                     cuotaAnual: Number(String(it.anual || 0).replace(',','.')),
+                    subcategoria: it.subcategoria || '',
+                    fabricante: it.fabricante || '',
+                    gama: it.gama || '',
                     validFrom: it.validFrom || '',
                     validTo: it.validTo || ''
                 }))]
@@ -291,8 +306,8 @@ export default function CatalogosPage() {
       const item = { ...newCat[index], [field]: value }
       
       // Autocálculo TMA y Micro y Ti
-      if (cat === 'Ti' || cat === 'TMA' || cat === 'Micro') {
-        const factor = (cat === 'TMA' || cat === 'Micro') ? 24 : 12;
+      if (cat === 'Ti' || cat === 'RENT' || cat === 'Micro') {
+        const factor = (cat === 'RENT' || cat === 'Micro') ? 24 : 12;
         if (field === 'cuotaMensual') {
           item.cuotaAnual = Math.round(Number(value) * factor * 100) / 100
         } else if (field === 'cuotaAnual') {
@@ -309,7 +324,7 @@ export default function CatalogosPage() {
     setSearch('')
     setCatalogs(prev => {
       const newItem: ProductItem = { id: Date.now().toString(), producto: '', validFrom: '', validTo: '' }
-      if (cat === 'Ti' || cat === 'TMA' || cat === 'Micro') {
+      if (cat === 'Ti' || cat === 'RENT' || cat === 'Micro') {
         newItem.cuotaMensual = 0
         newItem.cuotaAnual = 0
       } else {
@@ -350,17 +365,39 @@ export default function CatalogosPage() {
 
     const lines = bulkText.split('\n').filter(l => l.trim().length > 0)
     
+    const parseSpanishNumber = (str: string) => {
+      let clean = str.replace(/[^0-9.,-]/g, '')
+      if (clean.includes('.') && clean.includes(',')) {
+        clean = clean.replace(/\./g, '').replace(',', '.')
+      } else if (clean.includes(',')) {
+        clean = clean.replace(',', '.')
+      }
+      return clean || '0'
+    }
+
     // 1. Parsing the Excel text
-    const excelData: { producto: string; amountAsStr: string; desde: string; hasta: string }[] = []
+    const excelData: any[] = []
     lines.forEach((line) => {
       const parts = line.split('\t').map(p => p.trim())
       if (parts.length > 0 && parts[0]) {
-        excelData.push({
-          producto: parts[0],
-          amountAsStr: parts.length > 1 ? parts[1].replace(/[^0-9.,-]/g, '').replace(',', '.') : '0',
-          desde: parts.length > 2 ? parts[2] : '',
-          hasta: parts.length > 3 ? parts[3] : '',
-        })
+        if (activeTab === 'RENT') {
+          excelData.push({
+            fabricante: parts[0] || '',
+            categoria: parts[1] || '',
+            producto: parts[2] || '',
+            gama: parts[3] || '',
+            amountAsStr: parts.length > 4 ? parseSpanishNumber(parts[4]) : '0',
+            desde: parts.length > 5 ? parts[5] : '',
+            hasta: parts.length > 6 ? parts[6] : '',
+          })
+        } else {
+          excelData.push({
+            producto: parts[0],
+            amountAsStr: parts.length > 1 ? parseSpanishNumber(parts[1]) : '0',
+            desde: parts.length > 2 ? parts[2] : '',
+            hasta: parts.length > 3 ? parts[3] : '',
+          })
+        }
       }
     })
 
@@ -393,8 +430,20 @@ export default function CatalogosPage() {
           item.importStatus = 'unchanged'
           let changed = false
 
-          if (activeTab === 'Ti' || activeTab === 'TMA' || activeTab === 'Micro') {
-            const factor = (activeTab === 'TMA' || activeTab === 'Micro') ? 24 : 12;
+          if (activeTab === 'RENT') {
+            if (item.fabricante !== row.fabricante) { item.fabricante = row.fabricante; changed = true; }
+            if (item.subcategoria !== row.categoria) { item.subcategoria = row.categoria; changed = true; }
+            if (item.gama !== row.gama) { item.gama = row.gama; changed = true; }
+            
+            const expectedAnual = Math.round(amount * 100) / 100
+            const expectedMensual = Math.round((amount / 24) * 100) / 100
+            if (item.cuotaAnual !== expectedAnual) {
+              item.cuotaAnual = expectedAnual
+              item.cuotaMensual = expectedMensual
+              changed = true
+            }
+          } else if (activeTab === 'Ti' || activeTab === 'Micro') {
+            const factor = (activeTab === 'Micro') ? 24 : 12;
             const expectedMensual = Math.round(amount * 100) / 100
             if (item.cuotaMensual !== expectedMensual) {
               item.cuotaMensual = expectedMensual
@@ -411,6 +460,7 @@ export default function CatalogosPage() {
 
           if (item.validFrom !== row.desde) {
             item.validFrom = row.desde
+            changed = true
           }
           if (item.validTo !== row.hasta) {
             item.validTo = row.hasta
@@ -431,8 +481,14 @@ export default function CatalogosPage() {
             importStatus: 'new' as const
           }
 
-          if (activeTab === 'Ti' || activeTab === 'TMA' || activeTab === 'Micro') {
-            const factor = (activeTab === 'TMA' || activeTab === 'Micro') ? 24 : 12;
+          if (activeTab === 'RENT') {
+            newItem.fabricante = row.fabricante
+            newItem.subcategoria = row.categoria
+            newItem.gama = row.gama
+            newItem.cuotaAnual = Math.round(amount * 100) / 100
+            newItem.cuotaMensual = Math.round((amount / 24) * 100) / 100
+          } else if (activeTab === 'Ti' || activeTab === 'Micro') {
+            const factor = (activeTab === 'Micro') ? 24 : 12;
             newItem.cuotaMensual = Math.round(amount * 100) / 100
             newItem.cuotaAnual = Math.round((amount * factor) * 100) / 100
           } else {
@@ -551,7 +607,7 @@ export default function CatalogosPage() {
         {([
           { cat: 'Fija y Móvil', tip: 'Catálogo de productos de telefonía fija y móvil (contrato mensual). Incluye portabilidades, altas y tarifas de voz/datos. El precio configurado aquí (€/mes) es la cuota base usada en el cálculo de comisiones de venta fija y móvil.' },
           { cat: 'Ti', tip: 'Terminal de Instalación: dispositivos y servicios con contrato de 12 meses. El precio mensual se introduce y el sistema calcula automáticamente el importe total anual (×12).' },
-          { cat: 'TMA', tip: 'Terminal Móvil en Alquiler: dispositivos bajo contrato de 24 meses. Introduce el precio mensual y el sistema calcula el total a 24 meses automáticamente.' },
+          { cat: 'RENT', tip: 'Terminal Móvil en Alquiler: dispositivos bajo contrato de 24 meses. Introduce la cuota total a 24 meses.' },
           { cat: 'Micro', tip: 'Productos de Micro-segmento: soluciones tecnológicas especializadas con contratos de 24 meses. Funciona igual que TMA (precio mensual → total ×24).' },
           { cat: 'Objetivos Pyme', tip: 'Define los objetivos cuantitativos del mes para el perfil PYME por grupo comercial. Son la base del cálculo de cumplimiento y comisiones variables del canal Pyme.' },
           { cat: 'Objetivos Captador', tip: 'Define los objetivos del mes para el perfil Captador (canal de captación). Son la base del cálculo de comisiones variables del equipo captador.' },
@@ -639,19 +695,30 @@ Alta MV	15"
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
             <thead>
               <tr style={{ backgroundColor: 'var(--active-bg)', borderBottom: '1px solid var(--border-color)' }}>
-                <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '38%' }}>Nombre de Producto</th>
-                
-                {(activeTab === 'Ti' || activeTab === 'TMA' || activeTab === 'Micro') ? (
+                {activeTab === 'RENT' ? (
                   <>
-                    <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: 140 }}>Cuota Mes (€)</th>
+                    <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '12%' }}>Fabricante</th>
+                    <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '14%' }}>Categoría</th>
+                    <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '20%' }}>Nombre de Producto</th>
+                    <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '10%' }}>Gama</th>
                     <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 140 }}>Cuota Total (€)</th>
                   </>
                 ) : (
-                  <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: 140 }}>Cuota / Precio (€)</th>
+                  <>
+                    <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '38%' }}>Nombre de Producto</th>
+                    {(activeTab === 'Ti' || activeTab === 'Micro') ? (
+                      <>
+                        <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: 140 }}>Cuota Mes (€)</th>
+                        <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 140 }}>Cuota Total (€)</th>
+                      </>
+                    ) : (
+                      <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: 140 }}>Cuota / Precio (€)</th>
+                    )}
+                  </>
                 )}
                 
-                <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 130 }}>Desde <span style={{fontSize:10, fontWeight:'normal'}}>(dd/mm/yyyy)</span></th>
-                <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 130 }}>Hasta <span style={{fontSize:10, fontWeight:'normal'}}>(opcional)</span></th>
+                <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 130, minWidth: 120 }}>Desde <span style={{fontSize:10, fontWeight:'normal'}}>(dd/mm/yyyy)</span></th>
+                <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 130, minWidth: 110 }}>Hasta <span style={{fontSize:10, fontWeight:'normal'}}>(opcional)</span></th>
                 <th style={{ padding: '16px 20px', textAlign: 'center', color: 'var(--medium-gray)', width: 100 }}>Acciones</th>
               </tr>
             </thead>
@@ -669,38 +736,62 @@ Alta MV	15"
 
                   return (
                     <tr key={item.id || index} style={{ borderBottom: '1px solid var(--table-border)', backgroundColor: item.importStatus === 'missing' ? 'rgba(255, 69, 58, 0.05)' : item.importStatus === 'new' ? 'rgba(52, 199, 89, 0.05)' : item.importStatus === 'updated' ? 'rgba(255, 204, 0, 0.05)' : 'transparent' }}>
-                      <td style={{ padding: '12px 20px' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                          <input 
-                            type="text" 
-                            disabled={isHistoric}
-                            value={item.producto}
-                            onChange={e => updateItem(activeTab, index, 'producto', e.target.value)}
-                            className="form-input"
-                            style={{ border: 'none', backgroundColor: 'transparent', padding: '8px', fontSize: 14, fontWeight: 500, color: item.importStatus === 'missing' ? '#FF453A' : isHistoric ? 'var(--medium-gray)' : 'var(--light-text)' }}
-                            placeholder="Nombre del producto..."
-                          />
-                          {item.importStatus === 'missing' && <span style={{ fontSize: 11, color: '#FF453A', fontWeight: 600, paddingLeft: 8 }}>🚨 No presente en última importación</span>}
-                          {item.importStatus === 'new' && <span style={{ fontSize: 11, color: '#34C759', fontWeight: 600, paddingLeft: 8 }}>🆕 Nuevo en Excel</span>}
-                          {item.importStatus === 'updated' && <span style={{ fontSize: 11, color: '#FFCC00', fontWeight: 600, paddingLeft: 8 }}>🔄 Valores actualizados</span>}
-                        </div>
-                      </td>
-
-                      {(activeTab === 'Ti' || activeTab === 'TMA' || activeTab === 'Micro') ? (
+                      {activeTab === 'RENT' ? (
                         <>
                           <td style={{ padding: '12px 20px' }}>
-                            <div style={{ position: 'relative', display: 'inline-block' }}>
+                            <input 
+                              type="text" 
+                              disabled={isHistoric}
+                              value={item.fabricante || ''}
+                              onChange={e => updateItem(activeTab, index, 'fabricante', e.target.value)}
+                              className="form-input"
+                              style={{ width: '100%', border: 'none', backgroundColor: 'transparent', padding: '8px', fontSize: 14, color: isHistoric ? 'var(--medium-gray)' : 'var(--light-text)' }}
+                              placeholder="Fabricante..."
+                            />
+                          </td>
+                          <td style={{ padding: '12px 20px' }}>
+                            <select
+                              disabled={isHistoric}
+                              value={item.subcategoria || ''}
+                              onChange={e => updateItem(activeTab, index, 'subcategoria', e.target.value)}
+                              className="form-input"
+                              style={{ width: '100%', border: 'none', backgroundColor: 'transparent', padding: '8px', fontSize: 14, color: isHistoric ? 'var(--medium-gray)' : 'var(--light-text)' }}
+                            >
+                              <option value="">Seleccionar...</option>
+                              <option value="SMARTPHONE">SMARTPHONE</option>
+                              <option value="TABLET">TABLET</option>
+                              <option value="ACCESORIO">ACCESORIO</option>
+                              <option value="PC">PC</option>
+                              <option value="TV">TV</option>
+                              <option value="OTROS">OTROS</option>
+                            </select>
+                          </td>
+                          <td style={{ padding: '12px 20px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                               <input 
-                                type="number"
-                                step="0.01" 
+                                type="text" 
                                 disabled={isHistoric}
-                                value={item.cuotaMensual !== undefined ? Number(item.cuotaMensual).toFixed(2) : ''}
-                                onChange={e => updateItem(activeTab, index, 'cuotaMensual', e.target.value)}
+                                value={item.producto}
+                                onChange={e => updateItem(activeTab, index, 'producto', e.target.value)}
                                 className="form-input"
-                                style={{ width: 130, color: isHistoric ? 'var(--medium-gray)' : 'var(--mercedes-cyan)', fontWeight: 'bold', backgroundColor: isHistoric ? 'transparent' : 'var(--app-bg)', border: isHistoric ? 'none' : undefined, paddingRight: 24 }}
+                                style={{ width: '100%', border: 'none', backgroundColor: 'transparent', padding: '8px', fontSize: 14, fontWeight: 500, color: item.importStatus === 'missing' ? '#FF453A' : isHistoric ? 'var(--medium-gray)' : 'var(--light-text)' }}
+                                placeholder="Nombre del producto..."
                               />
-                              <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--medium-gray)', fontSize: 13, pointerEvents: 'none' }}>€</span>
+                              {item.importStatus === 'missing' && <span style={{ fontSize: 11, color: '#FF453A', fontWeight: 600, paddingLeft: 8 }}>🚨 No presente en última importación</span>}
+                              {item.importStatus === 'new' && <span style={{ fontSize: 11, color: '#34C759', fontWeight: 600, paddingLeft: 8 }}>🆕 Nuevo en Excel</span>}
+                              {item.importStatus === 'updated' && <span style={{ fontSize: 11, color: '#FFCC00', fontWeight: 600, paddingLeft: 8 }}>🔄 Valores actualizados</span>}
                             </div>
+                          </td>
+                          <td style={{ padding: '12px 20px' }}>
+                            <input 
+                              type="text" 
+                              disabled={isHistoric}
+                              value={item.gama || ''}
+                              onChange={e => updateItem(activeTab, index, 'gama', e.target.value)}
+                              className="form-input"
+                              style={{ width: '100%', border: 'none', backgroundColor: 'transparent', padding: '8px', fontSize: 14, color: isHistoric ? 'var(--medium-gray)' : 'var(--light-text)' }}
+                              placeholder="Gama..."
+                            />
                           </td>
                           <td style={{ padding: '12px 20px' }}>
                             <div style={{ position: 'relative', display: 'inline-block' }}>
@@ -709,15 +800,68 @@ Alta MV	15"
                                 step="0.01" 
                                 disabled={isHistoric}
                                 value={item.cuotaAnual !== undefined ? Number(item.cuotaAnual).toFixed(2) : ''}
-                                onChange={e => updateItem(activeTab, index, 'cuotaAnual', e.target.value)}
+                                onChange={e => {
+                                  updateItem(activeTab, index, 'cuotaAnual', e.target.value);
+                                  updateItem(activeTab, index, 'cuotaMensual', String(Number(e.target.value) / 24));
+                                }}
                                 className="form-input"
-                                style={{ width: 130, backgroundColor: isHistoric ? 'transparent' : 'var(--active-bg)', border: isHistoric ? 'none' : '1px dashed var(--border-color)', paddingRight: 24 }}
+                                style={{ width: 130, color: isHistoric ? 'var(--medium-gray)' : 'var(--mercedes-cyan)', fontWeight: 'bold', backgroundColor: isHistoric ? 'transparent' : 'var(--active-bg)', border: isHistoric ? 'none' : '1px dashed var(--border-color)', paddingRight: 24 }}
                               />
                               <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--medium-gray)', fontSize: 13, pointerEvents: 'none' }}>€</span>
                             </div>
                           </td>
                         </>
                       ) : (
+                        <>
+                          <td style={{ padding: '12px 20px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                              <input 
+                                type="text" 
+                                disabled={isHistoric}
+                                value={item.producto}
+                                onChange={e => updateItem(activeTab, index, 'producto', e.target.value)}
+                                className="form-input"
+                                style={{ border: 'none', backgroundColor: 'transparent', padding: '8px', fontSize: 14, fontWeight: 500, color: item.importStatus === 'missing' ? '#FF453A' : isHistoric ? 'var(--medium-gray)' : 'var(--light-text)' }}
+                                placeholder="Nombre del producto..."
+                              />
+                              {item.importStatus === 'missing' && <span style={{ fontSize: 11, color: '#FF453A', fontWeight: 600, paddingLeft: 8 }}>🚨 No presente en última importación</span>}
+                              {item.importStatus === 'new' && <span style={{ fontSize: 11, color: '#34C759', fontWeight: 600, paddingLeft: 8 }}>🆕 Nuevo en Excel</span>}
+                              {item.importStatus === 'updated' && <span style={{ fontSize: 11, color: '#FFCC00', fontWeight: 600, paddingLeft: 8 }}>🔄 Valores actualizados</span>}
+                            </div>
+                          </td>
+    
+                          {(activeTab === 'Ti' || activeTab === 'Micro') ? (
+                            <>
+                              <td style={{ padding: '12px 20px' }}>
+                                <div style={{ position: 'relative', display: 'inline-block' }}>
+                                  <input 
+                                    type="number"
+                                    step="0.01" 
+                                    disabled={isHistoric}
+                                    value={item.cuotaMensual !== undefined ? Number(item.cuotaMensual).toFixed(2) : ''}
+                                    onChange={e => updateItem(activeTab, index, 'cuotaMensual', e.target.value)}
+                                    className="form-input"
+                                    style={{ width: 130, color: isHistoric ? 'var(--medium-gray)' : 'var(--mercedes-cyan)', fontWeight: 'bold', backgroundColor: isHistoric ? 'transparent' : 'var(--app-bg)', border: isHistoric ? 'none' : undefined, paddingRight: 24 }}
+                                  />
+                                  <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--medium-gray)', fontSize: 13, pointerEvents: 'none' }}>€</span>
+                                </div>
+                              </td>
+                              <td style={{ padding: '12px 20px' }}>
+                                <div style={{ position: 'relative', display: 'inline-block' }}>
+                                  <input 
+                                    type="number"
+                                    step="0.01" 
+                                    disabled={isHistoric}
+                                    value={item.cuotaAnual !== undefined ? Number(item.cuotaAnual).toFixed(2) : ''}
+                                    onChange={e => updateItem(activeTab, index, 'cuotaAnual', e.target.value)}
+                                    className="form-input"
+                                    style={{ width: 130, backgroundColor: isHistoric ? 'transparent' : 'var(--active-bg)', border: isHistoric ? 'none' : '1px dashed var(--border-color)', paddingRight: 24 }}
+                                  />
+                                  <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--medium-gray)', fontSize: 13, pointerEvents: 'none' }}>€</span>
+                                </div>
+                              </td>
+                            </>
+                          ) : (
                         <td style={{ padding: '12px 20px' }}>
                           <div style={{ position: 'relative', display: 'inline-block' }}>
                             <input 
@@ -733,6 +877,9 @@ Alta MV	15"
                           </div>
                         </td>
                       )}
+                        </>
+                      )}
+
 
                       <td style={{ padding: '12px 8px' }}>
                         <input 
@@ -741,7 +888,7 @@ Alta MV	15"
                           value={item.validFrom || ''}
                           onChange={e => updateItem(activeTab, index, 'validFrom', e.target.value)}
                           className="form-input"
-                          style={{ width: '100%', fontSize: 13, backgroundColor: isHistoric ? 'transparent' : 'var(--app-bg)', border: isHistoric ? 'none' : undefined, textAlign: 'center' }}
+                          style={{ width: '100%', minWidth: 100, fontSize: 13, backgroundColor: isHistoric ? 'transparent' : 'var(--app-bg)', border: isHistoric ? 'none' : undefined, textAlign: 'center' }}
                           placeholder="dd/mm/yyyy"
                         />
                       </td>
@@ -752,7 +899,7 @@ Alta MV	15"
                           value={item.validTo || ''}
                           onChange={e => updateItem(activeTab, index, 'validTo', e.target.value)}
                           className="form-input"
-                          style={{ width: '100%', fontSize: 13, backgroundColor: isHistoric ? 'transparent' : 'var(--app-bg)', border: isHistoric ? 'none' : undefined, textAlign: 'center' }}
+                          style={{ width: '100%', minWidth: 90, fontSize: 13, backgroundColor: isHistoric ? 'transparent' : 'var(--app-bg)', border: isHistoric ? 'none' : undefined, textAlign: 'center' }}
                           placeholder="Fijo"
                         />
                       </td>

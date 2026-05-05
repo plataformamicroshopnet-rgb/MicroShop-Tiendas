@@ -85,7 +85,7 @@ export async function POST(request: Request) {
       const fechaStr = `${d}/${m}/${y}`
 
       let sheetCategory = 'OP'
-      if (['Fija y Móvil', 'Ti', 'TMA', 'Micro'].includes(prod.categoria)) {
+      if (['Fija y Móvil', 'Ti', 'RENT', 'Micro'].includes(prod.categoria)) {
         sheetCategory = 'Venta Fija'
       }
 
@@ -115,6 +115,11 @@ export async function POST(request: Request) {
         grupo: calculatedGroup,
         cuota: prod.importe ? parseFloat(prod.importe.toString().replace(',','.')) : null,
         detalle: prod.categoria || '',
+        imei: prod.imei || null,
+        rentConCoste: prod.rentConCoste || null,
+        seguro: prod.seguro || null,
+        seguroImporte: prod.seguroImporte ? parseFloat(prod.seguroImporte.toString().replace(',','.')) : null,
+        isLibre: prod.isLibre === true,
         periodId: activePeriod?.id || null
       })
     }

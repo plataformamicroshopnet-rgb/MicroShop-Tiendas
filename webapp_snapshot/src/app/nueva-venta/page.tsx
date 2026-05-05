@@ -33,7 +33,15 @@ export default function NuevaVentaPage() {
         telf: '',
         noCliente: '', // Maps to PO
         pendiente: 'No', // Si / No / Anulado
-        importe: ''
+        importe: '',
+        imei: '',
+        rentConCoste: 'No',
+        seguro: '',
+        seguroImporte: 0,
+        fabricante: '',
+        subcategoria: '',
+        gama: '',
+        isLibre: false
       }
     ]
   })
@@ -95,6 +103,15 @@ export default function NuevaVentaPage() {
       if (field === 'categoria') {
          newProducts[index].producto = ''
          newProducts[index].importe = ''
+         newProducts[index].fabricante = ''
+         newProducts[index].subcategoria = ''
+      }
+      
+      // Cascade clear when changing filters
+      if (field === 'fabricante' || field === 'subcategoria') {
+         newProducts[index].producto = ''
+         newProducts[index].importe = ''
+         newProducts[index].gama = ''
       }
       
       // Autofill importe if product is selected
@@ -103,13 +120,39 @@ export default function NuevaVentaPage() {
          const selectedItem = catList.find((p: any) => p.producto === value)
          if (selectedItem) {
             const cat = newProducts[index].categoria
-            if (cat === 'Ti' || cat === 'TMA' || cat === 'Micro') {
+            if (cat === 'Ti' || cat === 'TMA' || cat === 'Micro' || cat === 'RENT') {
               newProducts[index].importe = selectedItem.anual || selectedItem.mensual || ''
             } else {
               newProducts[index].importe = selectedItem.mensual || selectedItem.anual || ''
             }
+            if (cat === 'RENT') {
+              newProducts[index].fabricante = selectedItem.fabricante || ''
+              newProducts[index].subcategoria = selectedItem.subcategoria || ''
+              newProducts[index].gama = selectedItem.gama || ''
+            }
          } else {
             newProducts[index].importe = ''
+            newProducts[index].fabricante = ''
+            newProducts[index].subcategoria = ''
+            newProducts[index].gama = ''
+         }
+      }
+      
+      if (field === 'seguro') {
+        const seguroVal = value;
+        let seguroPrice = 0;
+        if (seguroVal === 'Smartphone') seguroPrice = 200;
+        else if (seguroVal === 'Tablet') seguroPrice = 50;
+        else if (seguroVal === 'Reacondicionado') seguroPrice = 150;
+        else if (seguroVal === 'Swap') seguroPrice = 0; // Swap can be overridden or kept 0
+        newProducts[index].seguroImporte = seguroPrice;
+      }
+      
+      if (field === 'isLibre') {
+         // If they check "Libre", maybe clear seguro?
+         if (value === true) {
+            newProducts[index].seguro = '';
+            newProducts[index].seguroImporte = 0;
          }
       }
       
@@ -129,7 +172,15 @@ export default function NuevaVentaPage() {
           telf: '',
           noCliente: '',
           pendiente: 'No',
-          importe: ''
+          importe: '',
+          imei: '',
+          rentConCoste: 'No',
+          seguro: '',
+          seguroImporte: 0,
+          fabricante: '',
+          subcategoria: '',
+          gama: '',
+          isLibre: false
         }
       ]
     }))
@@ -162,7 +213,7 @@ export default function NuevaVentaPage() {
         setSelectedTienda('')
         setFormData({
           vendedor: '', nombreCliente: '', codigo: '', nif: '', telefonoMovil: '', telefonoFijo: '', boletin: '', anotaciones: '',
-          productos: [{ categoria: '', producto: '', telf: '', noCliente: '', pendiente: 'No', importe: '' }]
+          productos: [{ categoria: '', producto: '', telf: '', noCliente: '', pendiente: 'No', importe: '', imei: '', rentConCoste: 'No', seguro: '', seguroImporte: 0, fabricante: '', subcategoria: '', gama: '', isLibre: false }]
         })
       } else {
         setError(data.error || 'Error al guardar la venta')
@@ -261,87 +312,209 @@ export default function NuevaVentaPage() {
                   )}
                 </div>
                 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '12px', alignItems: 'end' }}>
-                  
-                  {/* Categoría */}
-                  <div className="form-group" style={{ marginBottom: 0, minWidth: 120 }}>
-                    <label className="form-label" style={{ fontSize: 13 }}><strong className="text-cyan">{index + 1}</strong> Tipo de Venta</label>
-                    <select className="form-select" value={prod.categoria} onChange={e => handleProductChange(index, 'categoria', e.target.value)} required>
-                      <option value="">Selecciona...</option>
-                      {Object.keys(catalogs)
-                        .filter(cat => cat !== 'Fija' && cat !== 'Móvil')
-                        .map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                    </select>
-                  </div>
+                {prod.categoria === 'RENT' ? (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'stretch' }}>
+                    {/* COLUMNA 1: TIPO DE VENTA */}
+                    <div style={{ flex: '1', minWidth: '250px', backgroundColor: '#B8D5F6', borderRadius: '8px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <h4 style={{ margin: 0, color: '#1B3D6A', fontSize: '15px', fontWeight: 'bold' }}><span style={{ color: '#1050A4' }}>{index + 1}</span> Tipo de Venta</h4>
+                      
+                      <div>
+                        <label style={{ fontSize: 13, color: '#1B3D6A', display: 'block', marginBottom: 4 }}>Tipo de Venta</label>
+                        <select className="form-select" value={prod.categoria} onChange={e => handleProductChange(index, 'categoria', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
+                          <option value="">Selecciona...</option>
+                          {Object.keys(catalogs).filter(cat => cat !== 'Fija' && cat !== 'Móvil').map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                        </select>
+                      </div>
 
-                  {/* Producto */}
-                  <div className="form-group" style={{ marginBottom: 0, minWidth: 160, gridColumn: 'span 2' }}>
-                    <label className="form-label" style={{ fontSize: 13 }}>Producto</label>
-                    <select className="form-select" value={prod.producto} onChange={e => handleProductChange(index, 'producto', e.target.value)} disabled={!prod.categoria} required>
-                      <option value="">Selecciona...</option>
-                      {prod.categoria && catalogs[prod.categoria]
-                        ?.filter((p: any, i: number, self: any[]) => self.findIndex(t => t.producto === p.producto) === i)
-                        .map((p: any, i: number) => <option key={p.id || i} value={p.producto}>{p.producto}</option>)}
-                    </select>
-                  </div>
+                      <div>
+                        <label style={{ fontSize: 13, color: '#1B3D6A', display: 'block', marginBottom: 4 }}>Fabricante</label>
+                        <input list={`fab-${index}`} className="form-input" value={prod.fabricante} onChange={e => handleProductChange(index, 'fabricante', e.target.value)} placeholder="Buscar..." style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
+                        <datalist id={`fab-${index}`}>
+                          {[...new Set((catalogs['RENT'] || []).filter((p:any) => !prod.subcategoria || p.subcategoria === prod.subcategoria).map((p:any) => p.fabricante).filter(Boolean))].sort().map(f => <option key={String(f)} value={String(f)} />)}
+                        </datalist>
+                      </div>
 
-                  {/* Importe */}
-                  <div className="form-group" style={{ marginBottom: 0, maxWidth: 100 }}>
-                    <label className="form-label" style={{ fontSize: 13 }}>Importe</label>
-                    <div style={{ position: 'relative', display: 'inline-block' }}>
-                      <input 
-                        type="number" 
-                        step="0.01"
-                        className="form-input" 
-                        style={{ color: 'var(--mercedes-cyan)', fontWeight: 'bold', width: '100%', paddingRight: 24 }}
-                        value={prod.importe !== '' && prod.importe !== undefined ? Number(prod.importe).toFixed(2) : ''} 
-                        onChange={e => handleProductChange(index, 'importe', e.target.value)} 
-                      />
-                      <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--medium-gray)', fontSize: 13, pointerEvents: 'none' }}>€</span>
+                      <div>
+                        <label style={{ fontSize: 13, color: '#1B3D6A', display: 'block', marginBottom: 4 }}>Categoría</label>
+                        <input list={`cat-${index}`} className="form-input" value={prod.subcategoria} onChange={e => handleProductChange(index, 'subcategoria', e.target.value)} placeholder="Buscar..." style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
+                        <datalist id={`cat-${index}`}>
+                          {[...new Set((catalogs['RENT'] || []).filter((p:any) => !prod.fabricante || p.fabricante === prod.fabricante).map((p:any) => p.subcategoria).filter(Boolean))].sort().map(c => <option key={String(c)} value={String(c)} />)}
+                        </datalist>
+                      </div>
+                    </div>
+
+                    {/* COLUMNA 2: DETALLES DE LA VENTA / PRODUCTO */}
+                    <div style={{ flex: '2', minWidth: '350px', backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: '#333' }}>DETALLES DE LA VENTA / PRODUCTO</h4>
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>Producto</label>
+                        <input list={`prod-${index}`} className="form-input" value={prod.producto} onChange={e => handleProductChange(index, 'producto', e.target.value)} placeholder="Escribe para buscar..." required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
+                        <datalist id={`prod-${index}`}>
+                          {(catalogs['RENT'] || []).filter((p:any) => (!prod.fabricante || p.fabricante === prod.fabricante) && (!prod.subcategoria || p.subcategoria === prod.subcategoria)).map((p:any) => p.producto).filter((p:any, i:number, self:any[]) => self.indexOf(p) === i).sort().map((p:any) => <option key={String(p)} value={String(p)} />)}
+                        </datalist>
+                      </div>
+
+                      <div style={{ height: 1, backgroundColor: '#E0E0E0', margin: '8px 0' }}></div>
+                      <h5 style={{ margin: 0, fontSize: '13px', color: '#666' }}>Detalles del Producto</h5>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1fr', gap: '12px' }}>
+                        <div>
+                          <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>Gama</label>
+                          <input type="text" className="form-input" value={prod.gama} readOnly style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>IMEI</label>
+                          <input type="text" className="form-input" maxLength={15} value={prod.imei} onChange={e => handleProductChange(index, 'imei', e.target.value.replace(/\D/g, ''))} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>Teléfono</label>
+                          <input type="text" className="form-input" maxLength={9} value={prod.telf} onChange={e => handleProductChange(index, 'telf', e.target.value)} onPaste={e => { const pasted = e.clipboardData.getData('text'); if (pasted.length > 9) { e.preventDefault(); handleProductChange(index, 'telf', pasted); } }} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                        <input type="checkbox" checked={prod.isLibre || false} onChange={e => handleProductChange(index, 'isLibre', e.target.checked)} style={{ cursor: 'pointer', width: 16, height: 16 }} />
+                        <label style={{ fontSize: 13, color: '#555' }}>¿Libre?</label>
+                      </div>
+                    </div>
+
+                    {/* COLUMNA 3: ESTADO Y FINANZAS */}
+                    <div style={{ flex: '1', minWidth: '250px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      <div style={{ backgroundColor: '#B8D5F6', borderRadius: '8px', padding: '16px' }}>
+                        <label style={{ fontSize: 13, color: '#1B3D6A', display: 'block', marginBottom: 4 }}>Cuota Total</label>
+                        <div style={{ position: 'relative' }}>
+                          <input type="number" step="0.01" className="form-input" value={prod.importe !== '' && prod.importe !== undefined ? Number(prod.importe).toFixed(2) : ''} onChange={e => handleProductChange(index, 'importe', e.target.value)} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A', fontWeight: 'bold', width: '100%', paddingRight: 24 }} />
+                          <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: '#1B3D6A', fontSize: 13, pointerEvents: 'none' }}>€</span>
+                        </div>
+                      </div>
+
+                      <div style={{ backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', flex: 1 }}>
+                        <h5 style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: 'bold', color: '#333' }}>Estado</h5>
+                        
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                          <div>
+                            <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>¿Pendiente?</label>
+                            <select className="form-select" value={prod.pendiente} onChange={e => handleProductChange(index, 'pendiente', e.target.value)} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
+                              <option value="No">No</option>
+                              <option value="Si">Sí</option>
+                              <option value="Anulado">Anulado</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>Rent con coste</label>
+                            <select className="form-select" value={prod.rentConCoste} onChange={e => handleProductChange(index, 'rentConCoste', e.target.value)} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
+                              <option value="No">No</option>
+                              <option value="Si">Sí</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                          <div>
+                            <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>Seguro</label>
+                            <select className="form-select" value={prod.seguro} onChange={e => handleProductChange(index, 'seguro', e.target.value)} disabled={prod.isLibre} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
+                              <option value="">Selecciona...</option>
+                              <option value="Smartphone">Smartphone</option>
+                              <option value="Tablet">Tablet</option>
+                              <option value="Reacondicionado">Reacondicionado</option>
+                              <option value="Swap">Swap</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>Cuota Seguro</label>
+                            <div style={{ position: 'relative' }}>
+                              <input type="number" className="form-input" value={prod.seguroImporte} readOnly style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A', fontWeight: 'bold', width: '100%', paddingRight: 24 }} />
+                              <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: '#1B3D6A', fontSize: 13, pointerEvents: 'none' }}>€</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '12px', alignItems: 'end' }}>
+                    {/* Categoría */}
+                    <div className="form-group" style={{ marginBottom: 0, minWidth: 120 }}>
+                      <label className="form-label" style={{ fontSize: 13 }}><strong className="text-cyan">{index + 1}</strong> Tipo de Venta</label>
+                      <select className="form-select" value={prod.categoria} onChange={e => handleProductChange(index, 'categoria', e.target.value)} required>
+                        <option value="">Selecciona...</option>
+                        {Object.keys(catalogs)
+                          .filter(cat => cat !== 'Fija' && cat !== 'Móvil')
+                          .map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                      </select>
+                    </div>
 
-                  {/* Teléfono */}
-                  <div className="form-group" style={{ marginBottom: 0, maxWidth: 120 }}>
-                    <label className="form-label" style={{ fontSize: 13 }}>Teléfono</label>
-                    <input 
-                      type="text" 
-                      className="form-input" 
-                      maxLength={9} 
-                      value={prod.telf} 
-                      onChange={e => handleProductChange(index, 'telf', e.target.value)} 
-                      onPaste={e => {
-                        const pasted = e.clipboardData.getData('text');
-                        if (pasted.length > 9) {
-                          e.preventDefault();
-                          handleProductChange(index, 'telf', pasted);
-                        }
-                      }}
-                      required 
-                    />
+                    {/* Producto */}
+                    <div className="form-group" style={{ marginBottom: 0, minWidth: 160, gridColumn: 'span 2' }}>
+                      <label className="form-label" style={{ fontSize: 13 }}>Producto</label>
+                      <select className="form-select" value={prod.producto} onChange={e => handleProductChange(index, 'producto', e.target.value)} disabled={!prod.categoria} required>
+                        <option value="">Selecciona...</option>
+                        {prod.categoria && catalogs[prod.categoria]
+                          ?.filter((p: any, i: number, self: any[]) => self.findIndex(t => t.producto === p.producto) === i)
+                          .map((p: any, i: number) => <option key={p.id || i} value={p.producto}>{p.producto}</option>)}
+                      </select>
+                    </div>
+
+                    {/* Importe */}
+                    <div className="form-group" style={{ marginBottom: 0, maxWidth: 100 }}>
+                      <label className="form-label" style={{ fontSize: 13 }}>Importe</label>
+                      <div style={{ position: 'relative', display: 'inline-block' }}>
+                        <input 
+                          type="number" 
+                          step="0.01"
+                          className="form-input" 
+                          style={{ color: 'var(--mercedes-cyan)', fontWeight: 'bold', width: '100%', paddingRight: 24 }}
+                          value={prod.importe !== '' && prod.importe !== undefined ? Number(prod.importe).toFixed(2) : ''} 
+                          onChange={e => handleProductChange(index, 'importe', e.target.value)} 
+                        />
+                        <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--medium-gray)', fontSize: 13, pointerEvents: 'none' }}>€</span>
+                      </div>
+                    </div>
+
+                    {/* Teléfono */}
+                    <div className="form-group" style={{ marginBottom: 0, maxWidth: 120 }}>
+                      <label className="form-label" style={{ fontSize: 13 }}>Teléfono</label>
+                      <input 
+                        type="text" 
+                        className="form-input" 
+                        maxLength={9} 
+                        value={prod.telf} 
+                        onChange={e => handleProductChange(index, 'telf', e.target.value)} 
+                        onPaste={e => {
+                          const pasted = e.clipboardData.getData('text');
+                          if (pasted.length > 9) {
+                            e.preventDefault();
+                            handleProductChange(index, 'telf', pasted);
+                          }
+                        }}
+                        required 
+                      />
+                    </div>
+
+                    {/* NO Cliente */}
+                    <div className="form-group" style={{ marginBottom: 0, maxWidth: 90 }}>
+                      <label className="form-label" style={{ fontSize: 13 }}>Cliente</label>
+                      <select className="form-select" value={prod.noCliente} onChange={e => handleProductChange(index, 'noCliente', e.target.value)}>
+                        <option value="">Selecciona...</option>
+                        <option value="Si">Si</option>
+                        <option value="No">No</option>
+                      </select>
+                    </div>
+
+                    {/* Pendiente */}
+                    <div className="form-group" style={{ marginBottom: 0, maxWidth: 100 }}>
+                      <label className="form-label" style={{ fontSize: 13 }}>¿Pendiente?</label>
+                      <select className="form-select" value={prod.pendiente} onChange={e => handleProductChange(index, 'pendiente', e.target.value)}>
+                        <option value="No">No</option>
+                        <option value="Si">Sí</option>
+                        <option value="Anulado">Anulado</option>
+                      </select>
+                    </div>
                   </div>
-
-                  {/* NO Cliente */}
-                  <div className="form-group" style={{ marginBottom: 0, maxWidth: 90 }}>
-                    <label className="form-label" style={{ fontSize: 13 }}>Cliente</label>
-                    <select className="form-select" value={prod.noCliente} onChange={e => handleProductChange(index, 'noCliente', e.target.value)}>
-                      <option value="">Selecciona...</option>
-                      <option value="Si">Si</option>
-                      <option value="No">No</option>
-                    </select>
-                  </div>
-
-                  {/* Pendiente */}
-                  <div className="form-group" style={{ marginBottom: 0, maxWidth: 100 }}>
-                    <label className="form-label" style={{ fontSize: 13 }}>¿Pendiente?</label>
-                    <select className="form-select" value={prod.pendiente} onChange={e => handleProductChange(index, 'pendiente', e.target.value)}>
-                      <option value="No">No</option>
-                      <option value="Si">Sí</option>
-                      <option value="Anulado">Anulado</option>
-                    </select>
-                  </div>
-
-                </div>
+                )}
               </div>
             ))}
           </div>

@@ -59,6 +59,10 @@ model ProductCatalog {
   mensual   String
   anual     String
 
+  subcategoria String?
+  fabricante   String?
+  gama         String?
+
   validFrom String? // Formato: "DD/MM/YYYY"
   validTo   String? // Formato: "DD/MM/YYYY"
 
@@ -89,6 +93,11 @@ model Sale {
   grupo         String?
   cuota         Float?
   detalle       String?
+  imei          String?
+  rentConCoste  String?
+  seguro        String?
+  seguroImporte Float?
+  isLibre       Boolean?
 
   periodId String?
   period   WorkPeriod? @relation(fields: [periodId], references: [id], onDelete: Cascade)

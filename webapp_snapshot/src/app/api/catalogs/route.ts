@@ -60,7 +60,7 @@ export async function GET(request: Request) {
     }
   }
 
-  const catalogs: Record<string, any[]> = { "Fija": [], "Móvil": [], "Ti": [], "TMA": [], "Micro": [] }
+  const catalogs: Record<string, any[]> = { "Fija": [], "Móvil": [], "Ti": [], "RENT": [], "Micro": [] }
   for (const r of records) {
     if (!catalogs[r.categoria]) {
       catalogs[r.categoria] = []
@@ -69,6 +69,9 @@ export async function GET(request: Request) {
       producto: r.producto,
       mensual: r.mensual,
       anual: r.anual,
+      subcategoria: r.subcategoria,
+      fabricante: r.fabricante,
+      gama: r.gama,
       validFrom: r.validFrom,
       validTo: r.validTo,
       id: r.id // Enviamos ID por si hiciera falta luego
@@ -114,6 +117,9 @@ export async function POST(request: Request) {
           producto: p.producto,
           mensual: String(p.mensual || ''),
           anual: String(p.anual || ''),
+          subcategoria: p.subcategoria || null,
+          fabricante: p.fabricante || null,
+          gama: p.gama || null,
           validFrom: p.validFrom || null,
           validTo: p.validTo || null,
           periodId: targetPeriodId
