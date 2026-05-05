@@ -45,28 +45,12 @@ export default function SeguimientoVentasPage() {
       textColor: '#10b981'
     },
     {
-      title: 'Geventas',
-      description: 'Acceso corporativo de mando al portal externo de Geventas.',
-      icon: Globe,
-      action: () => window.open('https://geventas.com', '_blank', 'noopener,noreferrer'),
-      color: 'rgba(236, 72, 153, 0.1)',
-      textColor: '#ec4899'
-    },
-    {
       title: 'Comisiones Tiendas Completas',
       description: 'Liquidación grupal y métricas completas de todas las comisiones.',
       icon: Calculator,
       action: () => router.push('/comisiones'),
       color: 'rgba(255, 149, 0, 0.1)',
       textColor: 'rgb(255, 149, 0)'
-    },
-    {
-      title: 'Evolución Visitas Gevico',
-      description: 'Panel de seguimiento de volumen de visitas y avance trimestral.',
-      icon: Building2,
-      action: () => router.push('/cumplimiento-telefonica?from=jefetiendas'),
-      color: 'rgba(16, 185, 129, 0.1)',
-      textColor: '#10b981'
     },
     {
       title: 'Condiciones, Comisiones Extras del mes y Penalizaciones',

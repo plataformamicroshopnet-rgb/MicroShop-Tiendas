@@ -83,6 +83,9 @@ model Sale {
   pendiente     String?
   anulado       String?
   anotaciones   String?
+  telefonoFijo  String?
+  telefonoMovil String?
+  boletin       String?
   grupo         String?
   cuota         Float?
   detalle       String?

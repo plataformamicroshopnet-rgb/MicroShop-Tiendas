@@ -72,24 +72,6 @@ export default function TiendasHubPage() {
       isMain: false
     },
     {
-      title: 'Evolución Visitas Gevico',
-      description: 'Estado del cumplimento mensual/trimestral de visitas, cobertura, agenda y progresión en clientes B2B.',
-      icon: Target,
-      action: () => router.push('/cumplimiento-telefonica?from=tiendas'),
-      bgIcon: 'linear-gradient(135deg, rgba(139,92,246,0.15) 0%, rgba(124,58,237,0.2) 100%)',
-      colorIcon: '#8b5cf6',
-      isMain: false
-    },
-    {
-      title: 'Geventas',
-      description: 'Acceso corporativo directo al portal externo oficial de Geventas.',
-      icon: Globe,
-      action: () => window.open('https://geventas.com', '_blank', 'noopener,noreferrer'),
-      bgIcon: 'linear-gradient(135deg, rgba(236,72,153,0.15) 0%, rgba(219,39,119,0.2) 100%)',
-      colorIcon: '#ec4899',
-      isMain: false
-    },
-    {
       title: 'Condiciones, Comisiones Extras del mes y Penalizaciones',
       description: 'Consulta de condiciones, bonificaciones especiales y notas asignadas a este periodo.',
       icon: Target,

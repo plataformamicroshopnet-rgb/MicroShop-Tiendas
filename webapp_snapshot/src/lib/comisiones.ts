@@ -145,8 +145,7 @@ export const COMISIONES_NACIONALES = [
 // --- Lógica Compartida FrontEnd / Dashboard ---
 export const getProfile = (vendedorName: string) => {
     const nombre = String(vendedorName || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()
-    if (nombre === 'luis') return 'Básico'
-    if (['elena', 'javier', 'juan carlos', 'belen', 'maite'].includes(nombre)) return 'Plus'
+    if (['cristina', 'elena', 'gabriel', 'carmen', 'carlos', 'nuria', 'vanesa', 'lara'].includes(nombre)) return 'Plus'
     return 'Desconocido'
 }
 
@@ -216,5 +215,5 @@ export const mapObjectiveGroup = (rowName: string) => {
     return null;
 }
 
-export const FIXED_SELLERS = ['Luis', 'Javier', 'Elena', 'Maite', 'Belén', 'Juan Carlos']
+export const FIXED_SELLERS = ['Cristina', 'Elena', 'Gabriel', 'Carmen', 'Carlos', 'Nuria', 'Vanesa', 'Lara']
 

@@ -47,23 +47,6 @@ export default function BackOfficePage() {
       color: 'rgba(245, 158, 11, 0.1)',
       textColor: '#d97706',
       border: '1px solid rgba(245, 158, 11, 0.2)'
-    },
-    {
-      title: 'Visitas Tiendas',
-      description: 'Gestiona y registra las visitas presenciales realizadas por la Fuerza de Ventas.',
-      icon: MapPin,
-      href: '/visitas-tiendas',
-      color: 'rgba(37, 99, 235, 0.1)',
-      textColor: '#2563eb'
-    },
-    {
-      title: 'Evolución Visitas Gevico',
-      description: 'Dashboard analítico de actividad real vs foco core de cartera trimestral.',
-      icon: Building2,
-      href: '/cumplimiento-telefonica?from=backoffice',
-      color: 'rgba(16, 185, 129, 0.1)',
-      textColor: '#059669',
-      border: '1px solid rgba(16, 185, 129, 0.2)'
     }
   ]
 

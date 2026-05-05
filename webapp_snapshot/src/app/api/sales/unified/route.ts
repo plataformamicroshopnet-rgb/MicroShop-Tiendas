@@ -58,9 +58,8 @@ export async function POST(request: Request) {
     const data = await request.json()
 
     if (!data.vendedor) return NextResponse.json({ success: false, error: 'Selecciona el vendedor' }, { status: 400 })
-    if (!data.codigo) return NextResponse.json({ success: false, error: 'Selecciona el código de tramitación' }, { status: 400 })
     if (!data.nombreCliente) return NextResponse.json({ success: false, error: 'Indica el nombre del cliente' }, { status: 400 })
-    if (!data.nif) return NextResponse.json({ success: false, error: 'Comprueba el CIF / Nº Cliente' }, { status: 400 })
+    if (!data.nif) return NextResponse.json({ success: false, error: 'Comprueba el NIF del Titular' }, { status: 400 })
 
     const numValidProducts = data.productos.filter((p: any) => p.producto !== '').length
     if (numValidProducts === 0) return NextResponse.json({ success: false, error: 'Configura al menos un producto' }, { status: 400 })
@@ -101,7 +100,7 @@ export async function POST(request: Request) {
         sheet: sheetCategory,
         vendedor: data.vendedor,
         fecha: fechaStr,
-        codigo: data.codigo,
+        codigo: data.codigo || '',
         producto: prod.producto,
         nombreCliente: data.nombreCliente.toUpperCase(),
         nif: data.nif.toUpperCase(),
@@ -110,6 +109,9 @@ export async function POST(request: Request) {
         pendiente: prod.pendiente || '',
         anulado: 'No',
         anotaciones: data.anotaciones || '',
+        telefonoFijo: data.telefonoFijo || '',
+        telefonoMovil: data.telefonoMovil || '',
+        boletin: data.boletin || '',
         grupo: calculatedGroup,
         cuota: prod.importe ? parseFloat(prod.importe.toString().replace(',','.')) : null,
         detalle: prod.categoria || '',

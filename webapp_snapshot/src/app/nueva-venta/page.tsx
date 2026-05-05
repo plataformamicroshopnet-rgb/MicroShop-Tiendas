@@ -22,6 +22,9 @@ export default function NuevaVentaPage() {
     nombreCliente: '',
     codigo: '',
     nif: '',
+    telefonoMovil: '',
+    telefonoFijo: '',
+    boletin: '',
     anotaciones: '',
     productos: [
       {
@@ -158,7 +161,7 @@ export default function NuevaVentaPage() {
         setSuccess('¡VENTA AÑADIDA CON ÉXITO!')
         setSelectedTienda('')
         setFormData({
-          vendedor: '', nombreCliente: '', codigo: '', nif: '', anotaciones: '',
+          vendedor: '', nombreCliente: '', codigo: '', nif: '', telefonoMovil: '', telefonoFijo: '', boletin: '', anotaciones: '',
           productos: [{ categoria: '', producto: '', telf: '', noCliente: '', pendiente: 'No', importe: '' }]
         })
       } else {
@@ -224,15 +227,20 @@ export default function NuevaVentaPage() {
               <input type="text" className="form-input" maxLength={40} value={formData.nombreCliente} onChange={e => handleInputChange('nombreCliente', e.target.value)} required />
             </div>
             <div className="form-group">
-              <label className="form-label">CIF del cliente</label>
+              <label className="form-label">NIF del Titular</label>
               <input type="text" className="form-input" maxLength={9} value={formData.nif} onChange={e => handleInputChange('nif', e.target.value)} required />
             </div>
             <div className="form-group">
-              <label className="form-label">Código de tramitación</label>
-              <select className="form-select" value={formData.codigo} onChange={e => handleInputChange('codigo', e.target.value)} required>
-                <option value="">Selecciona...</option>
-                {CODIGOS_TRAMITACION.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+              <label className="form-label">Teléfono Móvil</label>
+              <input type="text" className="form-input" maxLength={9} value={formData.telefonoMovil} onChange={e => handleInputChange('telefonoMovil', e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Teléfono Fijo</label>
+              <input type="text" className="form-input" maxLength={9} value={formData.telefonoFijo} onChange={e => handleInputChange('telefonoFijo', e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Boletín</label>
+              <input type="text" className="form-input" maxLength={16} value={formData.boletin} onChange={e => handleInputChange('boletin', e.target.value)} />
             </div>
           </div>
           <div className="form-group" style={{ marginTop: 16 }}>

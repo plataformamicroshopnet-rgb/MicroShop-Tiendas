@@ -6,6 +6,15 @@ import { usePeriod } from '@/components/PeriodProvider'
 import { useGuard } from '@/hooks/useGuard'
 
 const COMERCIAL_CODES: { name: string; code: string }[] = [
+          { name: 'Cristina', code: 'PINDI0023997' },
+          { name: 'Elena',    code: 'PINDI0023998' },
+          { name: 'Gabriel',  code: 'PINDI0554690' },
+          { name: 'Carmen',   code: 'PINDI0023988' },
+          { name: 'Carlos',   code: 'PINDI0023996' },
+          { name: 'Nuria',    code: 'PINDI0051346' },
+          { name: 'Vanesa',   code: 'PINDI0023994' },
+          { name: 'Lara',     code: 'PINDI0023995' }
+        ] = [
   { name: 'Juan Carlos', code: '2FV1WFN7D' },
   { name: 'Elena',       code: '2FV1WF1SK' },
   { name: 'Belén',       code: '2FV1WFK2Z' },
