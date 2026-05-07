@@ -1482,8 +1482,6 @@ export default function LiquidacionesPage() {
             
             const plusCodesExact = ['plus 1ks', 'plus 1sk', 'plus nfg', 'plus n7d', 'plus k2z', 'plus zf7'];
             const isPlus = plusCodesExact.some(c => codigoLower.includes(c));
-
-            if (!isPlus && !isBasico) return 0;
             
             // Check if sale date matches the active selectedMonth (which is what dashboard is computing for)
             let saleMonth = ''
@@ -1499,10 +1497,10 @@ export default function LiquidacionesPage() {
             const getFallbackValue = () => {
                  let val = sale.importe || sale.cuota || 0;
                  const det = (sale.detalle || '').toLowerCase();
-                 if (!val && (det === 'ti' || det === 'tma' || det === 'micro')) {
+                 if (!val && (det === 'ti' || det === 'tma' || det === 'rent' || det === 'micro')) {
                      let catalogKey = '';
                      if (det === 'ti') catalogKey = 'Ti';
-                     if (det === 'tma') catalogKey = 'TMA';
+                     if (det === 'tma' || det === 'rent') catalogKey = 'RENT';
                      if (det === 'micro') catalogKey = 'Micro';
                      
                      const list = catalogs[catalogKey] || [];
@@ -1528,11 +1526,11 @@ export default function LiquidacionesPage() {
             // Fetch catalog override value for technical products if it exists
             const det = (sale.detalle || '').toLowerCase();
             let overrideBaseValue: number | undefined = undefined;
-            if (det === 'ti' || det === 'tma' || det === 'micro') {
-                // Ensure we map back to the EXACT object key in catalogs since it stores as 'Ti', 'TMA', 'Micro'
+            if (det === 'ti' || det === 'tma' || det === 'rent' || det === 'micro') {
+                // Ensure we map back to the EXACT object key in catalogs since it stores as 'Ti', 'RENT', 'Micro'
                 let catalogKey = '';
                 if (det === 'ti') catalogKey = 'Ti';
-                if (det === 'tma') catalogKey = 'TMA';
+                if (det === 'tma' || det === 'rent') catalogKey = 'RENT';
                 if (det === 'micro') catalogKey = 'Micro';
                 
                 const list = catalogs[catalogKey] || [];
@@ -1551,13 +1549,28 @@ export default function LiquidacionesPage() {
                 if (found) {
                     overrideBaseValue = Number(String(found.anual || 0).replace(',','.'));
                     console.log(`[Calc Commission] Match found for ${sale.producto} (Date: ${sale.fecha})! Base Value set to: ${overrideBaseValue}`);
+                    
+                    // Direct override para Contratos Móvil (Ti), usamos directamente la Comisión del catálogo
+                    if (det === 'ti') {
+                        return overrideBaseValue; // overrideBaseValue is already parsed from found.anual
+                    }
+                    
+                    // Direct override para RENT (TMA), verificando si la venta lleva seguro con coste
+                    if (det === 'tma' || det === 'rent') {
+                        const isConCoste = sale.rentConCoste && (sale.rentConCoste.toLowerCase() === 'sí' || sale.rentConCoste.toLowerCase() === 'si');
+                        if (isConCoste) {
+                            return Number(String(found.comisionConCoste || 0).replace(',','.'));
+                        } else {
+                            return Number(String(found.comision || 0).replace(',','.'));
+                        }
+                    }
                 } else {
                     console.log(`[Calc Commission] No match found in catalog for ${sale.producto}`);
                 }
             }
 
             const finalCommission = calculateDynamicCommission(sale, dashboardRows, overrideBaseValue);
-            if (det === 'ti' || det === 'tma' || det === 'micro') {
+            if (det === 'tma' || det === 'micro') {
                  console.log(`[Calc Commission] FINAL PAYOUT for ${sale.producto}: ${finalCommission}€`);
             }
             return finalCommission;
@@ -1573,8 +1586,7 @@ export default function LiquidacionesPage() {
                 { header: 'Vendedor', key: 'vendedor', width: 20 },
                 { header: 'Cliente (NIF)', key: 'nif', width: 15 },
                 { header: 'Teléfono', key: 'telefono', width: 15 },
-                { header: 'Código', key: 'codigo', width: 15 },
-                { header: 'Grupo', key: 'grupo', width: 15 },
+                { header: 'Tienda', key: 'codigo', width: 15 },
                 { header: 'Producto', key: 'producto', width: 30 },
                 { header: 'Comisión', key: 'comision', width: 15 },
                 { header: 'Varios', key: 'varios', width: 25 },
@@ -1595,7 +1607,6 @@ export default function LiquidacionesPage() {
                     nif: sale.nif || '-',
                     telefono: sale.telf || '-',
                     codigo: sale.codigo || '-',
-                    grupo: sale.grupo || sale.categoria || sale.sheet || '-',
                     producto: sale.producto || 'Sin especificar',
                     comision: Number(comisionEuros),
                     varios: sale.anotaciones || '-',
@@ -1610,7 +1621,6 @@ export default function LiquidacionesPage() {
                     nif: ex.customerNif || '-',
                     telefono: '-',
                     codigo: resolveExtraCode(ex) || 'MANUAL',
-                    grupo: 'EXTRA TELEFÓNICA',
                     producto: ex.rule?.name || 'Incentivo Manual',
                     comision: Number(ex.telecomRewardAmount || 0),
                     varios: ex.customerName || '-',
@@ -1673,8 +1683,7 @@ export default function LiquidacionesPage() {
                                 <th style={{ textAlign: 'left', color: 'var(--medium-gray)' }}>Vendedor</th>
                                 <th style={{ textAlign: 'left', color: 'var(--medium-gray)' }}>Cliente (NIF)</th>
                                 <th style={{ textAlign: 'center', color: 'var(--medium-gray)' }}>Teléfono</th>
-                                <th style={{ textAlign: 'left', color: 'var(--medium-gray)' }}>Código</th>
-                                <th style={{ textAlign: 'left', color: 'var(--medium-gray)' }}>Grupo</th>
+                                <th style={{ textAlign: 'left', color: 'var(--medium-gray)' }}>Tienda</th>
                                 <th style={{ textAlign: 'left', color: 'var(--medium-gray)' }}>Producto</th>
                                 <th style={{ textAlign: 'center', color: 'var(--medium-gray)' }}>Comisión</th>
                                 <th style={{ textAlign: 'left', color: 'var(--medium-gray)' }}>Varios</th>
@@ -1702,9 +1711,6 @@ export default function LiquidacionesPage() {
                                         </td>
                                         <td>
                                             {isEditing ? <input className="form-input" style={{ padding: '0 4px', width: 80 }} value={editForm.codigo || ''} onChange={e => setEditForm({ ...editForm, codigo: e.target.value })} /> : (s.codigo || '-')}
-                                        </td>
-                                        <td>
-                                            {s.grupo || getDisplayGroup(s.producto) || s.categoria || s.sheet || '-'}
                                         </td>
                                         <td>
                                             {isEditing ? (
@@ -1764,9 +1770,6 @@ export default function LiquidacionesPage() {
                                     <td style={{ color: '#059669' }}>{ex.customerNif || '-'}</td>
                                     <td style={{ textAlign: 'center', color: '#059669' }}>-</td>
                                     <td style={{ color: '#059669' }}>{resolveExtraCode(ex) || 'MANUAL'}</td>
-                                    <td style={{ color: '#059669' }}>
-                                        EXTRA TELEFÓNICA
-                                    </td>
                                     <td style={{ color: '#059669' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Zap size={14} /> {ex.rule?.name || 'Incentivo Manual'}</div>
                                     </td>

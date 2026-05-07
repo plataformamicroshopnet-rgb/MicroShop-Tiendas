@@ -60,7 +60,7 @@ export async function GET(request: Request) {
     }
   }
 
-  const catalogs: Record<string, any[]> = { "Fija": [], "Móvil": [], "Ti": [], "RENT": [], "Micro": [] }
+  const catalogs: Record<string, any[]> = { "Fija": [], "Móvil": [], "Ti": [], "RENT": [], "Micro": [], "O2": [] }
   for (const r of records) {
     if (!catalogs[r.categoria]) {
       catalogs[r.categoria] = []
@@ -74,6 +74,8 @@ export async function GET(request: Request) {
       gama: r.gama,
       validFrom: r.validFrom,
       validTo: r.validTo,
+      comision: r.comision,
+      comisionConCoste: r.comisionConCoste,
       id: r.id // Enviamos ID por si hiciera falta luego
     })
   }
@@ -122,6 +124,8 @@ export async function POST(request: Request) {
           gama: p.gama || null,
           validFrom: p.validFrom || null,
           validTo: p.validTo || null,
+          comision: p.comision || null,
+          comisionConCoste: p.comisionConCoste || null,
           periodId: targetPeriodId
         })
       }

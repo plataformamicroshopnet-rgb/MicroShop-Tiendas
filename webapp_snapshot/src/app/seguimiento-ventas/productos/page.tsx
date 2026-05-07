@@ -419,13 +419,6 @@ export default function AvancePalancasPage() {
           { name: 'Nuria',    code: 'PINDI0051346' },
           { name: 'Vanesa',   code: 'PINDI0023994' },
           { name: 'Lara',     code: 'PINDI0023995' }
-        ] = [
-          { name: 'Juan Carlos', code: '2FV1WFN7D' },
-          { name: 'Elena',       code: '2FV1WF1SK' },
-          { name: 'Belén',       code: '2FV1WFK2Z' },
-          { name: 'Javier',      code: '2FV1WFNFG' },
-          { name: 'Luis',        code: '2FV1WFXCU' },
-          { name: 'Maite',       code: '2FV1WFZF7' },
         ]
 
         const prod = (s: any) => (s.producto || s.detalle || '').toLowerCase()

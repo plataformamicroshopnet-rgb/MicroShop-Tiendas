@@ -68,15 +68,17 @@ type ProductItem = {
   subcategoria?: string
   fabricante?: string
   gama?: string
-  cuota?: number
-  cuotaMensual?: number
-  cuotaAnual?: number
+  cuota?: number | string
+  cuotaMensual?: number | string
+  cuotaAnual?: number | string
   validFrom?: string
   validTo?: string
+  comision?: number | string
+  comisionConCoste?: number | string
   importStatus?: 'new' | 'updated' | 'missing' | 'unchanged'
 }
 
-const CATEGORIES = ['Fija y Móvil', 'Ti', 'RENT', 'Micro']
+const CATEGORIES = ['Fija y Móvil', 'Ti', 'RENT', 'Seguro', 'O2', 'miMovistar']
 
 export default function CatalogosPage() {
   const { authorized } = useGuard('MODULE_ADMIN', 'MANAGE_CATALOG')
@@ -95,7 +97,7 @@ export default function CatalogosPage() {
   const previousPeriod = currentIndex > 0 ? sortedPeriods[currentIndex - 1] : null
 
   const [catalogs, setCatalogs] = useState<Record<string, ProductItem[]>>({
-    "Fija y Móvil": [], "Ti": [], "RENT": [], "Micro": []
+    "Fija y Móvil": [], "Ti": [], "RENT": [], "Seguro": [], "O2": [], "miMovistar": []
   })
   const [activeTab, setActiveTab] = useState('Fija y Móvil')
   const isProductTab = CATEGORIES.includes(activeTab)
@@ -114,20 +116,22 @@ export default function CatalogosPage() {
       .then(res => res.json())
       .then(data => {
         if (data.success) {
-          const mapped: Record<string, ProductItem[]> = { "Fija y Móvil": [], "Ti": [], "RENT": [], "Micro": [] }
+          const mapped: Record<string, ProductItem[]> = { "Fija y Móvil": [], "Ti": [], "RENT": [], "Seguro": [], "O2": [], "miMovistar": [] }
           for (const [cat, items] of Object.entries(data.catalogs as Record<string, any[]>)) {
              if (!mapped[cat]) mapped[cat] = [];
              mapped[cat] = [...mapped[cat], ...items.map((it: any) => ({
                  ...it,
                  id: it.id || String(Math.random()),
-                 cuota: Number(String(it.mensual || it.cuota || 0).replace(',','.')),
-                 cuotaMensual: Number(String(it.mensual || 0).replace(',','.')),
-                 cuotaAnual: Number(String(it.anual || 0).replace(',','.')),
+                 cuota: cat === 'Ti' ? String(it.mensual || it.cuota || '') : Number(String(it.mensual || it.cuota || 0).replace(',','.')),
+                 cuotaMensual: cat === 'Ti' ? String(it.mensual || '') : Number(String(it.mensual || 0).replace(',','.')),
+                 cuotaAnual: cat === 'Ti' ? String(it.anual || '') : Number(String(it.anual || 0).replace(',','.')),
                  subcategoria: it.subcategoria || '',
                  fabricante: it.fabricante || '',
                  gama: it.gama || '',
                  validFrom: it.validFrom || '',
-                 validTo: it.validTo || ''
+                 validTo: it.validTo || '',
+                 comision: it.comision || '',
+                 comisionConCoste: it.comisionConCoste || ''
              }))]
           }
           setCatalogs(mapped)
@@ -157,8 +161,18 @@ export default function CatalogosPage() {
        // Agrupamos para validar colisiones de fecha
        const byProduct: Record<string, any[]> = {};
        
-       exportCatalogs[cat] = items.map(it => {
-          const pName = String(it.producto).trim().toLowerCase();
+       exportCatalogs[cat] = items
+         .filter(it => it.importStatus !== 'missing') // AUTO-DELETE: Ignorar productos obsoletos
+         .map(it => {
+          let pName = String(it.producto).trim().toLowerCase();
+          
+          // Generate a composite key for specific categories where name alone isn't unique
+          if (cat === 'miMovistar') {
+            pName = `${String(it.subcategoria).trim().toLowerCase()}_${String(it.gama).trim().toLowerCase()}_${pName}`;
+          } else if (cat === 'RENT') {
+            pName = `${String(it.fabricante).trim().toLowerCase()}_${String(it.subcategoria).trim().toLowerCase()}_${String(it.gama).trim().toLowerCase()}_${pName}`;
+          }
+
           if (!byProduct[pName]) byProduct[pName] = [];
           
           const expItem = {
@@ -169,7 +183,9 @@ export default function CatalogosPage() {
              fabricante: it.fabricante || '',
              gama: it.gama || '',
              validFrom: it.validFrom || null,
-             validTo: it.validTo || null
+             validTo: it.validTo || null,
+             comision: it.comision || '',
+             comisionConCoste: it.comisionConCoste || ''
           }
           byProduct[pName].push(expItem);
           return expItem;
@@ -206,6 +222,29 @@ export default function CatalogosPage() {
       const data = await res.json()
       if (data.success) {
         alert('✅ Catálogo del periodo guardado correctamente.')
+        // REFRESH DATA to clear the colored import statuses
+        const freshRes = await fetch(`/api/catalogs?periodKey=${activePeriodKey}&strictPeriod=1`)
+        const freshData = await freshRes.json()
+        if (freshData.success) {
+            const mapped: Record<string, ProductItem[]> = {}
+            for (const [cat, freshItems] of Object.entries(freshData.catalogs as Record<string, any[]>)) {
+                mapped[cat] = freshItems.map((it: any) => ({
+                    ...it,
+                    id: String(Math.random()),
+                    cuota: Number(String(it.mensual || it.cuota || 0).replace(',','.')),
+                    cuotaMensual: Number(String(it.mensual || 0).replace(',','.')),
+                    cuotaAnual: Number(String(it.anual || 0).replace(',','.')),
+                    subcategoria: it.subcategoria || '',
+                    fabricante: it.fabricante || '',
+                    gama: it.gama || '',
+                    validFrom: it.validFrom || '',
+                    validTo: it.validTo || '',
+                    comision: it.comision || '',
+                    comisionConCoste: it.comisionConCoste || ''
+                }))
+            }
+            setCatalogs(mapped)
+        }
       } else {
         alert('❌ Error: ' + data.error)
       }
@@ -265,7 +304,7 @@ export default function CatalogosPage() {
         const res = await fetch(`/api/catalogs?legacyOnly=1`)
         const data = await res.json()
         if (data.success) {
-            const mapped: Record<string, ProductItem[]> = { "Fija y Móvil": [], "Ti": [], "RENT": [], "Micro": [] }
+            const mapped: Record<string, ProductItem[]> = { "Fija y Móvil": [], "Ti": [], "RENT": [], "Micro": [], "O2": [] }
             let totalItems = 0
             for (const [cat, items] of Object.entries(data.catalogs as Record<string, any[]>)) {
                 if (!mapped[cat]) mapped[cat] = [];
@@ -327,6 +366,14 @@ export default function CatalogosPage() {
       if (cat === 'Ti' || cat === 'RENT' || cat === 'Micro') {
         newItem.cuotaMensual = 0
         newItem.cuotaAnual = 0
+      } else if (cat === 'O2') {
+        newItem.subcategoria = ''
+        newItem.comision = ''
+      } else if (cat === 'miMovistar') {
+        newItem.subcategoria = ''
+        newItem.gama = ''
+        newItem.comision = 0
+        newItem.comisionConCoste = 0
       } else {
         newItem.cuota = 0
       }
@@ -363,7 +410,41 @@ export default function CatalogosPage() {
   const handleBulkImport = () => {
     if (!bulkText.trim()) return
 
-    const lines = bulkText.split('\n').filter(l => l.trim().length > 0)
+    // Preprocesar el texto para unificar saltos de línea dentro de comillas (típico de celdas multilínea en Excel)
+    let cleanText = bulkText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    let inQuotes = false;
+    let normalizedText = '';
+    for (let i = 0; i < cleanText.length; i++) {
+      if (cleanText[i] === '"') {
+        const isStartOfCell = i === 0 || cleanText[i-1] === '\t' || cleanText[i-1] === '\n';
+        const isEndOfCell = i === cleanText.length - 1 || cleanText[i+1] === '\t' || cleanText[i+1] === '\n';
+        
+        if (!inQuotes && isStartOfCell) {
+           inQuotes = true;
+           continue; // skip the quote itself
+        } else if (inQuotes && isEndOfCell) {
+           inQuotes = false;
+           continue; // skip the quote itself
+        }
+        // If it's a quote in the middle of a string (like 13"), we just leave it and don't toggle inQuotes
+      } else if (cleanText[i] === '\n' && inQuotes) {
+        normalizedText += '___NEWLINE___'; // Preserve internal newline
+        continue;
+      }
+      normalizedText += cleanText[i];
+    }
+    
+    // Limpiar comillas dobles internas escapadas por Excel ("")
+    normalizedText = normalizedText.replace(/""/g, '"');
+
+    // DEBUG: Send to backend so AI can see it
+    fetch('/api/debug', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: normalizedText })
+    }).catch(e => console.error(e));
+
+    const lines = normalizedText.split('\n').filter(l => l.trim().length > 0)
     
     const parseSpanishNumber = (str: string) => {
       let clean = str.replace(/[^0-9.,-]/g, '')
@@ -375,21 +456,126 @@ export default function CatalogosPage() {
       return clean || '0'
     }
 
-    // 1. Parsing the Excel text
     const excelData: any[] = []
     lines.forEach((line) => {
-      const parts = line.split('\t').map(p => p.trim())
-      if (parts.length > 0 && parts[0]) {
+      const parts = line.split('\t').map(p => p.trim().replace(/___NEWLINE___/g, '\n'))
+      if (parts.length > 0 && (parts[0] || (activeTab === 'miMovistar' && parts[2]))) {
         if (activeTab === 'RENT') {
+          // Detectar si el usuario ha pegado el formato con las fechas en medio (después del producto)
+          // Ejemplo: Fabricante | Categoria | Producto | Desde | Hasta | Gama | Cuota | Comision | Comision Coste
+          const isDate = (s: string) => /^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/.test((s || '').trim());
+          const isNewFormat = isDate(parts[3]) || isDate(parts[4]);
+
+          if (isNewFormat) {
+            excelData.push({
+              fabricante: parts[0] || '',
+              categoria: parts[1] || '',
+              producto: parts[2] || '',
+              desde: parts[3] || '',
+              hasta: parts[4] || '',
+              gama: parts[5] || '',
+              amountAsStr: parts.length > 6 ? parseSpanishNumber(parts[6]) : '0',
+              comision: parts.length > 7 ? parseSpanishNumber(parts[7]) : '',
+              comisionConCoste: parts.length > 8 ? parseSpanishNumber(parts[8]) : '',
+            })
+          } else {
+            excelData.push({
+              fabricante: parts[0] || '',
+              categoria: parts[1] || '',
+              producto: parts[2] || '',
+              gama: parts[3] || '',
+              amountAsStr: parts.length > 4 ? parseSpanishNumber(parts[4]) : '0',
+              comision: parts.length > 5 ? parseSpanishNumber(parts[5]) : '',
+              comisionConCoste: parts.length > 6 ? parseSpanishNumber(parts[6]) : '',
+              desde: parts.length > 7 ? parts[7] : '',
+              hasta: parts.length > 8 ? parts[8] : '',
+            })
+          }
+        } else if (activeTab === 'Ti') {
+          let pDesc = '';
+          let pAmt = '0';
+          let pDesde = '';
+          let pHasta = '';
+
+          const tail = parts.slice(1);
+          const isDate = (str: string) => /^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/.test((str || '').trim());
+          const isMoney = (str: string) => str.includes('€') || /^\d/.test((str || '').trim());
+
+          if (tail.length >= 4) {
+             pDesc = tail[0];
+             pAmt = tail[1];
+             pDesde = tail[2];
+             pHasta = tail[3];
+          } else if (tail.length === 3) {
+             if (isDate(tail[1]) || isDate(tail[2])) {
+                pAmt = tail[0];
+                pDesde = tail[1];
+                pHasta = tail[2];
+             } else {
+                pDesc = tail[0];
+                pAmt = tail[1];
+                pDesde = tail[2];
+             }
+          } else if (tail.length === 2) {
+             if (isDate(tail[1])) {
+                pAmt = tail[0];
+                pDesde = tail[1];
+             } else if (isMoney(tail[0])) {
+                pAmt = tail[0];
+                pDesde = tail[1];
+             } else {
+                pDesc = tail[0];
+                pAmt = tail[1];
+             }
+          } else if (tail.length === 1) {
+             pAmt = tail[0];
+          }
+
           excelData.push({
-            fabricante: parts[0] || '',
-            categoria: parts[1] || '',
-            producto: parts[2] || '',
-            gama: parts[3] || '',
-            amountAsStr: parts.length > 4 ? parseSpanishNumber(parts[4]) : '0',
-            desde: parts.length > 5 ? parts[5] : '',
-            hasta: parts.length > 6 ? parts[6] : '',
+            producto: parts[0],
+            descripcion: pDesc,
+            amountAsStr: parseSpanishNumber(pAmt),
+            desde: pDesde,
+            hasta: pHasta,
           })
+        } else if (activeTab === 'O2') {
+          excelData.push({
+            categoria: parts[0] || '',
+            producto: parts[1] || '',
+            amountAsStr: parts.length > 2 ? parseSpanishNumber(parts[2]) : '0',
+            desde: parts.length > 3 ? parts[3] : '',
+            hasta: parts.length > 4 ? parts[4] : '',
+          })
+        } else if (activeTab === 'Seguro') {
+          excelData.push({
+            categoria: parts[0] || '',
+            producto: parts[1] || '',
+            amountAsStr: parts.length > 2 ? parseSpanishNumber(parts[2]) : '0',
+            comision: parts.length > 3 ? parseSpanishNumber(parts[3]) : '0',
+            desde: parts.length > 4 ? parts[4] : '',
+            hasta: parts.length > 5 ? parts[5] : '',
+          })
+        } else if (activeTab === 'miMovistar') {
+          if (!parts[0] && !parts[1] && parts[2] && excelData.length > 0) {
+            // Continuation of the previous product's name due to merged cells in Excel
+            excelData[excelData.length - 1].producto += '\n' + parts[2];
+          } else {
+            let cat = parts[0] || '';
+            let tipo = parts[1] || '';
+
+            if (!cat && excelData.length > 0) cat = excelData[excelData.length - 1].subcategoria;
+            if (!tipo && excelData.length > 0) tipo = excelData[excelData.length - 1].gama;
+
+            excelData.push({
+              subcategoria: cat, // Categoría (AV, MV, BV)
+              gama: tipo, // Tipo (miMovistar BASE, etc.)
+              producto: parts[2] || '', // Nombre de Producto
+              comision: parts.length > 3 ? parseSpanishNumber(parts[3]) : '0',
+              comisionConCoste: parts.length > 4 ? parseSpanishNumber(parts[4]) : '0', // Multiplicador
+              desde: parts.length > 6 ? parts[6] : '',
+              hasta: parts.length > 7 ? parts[7] : '',
+            })
+          }
         } else {
           excelData.push({
             producto: parts[0],
@@ -418,12 +604,24 @@ export default function CatalogosPage() {
         const pName = row.producto.toLowerCase()
         const rowDesde = (row.desde || '').trim()
         
-        // FIND EXACT MATCH: Name AND Start Date (Desde)
-        // This solves "Option A": allowing multiple validities of the same product.
-        const matchIndex = updatedItems.findIndex(it => 
-           (it.producto || '').toLowerCase() === pName && 
+        // BULLETPROOF MATCHING: Elimina todos los espacios para evitar fallos por saltos de línea, dobles espacios o caracteres invisibles.
+        const normalize = (s: string) => (s || '').replace(/\s+/g, '').toLowerCase()
+        const pNameNorm = normalize(row.producto)
+        
+        let matchIndex = updatedItems.findIndex(it => 
+           normalize(it.producto) === pNameNorm && 
            (it.validFrom || '').trim() === rowDesde
         )
+
+        // MIGRATION FALLBACK: Si no hay coincidencia exacta por fecha, 
+        // busca el primer producto cuyo nombre contenga al otro (o viceversa),
+        // esto soluciona problemas donde en Excel falta la palabra "APPLE" al principio, etc.
+        if (matchIndex === -1) {
+          matchIndex = updatedItems.findIndex(it => {
+            const dbName = normalize(it.producto);
+            return dbName.includes(pNameNorm) || pNameNorm.includes(dbName);
+          })
+        }
 
         if (matchIndex >= 0) {
           const item = updatedItems[matchIndex]
@@ -434,7 +632,24 @@ export default function CatalogosPage() {
             if (item.fabricante !== row.fabricante) { item.fabricante = row.fabricante; changed = true; }
             if (item.subcategoria !== row.categoria) { item.subcategoria = row.categoria; changed = true; }
             if (item.gama !== row.gama) { item.gama = row.gama; changed = true; }
-            
+            if (item.comision !== row.comision) { item.comision = row.comision; changed = true; }
+            if (item.comisionConCoste !== row.comisionConCoste) { item.comisionConCoste = row.comisionConCoste; changed = true; }
+          } else if (activeTab === 'Ti') {
+            if (item.subcategoria !== row.descripcion) { item.subcategoria = row.descripcion; changed = true; }
+          } else if (activeTab === 'O2') {
+            if (item.subcategoria !== row.categoria) { item.subcategoria = row.categoria; changed = true; }
+          } else if (activeTab === 'Seguro') {
+            if (item.subcategoria !== row.categoria) { item.subcategoria = row.categoria; changed = true; }
+            if (item.comision !== row.comision) { item.comision = row.comision; changed = true; }
+          } else if (activeTab === 'miMovistar') {
+            if (item.subcategoria !== row.subcategoria) { item.subcategoria = row.subcategoria; changed = true; }
+            if (item.gama !== row.gama) { item.gama = row.gama; changed = true; }
+            if (item.comision !== row.comision) { item.comision = row.comision; changed = true; }
+            if (item.comisionConCoste !== row.comisionConCoste) { item.comisionConCoste = row.comisionConCoste; changed = true; }
+            if (item.producto !== row.producto) { item.producto = row.producto; changed = true; }
+          }
+
+          if (activeTab === 'RENT') {
             const expectedAnual = Math.round(amount * 100) / 100
             const expectedMensual = Math.round((amount / 24) * 100) / 100
             if (item.cuotaAnual !== expectedAnual) {
@@ -442,14 +657,39 @@ export default function CatalogosPage() {
               item.cuotaMensual = expectedMensual
               changed = true
             }
-          } else if (activeTab === 'Ti' || activeTab === 'Micro') {
-            const factor = (activeTab === 'Micro') ? 24 : 12;
+            if (item.comision !== row.comision) {
+              item.comision = row.comision
+              changed = true
+            }
+            if (item.comisionConCoste !== row.comisionConCoste) {
+              item.comisionConCoste = row.comisionConCoste
+              changed = true
+            }
+          } else if (activeTab === 'Ti') {
+            if (item.cuotaMensual !== row.descripcion) {
+              item.cuotaMensual = row.descripcion
+              changed = true
+            }
+            if (item.cuotaAnual !== amount) {
+              item.cuotaAnual = amount
+              changed = true
+            }
+          } else if (activeTab === 'Micro') {
+            const factor = 24;
             const expectedMensual = Math.round(amount * 100) / 100
             if (item.cuotaMensual !== expectedMensual) {
               item.cuotaMensual = expectedMensual
               item.cuotaAnual = Math.round((amount * factor) * 100) / 100
               changed = true
             }
+          } else if (activeTab === 'O2') {
+            if (item.subcategoria !== row.categoria) { item.subcategoria = row.categoria; changed = true; }
+            if (item.comision !== row.amountAsStr) { item.comision = row.amountAsStr; changed = true; }
+          } else if (activeTab === 'Seguro') {
+            if (item.subcategoria !== row.categoria) { item.subcategoria = row.categoria; changed = true; }
+            if (item.comision !== row.comision) { item.comision = row.comision; changed = true; }
+            const expectedCuota = Math.round(amount * 100) / 100
+            if (item.cuotaAnual !== expectedCuota) { item.cuotaAnual = expectedCuota; changed = true; }
           } else {
             const expectedCuota = Math.round(amount * 100) / 100
             if (item.cuota !== expectedCuota) {
@@ -486,11 +726,26 @@ export default function CatalogosPage() {
             newItem.subcategoria = row.categoria
             newItem.gama = row.gama
             newItem.cuotaAnual = Math.round(amount * 100) / 100
-            newItem.cuotaMensual = Math.round((amount / 24) * 100) / 100
-          } else if (activeTab === 'Ti' || activeTab === 'Micro') {
-            const factor = (activeTab === 'Micro') ? 24 : 12;
+            newItem.cuotaMensual = Math.round((amount / 12) * 100) / 100
+          } else if (activeTab === 'O2') {
+            newItem.subcategoria = row.categoria
+            newItem.comision = row.amountAsStr
+          } else if (activeTab === 'Seguro') {
+            newItem.subcategoria = row.categoria
+            newItem.comision = row.comision
+            newItem.cuotaAnual = Math.round(amount * 100) / 100
+          } else if (activeTab === 'Ti') {
+            newItem.cuotaMensual = row.descripcion
+            newItem.cuotaAnual = amount
+          } else if (activeTab === 'Micro') {
+            const factor = 24;
             newItem.cuotaMensual = Math.round(amount * 100) / 100
             newItem.cuotaAnual = Math.round((amount * factor) * 100) / 100
+          } else if (activeTab === 'miMovistar') {
+            newItem.subcategoria = row.subcategoria
+            newItem.gama = row.gama
+            newItem.comision = row.comision
+            newItem.comisionConCoste = row.comisionConCoste
           } else {
             newItem.cuota = Math.round(amount * 100) / 100
           }
@@ -608,9 +863,10 @@ export default function CatalogosPage() {
           { cat: 'Fija y Móvil', tip: 'Catálogo de productos de telefonía fija y móvil (contrato mensual). Incluye portabilidades, altas y tarifas de voz/datos. El precio configurado aquí (€/mes) es la cuota base usada en el cálculo de comisiones de venta fija y móvil.' },
           { cat: 'Ti', tip: 'Terminal de Instalación: dispositivos y servicios con contrato de 12 meses. El precio mensual se introduce y el sistema calcula automáticamente el importe total anual (×12).' },
           { cat: 'RENT', tip: 'Terminal Móvil en Alquiler: dispositivos bajo contrato de 24 meses. Introduce la cuota total a 24 meses.' },
-          { cat: 'Micro', tip: 'Productos de Micro-segmento: soluciones tecnológicas especializadas con contratos de 24 meses. Funciona igual que TMA (precio mensual → total ×24).' },
-          { cat: 'Objetivos Pyme', tip: 'Define los objetivos cuantitativos del mes para el perfil PYME por grupo comercial. Son la base del cálculo de cumplimiento y comisiones variables del canal Pyme.' },
-          { cat: 'Objetivos Captador', tip: 'Define los objetivos del mes para el perfil Captador (canal de captación). Son la base del cálculo de comisiones variables del equipo captador.' },
+          { cat: 'Seguro', tip: 'Catálogo de seguros para dispositivos. Introduce la categoría, cuota y comisión.' },
+          { cat: 'O2', tip: 'Catálogo de productos y tarifas de O2. Introduce la categoría, nombre y comisión.' },
+          { cat: 'miMovistar', tip: 'Catálogo de paquetes miMovistar. Configura categorías, tipos, productos multilínea y su estructura de comisiones por multiplicador.' },
+          { cat: 'Objetivos Tiendas', tip: 'Define los objetivos cuantitativos del mes para las tiendas. Son la base del cálculo de cumplimiento y comisiones.' },
         ] as const).map(({ cat, tip }) => (
           <TooltipBox key={cat} title={cat} content={tip} position="bottom">
             <button
@@ -627,7 +883,7 @@ export default function CatalogosPage() {
                 transition: 'all 0.2s ease'
               }}
             >
-              {cat}
+              {cat === 'Ti' ? 'Contratos Móvil' : cat}
             </button>
           </TooltipBox>
         ))}
@@ -668,16 +924,14 @@ export default function CatalogosPage() {
       {/* BULK IMPORT BOX */}
       {showBulk && (
         <div className="card" style={{ padding: 20, marginBottom: 20, border: '1px dashed var(--mercedes-cyan)', backgroundColor: 'rgba(0,173,239,0.05)' }}>
-          <h4 style={{ marginBottom: 8, color: 'var(--light-text)' }}>Importación Masiva a {activeTab}</h4>
+          <h4 style={{ marginBottom: 8, color: 'var(--light-text)' }}>Importación Masiva a {activeTab === 'Ti' ? 'Contratos Móvil' : activeTab}</h4>
           <p style={{ fontSize: 13, color: 'var(--medium-gray)', marginBottom: 12 }}>
-            Pega tu lista desde Excel. Orden esperado de columnas: <code>Nombre Producto [TAB] Precio [TAB] Desde [TAB] Hasta</code>. (Las fechas son opcionales).
+            Pega tu lista desde Excel. Orden esperado de columnas: <code>{activeTab === 'Ti' ? 'Nombre Producto [TAB] Descripción [TAB] Comisión [TAB] Desde [TAB] Hasta' : activeTab === 'RENT' ? 'Fabricante [TAB] Categoría [TAB] Producto [TAB] Gama [TAB] Cuota Total [TAB] Comisión [TAB] Comisión Coste [TAB] Desde [TAB] Hasta' : activeTab === 'Seguro' ? 'Categoría [TAB] Nombre de Producto [TAB] Cuota Total (€) [TAB] Comision [TAB] Desde [TAB] Hasta' : 'Nombre Producto [TAB] Precio [TAB] Desde [TAB] Hasta'}</code>. (Las fechas son opcionales).
           </p>
           <textarea 
             rows={5}
             className="form-textarea"
-            placeholder="Ejemplo:
-Porta AV Ilimitada	20
-Alta MV	15"
+            placeholder={activeTab === 'Ti' ? "Ejemplo:\nPorta AV Ilimitada\tAltas de Prepago\t15\t01/05/2026\t31/05/2026" : activeTab === 'RENT' ? "Ejemplo:\nAPPLE\tACCESORIO\tAirPods\tMEDIA\t122.80\t2.46\t4.91\t01/05/2026" : activeTab === 'O2' ? "Ejemplo:\nFibra y movil\tFibra 600 Mb linea movil 60 Gb\t80,00\t01/05/2026\t31/05/2026" : activeTab === 'Seguro' ? "Ejemplo:\nSeguro\tSmartphone\t200,00\t18,00\t01/05/2026\t31/05/2026" : "Ejemplo:\nPorta AV Ilimitada\t20\nAlta MV\t15"}
             value={bulkText}
             onChange={e => setBulkText(e.target.value)}
             style={{ marginBottom: 12 }}
@@ -701,15 +955,39 @@ Alta MV	15"
                     <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '14%' }}>Categoría</th>
                     <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '20%' }}>Nombre de Producto</th>
                     <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '10%' }}>Gama</th>
-                    <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 140 }}>Cuota Total (€)</th>
+                    <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 120 }}>Cuota Total (€)</th>
+                    <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 110 }}>Comisión</th>
+                    <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 130 }}>Comisión con Coste</th>
+                  </>
+                ) : activeTab === 'O2' ? (
+                  <>
+                    <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '25%' }}>Categoría</th>
+                    <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '35%' }}>Nombre de Producto</th>
+                    <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 140 }}>Comisión (€)</th>
+                  </>
+                ) : activeTab === 'Seguro' ? (
+                  <>
+                    <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '20%' }}>Categoría</th>
+                    <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '30%' }}>Nombre de Producto</th>
+                    <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 130 }}>Cuota Total (€)</th>
+                    <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 130 }}>Comision</th>
+                  </>
+                ) : activeTab === 'miMovistar' ? (
+                  <>
+                    <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '5%' }}>Categoría</th>
+                    <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '20%' }}>Tipo</th>
+                    <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '35%' }}>Nombre de Producto</th>
+                    <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 90 }}>Comisión (€)</th>
+                    <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 90 }}>Mult.</th>
+                    <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 100 }}>Comisión X (€)</th>
                   </>
                 ) : (
                   <>
                     <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '38%' }}>Nombre de Producto</th>
                     {(activeTab === 'Ti' || activeTab === 'Micro') ? (
                       <>
-                        <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: 140 }}>Cuota Mes (€)</th>
-                        <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 140 }}>Cuota Total (€)</th>
+                        <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: 140 }}>{activeTab === 'Ti' ? 'Descripción' : 'Cuota Mes (€)'}</th>
+                        <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 140 }}>{activeTab === 'Ti' ? 'Comisión (€)' : 'Cuota Total (€)'}</th>
                       </>
                     ) : (
                       <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: 140 }}>Cuota / Precio (€)</th>
@@ -726,7 +1004,7 @@ Alta MV	15"
               {activeData.length === 0 ? (
                 <tr>
                   <td colSpan={4} style={{ padding: 40, textAlign: 'center', color: 'var(--medium-gray)' }}>
-                    No hay productos en la categoría <strong>{activeTab}</strong>. Empieza añadiendo una fila o importando.
+                    No hay productos en la categoría <strong>{activeTab === 'Ti' ? 'Contratos Móvil' : activeTab}</strong>. Empieza añadiendo una fila o importando.
                   </td>
                 </tr>
               ) : (
@@ -807,6 +1085,211 @@ Alta MV	15"
                                 className="form-input"
                                 style={{ width: 130, color: isHistoric ? 'var(--medium-gray)' : 'var(--mercedes-cyan)', fontWeight: 'bold', backgroundColor: isHistoric ? 'transparent' : 'var(--active-bg)', border: isHistoric ? 'none' : '1px dashed var(--border-color)', paddingRight: 24 }}
                               />
+                                <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--medium-gray)', fontSize: 13, pointerEvents: 'none' }}>€</span>
+                              </div>
+                          </td>
+                          <td style={{ padding: '12px 8px' }}>
+                            <div style={{ position: 'relative', display: 'inline-block' }}>
+                              <input 
+                                type="text" 
+                                disabled={isHistoric}
+                                value={item.comision || ''}
+                                onChange={e => updateItem(activeTab, index, 'comision', e.target.value)}
+                                className="form-input"
+                                style={{ width: 90, color: isHistoric ? 'var(--medium-gray)' : 'var(--light-text)', backgroundColor: isHistoric ? 'transparent' : 'var(--active-bg)', border: isHistoric ? 'none' : '1px dashed var(--border-color)', paddingRight: 24 }}
+                              />
+                              <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--medium-gray)', fontSize: 13, pointerEvents: 'none' }}>€</span>
+                            </div>
+                          </td>
+                          <td style={{ padding: '12px 8px' }}>
+                            <div style={{ position: 'relative', display: 'inline-block' }}>
+                              <input 
+                                type="text" 
+                                disabled={isHistoric}
+                                value={item.comisionConCoste || ''}
+                                onChange={e => updateItem(activeTab, index, 'comisionConCoste', e.target.value)}
+                                className="form-input"
+                                style={{ width: 110, color: isHistoric ? 'var(--medium-gray)' : 'var(--light-text)', backgroundColor: isHistoric ? 'transparent' : 'var(--active-bg)', border: isHistoric ? 'none' : '1px dashed var(--border-color)', paddingRight: 24 }}
+                              />
+                              <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--medium-gray)', fontSize: 13, pointerEvents: 'none' }}>€</span>
+                            </div>
+                          </td>
+                        </>
+                      ) : activeTab === 'O2' ? (
+                        <>
+                          <td style={{ padding: '12px 20px' }}>
+                            <input 
+                              type="text" 
+                              disabled={isHistoric}
+                              value={item.subcategoria || ''}
+                              onChange={e => updateItem(activeTab, index, 'subcategoria', e.target.value)}
+                              className="form-input"
+                              style={{ width: '100%', border: 'none', backgroundColor: 'transparent', padding: '8px', fontSize: 14, color: isHistoric ? 'var(--medium-gray)' : 'var(--light-text)' }}
+                              placeholder="Ej. Fibra y movil"
+                            />
+                          </td>
+                          <td style={{ padding: '12px 20px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                              <input 
+                                type="text" 
+                                disabled={isHistoric}
+                                value={item.producto}
+                                onChange={e => updateItem(activeTab, index, 'producto', e.target.value)}
+                                className="form-input"
+                                style={{ width: '100%', border: 'none', backgroundColor: 'transparent', padding: '8px', fontSize: 14, fontWeight: 500, color: item.importStatus === 'missing' ? '#FF453A' : isHistoric ? 'var(--medium-gray)' : 'var(--light-text)' }}
+                                placeholder="Nombre del producto..."
+                              />
+                              {item.importStatus === 'missing' && <span style={{ fontSize: 11, color: '#FF453A', fontWeight: 600, paddingLeft: 8 }}>🚨 No presente en última importación</span>}
+                              {item.importStatus === 'new' && <span style={{ fontSize: 11, color: '#34C759', fontWeight: 600, paddingLeft: 8 }}>🆕 Nuevo en Excel</span>}
+                              {item.importStatus === 'updated' && <span style={{ fontSize: 11, color: '#FFCC00', fontWeight: 600, paddingLeft: 8 }}>🔄 Valores actualizados</span>}
+                            </div>
+                          </td>
+                          <td style={{ padding: '12px 8px' }}>
+                            <div style={{ position: 'relative', display: 'inline-block' }}>
+                              <input 
+                                type="text" 
+                                disabled={isHistoric}
+                                value={item.comision || ''}
+                                onChange={e => updateItem(activeTab, index, 'comision', e.target.value)}
+                                className="form-input"
+                                style={{ width: 110, color: isHistoric ? 'var(--medium-gray)' : 'var(--light-text)', backgroundColor: isHistoric ? 'transparent' : 'var(--active-bg)', border: isHistoric ? 'none' : '1px dashed var(--border-color)', paddingRight: 24 }}
+                                placeholder="0,00"
+                              />
+                              <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--medium-gray)', fontSize: 13, pointerEvents: 'none' }}>€</span>
+                            </div>
+                          </td>
+                        </>
+                      ) : activeTab === 'miMovistar' ? (
+                        <>
+                          <td style={{ padding: '12px 20px' }}>
+                            <input 
+                              type="text" 
+                              disabled={isHistoric}
+                              value={item.subcategoria || ''}
+                              onChange={e => updateItem(activeTab, index, 'subcategoria', e.target.value)}
+                              className="form-input"
+                              style={{ width: '100%', border: 'none', backgroundColor: 'transparent', padding: '8px', fontSize: 12, color: isHistoric ? 'var(--medium-gray)' : 'var(--light-text)' }}
+                              placeholder="Ej. AV"
+                            />
+                          </td>
+                          <td style={{ padding: '12px 20px' }}>
+                            <textarea 
+                              disabled={isHistoric}
+                              value={item.gama || ''}
+                              onChange={e => updateItem(activeTab, index, 'gama', e.target.value)}
+                              className="form-input"
+                              rows={2}
+                              style={{ width: '100%', border: 'none', backgroundColor: 'transparent', padding: '8px', fontSize: 12, color: isHistoric ? 'var(--medium-gray)' : 'var(--light-text)', resize: 'vertical' }}
+                              placeholder="Ej. miMovistar BASE"
+                            />
+                          </td>
+                          <td style={{ padding: '12px 20px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                              <textarea
+                                disabled={isHistoric}
+                                value={item.producto}
+                                onChange={e => updateItem(activeTab, index, 'producto', e.target.value)}
+                                className="form-input"
+                                rows={3}
+                                style={{ width: '100%', border: 'none', backgroundColor: 'transparent', padding: '8px', fontSize: 11, fontWeight: 500, color: item.importStatus === 'missing' ? '#FF453A' : isHistoric ? 'var(--medium-gray)' : 'var(--light-text)', resize: 'vertical' }}
+                                placeholder="Nombre multilínea..."
+                              />
+                              {item.importStatus === 'missing' && <span style={{ fontSize: 11, color: '#FF453A', fontWeight: 600, paddingLeft: 8 }}>🚨 No presente en última importación</span>}
+                              {item.importStatus === 'new' && <span style={{ fontSize: 11, color: '#34C759', fontWeight: 600, paddingLeft: 8 }}>🆕 Nuevo</span>}
+                            </div>
+                          </td>
+                          <td style={{ padding: '12px 8px' }}>
+                            <div style={{ position: 'relative', display: 'inline-block' }}>
+                              <input 
+                                type="number" 
+                                disabled={isHistoric}
+                                value={item.comision || ''}
+                                onChange={e => updateItem(activeTab, index, 'comision', e.target.value)}
+                                className="form-input"
+                                style={{ width: 80, color: isHistoric ? 'var(--medium-gray)' : 'var(--light-text)', backgroundColor: isHistoric ? 'transparent' : 'var(--active-bg)', border: isHistoric ? 'none' : '1px dashed var(--border-color)', paddingRight: 24 }}
+                              />
+                              <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--medium-gray)', fontSize: 13, pointerEvents: 'none' }}>€</span>
+                            </div>
+                          </td>
+                          <td style={{ padding: '12px 8px' }}>
+                            <div style={{ position: 'relative', display: 'inline-block' }}>
+                              <input 
+                                type="number" 
+                                disabled={isHistoric}
+                                value={item.comisionConCoste || ''}
+                                onChange={e => updateItem(activeTab, index, 'comisionConCoste', e.target.value)}
+                                className="form-input"
+                                style={{ width: 70, color: isHistoric ? 'var(--medium-gray)' : 'var(--light-text)', backgroundColor: isHistoric ? 'transparent' : 'var(--active-bg)', border: isHistoric ? 'none' : '1px dashed var(--border-color)', paddingRight: 8 }}
+                              />
+                            </div>
+                          </td>
+                          <td style={{ padding: '12px 8px' }}>
+                            <div style={{ position: 'relative', display: 'inline-block' }}>
+                              <input 
+                                type="text" 
+                                disabled
+                                value={Number(item.comision || 0) * Number(item.comisionConCoste || 0)}
+                                className="form-input"
+                                style={{ width: 90, color: 'var(--mercedes-cyan)', fontWeight: 'bold', backgroundColor: 'transparent', border: 'none', paddingRight: 24 }}
+                              />
+                              <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--medium-gray)', fontSize: 13, pointerEvents: 'none' }}>€</span>
+                            </div>
+                          </td>
+                        </>
+                      ) : activeTab === 'Seguro' ? (
+                        <>
+                          <td style={{ padding: '12px 20px' }}>
+                            <input 
+                              type="text" 
+                              disabled={isHistoric}
+                              value={item.subcategoria || ''}
+                              onChange={e => updateItem(activeTab, index, 'subcategoria', e.target.value)}
+                              className="form-input"
+                              style={{ width: '100%', border: 'none', backgroundColor: 'transparent', padding: '8px', fontSize: 14, color: isHistoric ? 'var(--medium-gray)' : 'var(--light-text)' }}
+                              placeholder="Ej. Seguro"
+                            />
+                          </td>
+                          <td style={{ padding: '12px 20px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                              <input 
+                                type="text" 
+                                disabled={isHistoric}
+                                value={item.producto}
+                                onChange={e => updateItem(activeTab, index, 'producto', e.target.value)}
+                                className="form-input"
+                                style={{ width: '100%', border: 'none', backgroundColor: 'transparent', padding: '8px', fontSize: 14, fontWeight: 500, color: item.importStatus === 'missing' ? '#FF453A' : isHistoric ? 'var(--medium-gray)' : 'var(--light-text)' }}
+                                placeholder="Nombre del producto..."
+                              />
+                              {item.importStatus === 'missing' && <span style={{ fontSize: 11, color: '#FF453A', fontWeight: 600, paddingLeft: 8 }}>🚨 No presente en última importación</span>}
+                              {item.importStatus === 'new' && <span style={{ fontSize: 11, color: '#34C759', fontWeight: 600, paddingLeft: 8 }}>🆕 Nuevo en Excel</span>}
+                              {item.importStatus === 'updated' && <span style={{ fontSize: 11, color: '#FFCC00', fontWeight: 600, paddingLeft: 8 }}>🔄 Valores actualizados</span>}
+                            </div>
+                          </td>
+                          <td style={{ padding: '12px 8px' }}>
+                            <div style={{ position: 'relative', display: 'inline-block' }}>
+                              <input 
+                                type="number"
+                                step="0.01" 
+                                disabled={isHistoric}
+                                value={item.cuotaAnual !== undefined ? Number(item.cuotaAnual).toFixed(2) : ''}
+                                onChange={e => updateItem(activeTab, index, 'cuotaAnual', e.target.value)}
+                                className="form-input"
+                                style={{ width: 110, color: isHistoric ? 'var(--medium-gray)' : 'var(--mercedes-cyan)', fontWeight: 'bold', backgroundColor: isHistoric ? 'transparent' : 'var(--active-bg)', border: isHistoric ? 'none' : '1px dashed var(--border-color)', paddingRight: 24 }}
+                              />
+                                <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--medium-gray)', fontSize: 13, pointerEvents: 'none' }}>€</span>
+                              </div>
+                          </td>
+                          <td style={{ padding: '12px 8px' }}>
+                            <div style={{ position: 'relative', display: 'inline-block' }}>
+                              <input 
+                                type="text" 
+                                disabled={isHistoric}
+                                value={item.comision || ''}
+                                onChange={e => updateItem(activeTab, index, 'comision', e.target.value)}
+                                className="form-input"
+                                style={{ width: 110, color: isHistoric ? 'var(--medium-gray)' : 'var(--light-text)', backgroundColor: isHistoric ? 'transparent' : 'var(--active-bg)', border: isHistoric ? 'none' : '1px dashed var(--border-color)', paddingRight: 24 }}
+                                placeholder="0,00"
+                              />
                               <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--medium-gray)', fontSize: 13, pointerEvents: 'none' }}>€</span>
                             </div>
                           </td>
@@ -834,16 +1317,29 @@ Alta MV	15"
                             <>
                               <td style={{ padding: '12px 20px' }}>
                                 <div style={{ position: 'relative', display: 'inline-block' }}>
-                                  <input 
-                                    type="number"
-                                    step="0.01" 
-                                    disabled={isHistoric}
-                                    value={item.cuotaMensual !== undefined ? Number(item.cuotaMensual).toFixed(2) : ''}
-                                    onChange={e => updateItem(activeTab, index, 'cuotaMensual', e.target.value)}
-                                    className="form-input"
-                                    style={{ width: 130, color: isHistoric ? 'var(--medium-gray)' : 'var(--mercedes-cyan)', fontWeight: 'bold', backgroundColor: isHistoric ? 'transparent' : 'var(--app-bg)', border: isHistoric ? 'none' : undefined, paddingRight: 24 }}
-                                  />
-                                  <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--medium-gray)', fontSize: 13, pointerEvents: 'none' }}>€</span>
+                                  {activeTab === 'Ti' ? (
+                                    <input 
+                                      type="text"
+                                      disabled={isHistoric}
+                                      value={item.cuotaMensual !== undefined ? item.cuotaMensual : ''}
+                                      onChange={e => updateItem(activeTab, index, 'cuotaMensual', e.target.value)}
+                                      className="form-input"
+                                      style={{ width: 130, color: isHistoric ? 'var(--medium-gray)' : 'var(--mercedes-cyan)', fontWeight: 'bold', backgroundColor: isHistoric ? 'transparent' : 'var(--app-bg)', border: isHistoric ? 'none' : undefined, paddingRight: 8 }}
+                                    />
+                                  ) : (
+                                    <>
+                                      <input 
+                                        type="number"
+                                        step="0.01" 
+                                        disabled={isHistoric}
+                                        value={item.cuotaMensual !== undefined && item.cuotaMensual !== '' && !isNaN(Number(item.cuotaMensual)) ? Number(item.cuotaMensual).toFixed(2) : ''}
+                                        onChange={e => updateItem(activeTab, index, 'cuotaMensual', e.target.value)}
+                                        className="form-input"
+                                        style={{ width: 130, color: isHistoric ? 'var(--medium-gray)' : 'var(--mercedes-cyan)', fontWeight: 'bold', backgroundColor: isHistoric ? 'transparent' : 'var(--app-bg)', border: isHistoric ? 'none' : undefined, paddingRight: 24 }}
+                                      />
+                                      <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--medium-gray)', fontSize: 13, pointerEvents: 'none' }}>€</span>
+                                    </>
+                                  )}
                                 </div>
                               </td>
                               <td style={{ padding: '12px 20px' }}>
@@ -940,7 +1436,7 @@ Alta MV	15"
         </>
       )}
 
-      {!isProductTab && <ObjetivosTab activeSegment={activeTab === 'Objetivos Pyme' ? 'Pyme' : 'Captador'} />}
+      {!isProductTab && <ObjetivosTab activeSegment={activeTab === 'Objetivos Tiendas' ? 'Pyme' : 'Captador'} />}
     </div>
   )
 }

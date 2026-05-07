@@ -88,6 +88,7 @@ export async function GET(request: Request) {
         importe: sale.cuota !== null ? sale.cuota.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '',
         cuota: sale.cuota ?? 0,
         detalle: sale.detalle || '',
+        rentConCoste: sale.rentConCoste || 'No',
         motivoModificacion: ''
       }
     })

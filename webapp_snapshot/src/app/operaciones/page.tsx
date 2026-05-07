@@ -668,7 +668,7 @@ function OperationsContent() {
         { header: 'Pte', key: 'Pte', width: 8 },
         { header: 'Anulado', key: 'Anulado', width: 10 },
         { header: 'Anotaciones', key: 'Anotaciones', width: 30 },
-        { header: 'Valor (€)', key: 'Valor', width: 15 }
+        { header: 'Comisión (€)', key: 'Valor', width: 15 }
       ];
 
       // Formatear cabeceras
@@ -809,7 +809,7 @@ function OperationsContent() {
                 <th style={{ padding: '16px', textAlign: 'center', color: 'var(--medium-gray)' }}>Pte.</th>
                 <th style={{ padding: '16px', textAlign: 'center', color: 'var(--medium-gray)' }}>Anul.</th>
                 <th style={{ padding: '16px', textAlign: 'left', color: 'var(--medium-gray)', minWidth: 200 }}>Anotaciones</th>
-                <th style={{ padding: '16px', textAlign: 'center', color: 'var(--medium-gray)' }}>Valor</th>
+                <th style={{ padding: '16px', textAlign: 'center', color: 'var(--medium-gray)' }}>Comisión</th>
                 <th style={{ padding: '16px', textAlign: 'center', color: 'var(--medium-gray)' }}>Acciones</th>
               </tr>
             </thead>

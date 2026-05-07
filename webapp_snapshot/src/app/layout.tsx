@@ -10,8 +10,8 @@ export const metadata: Metadata = {
   title: 'MicroShop Tiendas',
   description: 'Sistema Profesional de Gestión de Ventas',
   icons: {
-    icon: '/icon.png',
-    apple: '/apple-touch-icon.png',
+    icon: '/icon.png?v=darkblue',
+    apple: '/apple-icon.png?v=darkblue',
   },
   appleWebApp: {
     title: 'MicroShop',

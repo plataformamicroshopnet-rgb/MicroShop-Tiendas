@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { PageHeader } from '@/components/PageHeader'
-import { FilePlus } from 'lucide-react'
+import { FilePlus, ShieldPlus } from 'lucide-react'
 import { TIENDAS_COMERCIALES, VENDEDORES, CODIGOS_TRAMITACION } from '@/lib/constants'
 import { useGuard } from '@/hooks/useGuard'
 import { usePeriod } from '@/components/PeriodProvider'
@@ -109,6 +109,14 @@ export default function NuevaVentaPage() {
       }
       
       // Cascade clear when changing filters
+      if (field === 'categoria') {
+         newProducts[index].subcategoria = ''
+         newProducts[index].fabricante = ''
+         newProducts[index].producto = ''
+         newProducts[index].importe = ''
+         newProducts[index].gama = ''
+      }
+      
       if (field === 'fabricante' || field === 'subcategoria') {
          newProducts[index].producto = ''
          newProducts[index].importe = ''
@@ -118,10 +126,19 @@ export default function NuevaVentaPage() {
       // Autofill importe if product is selected
       if (field === 'producto') {
          const catList = catalogs[newProducts[index].categoria] || []
-         const selectedItem = catList.find((p: any) => p.producto === value)
+         const selectedItem = catList.find((p: any) => {
+           if (newProducts[index].categoria === 'miMovistar') {
+             return p.producto === value && p.subcategoria === newProducts[index].subcategoria && p.gama === newProducts[index].gama;
+           }
+           return p.producto === value;
+         })
          if (selectedItem) {
             const cat = newProducts[index].categoria
-            if (cat === 'Ti' || cat === 'TMA' || cat === 'Micro' || cat === 'RENT') {
+            if (cat === 'O2') {
+              newProducts[index].importe = selectedItem.comision || ''
+            } else if (cat === 'miMovistar') {
+              newProducts[index].importe = String(Number(selectedItem.comision || 0) * Number(selectedItem.comisionConCoste || 0));
+            } else if (cat === 'Ti' || cat === 'TMA' || cat === 'Micro' || cat === 'RENT') {
               newProducts[index].importe = selectedItem.anual || selectedItem.mensual || ''
             } else {
               newProducts[index].importe = selectedItem.mensual || selectedItem.anual || ''
@@ -133,26 +150,13 @@ export default function NuevaVentaPage() {
             }
          } else {
             newProducts[index].importe = ''
-            newProducts[index].fabricante = ''
-            newProducts[index].subcategoria = ''
             newProducts[index].gama = ''
          }
       }
       
-      if (field === 'seguro') {
-        const seguroVal = value;
-        let seguroPrice = 0;
-        if (seguroVal === 'Smartphone') seguroPrice = 200;
-        else if (seguroVal === 'Tablet') seguroPrice = 50;
-        else if (seguroVal === 'Reacondicionado') seguroPrice = 150;
-        newProducts[index].seguroImporte = seguroPrice;
-      }
-      
       if (field === 'isLibre') {
-         // If they check "Libre", maybe clear seguro?
+         // If they check "Libre", we don't need to clear seguro anymore because it's handled via a separate row
          if (value === true) {
-            newProducts[index].seguro = '';
-            newProducts[index].seguroImporte = 0;
          }
       }
       
@@ -187,6 +191,35 @@ export default function NuevaVentaPage() {
     }))
   }
 
+  const handleAddSeguro = (index: number) => {
+    if (formData.productos.length >= 50) return
+    const currentProd = formData.productos[index]
+    setFormData((prev: any) => ({
+      ...prev,
+      productos: [
+        ...prev.productos,
+        {
+          categoria: 'Seguro',
+          producto: '',
+          telf: currentProd.telf || '',
+          noCliente: currentProd.noCliente || '',
+          pendiente: 'No',
+          importe: '',
+          imei: '',
+          rentConCoste: 'No',
+          seguro: '',
+          seguroImporte: 0,
+          fabricante: '',
+          subcategoria: '',
+          gama: '',
+          isLibre: false,
+          isSwap: false
+        }
+      ]
+    }))
+  }
+
+
   const removeProductRow = (index: number) => {
     setFormData((prev: any) => {
       const newProducts = [...prev.productos]
@@ -205,7 +238,7 @@ export default function NuevaVentaPage() {
       const res = await fetch('/api/sales/unified', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, periodKey: activePeriodKey })
+        body: JSON.stringify({ ...formData, periodKey: activePeriodKey, codigo: selectedTienda })
       })
 
       const data = await res.json()
@@ -296,7 +329,7 @@ export default function NuevaVentaPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label" style={{ color: '#555' }}>Teléfono Móvil</label>
-                  <input type="text" className="form-input" maxLength={9} value={formData.telefonoMovil} onChange={e => handleInputChange('telefonoMovil', e.target.value)} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
+                  <input type="text" className="form-input" maxLength={9} value={formData.telefonoMovil} onChange={e => handleInputChange('telefonoMovil', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
                 </div>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label" style={{ color: '#555' }}>Teléfono Fijo</label>
@@ -342,7 +375,7 @@ export default function NuevaVentaPage() {
                         <label style={{ fontSize: 13, color: '#1B3D6A', display: 'block', marginBottom: 4 }}>Tipo de Venta</label>
                         <select className="form-select" value={prod.categoria} onChange={e => handleProductChange(index, 'categoria', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
                           <option value="">Selecciona...</option>
-                          {Object.keys(catalogs).filter(cat => cat !== 'Fija' && cat !== 'Móvil').map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                          {Object.keys(catalogs).filter(cat => cat !== 'Fija' && cat !== 'Móvil').map(cat => <option key={cat} value={cat}>{cat === 'Ti' ? 'Contratos Móvil' : cat}</option>)}
                         </select>
                       </div>
 
@@ -435,23 +468,137 @@ export default function NuevaVentaPage() {
                           </div>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                          <div>
-                            <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>Seguro</label>
-                            <select className="form-select" value={prod.seguro} onChange={e => handleProductChange(index, 'seguro', e.target.value)} disabled={prod.isLibre} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
-                              <option value="">Selecciona...</option>
-                              <option value="Smartphone">Smartphone</option>
-                              <option value="Tablet">Tablet</option>
-                              <option value="Reacondicionado">Reacondicionado</option>
-                            </select>
+                        <div style={{ marginTop: '8px' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleAddSeguro(index)}
+                            disabled={prod.isLibre}
+                            className="btn-secondary"
+                            style={{ 
+                                width: '100%', 
+                                padding: '10px 8px', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center', 
+                                gap: '8px', 
+                                border: prod.isLibre ? '1px dashed #CCC' : 'none', 
+                                backgroundColor: prod.isLibre ? '#F5F5F5' : '#5CB615', 
+                                color: prod.isLibre ? '#AAA' : '#FFFFFF', 
+                                borderRadius: '6px', 
+                                cursor: prod.isLibre ? 'not-allowed' : 'pointer',
+                                fontWeight: 'bold',
+                                boxShadow: prod.isLibre ? 'none' : '0 4px 12px rgba(92,182,21,0.3)',
+                                transition: 'all 0.2s ease'
+                            }}
+                          >
+                            <ShieldPlus size={16} /> Añadir Seguro a esta venta
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : prod.categoria === 'miMovistar' ? (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'stretch' }}>
+                    {/* COLUMNA 1: TIPO DE VENTA */}
+                    <div style={{ flex: '1', minWidth: '250px', backgroundColor: '#B8D5F6', borderRadius: '8px', padding: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <h4 style={{ margin: 0, color: '#1B3D6A', fontSize: '15px', fontWeight: 'bold' }}><span style={{ color: '#1050A4' }}>{index + 1}</span> Tipo de Venta</h4>
+                      
+                      <div>
+                        <label style={{ fontSize: 13, color: '#1B3D6A', display: 'block', marginBottom: 4 }}>Tipo de Venta</label>
+                        <select className="form-select" value={prod.categoria} onChange={e => handleProductChange(index, 'categoria', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
+                          <option value="">Selecciona...</option>
+                          {Object.keys(catalogs).filter(cat => cat !== 'Fija' && cat !== 'Móvil').map(cat => <option key={cat} value={cat}>{cat === 'Ti' ? 'Contratos Móvil' : cat}</option>)}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: 13, color: '#1B3D6A', display: 'block', marginBottom: 4 }}>Categoría</label>
+                        <select className="form-select" value={prod.subcategoria} onChange={e => handleProductChange(index, 'subcategoria', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
+                          <option value="">Selecciona...</option>
+                          {[...new Set((catalogs['miMovistar'] || []).map((p:any) => p.subcategoria).filter(Boolean))].sort().map(c => <option key={String(c)} value={String(c)}>{String(c)}</option>)}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: 13, color: '#1B3D6A', display: 'block', marginBottom: 4 }}>Tipo</label>
+                        <select className="form-select" value={prod.gama} onChange={e => handleProductChange(index, 'gama', e.target.value)} required disabled={!prod.subcategoria} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
+                          <option value="">Selecciona...</option>
+                          {[...new Set((catalogs['miMovistar'] || []).filter((p:any) => p.subcategoria === prod.subcategoria).map((p:any) => p.gama).filter(Boolean))].sort().map(c => <option key={String(c)} value={String(c)}>{String(c)}</option>)}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* COLUMNA 2: DETALLES DE LA VENTA / PRODUCTO */}
+                    <div style={{ flex: '2', minWidth: '350px', backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: '#333' }}>DETALLES DEL PAQUETE</h4>
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>Producto</label>
+                        <select className="form-select" value={prod.producto} onChange={e => handleProductChange(index, 'producto', e.target.value)} required disabled={!prod.gama} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
+                          <option value="">Selecciona...</option>
+                          {(catalogs['miMovistar'] || [])
+                             .filter((p:any) => p.subcategoria === prod.subcategoria && p.gama === prod.gama)
+                             .map((p:any) => p.producto)
+                             .filter((p:any, i:number, self:any[]) => self.indexOf(p) === i)
+                             .sort()
+                             .map((p:any) => (
+                               <option key={String(p)} value={String(p)}>
+                                 {String(p).replace(/\n/g, ' ➕ ')}
+                               </option>
+                             ))}
+                        </select>
+                      </div>
+
+                      {/* TICKET VISUAL */}
+                      {prod.producto && (
+                        <div style={{ marginTop: '12px', padding: '12px', backgroundColor: '#F8F9FA', borderRadius: '6px', borderLeft: '4px solid #5CB615' }}>
+                          <span style={{ fontSize: 11, color: '#666', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: 6, display: 'block' }}>Paquete Seleccionado:</span>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {String(prod.producto).split('\n').map((line, i) => (
+                               <div key={i} style={{ fontSize: 14, fontWeight: i === 0 ? 'bold' : 'normal', color: i === 0 ? '#1B3D6A' : '#444', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                 {i > 0 && <span style={{ color: '#5CB615', fontSize: 12 }}>+</span>} {line.trim()}
+                               </div>
+                            ))}
                           </div>
-                          <div>
-                            <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>Cuota Seguro</label>
-                            <div style={{ position: 'relative' }}>
-                              <input type="number" className="form-input" value={prod.seguroImporte} readOnly style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A', fontWeight: 'bold', width: '100%', paddingRight: 24 }} />
-                              <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: '#1B3D6A', fontSize: 13, pointerEvents: 'none' }}>€</span>
-                            </div>
-                          </div>
+                        </div>
+                      )}
+
+                      <div style={{ height: 1, backgroundColor: '#E0E0E0', margin: '8px 0' }}></div>
+                      
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                        <div>
+                          <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>Teléfono (Nº Fijo / Móvil)</label>
+                          <input type="text" className="form-input" maxLength={9} value={prod.telf} onChange={e => handleProductChange(index, 'telf', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>Nº Cliente (Opcional)</label>
+                          <input type="text" className="form-input" value={prod.noCliente} onChange={e => handleProductChange(index, 'noCliente', e.target.value)} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* COLUMNA 3: ESTADO Y FINANZAS */}
+                    <div style={{ flex: '1', minWidth: '250px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ backgroundColor: '#B8D5F6', borderRadius: '8px', padding: '8px' }}>
+                        <label style={{ fontSize: 13, color: '#1B3D6A', display: 'block', marginBottom: 4 }}>Comisión X (Venta)</label>
+                        <div style={{ position: 'relative' }}>
+                          <input type="number" step="0.01" className="form-input" readOnly value={prod.importe !== '' && prod.importe !== undefined ? Number(prod.importe).toFixed(2) : ''} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A', fontWeight: 'bold', width: '100%', paddingRight: 24 }} />
+                          <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: '#1B3D6A', fontSize: 13, pointerEvents: 'none' }}>€</span>
+                        </div>
+                      </div>
+
+                      <div style={{ backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', flex: 1 }}>
+                        <h5 style={{ margin: '0 0 6px 0', fontSize: '13px', fontWeight: 'bold', color: '#333' }}>Estado</h5>
+                        
+                        <div>
+                          <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>¿Pendiente?</label>
+                          <select className="form-select" value={prod.pendiente} onChange={e => handleProductChange(index, 'pendiente', e.target.value)} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A', width: '100%' }}>
+                            <option value="No">No</option>
+                            <option value="Si">Sí</option>
+                            <option value="Anulado">Anulado</option>
+                          </select>
                         </div>
                       </div>
                     </div>
@@ -467,19 +614,32 @@ export default function NuevaVentaPage() {
                           <option value="">Selecciona...</option>
                           {Object.keys(catalogs)
                             .filter(cat => cat !== 'Fija' && cat !== 'Móvil')
-                            .map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                            .map(cat => <option key={cat} value={cat}>{cat === 'Ti' ? 'Contratos Móvil' : cat}</option>)}
                         </select>
                       </div>
+
+                      {prod.categoria === 'O2' && (
+                        <div className="form-group" style={{ marginBottom: 0 }}>
+                          <label className="form-label" style={{ color: '#1B3D6A', fontSize: '13px' }}>Categoría</label>
+                          <select className="form-select" value={prod.subcategoria || ''} onChange={e => handleProductChange(index, 'subcategoria', e.target.value)} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A', fontSize: '13px', padding: '4px 8px' }}>
+                            <option value="">Todas...</option>
+                            {[...new Set(catalogs['O2']?.map((p: any) => p.subcategoria).filter(Boolean))].map((sub: any) => (
+                              <option key={sub} value={sub}>{sub}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
                     </div>
 
                     {/* COLUMNA 2: DETALLES PRODUCTO */}
-                    <div style={{ flex: '2', minWidth: '300px', backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '6px' }}>
+                    <div style={{ flex: '2.5', minWidth: '350px', backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '6px' }}>
                         <div className="form-group" style={{ marginBottom: 0 }}>
                           <label className="form-label" style={{ color: '#555' }}>Producto</label>
                           <select className="form-select" value={prod.producto} onChange={e => handleProductChange(index, 'producto', e.target.value)} disabled={!prod.categoria} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
                             <option value="">Selecciona...</option>
                             {prod.categoria && catalogs[prod.categoria]
+                              ?.filter((p: any) => prod.categoria !== 'O2' || !prod.subcategoria || p.subcategoria === prod.subcategoria)
                               ?.filter((p: any, i: number, self: any[]) => self.findIndex(t => t.producto === p.producto) === i)
                               .map((p: any, i: number) => <option key={p.id || i} value={p.producto}>{p.producto}</option>)}
                           </select>
@@ -507,10 +667,10 @@ export default function NuevaVentaPage() {
                     </div>
 
                     {/* COLUMNA 3: FINANZAS / ESTADO */}
-                    <div style={{ flex: '1.5', minWidth: '250px', backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
+                    <div style={{ flex: '1', minWidth: '200px', backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
                         <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label className="form-label" style={{ color: '#555' }}>Importe</label>
+                          <label className="form-label" style={{ color: '#555' }}>{prod.categoria === 'O2' ? 'Comisión' : 'Importe'}</label>
                           <div style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
                             <input 
                               type="number" 
@@ -522,15 +682,6 @@ export default function NuevaVentaPage() {
                             />
                             <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: '#1B3D6A', fontSize: 13, pointerEvents: 'none' }}>€</span>
                           </div>
-                        </div>
-
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label className="form-label" style={{ color: '#555' }}>Cliente</label>
-                          <select className="form-select" value={prod.noCliente} onChange={e => handleProductChange(index, 'noCliente', e.target.value)} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
-                            <option value="">---</option>
-                            <option value="Si">Si</option>
-                            <option value="No">No</option>
-                          </select>
                         </div>
 
                         <div className="form-group" style={{ marginBottom: 0 }}>

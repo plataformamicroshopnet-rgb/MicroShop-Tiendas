@@ -281,7 +281,7 @@ export default function ObjetivosTab({ activeSegment: activeSegmentProp }: { act
 
   const handleCloneFromPrevious = () => {
      if (isHistoric || !previousMonthStr) return
-     if (!window.confirm(`¿Seguro que quieres clonar íntegramente los objetivos Pyme y Captador desde el periodo ${previousPeriod?.period_key}?`)) return
+     if (!window.confirm(`¿Seguro que quieres clonar íntegramente los objetivos Tiendas y Captador desde el periodo ${previousPeriod?.period_key}?`)) return
      
      const clonedData = JSON.parse(JSON.stringify(data))
      const clonesToMark: { segment: 'Pyme' | 'Captador', product: string }[] = []
@@ -304,7 +304,7 @@ export default function ObjetivosTab({ activeSegment: activeSegmentProp }: { act
 
   const handleClearTable = () => {
     if (isHistoric) return
-    if (!window.confirm(`⚠️ ATENCIÓN: ¿Seguro que quieres VACIAR TODA LA TABLA de Objetivos ${activeSegment} de este mes?`)) return
+    if (!window.confirm(`⚠️ ATENCIÓN: ¿Seguro que quieres VACIAR TODA LA TABLA de Objetivos ${activeSegment === 'Pyme' ? 'Tiendas' : activeSegment} de este mes?`)) return
     
     const toBeDeleted = rowKeys.map(k => ({ segment: activeSegment, product: k }))
     setDeletedProducts(prev => [...prev, ...toBeDeleted])
@@ -358,7 +358,7 @@ export default function ObjetivosTab({ activeSegment: activeSegmentProp }: { act
 
       {showBulk && !isHistoric && (
         <div className="card" style={{ padding: 20, marginBottom: 20, border: '1px dashed var(--mercedes-cyan)' }}>
-           <h4>Importar {activeSegment} - {activePeriodKey}</h4>
+           <h4>Importar {activeSegment === 'Pyme' ? 'Tiendas' : activeSegment} - {activePeriodKey}</h4>
            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
              <label style={{ fontSize: 13, color: 'var(--medium-gray)', fontWeight: 600 }}>La primera columna del Excel es:</label>
              <select 

@@ -1,0 +1,135 @@
+AV	miMovistar BASE	Movistar+	143,00 €	2,00	286,00 €	01/05/2026	31/05/2026
+		Ficción Total con netflix con anuncios					
+		Futbol Total					
+AV	miMovistar BASE	Movistar+	150,00 €	2,00	300,00 €	01/05/2026	31/05/2026
+		Ficción Total con netflix Estándar					
+		Futbol Total					
+AV	miMovistar BASE	Movistar+	156,00 €	2,00	312,00 €	01/05/2026	31/05/2026
+		Ficción Total con netflix Premium					
+		Futbol Total					
+AV	miMovistar MAX	Movistar+	155,00 €	2,00	310,00 €	01/05/2026	31/05/2026
+		Ficción Total con netflix con anuncios					
+		Futbol Total					
+AV	miMovistar MAX	Movistar+	162,00 €	2,00	324,00 €	01/05/2026	31/05/2026
+		Ficción Total con netflix Estándar					
+		Futbol Total					
+AV	miMovistar MAX	Movistar+	168,00 €	2,00	336,00 €	01/05/2026	31/05/2026
+		Ficción Total con netflix Premium					
+		Futbol Total					
+AV	miMovistar ILIMITADO	Movistar+	172,00 €	2,00	344,00 €	01/05/2026	31/05/2026
+		Ficción Total con netflix con anuncios					
+		Futbol Total					
+AV	miMovistar ILIMITADO	Movistar+	179,00 €	2,00	358,00 €	01/05/2026	31/05/2026
+		Ficción Total con netflix Estándar					
+		Futbol Total					
+AV	miMovistar ILIMITADO	Movistar+	185,00 €	2,00	370,00 €	01/05/2026	31/05/2026
+		Ficción Total con netflix Premium					
+		Futbol Total					
+AV	miMovistar ILIMITADO x2	Movistar+	189,00 €	2,00	378,00 €	01/05/2026	31/05/2026
+		Ficción Total con netflix con anuncios					
+		Futbol Total					
+AV	miMovistar ILIMITADO x2	Movistar+	196,00 €	2,00	392,00 €	01/05/2026	31/05/2026
+		Ficción Total con netflix Estándar					
+		Futbol Total					
+AV	miMovistar ILIMITADO x2	Movistar+	202,00 €	2,00	404,00 €	01/05/2026	31/05/2026
+		Ficción Total con netflix Premium					
+		Futbol Total					
+AV	miMovistar ILIMITADO x2		175,00 €	2,00	350,00 €	01/05/2026	31/05/2026
+		Ficción Total con netflix con anuncios					
+		Futbol Total					
+AV	miMovistar ILIMITADO x2		182,00 €	2,00	364,00 €	01/05/2026	31/05/2026
+		Ficción Total con netflix Estándar					
+		Futbol Total					
+AV	miMovistar ILIMITADO x2		188,00 €	2,00	376,00 €	01/05/2026	31/05/2026
+		Ficción Total con netflix Premium					
+		Futbol Total					
+AV	miMovistar ILIMITADO x4	Movistar+	219,00 €	2,00	438,00 €	01/05/2026	31/05/2026
+		Ficción Total con netflix con anuncios					
+		Futbol Total					
+AV	miMovistar ILIMITADO x4	Movistar+	226,00 €	2,00	452,00 €	01/05/2026	31/05/2026
+		Ficción Total con netflix Estándar					
+		Futbol Total					
+AV	miMovistar ILIMITADO x4	Movistar+	232,00 €	2,00	464,00 €	01/05/2026	31/05/2026
+		Ficción Total con netflix Premium					
+		Futbol Total					
+AV	miMovistar ILIMITADO x4		205,00 €	2,00	410,00 €	01/05/2026	31/05/2026
+		Ficción Total con netflix con anuncios					
+		Futbol Total					
+AV	miMovistar ILIMITADO x4		212,00 €	2,00	424,00 €	01/05/2026	31/05/2026
+		Ficción Total con netflix Estándar					
+		Futbol Total					
+AV	miMovistar ILIMITADO x4		218,00 €	2,00	436,00 €	01/05/2026	31/05/2026
+		Ficción Total con netflix Premium					
+		Futbol Total					
+MV	miMovistar BASE	Movistar+	117,00 €	2,00	234,00 €	01/05/2026	31/05/2026
+		Fútbol Total					
+	miMovistar BASE	Movistar+	93,00 €	2,00	186,00 €	01/05/2026	31/05/2026
+		Ficción total con netflix con anuncios					
+	miMovistar BASE	Movistar+	100,00 €	2,00	200,00 €	01/05/2026	31/05/2026
+		Ficción total con netflix Estándar					
+	miMovistar BASE	Movistar+	106,00 €	2,00	212,00 €	01/05/2026	31/05/2026
+		Ficción total con netflix premium					
+	miMovistar BASE	Movistar+	103,00 €	2,00	206,00 €	01/05/2026	31/05/2026
+		LaLiga					
+	miMovistar BASE	Movistar+	91,00 €	2,00	182,00 €	01/05/2026	31/05/2026
+		Champion					
+MV	miMovistar MAX	Movistar+	129,00 €	2,00	258,00 €	01/05/2026	31/05/2026
+		Fútbol Total					
+	miMovistar MAX	Movistar+	105,00 €	2,00	210,00 €	01/05/2026	31/05/2026
+		Ficción total con netflix con anuncios					
+	miMovistar MAX	Movistar+	112,00 €	2,00	224,00 €	01/05/2026	31/05/2026
+		Ficción total con netflix Estándar					
+	miMovistar MAX	Movistar+	118,00 €	2,00	236,00 €	01/05/2026	31/05/2026
+		Ficción total con netflix premium					
+	miMovistar MAX	Movistar+	115,00 €	2,00	230,00 €	01/05/2026	31/05/2026
+		LaLiga					
+	miMovistar MAX	Movistar+	103,00 €	2,00	206,00 €	01/05/2026	31/05/2026
+		Champion					
+MV	miMovistar ILIMITADO	Movistar+	146,00 €	2,00	292,00 €	01/05/2026	31/05/2026
+		Fútbol Total					
+	miMovistar ILIMITADO	Movistar+	122,00 €	2,00	244,00 €	01/05/2026	31/05/2026
+		Ficción total con netflix con anuncios					
+	miMovistar ILIMITADO	Movistar+	129,00 €	2,00	258,00 €	01/05/2026	31/05/2026
+		Ficción total con netflix Estándar					
+	miMovistar ILIMITADO	Movistar+	135,00 €	2,00	270,00 €	01/05/2026	31/05/2026
+		Ficción total con netflix premium					
+	miMovistar ILIMITADO	Movistar+	132,00 €	2,00	264,00 €	01/05/2026	31/05/2026
+		LaLiga					
+	miMovistar ILIMITADO	Movistar+	120,00 €	2,00	240,00 €	01/05/2026	31/05/2026
+		Champion					
+MV	miMovistar ILIMITADO x2	Movistar+	163,00 €	2,00	326,00 €	01/05/2026	31/05/2026
+		Fútbol Total					
+	miMovistar ILIMITADO x2	Movistar+	139,00 €	2,00	278,00 €	01/05/2026	31/05/2026
+		Ficción total con netflix con anuncios					
+	miMovistar ILIMITADO x2	Movistar+	146,00 €	2,00	292,00 €	01/05/2026	31/05/2026
+		Ficción total con netflix Estándar					
+	miMovistar ILIMITADO x2	Movistar+	152,00 €	2,00	304,00 €	01/05/2026	31/05/2026
+		Ficción total con netflix premium					
+	miMovistar ILIMITADO x2	Movistar+	149,00 €	2,00	298,00 €	01/05/2026	31/05/2026
+		LaLiga					
+	miMovistar ILIMITADO x2	Movistar+	137,00 €	2,00	274,00 €	01/05/2026	31/05/2026
+		Champion					
+MV	miMovistar ILIMITADO x2		149,00 €	2,00	298,00 €	01/05/2026	31/05/2026
+		Fútbol Total					
+	miMovistar ILIMITADO x2		135,00 €	2,00	270,00 €	01/05/2026	31/05/2026
+		LaLiga					
+	miMovistar ILIMITADO x2		123,00 €	2,00	246,00 €	01/05/2026	31/05/2026
+		Champion					
+MV	miMovistar ILIMITADO x4	Movistar+	143,00 €	2,00	286,00 €	01/05/2026	31/05/2026
+MV	miMovistar ILIMITADO x4		129,00 €	2,00	258,00 €	01/05/2026	31/05/2026
+BV	miMovistar BASE	Movistar+	67,00 €	1,50	100,50 €	01/05/2026	31/05/2026
+BV	miMovistar BASE		53,00 €	1,50	79,50 €	01/05/2026	31/05/2026
+BV	miMovistar MAX	Movistar+	79,00 €	1,50	118,50 €	01/05/2026	31/05/2026
+BV	miMovistar MAX		65,00 €	1,50	97,50 €	01/05/2026	31/05/2026
+BV	miMovistar ILIMITADO	Movistar+	96,00 €	1,50	144,00 €	01/05/2026	31/05/2026
+BV	miMovistar ILIMITADO		82,00 €	1,50	123,00 €	01/05/2026	31/05/2026
+BV	miMovistar ILIMITADO x2	Movistar+	113,00 €	1,50	169,50 €	01/05/2026	31/05/2026
+BV	miMovistar ILIMITADO x2		99,00 €	1,50	148,50 €	01/05/2026	31/05/2026
+BV	miMovistar Autónomos		61,00 €	0,00	61,00 €	01/05/2026	31/05/2026
+BAF no miMovistar/BAF no Fusión	Fibra 300 Mb		19,90 €	1,50	29,85 €	01/05/2026	31/05/2026
+BAF no miMovistar/BAF no Fusión	Fibra 600 Mb		24,90 €	1,50	37,35 €	01/05/2026	31/05/2026
+BAF no miMovistar/BAF no Fusión	Fibra 1Gb		29,90 €	1,50	44,85 €	01/05/2026	31/05/2026
+BAF no miMovistar/BAF no Fusión	Fibra Adicional 300 Mb		15,00 €	1,50	22,50 €	01/05/2026	31/05/2026
+BAF no miMovistar/BAF no Fusión	Fibra Adicional 600 Mb		20,00 €	1,50	30,00 €	01/05/2026	31/05/2026
+BAF no miMovistar/BAF no Fusión	Fibra Adicional 1Gb		25,00 €	1,50	37,50 €	01/05/2026	31/05/2026
+O2	Fibra + Móvil		35,00 €	0,00	35,00 €	01/05/2026	31/05/2026
