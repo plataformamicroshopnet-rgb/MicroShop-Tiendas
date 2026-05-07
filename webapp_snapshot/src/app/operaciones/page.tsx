@@ -232,6 +232,7 @@ function CommercialDashboard({ data, activeExtras = [], isComercial }: { data: a
               <tr style={{ backgroundColor: 'var(--active-bg)', boxShadow: '0 1px 0 var(--table-border)' }}>
                 <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--medium-gray)' }}>Fecha</th>
                 <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--medium-gray)' }}>Comercial</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--medium-gray)' }}>Tipo de Venta</th>
                 <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--medium-gray)' }}>Producto</th>
                 <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--medium-gray)' }}>Nombre del Cliente</th>
                 <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--medium-gray)' }}>NIF</th>
@@ -249,6 +250,7 @@ function CommercialDashboard({ data, activeExtras = [], isComercial }: { data: a
                 <tr key={i} style={{ borderBottom: '1px solid var(--border-color)', verticalAlign: 'top' }}>
                   <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>{sale.fecha}</td>
                   <td style={{ padding: '12px 16px', fontWeight: 600 }}>{sale.vendedor}</td>
+                  <td style={{ padding: '12px 16px', color: 'var(--medium-gray)' }}>{sale.detalle || '-'}</td>
                   <td style={{ padding: '12px 16px' }}>{sale.producto}</td>
                   <td style={{ padding: '12px 16px' }}>{sale.nombreCliente || '-'}</td>
                   <td style={{ padding: '12px 16px' }}>{sale.nif}</td>
@@ -273,6 +275,7 @@ function CommercialDashboard({ data, activeExtras = [], isComercial }: { data: a
                 <tr key={`extra-${ex.id || i}`} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'rgba(16, 185, 129, 0.05)', verticalAlign: 'top' }}>
                   <td style={{ padding: '12px 16px', color: '#059669', whiteSpace: 'nowrap' }}>{new Date(ex.createdAt).toLocaleDateString()}</td>
                   <td style={{ padding: '12px 16px', fontWeight: 600, color: '#059669' }}>{ex.seller}</td>
+                  <td style={{ padding: '12px 16px', color: '#059669' }}>EXTRA</td>
                   <td style={{ padding: '12px 16px', color: '#059669' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 'bold' }}>
                       ⚡ {ex.rule?.name || 'Incentivo Manual'}
@@ -625,6 +628,7 @@ function OperationsContent() {
               Fecha: s.fecha || '-',
               Código: s.codigo || '-',
               Grupo: s.imei || '-',
+              TipoVenta: s.detalle || '-',
               Producto: s.producto || '-',
               NombreCliente: s.nombreCliente || '-',
               NIF: s.nif || '-',
@@ -643,6 +647,7 @@ function OperationsContent() {
               Fecha: new Date(ex.createdAt).toLocaleDateString() || '-',
               Código: resolveRawCode(ex),
               Grupo: '-',
+              TipoVenta: 'EXTRA',
               Producto: ex.rule?.name || 'Incentivo Manual',
               NombreCliente: ex.customerName || '-',
               NIF: ex.customerNif || '-',
@@ -660,6 +665,7 @@ function OperationsContent() {
         { header: 'Fecha', key: 'Fecha', width: 12 },
         { header: 'Tienda', key: 'Código', width: 15 },
         { header: 'IMEI', key: 'Grupo', width: 20 },
+        { header: 'Tipo de Venta', key: 'TipoVenta', width: 20 },
         { header: 'Producto', key: 'Producto', width: 30 },
         { header: 'Nombre Cliente', key: 'NombreCliente', width: 30 },
         { header: 'NIF', key: 'NIF', width: 15 },
@@ -801,6 +807,7 @@ function OperationsContent() {
                 <th style={{ padding: '16px', textAlign: 'left', color: 'var(--medium-gray)' }}>Fecha</th>
                 <th style={{ padding: '16px', textAlign: 'left', color: 'var(--medium-gray)' }}>Tienda</th>
                 <th style={{ padding: '16px', textAlign: 'left', color: 'var(--medium-gray)' }}>IMEI</th>
+                <th style={{ padding: '16px', textAlign: 'left', color: 'var(--medium-gray)' }}>Tipo de Venta</th>
                 <th style={{ padding: '16px', textAlign: 'left', color: 'var(--medium-gray)' }}>Producto</th>
                 <th style={{ padding: '16px', textAlign: 'left', color: 'var(--medium-gray)' }}>Nombre del Cliente</th>
                 <th style={{ padding: '16px', textAlign: 'left', color: 'var(--medium-gray)' }}>NIF</th>
@@ -834,6 +841,9 @@ function OperationsContent() {
                     </td>
                     <td style={{ padding: '16px', color: 'var(--medium-gray)', fontWeight: 600 }}>
                       {editingId === sale.id ? <input value={editForm.imei || ''} onChange={e => handleEditChange('imei', e.target.value)} style={{ width: 120, padding: 4 }} /> : (sale.imei || '-')}
+                    </td>
+                    <td style={{ padding: '16px', color: 'var(--medium-gray)' }}>
+                      {editingId === sale.id ? <input value={editForm.detalle || ''} onChange={e => handleEditChange('detalle', e.target.value)} style={{ width: 100, padding: 4 }} /> : (sale.detalle || '-')}
                     </td>
                     <td style={{ padding: '16px' }}>
                       {editingId === sale.id ? <input value={editForm.producto} onChange={e => handleEditChange('producto', e.target.value)} style={{ width: 120, padding: 4 }} /> : sale.producto}
@@ -906,8 +916,11 @@ function OperationsContent() {
               )}
               {activeExtras.length > 0 && activeExtras.map((ex: any, i: number) => (
                 <tr key={`extra-${ex.id || i}`} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'rgba(16, 185, 129, 0.05)', verticalAlign: 'top' }}>
-                  <td style={{ padding: '12px 16px', color: '#059669', whiteSpace: 'nowrap' }}>{new Date(ex.createdAt).toLocaleDateString()}</td>
                   <td style={{ padding: '12px 16px', fontWeight: 600, color: '#059669' }}>{ex.seller}</td>
+                  <td style={{ padding: '12px 16px', color: '#059669', whiteSpace: 'nowrap' }}>{new Date(ex.createdAt).toLocaleDateString()}</td>
+                  <td style={{ padding: '12px 16px', color: '#059669' }}>{resolveRawCode(ex)}</td>
+                  <td style={{ padding: '12px 16px', color: '#059669' }}>-</td>
+                  <td style={{ padding: '12px 16px', color: '#059669' }}>EXTRA</td>
                   <td style={{ padding: '12px 16px', color: '#059669' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 'bold' }}>
                       ⚡ {ex.rule?.name || 'Incentivo Manual'}

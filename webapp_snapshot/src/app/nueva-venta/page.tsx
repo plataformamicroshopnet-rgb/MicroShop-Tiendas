@@ -134,7 +134,7 @@ export default function NuevaVentaPage() {
          })
          if (selectedItem) {
             const cat = newProducts[index].categoria
-            if (cat === 'O2') {
+            if (cat === 'O2' || cat === 'Seguro') {
               newProducts[index].importe = selectedItem.comision || ''
             } else if (cat === 'miMovistar') {
               newProducts[index].importe = String(Number(selectedItem.comision || 0) * Number(selectedItem.comisionConCoste || 0));

@@ -1587,6 +1587,7 @@ export default function LiquidacionesPage() {
                 { header: 'Cliente (NIF)', key: 'nif', width: 15 },
                 { header: 'Teléfono', key: 'telefono', width: 15 },
                 { header: 'Tienda', key: 'codigo', width: 15 },
+                { header: 'Tipo de Venta', key: 'tipoVenta', width: 20 },
                 { header: 'Producto', key: 'producto', width: 30 },
                 { header: 'Comisión', key: 'comision', width: 15 },
                 { header: 'Varios', key: 'varios', width: 25 },
@@ -1607,6 +1608,7 @@ export default function LiquidacionesPage() {
                     nif: sale.nif || '-',
                     telefono: sale.telf || '-',
                     codigo: sale.codigo || '-',
+                    tipoVenta: sale.detalle || '-',
                     producto: sale.producto || 'Sin especificar',
                     comision: Number(comisionEuros),
                     varios: sale.anotaciones || '-',
@@ -1621,6 +1623,7 @@ export default function LiquidacionesPage() {
                     nif: ex.customerNif || '-',
                     telefono: '-',
                     codigo: resolveExtraCode(ex) || 'MANUAL',
+                    tipoVenta: 'EXTRA',
                     producto: ex.rule?.name || 'Incentivo Manual',
                     comision: Number(ex.telecomRewardAmount || 0),
                     varios: ex.customerName || '-',
@@ -1684,6 +1687,7 @@ export default function LiquidacionesPage() {
                                 <th style={{ textAlign: 'left', color: 'var(--medium-gray)' }}>Cliente (NIF)</th>
                                 <th style={{ textAlign: 'center', color: 'var(--medium-gray)' }}>Teléfono</th>
                                 <th style={{ textAlign: 'left', color: 'var(--medium-gray)' }}>Tienda</th>
+                                <th style={{ textAlign: 'left', color: 'var(--medium-gray)' }}>Tipo de Venta</th>
                                 <th style={{ textAlign: 'left', color: 'var(--medium-gray)' }}>Producto</th>
                                 <th style={{ textAlign: 'center', color: 'var(--medium-gray)' }}>Comisión</th>
                                 <th style={{ textAlign: 'left', color: 'var(--medium-gray)' }}>Varios</th>
@@ -1711,6 +1715,9 @@ export default function LiquidacionesPage() {
                                         </td>
                                         <td>
                                             {isEditing ? <input className="form-input" style={{ padding: '0 4px', width: 80 }} value={editForm.codigo || ''} onChange={e => setEditForm({ ...editForm, codigo: e.target.value })} /> : (s.codigo || '-')}
+                                        </td>
+                                        <td>
+                                            {isEditing ? <input className="form-input" style={{ padding: '0 4px', width: 100 }} value={editForm.detalle || ''} onChange={e => setEditForm({ ...editForm, detalle: e.target.value })} /> : (s.detalle || '-')}
                                         </td>
                                         <td>
                                             {isEditing ? (
@@ -1770,6 +1777,7 @@ export default function LiquidacionesPage() {
                                     <td style={{ color: '#059669' }}>{ex.customerNif || '-'}</td>
                                     <td style={{ textAlign: 'center', color: '#059669' }}>-</td>
                                     <td style={{ color: '#059669' }}>{resolveExtraCode(ex) || 'MANUAL'}</td>
+                                    <td style={{ color: '#059669' }}>EXTRA</td>
                                     <td style={{ color: '#059669' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Zap size={14} /> {ex.rule?.name || 'Incentivo Manual'}</div>
                                     </td>
