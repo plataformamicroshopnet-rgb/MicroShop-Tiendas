@@ -78,7 +78,7 @@ type ProductItem = {
   importStatus?: 'new' | 'updated' | 'missing' | 'unchanged'
 }
 
-const CATEGORIES = ['Fija y Móvil', 'Ti', 'RENT', 'Seguro', 'O2', 'miMovistar']
+const CATEGORIES = ['Fija y Móvil', 'Ti', 'RENT', 'Seguro', 'O2', 'miMovistar', 'Suscripciones TV']
 
 export default function CatalogosPage() {
   const { authorized } = useGuard('MODULE_ADMIN', 'MANAGE_CATALOG')
@@ -97,7 +97,7 @@ export default function CatalogosPage() {
   const previousPeriod = currentIndex > 0 ? sortedPeriods[currentIndex - 1] : null
 
   const [catalogs, setCatalogs] = useState<Record<string, ProductItem[]>>({
-    "Fija y Móvil": [], "Ti": [], "RENT": [], "Seguro": [], "O2": [], "miMovistar": []
+    "Fija y Móvil": [], "Ti": [], "RENT": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": []
   })
   const [activeTab, setActiveTab] = useState('Fija y Móvil')
   const isProductTab = CATEGORIES.includes(activeTab)
@@ -116,7 +116,7 @@ export default function CatalogosPage() {
       .then(res => res.json())
       .then(data => {
         if (data.success) {
-          const mapped: Record<string, ProductItem[]> = { "Fija y Móvil": [], "Ti": [], "RENT": [], "Seguro": [], "O2": [], "miMovistar": [] }
+          const mapped: Record<string, ProductItem[]> = { "Fija y Móvil": [], "Ti": [], "RENT": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": [] }
           for (const [cat, items] of Object.entries(data.catalogs as Record<string, any[]>)) {
              if (!mapped[cat]) mapped[cat] = [];
              mapped[cat] = [...mapped[cat], ...items.map((it: any) => ({
@@ -278,7 +278,9 @@ export default function CatalogosPage() {
                       fabricante: it.fabricante || '',
                       gama: it.gama || '',
                       validFrom: it.validFrom || '',
-                      validTo: it.validTo || ''
+                      validTo: it.validTo || '',
+                      comision: it.comision || '',
+                      comisionConCoste: it.comisionConCoste || ''
                   }))
                   totalItems += items.length
               }
@@ -318,7 +320,9 @@ export default function CatalogosPage() {
                     fabricante: it.fabricante || '',
                     gama: it.gama || '',
                     validFrom: it.validFrom || '',
-                    validTo: it.validTo || ''
+                    validTo: it.validTo || '',
+                    comision: it.comision || '',
+                    comisionConCoste: it.comisionConCoste || ''
                 }))]
                 totalItems += items.length
             }
@@ -366,6 +370,10 @@ export default function CatalogosPage() {
       if (cat === 'Ti' || cat === 'RENT' || cat === 'Micro') {
         newItem.cuotaMensual = 0
         newItem.cuotaAnual = 0
+        if (cat === 'RENT') {
+           newItem.comision = ''
+           newItem.comisionConCoste = ''
+        }
       } else if (cat === 'O2') {
         newItem.subcategoria = ''
         newItem.comision = ''
@@ -374,6 +382,8 @@ export default function CatalogosPage() {
         newItem.gama = ''
         newItem.comision = 0
         newItem.comisionConCoste = 0
+      } else if (cat === 'Suscripciones TV') {
+        newItem.comision = ''
       } else {
         newItem.cuota = 0
       }
@@ -576,6 +586,14 @@ export default function CatalogosPage() {
               hasta: parts.length > 7 ? parts[7] : '',
             })
           }
+        } else if (activeTab === 'Suscripciones TV') {
+          excelData.push({
+            categoria: parts[0] || '',
+            producto: parts[1] || '',
+            comision: parts.length > 2 ? parseSpanishNumber(parts[2]) : '0',
+            desde: parts.length > 3 ? parts[3] : '',
+            hasta: parts.length > 4 ? parts[4] : '',
+          })
         } else {
           excelData.push({
             producto: parts[0],
@@ -647,6 +665,8 @@ export default function CatalogosPage() {
             if (item.comision !== row.comision) { item.comision = row.comision; changed = true; }
             if (item.comisionConCoste !== row.comisionConCoste) { item.comisionConCoste = row.comisionConCoste; changed = true; }
             if (item.producto !== row.producto) { item.producto = row.producto; changed = true; }
+          } else if (activeTab === 'Suscripciones TV') {
+            if (item.comision !== row.comision) { item.comision = row.comision; changed = true; }
           }
 
           if (activeTab === 'RENT') {
@@ -746,6 +766,8 @@ export default function CatalogosPage() {
             newItem.gama = row.gama
             newItem.comision = row.comision
             newItem.comisionConCoste = row.comisionConCoste
+          } else if (activeTab === 'Suscripciones TV') {
+            newItem.comision = row.comision
           } else {
             newItem.cuota = Math.round(amount * 100) / 100
           }
@@ -866,6 +888,7 @@ export default function CatalogosPage() {
           { cat: 'Seguro', tip: 'Catálogo de seguros para dispositivos. Introduce la categoría, cuota y comisión.' },
           { cat: 'O2', tip: 'Catálogo de productos y tarifas de O2. Introduce la categoría, nombre y comisión.' },
           { cat: 'miMovistar', tip: 'Catálogo de paquetes miMovistar. Configura categorías, tipos, productos multilínea y su estructura de comisiones por multiplicador.' },
+          { cat: 'Suscripciones TV', tip: 'Catálogo de suscripciones de televisión. Introduce la categoría, nombre, comisión y fechas.' },
           { cat: 'Objetivos Tiendas', tip: 'Define los objetivos cuantitativos del mes para las tiendas. Son la base del cálculo de cumplimiento y comisiones.' },
         ] as const).map(({ cat, tip }) => (
           <TooltipBox key={cat} title={cat} content={tip} position="bottom">
@@ -971,6 +994,12 @@ export default function CatalogosPage() {
                     <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '30%' }}>Nombre de Producto</th>
                     <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 130 }}>Cuota Total (€)</th>
                     <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 130 }}>Comision</th>
+                  </>
+                ) : activeTab === 'Suscripciones TV' ? (
+                  <>
+                    <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '25%' }}>Categoría</th>
+                    <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '35%' }}>Nombre de Producto</th>
+                    <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 140 }}>Comisión (€)</th>
                   </>
                 ) : activeTab === 'miMovistar' ? (
                   <>
@@ -1126,6 +1155,50 @@ export default function CatalogosPage() {
                               className="form-input"
                               style={{ width: '100%', border: 'none', backgroundColor: 'transparent', padding: '8px', fontSize: 14, color: isHistoric ? 'var(--medium-gray)' : 'var(--light-text)' }}
                               placeholder="Ej. Fibra y movil"
+                            />
+                          </td>
+                          <td style={{ padding: '12px 20px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                              <input 
+                                type="text" 
+                                disabled={isHistoric}
+                                value={item.producto}
+                                onChange={e => updateItem(activeTab, index, 'producto', e.target.value)}
+                                className="form-input"
+                                style={{ width: '100%', border: 'none', backgroundColor: 'transparent', padding: '8px', fontSize: 14, fontWeight: 500, color: item.importStatus === 'missing' ? '#FF453A' : isHistoric ? 'var(--medium-gray)' : 'var(--light-text)' }}
+                                placeholder="Nombre del producto..."
+                              />
+                              {item.importStatus === 'missing' && <span style={{ fontSize: 11, color: '#FF453A', fontWeight: 600, paddingLeft: 8 }}>🚨 No presente en última importación</span>}
+                              {item.importStatus === 'new' && <span style={{ fontSize: 11, color: '#34C759', fontWeight: 600, paddingLeft: 8 }}>🆕 Nuevo en Excel</span>}
+                              {item.importStatus === 'updated' && <span style={{ fontSize: 11, color: '#FFCC00', fontWeight: 600, paddingLeft: 8 }}>🔄 Valores actualizados</span>}
+                            </div>
+                          </td>
+                          <td style={{ padding: '12px 8px' }}>
+                            <div style={{ position: 'relative', display: 'inline-block' }}>
+                              <input 
+                                type="text" 
+                                disabled={isHistoric}
+                                value={item.comision || ''}
+                                onChange={e => updateItem(activeTab, index, 'comision', e.target.value)}
+                                className="form-input"
+                                style={{ width: 110, color: isHistoric ? 'var(--medium-gray)' : 'var(--light-text)', backgroundColor: isHistoric ? 'transparent' : 'var(--active-bg)', border: isHistoric ? 'none' : '1px dashed var(--border-color)', paddingRight: 24 }}
+                                placeholder="0,00"
+                              />
+                              <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--medium-gray)', fontSize: 13, pointerEvents: 'none' }}>€</span>
+                            </div>
+                          </td>
+                        </>
+                      ) : activeTab === 'Suscripciones TV' ? (
+                        <>
+                          <td style={{ padding: '12px 20px' }}>
+                            <input 
+                              type="text" 
+                              disabled={isHistoric}
+                              value={item.subcategoria || 'Suscripciones TV'}
+                              onChange={e => updateItem(activeTab, index, 'subcategoria', e.target.value)}
+                              className="form-input"
+                              style={{ width: '100%', border: 'none', backgroundColor: 'transparent', padding: '8px', fontSize: 14, color: isHistoric ? 'var(--medium-gray)' : 'var(--light-text)' }}
+                              placeholder="Ej. Suscripciones TV"
                             />
                           </td>
                           <td style={{ padding: '12px 20px' }}>

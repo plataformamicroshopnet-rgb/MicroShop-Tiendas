@@ -134,7 +134,7 @@ export default function NuevaVentaPage() {
          })
          if (selectedItem) {
             const cat = newProducts[index].categoria
-            if (cat === 'O2' || cat === 'Seguro') {
+            if (cat === 'O2' || cat === 'Seguro' || cat === 'Suscripciones TV') {
               newProducts[index].importe = selectedItem.comision || ''
             } else if (cat === 'miMovistar') {
               newProducts[index].importe = String(Number(selectedItem.comision || 0) * Number(selectedItem.comisionConCoste || 0));
@@ -200,6 +200,34 @@ export default function NuevaVentaPage() {
         ...prev.productos,
         {
           categoria: 'Seguro',
+          producto: '',
+          telf: currentProd.telf || '',
+          noCliente: currentProd.noCliente || '',
+          pendiente: 'No',
+          importe: '',
+          imei: '',
+          rentConCoste: 'No',
+          seguro: '',
+          seguroImporte: 0,
+          fabricante: '',
+          subcategoria: '',
+          gama: '',
+          isLibre: false,
+          isSwap: false
+        }
+      ]
+    }))
+  }
+
+  const handleAddSuscripcion = (index: number) => {
+    if (formData.productos.length >= 50) return
+    const currentProd = formData.productos[index]
+    setFormData((prev: any) => ({
+      ...prev,
+      productos: [
+        ...prev.productos,
+        {
+          categoria: 'Suscripciones TV',
           producto: '',
           telf: currentProd.telf || '',
           noCliente: currentProd.noCliente || '',
@@ -600,6 +628,32 @@ export default function NuevaVentaPage() {
                             <option value="Anulado">Anulado</option>
                           </select>
                         </div>
+                        
+                        <div style={{ marginTop: '12px' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleAddSuscripcion(index)}
+                            className="btn-secondary"
+                            style={{ 
+                                width: '100%', 
+                                padding: '10px 8px', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center', 
+                                gap: '8px', 
+                                border: 'none', 
+                                backgroundColor: '#5CB615', 
+                                color: '#FFFFFF', 
+                                borderRadius: '6px', 
+                                cursor: 'pointer',
+                                fontWeight: 'bold',
+                                boxShadow: '0 4px 12px rgba(92,182,21,0.3)',
+                                transition: 'all 0.2s ease'
+                            }}
+                          >
+                            <ShieldPlus size={16} /> Añadir Suscripciones TV
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -670,7 +724,7 @@ export default function NuevaVentaPage() {
                     <div style={{ flex: '1', minWidth: '200px', backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
                         <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label className="form-label" style={{ color: '#555' }}>{prod.categoria === 'O2' ? 'Comisión' : 'Importe'}</label>
+                          <label className="form-label" style={{ color: '#555' }}>{(prod.categoria === 'O2' || prod.categoria === 'Suscripciones TV') ? 'Comisión' : 'Importe'}</label>
                           <div style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
                             <input 
                               type="number" 
@@ -693,6 +747,7 @@ export default function NuevaVentaPage() {
                           </select>
                         </div>
                       </div>
+
                     </div>
 
                   </div>

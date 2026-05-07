@@ -1525,6 +1525,12 @@ export default function LiquidacionesPage() {
 
             // Fetch catalog override value for technical products if it exists
             const det = (sale.detalle || '').toLowerCase();
+            
+            // O2, Seguro and miMovistar store their commission directly in importe/cuota
+            if (det === 'o2' || det === 'seguro' || det === 'mimovistar') {
+                return Number(sale.importe || sale.cuota || 0);
+            }
+            
             let overrideBaseValue: number | undefined = undefined;
             if (det === 'ti' || det === 'tma' || det === 'rent' || det === 'micro') {
                 // Ensure we map back to the EXACT object key in catalogs since it stores as 'Ti', 'RENT', 'Micro'
@@ -1608,7 +1614,7 @@ export default function LiquidacionesPage() {
                     nif: sale.nif || '-',
                     telefono: sale.telf || '-',
                     codigo: sale.codigo || '-',
-                    tipoVenta: sale.detalle || '-',
+                    tipoVenta: sale.detalle === 'Ti' ? 'Contratos Móvil' : (sale.detalle || '-'),
                     producto: sale.producto || 'Sin especificar',
                     comision: Number(comisionEuros),
                     varios: sale.anotaciones || '-',
@@ -1717,7 +1723,7 @@ export default function LiquidacionesPage() {
                                             {isEditing ? <input className="form-input" style={{ padding: '0 4px', width: 80 }} value={editForm.codigo || ''} onChange={e => setEditForm({ ...editForm, codigo: e.target.value })} /> : (s.codigo || '-')}
                                         </td>
                                         <td>
-                                            {isEditing ? <input className="form-input" style={{ padding: '0 4px', width: 100 }} value={editForm.detalle || ''} onChange={e => setEditForm({ ...editForm, detalle: e.target.value })} /> : (s.detalle || '-')}
+                                            {isEditing ? <input className="form-input" style={{ padding: '0 4px', width: 100 }} value={editForm.detalle || ''} onChange={e => setEditForm({ ...editForm, detalle: e.target.value })} /> : (s.detalle === 'Ti' ? 'Contratos Móvil' : (s.detalle || '-'))}
                                         </td>
                                         <td>
                                             {isEditing ? (

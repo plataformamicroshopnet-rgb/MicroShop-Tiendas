@@ -250,7 +250,7 @@ function CommercialDashboard({ data, activeExtras = [], isComercial }: { data: a
                 <tr key={i} style={{ borderBottom: '1px solid var(--border-color)', verticalAlign: 'top' }}>
                   <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>{sale.fecha}</td>
                   <td style={{ padding: '12px 16px', fontWeight: 600 }}>{sale.vendedor}</td>
-                  <td style={{ padding: '12px 16px', color: 'var(--medium-gray)' }}>{sale.detalle || '-'}</td>
+                  <td style={{ padding: '12px 16px', color: 'var(--medium-gray)' }}>{sale.detalle === 'Ti' ? 'Contratos Móvil' : (sale.detalle || '-')}</td>
                   <td style={{ padding: '12px 16px' }}>{sale.producto}</td>
                   <td style={{ padding: '12px 16px' }}>{sale.nombreCliente || '-'}</td>
                   <td style={{ padding: '12px 16px' }}>{sale.nif}</td>
@@ -570,9 +570,14 @@ function OperationsContent() {
       
       // Override for Technical products: fetch exact value from Catalog based on active name
       const det = sale.detalle || '';
-      if (det === 'Ti' || det === 'TMA' || det === 'Micro') {
+      
+      if (det === 'O2' || det === 'Seguro' || det === 'miMovistar') {
          bypassCommissionCalc = true;
-         const list = catalogs[det] || [];
+         finalImporte = Number(sale.importe || sale.cuota || 0);
+      } else if (det === 'Ti' || det === 'TMA' || det === 'Micro' || det === 'RENT') {
+         bypassCommissionCalc = true;
+         const catalogKey = det === 'TMA' ? 'RENT' : det;
+         const list = catalogs[catalogKey] || [];
          const foundList = list.filter((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
          if (foundList.length > 0) {
             let found = foundList[0];
@@ -580,7 +585,16 @@ function OperationsContent() {
                const properlyDated = foundList.find((c: any) => isVentaWithinDates(sale.fecha, c.validFrom, c.validTo));
                if (properlyDated) found = properlyDated;
             }
-            finalImporte = Number(String(found.anual || 0).replace(',','.'));
+            if (det === 'TMA' || det === 'RENT') {
+                const isConCoste = sale.rentConCoste && (sale.rentConCoste.toLowerCase() === 'sí' || sale.rentConCoste.toLowerCase() === 'si');
+                if (isConCoste) {
+                    finalImporte = Number(String(found.comisionConCoste || 0).replace(',','.'));
+                } else {
+                    finalImporte = Number(String(found.comision || 0).replace(',','.'));
+                }
+            } else {
+                finalImporte = Number(String(found.anual || 0).replace(',','.'));
+            }
          }
       }
 
@@ -628,7 +642,7 @@ function OperationsContent() {
               Fecha: s.fecha || '-',
               Código: s.codigo || '-',
               Grupo: s.imei || '-',
-              TipoVenta: s.detalle || '-',
+              TipoVenta: s.detalle === 'Ti' ? 'Contratos Móvil' : (s.detalle || '-'),
               Producto: s.producto || '-',
               NombreCliente: s.nombreCliente || '-',
               NIF: s.nif || '-',
@@ -843,7 +857,7 @@ function OperationsContent() {
                       {editingId === sale.id ? <input value={editForm.imei || ''} onChange={e => handleEditChange('imei', e.target.value)} style={{ width: 120, padding: 4 }} /> : (sale.imei || '-')}
                     </td>
                     <td style={{ padding: '16px', color: 'var(--medium-gray)' }}>
-                      {editingId === sale.id ? <input value={editForm.detalle || ''} onChange={e => handleEditChange('detalle', e.target.value)} style={{ width: 100, padding: 4 }} /> : (sale.detalle || '-')}
+                      {editingId === sale.id ? <input value={editForm.detalle || ''} onChange={e => handleEditChange('detalle', e.target.value)} style={{ width: 100, padding: 4 }} /> : (sale.detalle === 'Ti' ? 'Contratos Móvil' : (sale.detalle || '-'))}
                     </td>
                     <td style={{ padding: '16px' }}>
                       {editingId === sale.id ? <input value={editForm.producto} onChange={e => handleEditChange('producto', e.target.value)} style={{ width: 120, padding: 4 }} /> : sale.producto}
