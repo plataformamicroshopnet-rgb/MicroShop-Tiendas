@@ -78,7 +78,7 @@ type ProductItem = {
   importStatus?: 'new' | 'updated' | 'missing' | 'unchanged'
 }
 
-const CATEGORIES = ['Fija y Móvil', 'Ti', 'RENT', 'Seguro', 'O2', 'miMovistar', 'Suscripciones TV']
+const CATEGORIES = ['Fija y Móvil', 'Ti', 'RENT', 'Seguro', 'O2', 'miMovistar', 'Suscripciones TV', 'PREPAGO', 'Varios', 'Repos']
 
 export default function CatalogosPage() {
   const { authorized } = useGuard('MODULE_ADMIN', 'MANAGE_CATALOG')
@@ -97,7 +97,7 @@ export default function CatalogosPage() {
   const previousPeriod = currentIndex > 0 ? sortedPeriods[currentIndex - 1] : null
 
   const [catalogs, setCatalogs] = useState<Record<string, ProductItem[]>>({
-    "Fija y Móvil": [], "Ti": [], "RENT": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": []
+    "Fija y Móvil": [], "Ti": [], "RENT": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": [], "PREPAGO": [], "Varios": [], "Repos": []
   })
   const [activeTab, setActiveTab] = useState('Fija y Móvil')
   const isProductTab = CATEGORIES.includes(activeTab)
@@ -116,7 +116,7 @@ export default function CatalogosPage() {
       .then(res => res.json())
       .then(data => {
         if (data.success) {
-          const mapped: Record<string, ProductItem[]> = { "Fija y Móvil": [], "Ti": [], "RENT": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": [] }
+          const mapped: Record<string, ProductItem[]> = { "Fija y Móvil": [], "Ti": [], "RENT": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": [], "PREPAGO": [], "Varios": [], "Repos": [] }
           for (const [cat, items] of Object.entries(data.catalogs as Record<string, any[]>)) {
              if (!mapped[cat]) mapped[cat] = [];
              mapped[cat] = [...mapped[cat], ...items.map((it: any) => ({
@@ -382,8 +382,17 @@ export default function CatalogosPage() {
         newItem.gama = ''
         newItem.comision = 0
         newItem.comisionConCoste = 0
-      } else if (cat === 'Suscripciones TV') {
+      } else if (cat === 'Suscripciones TV' || cat === 'PREPAGO') {
         newItem.comision = ''
+      } else if (cat === 'Seguro' || cat === 'Varios') {
+        newItem.subcategoria = ''
+        newItem.comision = ''
+        newItem.cuotaAnual = 0
+      } else if (cat === 'Repos') {
+        newItem.subcategoria = ''
+        newItem.comision = ''
+        newItem.comisionConCoste = ''
+        newItem.cuotaAnual = 0
       } else {
         newItem.cuota = 0
       }
@@ -556,7 +565,7 @@ export default function CatalogosPage() {
             desde: parts.length > 3 ? parts[3] : '',
             hasta: parts.length > 4 ? parts[4] : '',
           })
-        } else if (activeTab === 'Seguro') {
+        } else if (activeTab === 'Seguro' || activeTab === 'Varios') {
           excelData.push({
             categoria: parts[0] || '',
             producto: parts[1] || '',
@@ -564,6 +573,17 @@ export default function CatalogosPage() {
             comision: parts.length > 3 ? parseSpanishNumber(parts[3]) : '0',
             desde: parts.length > 4 ? parts[4] : '',
             hasta: parts.length > 5 ? parts[5] : '',
+          })
+        } else if (activeTab === 'Repos') {
+          excelData.push({
+            categoria: parts[0] || '',
+            producto: parts[1] || '',
+            amountAsStr: parts.length > 2 ? parseSpanishNumber(parts[2]) : '0', // Cuota Total
+            comision: parts.length > 3 ? parseSpanishNumber(parts[3]) : '0', // Comisión Fija
+            comisionConCoste: parts.length > 4 ? parseSpanishNumber(parts[4]) : '0', // Multiplicador
+            // parts[5] es Comisión X que no guardamos (se calcula).
+            desde: parts.length > 6 ? parts[6] : '',
+            hasta: parts.length > 7 ? parts[7] : '',
           })
         } else if (activeTab === 'miMovistar') {
           if (!parts[0] && !parts[1] && parts[2] && excelData.length > 0) {
@@ -586,7 +606,7 @@ export default function CatalogosPage() {
               hasta: parts.length > 7 ? parts[7] : '',
             })
           }
-        } else if (activeTab === 'Suscripciones TV') {
+        } else if (activeTab === 'Suscripciones TV' || activeTab === 'PREPAGO') {
           excelData.push({
             categoria: parts[0] || '',
             producto: parts[1] || '',
@@ -659,13 +679,17 @@ export default function CatalogosPage() {
           } else if (activeTab === 'Seguro') {
             if (item.subcategoria !== row.categoria) { item.subcategoria = row.categoria; changed = true; }
             if (item.comision !== row.comision) { item.comision = row.comision; changed = true; }
+          } else if (activeTab === 'Repos') {
+            if (item.subcategoria !== row.categoria) { item.subcategoria = row.categoria; changed = true; }
+            if (item.comision !== row.comision) { item.comision = row.comision; changed = true; }
+            if (item.comisionConCoste !== row.comisionConCoste) { item.comisionConCoste = row.comisionConCoste; changed = true; }
           } else if (activeTab === 'miMovistar') {
             if (item.subcategoria !== row.subcategoria) { item.subcategoria = row.subcategoria; changed = true; }
             if (item.gama !== row.gama) { item.gama = row.gama; changed = true; }
             if (item.comision !== row.comision) { item.comision = row.comision; changed = true; }
             if (item.comisionConCoste !== row.comisionConCoste) { item.comisionConCoste = row.comisionConCoste; changed = true; }
             if (item.producto !== row.producto) { item.producto = row.producto; changed = true; }
-          } else if (activeTab === 'Suscripciones TV') {
+          } else if (activeTab === 'Suscripciones TV' || activeTab === 'PREPAGO') {
             if (item.comision !== row.comision) { item.comision = row.comision; changed = true; }
           }
 
@@ -705,9 +729,12 @@ export default function CatalogosPage() {
           } else if (activeTab === 'O2') {
             if (item.subcategoria !== row.categoria) { item.subcategoria = row.categoria; changed = true; }
             if (item.comision !== row.amountAsStr) { item.comision = row.amountAsStr; changed = true; }
-          } else if (activeTab === 'Seguro') {
+          } else if (activeTab === 'Seguro' || activeTab === 'Varios') {
             if (item.subcategoria !== row.categoria) { item.subcategoria = row.categoria; changed = true; }
             if (item.comision !== row.comision) { item.comision = row.comision; changed = true; }
+            const expectedCuota = Math.round(amount * 100) / 100
+            if (item.cuotaAnual !== expectedCuota) { item.cuotaAnual = expectedCuota; changed = true; }
+          } else if (activeTab === 'Repos') {
             const expectedCuota = Math.round(amount * 100) / 100
             if (item.cuotaAnual !== expectedCuota) { item.cuotaAnual = expectedCuota; changed = true; }
           } else {
@@ -750,9 +777,14 @@ export default function CatalogosPage() {
           } else if (activeTab === 'O2') {
             newItem.subcategoria = row.categoria
             newItem.comision = row.amountAsStr
-          } else if (activeTab === 'Seguro') {
+          } else if (activeTab === 'Seguro' || activeTab === 'Varios') {
             newItem.subcategoria = row.categoria
             newItem.comision = row.comision
+            newItem.cuotaAnual = Math.round(amount * 100) / 100
+          } else if (activeTab === 'Repos') {
+            newItem.subcategoria = row.categoria
+            newItem.comision = row.comision
+            newItem.comisionConCoste = row.comisionConCoste
             newItem.cuotaAnual = Math.round(amount * 100) / 100
           } else if (activeTab === 'Ti') {
             newItem.cuotaMensual = row.descripcion
@@ -766,7 +798,7 @@ export default function CatalogosPage() {
             newItem.gama = row.gama
             newItem.comision = row.comision
             newItem.comisionConCoste = row.comisionConCoste
-          } else if (activeTab === 'Suscripciones TV') {
+          } else if (activeTab === 'Suscripciones TV' || activeTab === 'PREPAGO') {
             newItem.comision = row.comision
           } else {
             newItem.cuota = Math.round(amount * 100) / 100
@@ -882,13 +914,15 @@ export default function CatalogosPage() {
           {/* TABS */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 20, borderBottom: '1px solid var(--border-color)', paddingBottom: 16, flexWrap: 'wrap' }}>
         {([
-          { cat: 'Fija y Móvil', tip: 'Catálogo de productos de telefonía fija y móvil (contrato mensual). Incluye portabilidades, altas y tarifas de voz/datos. El precio configurado aquí (€/mes) es la cuota base usada en el cálculo de comisiones de venta fija y móvil.' },
           { cat: 'Ti', tip: 'Terminal de Instalación: dispositivos y servicios con contrato de 12 meses. El precio mensual se introduce y el sistema calcula automáticamente el importe total anual (×12).' },
           { cat: 'RENT', tip: 'Terminal Móvil en Alquiler: dispositivos bajo contrato de 24 meses. Introduce la cuota total a 24 meses.' },
           { cat: 'Seguro', tip: 'Catálogo de seguros para dispositivos. Introduce la categoría, cuota y comisión.' },
           { cat: 'O2', tip: 'Catálogo de productos y tarifas de O2. Introduce la categoría, nombre y comisión.' },
           { cat: 'miMovistar', tip: 'Catálogo de paquetes miMovistar. Configura categorías, tipos, productos multilínea y su estructura de comisiones por multiplicador.' },
           { cat: 'Suscripciones TV', tip: 'Catálogo de suscripciones de televisión. Introduce la categoría, nombre, comisión y fechas.' },
+          { cat: 'PREPAGO', tip: 'Catálogo de productos prepago. Introduce la categoría, nombre de producto y comisión.' },
+          { cat: 'Varios', tip: 'Catálogo de productos varios (alarmas, migraciones, etc). Introduce categoría, nombre, cuota total y comisión.' },
+          { cat: 'Repos', tip: 'Catálogo de Reposiciones. Introduce categoría, nombre, cuota total, comisión y multiplicador.' },
           { cat: 'Objetivos Tiendas', tip: 'Define los objetivos cuantitativos del mes para las tiendas. Son la base del cálculo de cumplimiento y comisiones.' },
         ] as const).map(({ cat, tip }) => (
           <TooltipBox key={cat} title={cat} content={tip} position="bottom">
@@ -988,14 +1022,23 @@ export default function CatalogosPage() {
                     <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '35%' }}>Nombre de Producto</th>
                     <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 140 }}>Comisión (€)</th>
                   </>
-                ) : activeTab === 'Seguro' ? (
+                ) : activeTab === 'Seguro' || activeTab === 'Varios' ? (
                   <>
                     <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '20%' }}>Categoría</th>
                     <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '30%' }}>Nombre de Producto</th>
                     <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 130 }}>Cuota Total (€)</th>
                     <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 130 }}>Comision</th>
                   </>
-                ) : activeTab === 'Suscripciones TV' ? (
+                ) : activeTab === 'Repos' ? (
+                  <>
+                    <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '15%' }}>Categoría</th>
+                    <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '25%' }}>Nombre de Producto</th>
+                    <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 110 }}>Cuota Total (€)</th>
+                    <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 110 }}>Comisión</th>
+                    <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 90 }}>Mult.</th>
+                    <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 100 }}>Comisión X (€)</th>
+                  </>
+                ) : activeTab === 'Suscripciones TV' || activeTab === 'PREPAGO' ? (
                   <>
                     <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '25%' }}>Categoría</th>
                     <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '35%' }}>Nombre de Producto</th>
@@ -1188,17 +1231,17 @@ export default function CatalogosPage() {
                             </div>
                           </td>
                         </>
-                      ) : activeTab === 'Suscripciones TV' ? (
+                      ) : activeTab === 'Suscripciones TV' || activeTab === 'PREPAGO' ? (
                         <>
                           <td style={{ padding: '12px 20px' }}>
                             <input 
                               type="text" 
                               disabled={isHistoric}
-                              value={item.subcategoria || 'Suscripciones TV'}
+                              value={item.subcategoria || activeTab}
                               onChange={e => updateItem(activeTab, index, 'subcategoria', e.target.value)}
                               className="form-input"
                               style={{ width: '100%', border: 'none', backgroundColor: 'transparent', padding: '8px', fontSize: 14, color: isHistoric ? 'var(--medium-gray)' : 'var(--light-text)' }}
-                              placeholder="Ej. Suscripciones TV"
+                              placeholder={`Ej. ${activeTab}`}
                             />
                           </td>
                           <td style={{ padding: '12px 20px' }}>
@@ -1309,7 +1352,7 @@ export default function CatalogosPage() {
                             </div>
                           </td>
                         </>
-                      ) : activeTab === 'Seguro' ? (
+                      ) : activeTab === 'Seguro' || activeTab === 'Varios' ? (
                         <>
                           <td style={{ padding: '12px 20px' }}>
                             <input 
@@ -1362,6 +1405,88 @@ export default function CatalogosPage() {
                                 className="form-input"
                                 style={{ width: 110, color: isHistoric ? 'var(--medium-gray)' : 'var(--light-text)', backgroundColor: isHistoric ? 'transparent' : 'var(--active-bg)', border: isHistoric ? 'none' : '1px dashed var(--border-color)', paddingRight: 24 }}
                                 placeholder="0,00"
+                              />
+                              <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--medium-gray)', fontSize: 13, pointerEvents: 'none' }}>€</span>
+                            </div>
+                          </td>
+                        </>
+                      ) : activeTab === 'Repos' ? (
+                        <>
+                          <td style={{ padding: '12px 20px' }}>
+                            <input 
+                              type="text" 
+                              disabled={isHistoric}
+                              value={item.subcategoria || ''}
+                              onChange={e => updateItem(activeTab, index, 'subcategoria', e.target.value)}
+                              className="form-input"
+                              style={{ width: '100%', border: 'none', backgroundColor: 'transparent', padding: '8px', fontSize: 14, color: isHistoric ? 'var(--medium-gray)' : 'var(--light-text)' }}
+                              placeholder="Ej. Repos"
+                            />
+                          </td>
+                          <td style={{ padding: '12px 20px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                              <input 
+                                type="text" 
+                                disabled={isHistoric}
+                                value={item.producto}
+                                onChange={e => updateItem(activeTab, index, 'producto', e.target.value)}
+                                className="form-input"
+                                style={{ width: '100%', border: 'none', backgroundColor: 'transparent', padding: '8px', fontSize: 14, fontWeight: 500, color: item.importStatus === 'missing' ? '#FF453A' : isHistoric ? 'var(--medium-gray)' : 'var(--light-text)' }}
+                                placeholder="Nombre del producto..."
+                              />
+                              {item.importStatus === 'missing' && <span style={{ fontSize: 11, color: '#FF453A', fontWeight: 600, paddingLeft: 8 }}>🚨 No presente en última importación</span>}
+                              {item.importStatus === 'new' && <span style={{ fontSize: 11, color: '#34C759', fontWeight: 600, paddingLeft: 8 }}>🆕 Nuevo en Excel</span>}
+                              {item.importStatus === 'updated' && <span style={{ fontSize: 11, color: '#FFCC00', fontWeight: 600, paddingLeft: 8 }}>🔄 Valores actualizados</span>}
+                            </div>
+                          </td>
+                          <td style={{ padding: '12px 8px' }}>
+                            <div style={{ position: 'relative', display: 'inline-block' }}>
+                              <input 
+                                type="number"
+                                step="0.01" 
+                                disabled={isHistoric}
+                                value={item.cuotaAnual !== undefined ? Number(item.cuotaAnual).toFixed(2) : ''}
+                                onChange={e => updateItem(activeTab, index, 'cuotaAnual', e.target.value)}
+                                className="form-input"
+                                style={{ width: 90, color: isHistoric ? 'var(--medium-gray)' : 'var(--mercedes-cyan)', fontWeight: 'bold', backgroundColor: isHistoric ? 'transparent' : 'var(--active-bg)', border: isHistoric ? 'none' : '1px dashed var(--border-color)', paddingRight: 24 }}
+                              />
+                                <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--medium-gray)', fontSize: 13, pointerEvents: 'none' }}>€</span>
+                              </div>
+                          </td>
+                          <td style={{ padding: '12px 8px' }}>
+                            <div style={{ position: 'relative', display: 'inline-block' }}>
+                              <input 
+                                type="text" 
+                                disabled={isHistoric}
+                                value={item.comision || ''}
+                                onChange={e => updateItem(activeTab, index, 'comision', e.target.value)}
+                                className="form-input"
+                                style={{ width: 90, color: isHistoric ? 'var(--medium-gray)' : 'var(--light-text)', backgroundColor: isHistoric ? 'transparent' : 'var(--active-bg)', border: isHistoric ? 'none' : '1px dashed var(--border-color)', paddingRight: 24 }}
+                                placeholder="0,00"
+                              />
+                              <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--medium-gray)', fontSize: 13, pointerEvents: 'none' }}>€</span>
+                            </div>
+                          </td>
+                          <td style={{ padding: '12px 8px' }}>
+                            <div style={{ position: 'relative', display: 'inline-block' }}>
+                              <input 
+                                type="number" 
+                                disabled={isHistoric}
+                                value={item.comisionConCoste || ''}
+                                onChange={e => updateItem(activeTab, index, 'comisionConCoste', e.target.value)}
+                                className="form-input"
+                                style={{ width: 70, color: isHistoric ? 'var(--medium-gray)' : 'var(--light-text)', backgroundColor: isHistoric ? 'transparent' : 'var(--active-bg)', border: isHistoric ? 'none' : '1px dashed var(--border-color)', paddingRight: 8 }}
+                              />
+                            </div>
+                          </td>
+                          <td style={{ padding: '12px 8px' }}>
+                            <div style={{ position: 'relative', display: 'inline-block' }}>
+                              <input 
+                                type="text" 
+                                disabled
+                                value={item.comision && item.comisionConCoste ? Number(item.comision || 0) * Number(item.comisionConCoste || 0) : ''}
+                                className="form-input"
+                                style={{ width: 90, color: 'var(--mercedes-cyan)', fontWeight: 'bold', backgroundColor: 'transparent', border: 'none', paddingRight: 24 }}
                               />
                               <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--medium-gray)', fontSize: 13, pointerEvents: 'none' }}>€</span>
                             </div>

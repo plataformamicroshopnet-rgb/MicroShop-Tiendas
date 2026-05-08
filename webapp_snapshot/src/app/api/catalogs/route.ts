@@ -60,7 +60,7 @@ export async function GET(request: Request) {
     }
   }
 
-  const catalogs: Record<string, any[]> = { "Fija": [], "Móvil": [], "Ti": [], "RENT": [], "Micro": [], "O2": [], "Seguro": [], "miMovistar": [], "Suscripciones TV": [] }
+  const catalogs: Record<string, any[]> = { "Fija": [], "Móvil": [], "Ti": [], "RENT": [], "Micro": [], "O2": [], "Seguro": [], "miMovistar": [], "Suscripciones TV": [], "PREPAGO": [], "Varios": [], "Repos": [] }
   for (const r of records) {
     if (!catalogs[r.categoria]) {
       catalogs[r.categoria] = []

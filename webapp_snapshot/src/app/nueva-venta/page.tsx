@@ -42,7 +42,9 @@ export default function NuevaVentaPage() {
         subcategoria: '',
         gama: '',
         isLibre: false,
-        isSwap: false
+        isSwap: false,
+        facturacionAnterior: '',
+        facturacionNueva: ''
       }
     ]
   })
@@ -134,8 +136,16 @@ export default function NuevaVentaPage() {
          })
          if (selectedItem) {
             const cat = newProducts[index].categoria
-            if (cat === 'O2' || cat === 'Seguro' || cat === 'Suscripciones TV') {
+            if (cat === 'O2' || cat === 'Seguro' || cat === 'Suscripciones TV' || cat === 'PREPAGO' || cat === 'Varios') {
               newProducts[index].importe = selectedItem.comision || ''
+            } else if (cat === 'Repos') {
+               if (selectedItem.comisionConCoste && Number(selectedItem.comisionConCoste) > 0) {
+                  const ant = Number(newProducts[index].facturacionAnterior || 0)
+                  const nue = Number(newProducts[index].facturacionNueva || 0)
+                  newProducts[index].importe = String(Math.max(0, nue - ant) * Number(selectedItem.comisionConCoste))
+               } else {
+                  newProducts[index].importe = selectedItem.comision || ''
+               }
             } else if (cat === 'miMovistar') {
               newProducts[index].importe = String(Number(selectedItem.comision || 0) * Number(selectedItem.comisionConCoste || 0));
             } else if (cat === 'Ti' || cat === 'TMA' || cat === 'Micro' || cat === 'RENT') {
@@ -157,6 +167,17 @@ export default function NuevaVentaPage() {
       if (field === 'isLibre') {
          // If they check "Libre", we don't need to clear seguro anymore because it's handled via a separate row
          if (value === true) {
+         }
+      }
+      
+      // Recalcular importe para Repos si cambian los factores numéricos
+      if (newProducts[index].categoria === 'Repos' && (field === 'facturacionAnterior' || field === 'facturacionNueva')) {
+         const catList = catalogs['Repos'] || []
+         const selectedItem = catList.find((p: any) => p.producto === newProducts[index].producto)
+         if (selectedItem && selectedItem.comisionConCoste && Number(selectedItem.comisionConCoste) > 0) {
+            const ant = Number(newProducts[index].facturacionAnterior || 0)
+            const nue = Number(newProducts[index].facturacionNueva || 0)
+            newProducts[index].importe = String(Math.max(0, nue - ant) * Number(selectedItem.comisionConCoste))
          }
       }
       
@@ -185,7 +206,9 @@ export default function NuevaVentaPage() {
           subcategoria: '',
           gama: '',
           isLibre: false,
-          isSwap: false
+          isSwap: false,
+          facturacionAnterior: '',
+          facturacionNueva: ''
         }
       ]
     }))
@@ -275,7 +298,7 @@ export default function NuevaVentaPage() {
         setSelectedTienda('')
         setFormData({
           vendedor: '', nombreCliente: '', codigo: '', nif: '', telefonoMovil: '', telefonoFijo: '', boletin: '', anotaciones: '',
-          productos: [{ categoria: '', producto: '', telf: '', noCliente: '', pendiente: 'No', importe: '', imei: '', rentConCoste: 'No', seguro: '', seguroImporte: 0, fabricante: '', subcategoria: '', gama: '', isLibre: false, isSwap: false }]
+          productos: [{ categoria: '', producto: '', telf: '', noCliente: '', pendiente: 'No', importe: '', imei: '', rentConCoste: 'No', seguro: '', seguroImporte: 0, fabricante: '', subcategoria: '', gama: '', isLibre: false, isSwap: false, facturacionAnterior: '', facturacionNueva: '' }]
         })
       } else {
         setError(data.error || 'Error al guardar la venta')
@@ -687,7 +710,6 @@ export default function NuevaVentaPage() {
 
                     {/* COLUMNA 2: DETALLES PRODUCTO */}
                     <div style={{ flex: '2.5', minWidth: '350px', backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '6px' }}>
                         <div className="form-group" style={{ marginBottom: 0 }}>
                           <label className="form-label" style={{ color: '#555' }}>Producto</label>
                           <select className="form-select" value={prod.producto} onChange={e => handleProductChange(index, 'producto', e.target.value)} disabled={!prod.categoria} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
@@ -717,14 +739,50 @@ export default function NuevaVentaPage() {
                             style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}
                           />
                         </div>
-                      </div>
                     </div>
 
                     {/* COLUMNA 3: FINANZAS / ESTADO */}
                     <div style={{ flex: '1', minWidth: '200px', backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {prod.categoria === 'Repos' && (() => {
+                        const selRepos = (catalogs['Repos'] || []).find((p: any) => p.producto === prod.producto);
+                        const isReposMult = selRepos && selRepos.comisionConCoste && Number(selRepos.comisionConCoste) > 0;
+                        if (!isReposMult) return null;
+                        return (
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                              <label className="form-label" style={{ color: '#555', fontSize: 11 }}>Fact. Anterior</label>
+                              <div style={{ position: 'relative' }}>
+                                <input 
+                                  type="number" 
+                                  step="0.01"
+                                  className="form-input" 
+                                  style={{ width: '100%', backgroundColor: '#FFF3E0', border: '1px solid #FFCC80', color: '#E65100', paddingRight: 24 }}
+                                  value={prod.facturacionAnterior}
+                                  onChange={e => handleProductChange(index, 'facturacionAnterior', e.target.value)} 
+                                />
+                                <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: '#E65100', fontSize: 13, pointerEvents: 'none' }}>€</span>
+                              </div>
+                            </div>
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                              <label className="form-label" style={{ color: '#555', fontSize: 11 }}>Fact. Nueva</label>
+                              <div style={{ position: 'relative' }}>
+                                <input 
+                                  type="number" 
+                                  step="0.01"
+                                  className="form-input" 
+                                  style={{ width: '100%', backgroundColor: '#E8F5E9', border: '1px solid #A5D6A7', color: '#1B5E20', paddingRight: 24 }}
+                                  value={prod.facturacionNueva}
+                                  onChange={e => handleProductChange(index, 'facturacionNueva', e.target.value)} 
+                                />
+                                <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: '#1B5E20', fontSize: 13, pointerEvents: 'none' }}>€</span>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })()}
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
                         <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label className="form-label" style={{ color: '#555' }}>{(prod.categoria === 'O2' || prod.categoria === 'Suscripciones TV') ? 'Comisión' : 'Importe'}</label>
+                          <label className="form-label" style={{ color: '#555' }}>{(prod.categoria === 'O2' || prod.categoria === 'Suscripciones TV' || prod.categoria === 'PREPAGO' || prod.categoria === 'Varios' || prod.categoria === 'Repos') ? 'Comisión' : 'Importe'}</label>
                           <div style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
                             <input 
                               type="number" 

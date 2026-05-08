@@ -1,15 +1,6 @@
-Suscripciones TV	Movistar+	14,00 €	01/05/2026
-Suscripciones TV	Futbol Total	 50,00 € 	01/05/2026
-Suscripciones TV	LaLiga	 36,00 € 	01/05/2026
-Suscripciones TV	Champions	 24,00 € 	01/05/2026
-Suscripciones TV	Deportes total	29,00 €	01/05/2026
-Suscripciones TV	Motor	20,00 €	01/05/2026
-Suscripciones TV	Ficción total	21,00 €	01/05/2026
-Suscripciones TV	Disney + sin anuncios	6,99 €	01/05/2026
-Suscripciones TV	Disney + Estándar	10,99 €	01/05/2026
-Suscripciones TV	Disney + Premium	15,99 €	01/05/2026
-Suscripciones TV	HBO Estándar	10,99 €	01/05/2026
-Suscripciones TV	SkyShowtime	7,99 €	01/05/2026
-Suscripciones TV	Netflix sin anuncios	6,99 €	01/05/2026
-Suscripciones TV	Netflix Estándar	13,99 €	01/05/2026
-Suscripciones TV	Netflix Premium	19,99 €	01/05/2026
+Categoría	Nombre de Producto	Cuota Total (€)	Comisión	Multiplicador	Comisión X	Desde	Hasta
+Repos	Repos destino BAF miMovistar/Fusión incremento de ARPU < 6€			1,5		01/05/2026	
+Repos	Repos destino BAF miMovistar/Fusión incremento de ARPU >=6€ y <10€			1,5		01/05/2026	
+Repos	Repos destino BAF miMovistar/Fusión incremento de ARPU >=10€ y < 35€			2		01/05/2026	
+Repos	Repos destino BAF miMovistar/Fusión incremento de ARPU => 35€			2		01/05/2026	
+Repos	Extra Repos up destino Fútbol		 10,00 € 			01/05/2026	
