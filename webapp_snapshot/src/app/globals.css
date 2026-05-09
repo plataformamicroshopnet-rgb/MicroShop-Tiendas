@@ -110,7 +110,7 @@ button, input, select, textarea {
 @media (min-width: 768px) {
   .main-content {
     padding-bottom: 0; /* No bottom nav on desktop */
-    padding-left: 260px; /* Space for sidebar */
+    padding-left: 76px; /* Space for collapsed sidebar */
   }
 }
 

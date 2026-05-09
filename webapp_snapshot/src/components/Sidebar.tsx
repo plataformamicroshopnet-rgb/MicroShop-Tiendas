@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Smartphone, Building2, LogOut, Settings, Archive, List, Briefcase, BookOpen, Euro, LineChart, FolderOpen, ChevronDown, ChevronRight } from 'lucide-react'
+import { LayoutDashboard, Smartphone, Building2, LogOut, Settings, Archive, List, Briefcase, BookOpen, Euro, LineChart, FolderOpen, ChevronDown, ChevronRight, Menu } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import './Sidebar.css'
 import { can } from '@/lib/permissions'
@@ -57,6 +57,9 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
+        <button className="menu-toggle">
+          <Menu size={24} />
+        </button>
         <h2>MicroShop <span className="text-cyan">Tiendas</span></h2>
       </div>
       <nav className="sidebar-nav">
