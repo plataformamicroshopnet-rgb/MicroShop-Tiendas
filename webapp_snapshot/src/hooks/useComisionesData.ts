@@ -74,6 +74,7 @@ export function useComisionesData() {
         const ultimaVenta = fechas.length > 0 ? new Date(fechas[0]).toLocaleDateString('es-ES') : '-';
 
         const groupCounts: Record<string, number> = {};
+        const groupPending: Record<string, number> = {};
         const groupObj1: Record<string, number> = {};
         const groupObj2: Record<string, number> = {};
         const groupComisions: Record<string, number> = {};
@@ -85,6 +86,7 @@ export function useComisionesData() {
         tiendaRules.forEach(rule => {
             const ruleName = rule.nombre;
             groupCounts[ruleName] = 0;
+            groupPending[ruleName] = 0;
             groupComisions[ruleName] = 0;
             
             const totalHoras = rule.totalHoras || 0;
@@ -171,11 +173,14 @@ export function useComisionesData() {
                 if (matchTipoVenta(s, rule.productosCuentan)) {
                     // Determinar si el tramo pide % o Euros (heuristic)
                     const isPercentage = String(rule.importePrimerTramo || '').includes('%');
+                    const isPending = String(s.pendiente || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === 'si';
                     if (isPercentage) {
                         groupCounts[rule.nombre] += cuotaValue;
+                        if (isPending) groupPending[rule.nombre] += cuotaValue;
                         totalValueGroupsAmount += cuotaValue;
                     } else {
                         groupCounts[rule.nombre] += 1;
+                        if (isPending) groupPending[rule.nombre] += 1;
                         totalUnitGroupsAmount += 1;
                     }
                 }
@@ -477,6 +482,7 @@ export function useComisionesData() {
             ultimaVenta,
             totalSales: numSalesTotal,
             groupCounts,
+            groupPending,
             groupObj1,
             groupObj2,
             groupComisions,

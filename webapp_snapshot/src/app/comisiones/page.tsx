@@ -699,7 +699,10 @@ export default function ComisionesDashboardPage() {
                                                 borderBottom: '2px solid #bfdbfe'
                                             }}>
                                                 <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700 }}>Nombre Comisión</th>
+                                                <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700 }}>Importe<br/>Primer Tramo</th>
+                                                <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700 }}>Importe<br/>Segundo Tramo</th>
                                                 <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700 }}>Ventas</th>
+                                                <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700 }}>Pte.</th>
                                                 <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700 }}>Obj. 1</th>
                                                 <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700 }}>Obj. 2</th>
                                                 <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700 }}>Falta 1</th>
@@ -713,6 +716,7 @@ export default function ComisionesDashboardPage() {
                                                 const rowBg = isAlternate ? '#ffffff' : '#f8fafc';
                                                 const gName = rule.nombre;
                                                 const qtty = s.groupCounts[gName] || 0
+                                                const pendingQtty = s.groupPending[gName] || 0
                                                 const obj1 = s.groupObj1[gName] || 0
                                                 const obj2 = s.groupObj2[gName] || 0
                                                 const isValueGroup = String(rule.importePrimerTramo || '').includes('%');
@@ -741,13 +745,31 @@ export default function ComisionesDashboardPage() {
                                                 }
                                                 const comisionCalculada = s.groupComisions[gName] || 0;
 
+                                                const formatImporteTramo = (val: string | null | undefined) => {
+                                                    if (!val) return '-';
+                                                    const s = String(val).trim();
+                                                    if (s.includes('%') || s === '-') return s;
+                                                    const num = parseFloat(s.replace(',', '.'));
+                                                    if (!isNaN(num)) return `${num.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
+                                                    return s;
+                                                }
+
                                                 return (
                                                     <tr key={gName} style={{ backgroundColor: rowBg, borderBottom: '1px solid #e2e8f0', transition: 'background 0.2s', color: '#334155' }}>
                                                         <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
                                                             {gName}
                                                         </td>
+                                                        <td style={{ padding: '10px 8px', textAlign: 'center', fontSize: 13, color: '#334155' }}>
+                                                            {formatImporteTramo(rule.importePrimerTramo)}
+                                                        </td>
+                                                        <td style={{ padding: '10px 8px', textAlign: 'center', fontSize: 13, color: '#334155' }}>
+                                                            {formatImporteTramo(rule.importeSegundoTramo)}
+                                                        </td>
                                                         <td style={{ padding: '10px 8px', textAlign: 'center', fontSize: 14, fontWeight: 800, color: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.05)' }}>
                                                             {formatQtty(qtty)}
+                                                        </td>
+                                                        <td style={{ padding: '10px 8px', textAlign: 'center', fontSize: 13, fontWeight: 700, color: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.05)' }}>
+                                                            {pendingQtty > 0 ? formatQtty(pendingQtty) : '-'}
                                                         </td>
                                                         <td style={{ padding: '10px 8px', textAlign: 'center', fontSize: 13 }}>
                                                             {obj1 === 0 ? '-' : format(obj1)}
@@ -766,7 +788,7 @@ export default function ComisionesDashboardPage() {
                                                         </td>
                                                     </tr>
                                                 )
-                                            }) : <tr><td colSpan={7} style={{padding: 20, textAlign: 'center', color: '#64748b'}}>No hay reglas de comisión configuradas para este mes.</td></tr>}
+                                            }) : <tr><td colSpan={10} style={{padding: 20, textAlign: 'center', color: '#64748b'}}>No hay reglas de comisión configuradas para este mes.</td></tr>}
                                             {s.extraGroups && s.extraGroups.length > 0 && s.extraGroups.map((eg: any, idx: number) => (
                                                 <tr key={`extra-${idx}`} style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: '#ecfdf5', transition: 'background 0.2s', color: '#065f46' }}>
                                                     <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -775,7 +797,7 @@ export default function ComisionesDashboardPage() {
                                                     <td style={{ padding: '10px 8px', textAlign: 'center', fontSize: 14, fontWeight: 800, color: '#10b981' }}>
                                                         {eg.count}
                                                     </td>
-                                                    <td colSpan={4} style={{ padding: '10px 8px', textAlign: 'center', fontSize: 13, color: '#a7f3d0' }}>
+                                                    <td colSpan={7} style={{ padding: '10px 8px', textAlign: 'center', fontSize: 13, color: '#a7f3d0' }}>
                                                         N/A
                                                     </td>
                                                     <td style={{ padding: '10px 12px', textAlign: 'right', fontSize: 14, fontWeight: 800, color: '#10b981' }}>
