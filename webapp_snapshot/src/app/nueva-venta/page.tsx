@@ -426,7 +426,7 @@ export default function NuevaVentaPage() {
                         <label style={{ fontSize: 13, color: '#1B3D6A', display: 'block', marginBottom: 4 }}>Tipo de Venta</label>
                         <select className="form-select" value={prod.categoria} onChange={e => handleProductChange(index, 'categoria', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
                           <option value="">Selecciona...</option>
-                          {Object.keys(catalogs).filter(cat => cat !== 'Fija' && cat !== 'Móvil').map(cat => <option key={cat} value={cat}>{cat === 'Ti' ? 'Contratos Móvil' : cat}</option>)}
+                          {Object.keys(catalogs).filter(cat => cat !== 'Fija' && cat !== 'Móvil').map(cat => <option key={cat} value={cat}>{cat === 'Ti' ? 'Contratos Móvil' : cat === 'O2' ? 'O2 MovilFree' : cat}</option>)}
                         </select>
                       </div>
 
@@ -558,7 +558,7 @@ export default function NuevaVentaPage() {
                         <label style={{ fontSize: 13, color: '#1B3D6A', display: 'block', marginBottom: 4 }}>Tipo de Venta</label>
                         <select className="form-select" value={prod.categoria} onChange={e => handleProductChange(index, 'categoria', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
                           <option value="">Selecciona...</option>
-                          {Object.keys(catalogs).filter(cat => cat !== 'Fija' && cat !== 'Móvil').map(cat => <option key={cat} value={cat}>{cat === 'Ti' ? 'Contratos Móvil' : cat}</option>)}
+                          {Object.keys(catalogs).filter(cat => cat !== 'Fija' && cat !== 'Móvil').map(cat => <option key={cat} value={cat}>{cat === 'Ti' ? 'Contratos Móvil' : cat === 'O2' ? 'O2 MovilFree' : cat}</option>)}
                         </select>
                       </div>
 
@@ -691,7 +691,7 @@ export default function NuevaVentaPage() {
                           <option value="">Selecciona...</option>
                           {Object.keys(catalogs)
                             .filter(cat => cat !== 'Fija' && cat !== 'Móvil')
-                            .map(cat => <option key={cat} value={cat}>{cat === 'Ti' ? 'Contratos Móvil' : cat}</option>)}
+                            .map(cat => <option key={cat} value={cat}>{cat === 'Ti' ? 'Contratos Móvil' : cat === 'O2' ? 'O2 MovilFree' : cat}</option>)}
                         </select>
                       </div>
 
