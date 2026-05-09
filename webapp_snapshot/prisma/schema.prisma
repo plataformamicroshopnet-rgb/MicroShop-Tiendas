@@ -411,3 +411,31 @@ model LiquidacionTelef {
 
   @@index([nifCliente])
 }
+
+model TiendaCommissionRule {
+  id                  String      @id @default(uuid())
+  periodKey           String
+  nombre              String
+  productosCuentan    String?
+  objPrimerTramo      Float?
+  importePrimerTramo  String?
+  objSegundoTramo     Float?
+  importeSegundoTramo String?
+  condicionantes      String?
+  totalHoras          Float?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  @@index([periodKey])
+}
+
+model TiendaComercialHour {
+  id                  String      @id @default(uuid())
+  periodKey           String
+  comercial           String
+  horario             Float
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  @@index([periodKey])
+}

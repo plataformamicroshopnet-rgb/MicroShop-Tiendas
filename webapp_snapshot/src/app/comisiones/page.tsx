@@ -482,7 +482,8 @@ export default function ComisionesDashboardPage() {
         top3,
         maxComisionSeller,
         maxSalesSeller,
-        monthSales
+        monthSales,
+        tiendaRules
     } = useComisionesData()
 
     useEffect(() => {
@@ -687,28 +688,34 @@ export default function ComisionesDashboardPage() {
                             
                                 {/* GRÁFICO DE BARRAS DE VENTAS POR GRUPO */}
                                 <div style={{ flex: 1 }}>
+                                    <div style={{ backgroundColor: '#ffffff', borderRadius: 8, overflow: 'hidden', border: '1px solid #bfdbfe', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
                                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
                                         <thead>
                                             <tr style={{ 
-                                                backgroundColor: isPlus ? 'rgba(0,173,239,0.1)' : 'rgba(255,149,0,0.1)', 
-                                                color: isPlus ? 'var(--mercedes-cyan)' : '#FF9500', 
+                                                backgroundColor: '#eff6ff', 
+                                                color: '#1e3a8a', 
                                                 textTransform: 'uppercase',
-                                                fontSize: 10
+                                                fontSize: 11,
+                                                borderBottom: '2px solid #bfdbfe'
                                             }}>
-                                                <th style={{ padding: '6px', textAlign: 'left', fontWeight: 600 }}>Grupo</th>
-                                                <th style={{ padding: '6px', textAlign: 'left', fontWeight: 600 }}></th>
-                                                <th style={{ padding: '6px', textAlign: 'center', fontWeight: 600 }}>Ventas</th>
-                                                <th style={{ padding: '6px', textAlign: 'center', fontWeight: 600 }}>Objetivos (1 - 2)</th>
-                                                <th style={{ padding: '6px', textAlign: 'center', fontWeight: 600 }}>Te quedan (1 - 2)</th>
-                                                <th style={{ padding: '6px', textAlign: 'right', fontWeight: 600 }}>Comisión</th>
+                                                <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700 }}>Nombre Comisión</th>
+                                                <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700 }}>Ventas</th>
+                                                <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700 }}>Obj. 1</th>
+                                                <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700 }}>Obj. 2</th>
+                                                <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700 }}>Falta 1</th>
+                                                <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700 }}>Falta 2</th>
+                                                <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700 }}>Comisión</th>
                                             </tr>
                                         </thead>
-                                        <tbody>
-                                            {ALL_GROUPS.map(gName => {
-                                                const qtty = s.groupCounts[gName]
+                                        <tbody style={{ backgroundColor: '#ffffff' }}>
+                                            {tiendaRules && tiendaRules.length > 0 ? tiendaRules.map((rule: any, idx: number) => {
+                                                const isAlternate = idx % 2 === 0;
+                                                const rowBg = isAlternate ? '#ffffff' : '#f8fafc';
+                                                const gName = rule.nombre;
+                                                const qtty = s.groupCounts[gName] || 0
                                                 const obj1 = s.groupObj1[gName] || 0
                                                 const obj2 = s.groupObj2[gName] || 0
-                                                const isValueGroup = ['TMA', 'TI', 'MIC'].includes(gName)
+                                                const isValueGroup = String(rule.importePrimerTramo || '').includes('%');
                                                 
                                                 const maxObj = obj2 > 0 ? obj2 : (obj1 > 0 ? obj1 : 0)
                                                 const percent = maxObj > 0 ? Math.min(100, (qtty / maxObj) * 100) : (qtty > 0 ? 100 : 0)
@@ -722,55 +729,63 @@ export default function ComisionesDashboardPage() {
                                                 const falt1 = Math.max(0, obj1 - qtty)
                                                 const falt2 = Math.max(0, obj2 - qtty)
                                                 
-                                                const format = (v: number) => isValueGroup ? `${Math.round(v).toLocaleString('es-ES')} €` : `${v}`
+                                                const format = (v: number) => {
+                                                    if (v === 0) return '0';
+                                                    if (isValueGroup || v > 100) return `${v.toLocaleString('es-ES', { maximumFractionDigits: 0 })} €`;
+                                                    return Math.round(v).toString();
+                                                }
+                                                const formatQtty = (v: number) => {
+                                                    if (v === 0) return '0';
+                                                    if (isValueGroup || v > 100) return `${v.toLocaleString('es-ES', { maximumFractionDigits: 2 })} €`;
+                                                    return Math.round(v).toString();
+                                                }
                                                 const comisionCalculada = s.groupComisions[gName] || 0;
 
                                                 return (
-                                                    <tr className="table-row-hover" key={gName} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', transition: 'background 0.2s' }}>
-                                                        <td style={{ padding: '6px 4px', fontSize: 13, fontWeight: 700, color: 'var(--light-text)', width: 45 }}>
+                                                    <tr key={gName} style={{ backgroundColor: rowBg, borderBottom: '1px solid #e2e8f0', transition: 'background 0.2s', color: '#334155' }}>
+                                                        <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
                                                             {gName}
                                                         </td>
-                                                        <td style={{ padding: '6px 8px', width: '25%' }}>
-                                                            <div style={{ position: 'relative', backgroundColor: 'rgba(255,255,255,0.08)', height: 6, borderRadius: 3, overflow: 'hidden' }}>
-                                                                <div style={{ width: `${percent}%`, height: '100%', background: gradientColor, transition: 'width 0.5s ease', boxShadow: '0 0 6px rgba(0,0,0,0.2)', borderRadius: 4 }} />
-                                                                {obj1Percent > 0 && obj1Percent < 100 && (
-                                                                    <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${obj1Percent}%`, width: 2, backgroundColor: 'var(--bg-card)', boxShadow: '0 0 4px rgba(0,0,0,0.5)', zIndex: 1 }} title="Objetivo 1" />
-                                                                )}
-                                                            </div>
+                                                        <td style={{ padding: '10px 8px', textAlign: 'center', fontSize: 14, fontWeight: 800, color: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.05)' }}>
+                                                            {formatQtty(qtty)}
                                                         </td>
-                                                        <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 13, fontWeight: 800, color: isPlus ? '#00ADEF' : '#FF9500' }}>
-                                                            {format(qtty)}
+                                                        <td style={{ padding: '10px 8px', textAlign: 'center', fontSize: 13 }}>
+                                                            {obj1 === 0 ? '-' : format(obj1)}
                                                         </td>
-                                                        <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 13, color: 'var(--medium-gray)' }}>
-                                                            {format(obj1)} <span style={{opacity: 0.5}}>/</span> {format(obj2)}
+                                                        <td style={{ padding: '10px 8px', textAlign: 'center', fontSize: 13 }}>
+                                                            {obj2 === 0 ? '-' : format(obj2)}
                                                         </td>
-                                                        <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 13, color: 'var(--medium-gray)' }}>
-                                                            <span style={{ color: falt1 > 0 ? '#FF453A' : '#34d399' }}>{falt1 > 0 ? `-${format(falt1)}` : '✓'}</span> <span style={{opacity: 0.5}}>/</span> <span style={{ color: falt2 > 0 ? (falt1 === 0 ? '#FF9500' : '#FF453A') : '#34d399' }}>{falt2 > 0 ? `-${format(falt2)}` : '✓'}</span>
+                                                        <td style={{ padding: '10px 8px', textAlign: 'center', fontSize: 13, fontWeight: 600 }}>
+                                                            {obj1 === 0 ? '-' : (falt1 > 0 ? <span style={{ color: '#ef4444' }}>{format(falt1)}</span> : <span style={{ color: '#10b981' }}>✓</span>)}
                                                         </td>
-                                                        <td style={{ padding: '6px 4px', textAlign: 'right', fontSize: 14, fontWeight: 800, color: '#34d399' }}>
+                                                        <td style={{ padding: '10px 8px', textAlign: 'center', fontSize: 13, fontWeight: 600 }}>
+                                                            {obj2 === 0 ? '-' : (falt2 > 0 ? <span style={{ color: '#ef4444' }}>{format(falt2)}</span> : <span style={{ color: '#10b981' }}>✓</span>)}
+                                                        </td>
+                                                        <td style={{ padding: '10px 12px', textAlign: 'right', fontSize: 14, fontWeight: 800, color: '#10b981' }}>
                                                             {Math.round(comisionCalculada).toLocaleString('es-ES')} €
                                                         </td>
                                                     </tr>
                                                 )
-                                            })}
+                                            }) : <tr><td colSpan={7} style={{padding: 20, textAlign: 'center', color: '#64748b'}}>No hay reglas de comisión configuradas para este mes.</td></tr>}
                                             {s.extraGroups && s.extraGroups.length > 0 && s.extraGroups.map((eg: any, idx: number) => (
-                                                <tr className="table-row-hover" key={`extra-${idx}`} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', backgroundColor: 'rgba(16, 185, 129, 0.05)', transition: 'background 0.2s' }}>
-                                                    <td colSpan={2} style={{ padding: '6px 4px', fontSize: 12, fontWeight: 700, color: '#10b981' }}>
-                                                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Trophy size={12} /> {eg.name}</span>
+                                                <tr key={`extra-${idx}`} style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: '#ecfdf5', transition: 'background 0.2s', color: '#065f46' }}>
+                                                    <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                        <Trophy size={14} color="#10b981" /> {eg.name}
                                                     </td>
-                                                    <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 13, fontWeight: 800, color: '#10b981' }}>
+                                                    <td style={{ padding: '10px 8px', textAlign: 'center', fontSize: 14, fontWeight: 800, color: '#10b981' }}>
                                                         {eg.count}
                                                     </td>
-                                                    <td colSpan={2} style={{ padding: '6px 4px', textAlign: 'center', fontSize: 13, color: '#10b981' }}>
-                                                        -
+                                                    <td colSpan={4} style={{ padding: '10px 8px', textAlign: 'center', fontSize: 13, color: '#a7f3d0' }}>
+                                                        N/A
                                                     </td>
-                                                    <td style={{ padding: '6px 4px', textAlign: 'right', fontSize: 14, fontWeight: 800, color: '#34d399' }}>
+                                                    <td style={{ padding: '10px 12px', textAlign: 'right', fontSize: 14, fontWeight: 800, color: '#10b981' }}>
                                                         {Math.round(eg.totalAmount).toLocaleString('es-ES')} €
                                                     </td>
                                                 </tr>
                                             ))}
                                         </tbody>
                                     </table>
+                                    </div>
                                 </div>
                             </div>
                             

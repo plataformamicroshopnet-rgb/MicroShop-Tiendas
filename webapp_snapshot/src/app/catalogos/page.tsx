@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { Save, Search, Plus, Trash2, FileText, AlertCircle, Target, Euro, Box, ChevronLeft, Lock } from 'lucide-react'
 import Link from 'next/link'
 import ObjetivosTab from './ObjetivosTab'
+import ProductosComisionanTab from './ProductosComisionanTab'
 import { useGuard } from '@/hooks/useGuard'
 import { usePeriod } from '@/components/PeriodProvider'
 import { PeriodSelector } from '@/components/PeriodSelector'
@@ -78,7 +79,7 @@ type ProductItem = {
   importStatus?: 'new' | 'updated' | 'missing' | 'unchanged'
 }
 
-const CATEGORIES = ['Fija y Móvil', 'Ti', 'RENT', 'Seguro', 'O2', 'miMovistar', 'Suscripciones TV', 'PREPAGO', 'Varios', 'Repos']
+const CATEGORIES = ['Fija y Móvil', 'Ti', 'RENT', 'Seguro', 'O2', 'miMovistar', 'Suscripciones TV', 'PREPAGO', 'Varios', 'Repos', 'Resto BAF']
 
 export default function CatalogosPage() {
   const { authorized } = useGuard('MODULE_ADMIN', 'MANAGE_CATALOG')
@@ -97,10 +98,10 @@ export default function CatalogosPage() {
   const previousPeriod = currentIndex > 0 ? sortedPeriods[currentIndex - 1] : null
 
   const [catalogs, setCatalogs] = useState<Record<string, ProductItem[]>>({
-    "Fija y Móvil": [], "Ti": [], "RENT": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": [], "PREPAGO": [], "Varios": [], "Repos": []
+    "Fija y Móvil": [], "Ti": [], "RENT": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": [], "PREPAGO": [], "Varios": [], "Repos": [], "Resto BAF": []
   })
   const [activeTab, setActiveTab] = useState('Fija y Móvil')
-  const isProductTab = CATEGORIES.includes(activeTab)
+  const isProductTab = CATEGORIES.includes(activeTab) && activeTab !== 'Objetivos Tiendas' && activeTab !== 'Objetivos Captador' && activeTab !== 'Productos que Comisionan'
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [search, setSearch] = useState('')
@@ -116,7 +117,7 @@ export default function CatalogosPage() {
       .then(res => res.json())
       .then(data => {
         if (data.success) {
-          const mapped: Record<string, ProductItem[]> = { "Fija y Móvil": [], "Ti": [], "RENT": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": [], "PREPAGO": [], "Varios": [], "Repos": [] }
+          const mapped: Record<string, ProductItem[]> = { "Fija y Móvil": [], "Ti": [], "RENT": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": [], "PREPAGO": [], "Varios": [], "Repos": [], "Resto BAF": [] }
           for (const [cat, items] of Object.entries(data.catalogs as Record<string, any[]>)) {
              if (!mapped[cat]) mapped[cat] = [];
              mapped[cat] = [...mapped[cat], ...items.map((it: any) => ({
@@ -167,7 +168,7 @@ export default function CatalogosPage() {
           let pName = String(it.producto).trim().toLowerCase();
           
           // Generate a composite key for specific categories where name alone isn't unique
-          if (cat === 'miMovistar') {
+          if (cat === 'miMovistar' || cat === 'Resto BAF') {
             pName = `${String(it.subcategoria).trim().toLowerCase()}_${String(it.gama).trim().toLowerCase()}_${pName}`;
           } else if (cat === 'RENT') {
             pName = `${String(it.fabricante).trim().toLowerCase()}_${String(it.subcategoria).trim().toLowerCase()}_${String(it.gama).trim().toLowerCase()}_${pName}`;
@@ -377,11 +378,11 @@ export default function CatalogosPage() {
       } else if (cat === 'O2') {
         newItem.subcategoria = ''
         newItem.comision = ''
-      } else if (cat === 'miMovistar') {
+      } else if (cat === 'miMovistar' || cat === 'Resto BAF') {
         newItem.subcategoria = ''
         newItem.gama = ''
         newItem.comision = 0
-        newItem.comisionConCoste = 0
+        newItem.comisionConCoste = 1
       } else if (cat === 'Suscripciones TV' || cat === 'PREPAGO') {
         newItem.comision = ''
       } else if (cat === 'Seguro' || cat === 'Varios') {
@@ -585,7 +586,7 @@ export default function CatalogosPage() {
             desde: parts.length > 6 ? parts[6] : '',
             hasta: parts.length > 7 ? parts[7] : '',
           })
-        } else if (activeTab === 'miMovistar') {
+        } else if (activeTab === 'miMovistar' || activeTab === 'Resto BAF') {
           if (!parts[0] && !parts[1] && parts[2] && excelData.length > 0) {
             // Continuation of the previous product's name due to merged cells in Excel
             excelData[excelData.length - 1].producto += '\n' + parts[2];
@@ -793,7 +794,7 @@ export default function CatalogosPage() {
             const factor = 24;
             newItem.cuotaMensual = Math.round(amount * 100) / 100
             newItem.cuotaAnual = Math.round((amount * factor) * 100) / 100
-          } else if (activeTab === 'miMovistar') {
+          } else if (activeTab === 'miMovistar' || activeTab === 'Resto BAF') {
             newItem.subcategoria = row.subcategoria
             newItem.gama = row.gama
             newItem.comision = row.comision
@@ -923,7 +924,9 @@ export default function CatalogosPage() {
           { cat: 'PREPAGO', tip: 'Catálogo de productos prepago. Introduce la categoría, nombre de producto y comisión.' },
           { cat: 'Varios', tip: 'Catálogo de productos varios (alarmas, migraciones, etc). Introduce categoría, nombre, cuota total y comisión.' },
           { cat: 'Repos', tip: 'Catálogo de Reposiciones. Introduce categoría, nombre, cuota total, comisión y multiplicador.' },
+          { cat: 'Resto BAF', tip: 'Catálogo para Resto BAF. Estructura idéntica a miMovistar.' },
           { cat: 'Objetivos Tiendas', tip: 'Define los objetivos cuantitativos del mes para las tiendas. Son la base del cálculo de cumplimiento y comisiones.' },
+          { cat: 'Productos que Comisionan', tip: 'Configura las reglas globales y objetivos que aplicarán a los comerciales de la tienda en este mes.' },
         ] as const).map(({ cat, tip }) => (
           <TooltipBox key={cat} title={cat} content={tip} position="bottom">
             <button
@@ -1044,7 +1047,7 @@ export default function CatalogosPage() {
                     <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '35%' }}>Nombre de Producto</th>
                     <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 140 }}>Comisión (€)</th>
                   </>
-                ) : activeTab === 'miMovistar' ? (
+                ) : (activeTab === 'miMovistar' || activeTab === 'Resto BAF') ? (
                   <>
                     <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '5%' }}>Categoría</th>
                     <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '20%' }}>Tipo</th>
@@ -1275,7 +1278,7 @@ export default function CatalogosPage() {
                             </div>
                           </td>
                         </>
-                      ) : activeTab === 'miMovistar' ? (
+                      ) : (activeTab === 'miMovistar' || activeTab === 'Resto BAF') ? (
                         <>
                           <td style={{ padding: '12px 20px' }}>
                             <input 
@@ -1634,7 +1637,8 @@ export default function CatalogosPage() {
         </>
       )}
 
-      {!isProductTab && <ObjetivosTab activeSegment={activeTab === 'Objetivos Tiendas' ? 'Pyme' : 'Captador'} />}
+      {!isProductTab && activeTab === 'Productos que Comisionan' && <ProductosComisionanTab />}
+      {!isProductTab && activeTab !== 'Productos que Comisionan' && <ObjetivosTab activeSegment={activeTab === 'Objetivos Tiendas' ? 'Pyme' : 'Captador'} />}
     </div>
   )
 }

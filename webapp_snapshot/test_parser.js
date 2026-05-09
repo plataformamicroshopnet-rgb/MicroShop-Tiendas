@@ -1,31 +1,41 @@
-const bulkText = `REACONDICIONADO	REACONDICIONADO	Lenovo ThinkPad L390 i5-8ª 8GB 256GB 13 RENT REAC.A	MEDIA	228,10 €	4,56 €	9,12 €	01/05/2026	31/05/2026
-REACONDICIONADO	REACONDICIONADO	iPhone 12 128GB RENT REAC.A	MEDIA	298,30 €	5,97 €	11,93 €	01/05/2026	31/05/2026`;
-
-let cleanText = bulkText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-let inQuotes = false;
-let normalizedText = '';
-for (let i = 0; i < cleanText.length; i++) {
-  if (cleanText[i] === '"') {
-    const isStartOfCell = i === 0 || cleanText[i-1] === '\t' || cleanText[i-1] === '\n';
-    const isEndOfCell = i === cleanText.length - 1 || cleanText[i+1] === '\t' || cleanText[i+1] === '\n';
+function matchProductFormula(productName, formula) {
+    if (!formula || !productName) return false;
+    const p = String(productName).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
     
-    if (!inQuotes && isStartOfCell) {
-       inQuotes = true;
-       continue;
-    } else if (inQuotes && isEndOfCell) {
-       inQuotes = false;
-       continue;
+    // Split by '+' (OR)
+    const orBlocks = formula.split('+').map(b => b.trim());
+    
+    for (const block of orBlocks) {
+        if (!block) continue;
+        
+        // Split by ' -' (Exclusions)
+        // We use split(' -') so that "miMovistar -Repos" becomes ["miMovistar", "Repos"]
+        const parts = block.split(' -').map(p => p.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim());
+        
+        const mustInclude = parts[0];
+        const mustNotIncludes = parts.slice(1);
+        
+        if (p.includes(mustInclude)) {
+            // Check if any exclusion is present
+            let isExcluded = false;
+            for (const excl of mustNotIncludes) {
+                if (excl && p.includes(excl)) {
+                    isExcluded = true;
+                    break;
+                }
+            }
+            
+            if (!isExcluded) return true; // Found a matching OR block that is not excluded
+        }
     }
-  } else if (cleanText[i] === '\n' && inQuotes) {
-    normalizedText += ' '; 
-    continue;
-  }
-  normalizedText += cleanText[i];
+    return false;
 }
 
-normalizedText = normalizedText.replace(/""/g, '"');
+const laraSale = "Repos destino BAF miMovistar/Fusión incremento de ARPU >=10€ y < 35€ Repos";
+const carlosSale = "Contrato O2 - Alta y Porta Sólo Móvil Ti";
 
-console.log("Lines:");
-const lines = normalizedText.split('\n');
-console.log(lines.length);
-console.log(lines);
+console.log("Lara match Alta BAF Convergente (miMovistar):", matchProductFormula(laraSale, "miMovistar"));
+console.log("Lara match Alta BAF Convergente (miMovistar -Repos):", matchProductFormula(laraSale, "miMovistar -Repos"));
+console.log("Lara match ARPU (incremento de ARPU):", matchProductFormula(laraSale, "incremento de ARPU"));
+console.log("Carlos match Alta BAF Total (O2):", matchProductFormula(carlosSale, "O2"));
+console.log("Carlos match Alta BAF Total (O2 -Sólo Móvil):", matchProductFormula(carlosSale, "O2 -Solo Movil"));

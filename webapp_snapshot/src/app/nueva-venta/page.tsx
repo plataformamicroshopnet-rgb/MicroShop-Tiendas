@@ -129,8 +129,11 @@ export default function NuevaVentaPage() {
       if (field === 'producto') {
          const catList = catalogs[newProducts[index].categoria] || []
          const selectedItem = catList.find((p: any) => {
-           if (newProducts[index].categoria === 'miMovistar') {
+           if (newProducts[index].categoria === 'miMovistar' || newProducts[index].categoria === 'Resto BAF') {
              return p.producto === value && p.subcategoria === newProducts[index].subcategoria && p.gama === newProducts[index].gama;
+           }
+           if (newProducts[index].categoria === 'O2' && newProducts[index].subcategoria) {
+             return p.producto === value && p.subcategoria === newProducts[index].subcategoria;
            }
            return p.producto === value;
          })
@@ -146,8 +149,10 @@ export default function NuevaVentaPage() {
                } else {
                   newProducts[index].importe = selectedItem.comision || ''
                }
-            } else if (cat === 'miMovistar') {
-              newProducts[index].importe = String(Number(selectedItem.comision || 0) * Number(selectedItem.comisionConCoste || 0));
+            } else if (cat === 'miMovistar' || cat === 'Resto BAF') {
+              const baseCom = Number(selectedItem.comision) || 0;
+              const mult = Number(selectedItem.comisionConCoste) || 0;
+              newProducts[index].importe = String(baseCom * (mult === 0 ? 1 : mult));
             } else if (cat === 'Ti' || cat === 'TMA' || cat === 'Micro' || cat === 'RENT') {
               newProducts[index].importe = selectedItem.anual || selectedItem.mensual || ''
             } else {
@@ -426,7 +431,7 @@ export default function NuevaVentaPage() {
                         <label style={{ fontSize: 13, color: '#1B3D6A', display: 'block', marginBottom: 4 }}>Tipo de Venta</label>
                         <select className="form-select" value={prod.categoria} onChange={e => handleProductChange(index, 'categoria', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
                           <option value="">Selecciona...</option>
-                          {Object.keys(catalogs).filter(cat => cat !== 'Fija' && cat !== 'Móvil').map(cat => <option key={cat} value={cat}>{cat === 'Ti' ? 'Contratos Móvil' : cat === 'O2' ? 'O2 MovilFree' : cat}</option>)}
+                          {Object.keys(catalogs).filter(cat => cat !== 'Fija' && cat !== 'Móvil' && cat !== 'Micro').map(cat => <option key={cat} value={cat}>{cat === 'Ti' ? 'Contratos Móvil' : cat === 'O2' ? 'O2 MovilFree' : cat}</option>)}
                         </select>
                       </div>
 
@@ -548,7 +553,7 @@ export default function NuevaVentaPage() {
                       </div>
                     </div>
                   </div>
-                ) : prod.categoria === 'miMovistar' ? (
+                ) : (prod.categoria === 'miMovistar' || prod.categoria === 'Resto BAF') ? (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'stretch' }}>
                     {/* COLUMNA 1: TIPO DE VENTA */}
                     <div style={{ flex: '1', minWidth: '250px', backgroundColor: '#B8D5F6', borderRadius: '8px', padding: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -558,7 +563,7 @@ export default function NuevaVentaPage() {
                         <label style={{ fontSize: 13, color: '#1B3D6A', display: 'block', marginBottom: 4 }}>Tipo de Venta</label>
                         <select className="form-select" value={prod.categoria} onChange={e => handleProductChange(index, 'categoria', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
                           <option value="">Selecciona...</option>
-                          {Object.keys(catalogs).filter(cat => cat !== 'Fija' && cat !== 'Móvil').map(cat => <option key={cat} value={cat}>{cat === 'Ti' ? 'Contratos Móvil' : cat === 'O2' ? 'O2 MovilFree' : cat}</option>)}
+                          {Object.keys(catalogs).filter(cat => cat !== 'Fija' && cat !== 'Móvil' && cat !== 'Micro').map(cat => <option key={cat} value={cat}>{cat === 'Ti' ? 'Contratos Móvil' : cat === 'O2' ? 'O2 MovilFree' : cat}</option>)}
                         </select>
                       </div>
 
@@ -566,7 +571,7 @@ export default function NuevaVentaPage() {
                         <label style={{ fontSize: 13, color: '#1B3D6A', display: 'block', marginBottom: 4 }}>Categoría</label>
                         <select className="form-select" value={prod.subcategoria} onChange={e => handleProductChange(index, 'subcategoria', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
                           <option value="">Selecciona...</option>
-                          {[...new Set((catalogs['miMovistar'] || []).map((p:any) => p.subcategoria).filter(Boolean))].sort().map(c => <option key={String(c)} value={String(c)}>{String(c)}</option>)}
+                          {[...new Set((catalogs[prod.categoria] || []).map((p:any) => p.subcategoria).filter(Boolean))].sort().map(c => <option key={String(c)} value={String(c)}>{String(c)}</option>)}
                         </select>
                       </div>
 
@@ -574,7 +579,7 @@ export default function NuevaVentaPage() {
                         <label style={{ fontSize: 13, color: '#1B3D6A', display: 'block', marginBottom: 4 }}>Tipo</label>
                         <select className="form-select" value={prod.gama} onChange={e => handleProductChange(index, 'gama', e.target.value)} required disabled={!prod.subcategoria} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
                           <option value="">Selecciona...</option>
-                          {[...new Set((catalogs['miMovistar'] || []).filter((p:any) => p.subcategoria === prod.subcategoria).map((p:any) => p.gama).filter(Boolean))].sort().map(c => <option key={String(c)} value={String(c)}>{String(c)}</option>)}
+                          {[...new Set((catalogs[prod.categoria] || []).filter((p:any) => p.subcategoria === prod.subcategoria).map((p:any) => p.gama).filter(Boolean))].sort().map(c => <option key={String(c)} value={String(c)}>{String(c)}</option>)}
                         </select>
                       </div>
                     </div>
@@ -589,7 +594,7 @@ export default function NuevaVentaPage() {
                         <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>Producto</label>
                         <select className="form-select" value={prod.producto} onChange={e => handleProductChange(index, 'producto', e.target.value)} required disabled={!prod.gama} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
                           <option value="">Selecciona...</option>
-                          {(catalogs['miMovistar'] || [])
+                          {(catalogs[prod.categoria] || [])
                              .filter((p:any) => p.subcategoria === prod.subcategoria && p.gama === prod.gama)
                              .map((p:any) => p.producto)
                              .filter((p:any, i:number, self:any[]) => self.indexOf(p) === i)
@@ -690,7 +695,7 @@ export default function NuevaVentaPage() {
                         <select className="form-select" value={prod.categoria} onChange={e => handleProductChange(index, 'categoria', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
                           <option value="">Selecciona...</option>
                           {Object.keys(catalogs)
-                            .filter(cat => cat !== 'Fija' && cat !== 'Móvil')
+                            .filter(cat => cat !== 'Fija' && cat !== 'Móvil' && cat !== 'Micro')
                             .map(cat => <option key={cat} value={cat}>{cat === 'Ti' ? 'Contratos Móvil' : cat === 'O2' ? 'O2 MovilFree' : cat}</option>)}
                         </select>
                       </div>

@@ -9,6 +9,8 @@ export function useComisionesData() {
     const [condiciones, setCondiciones] = useState<any[]>([]);
     const [extraAssignments, setExtraAssignments] = useState<any[]>([]);
     const [activeRules, setActiveRules] = useState<any[]>([]); // KPI Rules fetch
+    const [tiendaRules, setTiendaRules] = useState<any[]>([]);
+    const [tiendaHours, setTiendaHours] = useState<any[]>([]);
     
     const [selectedSellerFilter, setSelectedSellerFilter] = useState<string | null>(null);
 
@@ -19,9 +21,10 @@ export function useComisionesData() {
             fetch(`/api/sales?periodKey=${activePeriodKey}`).then(res => res.json()),
             fetch(`/api/condiciones-plus?periodKey=${activePeriodKey}&strictPeriod=1`).then(res => res.json()).catch(() => ({ rows: [] })),
             fetch(`/api/extras/assignments?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({ data: [] })),
-            fetch('/api/extras/rules').then(res => res.json()).catch(() => ({ rules: [] }))
+            fetch('/api/extras/rules').then(res => res.json()).catch(() => ({ rules: [] })),
+            fetch(`/api/tiendas-comisiones?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({ success: false, rules: [], hours: [] }))
         ])
-        .then(([data, condData, extrasData, rulesData]) => {
+        .then(([data, condData, extrasData, rulesData, tiendasData]) => {
             if (data.success && data.logs) {
                 setAllSales(data.logs);
             }
@@ -34,6 +37,10 @@ export function useComisionesData() {
             if (rulesData && rulesData.rules) {
                 // Filtramos solo las reglas KPI activas 
                 setActiveRules(rulesData.rules.filter((r: any) => r.isActive && r.combinationLabel?.startsWith('[KPI]')));
+            }
+            if (tiendasData && tiendasData.success) {
+                setTiendaRules(tiendasData.rules || []);
+                setTiendaHours(tiendasData.hours || []);
             }
             setLoading(false);
         })
@@ -69,106 +76,146 @@ export function useComisionesData() {
         const groupCounts: Record<string, number> = {};
         const groupObj1: Record<string, number> = {};
         const groupObj2: Record<string, number> = {};
-        
-        ALL_GROUPS.forEach(g => {
-            groupCounts[g] = 0;
-            groupObj1[g] = 0;
-            groupObj2[g] = 0;
-        });
-        
-        let totalValueGroupsAmount = 0;
-        let totalUnitGroupsAmount = 0;
-        const VALUE_GROUPS = ['TMA', 'TI', 'MIC'];
+        const groupComisions: Record<string, number> = {};
 
-        sSales.forEach(s => {
-            const g = getGroupVisual(s.producto, s.detalle || s.sheet || s.categoria);
-            if (g && groupCounts[g] !== undefined) {
-                if (VALUE_GROUPS.includes(g)) {
-                    const cuotaValue = Number(s.cuota) || 0;
-                    groupCounts[g] += cuotaValue;
-                    totalValueGroupsAmount += cuotaValue;
-                } else {
-                    groupCounts[g] += 1;
-                    totalUnitGroupsAmount += 1;
+        // INICIALIZAR OBJETIVOS Y CONTADORES BASADOS EN REGLAS DINAMICAS
+        const comercialHour = tiendaHours.find(h => String(h.comercial).toLowerCase() === String(name).toLowerCase());
+        const horario = comercialHour ? Number(comercialHour.horario) : 0;
+
+        tiendaRules.forEach(rule => {
+            const ruleName = rule.nombre;
+            groupCounts[ruleName] = 0;
+            groupComisions[ruleName] = 0;
+            
+            const totalHoras = rule.totalHoras || 0;
+            if (totalHoras > 0 && horario > 0) {
+                groupObj1[ruleName] = (rule.objPrimerTramo / totalHoras) * horario;
+                groupObj2[ruleName] = (rule.objSegundoTramo / totalHoras) * horario;
+            } else {
+                groupObj1[ruleName] = 0;
+                groupObj2[ruleName] = 0;
+            }
+        });
+
+        // Parseador de Fórmulas de Productos (Soporta exclusiones con " -")
+        const matchProductFormula = (productName: string, formula: string) => {
+            if (!formula || !productName) return false;
+            const p = String(productName).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+            
+            // Separar por '+' (Condición OR)
+            const orBlocks = formula.split('+').map((b: string) => b.trim());
+            
+            for (const block of orBlocks) {
+                if (!block) continue;
+                
+                // Separar por ' -' (Condición NOT/Exclusión)
+                const parts = block.split(' -').map(part => part.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim());
+                
+                const mustInclude = parts[0];
+                const mustNotIncludes = parts.slice(1);
+                
+                if (mustInclude && p.includes(mustInclude)) {
+                    // Verificar si tiene alguna palabra excluida
+                    let isExcluded = false;
+                    for (const excl of mustNotIncludes) {
+                        if (excl && p.includes(excl)) {
+                            isExcluded = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!isExcluded) return true; // Hizo match y no fue excluido
                 }
             }
-        });
-
-        // 1. BLOQUE EXACTO PARSEVAL (Para Obj1/Obj2 numérico español y tarifas)
-        const parseVal = (val: any) => {
-            let s = String(val || '0').replace(/[^\d,\.-]/g, '').trim();
-            if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
-            else {
-                const p = s.split('.');
-                if (p.length > 1 && p[p.length - 1].length === 3) s = s.replace(/\./g, '');
+            return false;
+        };
+        
+        const matchTipoVenta = (sale: any, tipoVenta: string) => {
+            const cat = sale.categoria || sale.detalle || sale.sheet || '';
+            const prod = sale.producto || '';
+            
+            switch(tipoVenta) {
+                case 'Alta BAF Total':
+                    return cat === 'miMovistar' || cat === 'Resto BAF';
+                case 'Alta BAF Convergente':
+                    return cat === 'miMovistar';
+                case 'Dispositivos + Seguro':
+                    return cat === 'RENT' || cat === 'Seguro';
+                case 'MPA':
+                    return prod.includes('Movistar Prosegur Alarmas');
+                case 'FTTR':
+                    return prod.includes('Solución FTTR') || prod.includes('FTTR');
+                case 'Señalización Solar 360':
+                    return prod.includes('Solar360');
+                case 'ARPU':
+                    return cat === 'Repos' && !prod.includes('Fútbol');
+                case 'Repo Fútbol':
+                    return prod.includes('Fútbol') && cat === 'Repos';
+                default:
+                    // Fallback for FORMULA_LIBRE or missing mapping
+                    const searchString = `${prod} ${sale.detalle || ''} ${sale.grupo || ''}`;
+                    return matchProductFormula(searchString, tipoVenta);
             }
-            return Number(s) || 0;
         };
 
-        const obj1Col = getProfile(name) === 'Plus' ? 'Objetivo1 Plus' : 'Objetivo1 Básico';
-        const obj2Col = getProfile(name) === 'Plus' ? 'Objetivo2 Plus' : 'Objetivo2 Básico';
-        
-        // 2. PARSEO DE OBJETIVOS CON COMPATIBILIDAD MAPOBJECTIVEGROUP
-        condiciones.forEach((row: any) => {
-            const grp = String(row['Grupo Productos'] || '').trim();
+        let totalValueGroupsAmount = 0;
+        let totalUnitGroupsAmount = 0;
+
+        // COUNTING LOGIC BASED ON RULES
+        sSales.forEach(s => {
+            let cuotaValue = Number(s.cuota) || 0;
+            if (isNaN(cuotaValue)) cuotaValue = 0;
             
-            // Prioridad: Mapeo exacto vs ALL_GROUPS
-            if (ALL_GROUPS.includes(grp)) {
-                const val1 = parseVal(row[obj1Col]);
-                const val2 = parseVal(row[obj2Col]);
-                if (val1 > 0) groupObj1[grp] = val1;
-                if (val2 > 0) groupObj2[grp] = val2;
-            }
-            
-            // Legacy/Fallback mapping
-            const mapped = mapObjectiveGroup(row['Productos Tiendas']);
-            if (mapped && ALL_GROUPS.includes(mapped)) {
-                // Si allGroups no cubría este producto, inyectamos o sumamos
-                const val1 = parseVal(row[obj1Col]);
-                const val2 = parseVal(row[obj2Col]);
-                if (val1 > 0 && !groupObj1[mapped]) groupObj1[mapped] = val1;
-                if (val2 > 0 && !groupObj2[mapped]) groupObj2[mapped] = val2;
-            }
+            // Un producto puede contar para multiples reglas si encaja en el Tipo de Venta
+            tiendaRules.forEach(rule => {
+                if (matchTipoVenta(s, rule.productosCuentan)) {
+                    // Determinar si el tramo pide % o Euros (heuristic)
+                    const isPercentage = String(rule.importePrimerTramo || '').includes('%');
+                    if (isPercentage) {
+                        groupCounts[rule.nombre] += cuotaValue;
+                        totalValueGroupsAmount += cuotaValue;
+                    } else {
+                        groupCounts[rule.nombre] += 1;
+                        totalUnitGroupsAmount += 1;
+                    }
+                }
+            });
         });
 
         const profile = getProfile(name);
-        
-        // 3. CALCULO EXACTO DE GROUPCOMISIONS Y TOTALCOMISION (Reemplazando s.comision)
-        const groupComisions: Record<string, number> = {};
         let internalTotalComision = 0;
 
-        ALL_GROUPS.forEach(gName => {
-            let comisionCalculada = 0;
-            const qtty = groupCounts[gName] || 0;
-            const obj1 = groupObj1[gName] || 0;
-            const obj2 = groupObj2[gName] || 0;
-            const isValueGroup = VALUE_GROUPS.includes(gName);
+        tiendaRules.forEach(rule => {
+            const ruleName = rule.nombre;
+            const qtty = groupCounts[ruleName] || 0;
+            const obj1 = groupObj1[ruleName] || 0;
+            const obj2 = groupObj2[ruleName] || 0;
             
-            // Hito superado: 2 -> Obj2, 1 -> Obj1, 0 -> Sin objetivo superado
+            let comisionCalculada = 0;
+            const isPercentage = String(rule.importePrimerTramo || '').includes('%');
+            
+            const parseImporte = (val: any) => {
+                let s = String(val || '0').replace('%', '').trim();
+                s = s.replace(',', '.');
+                return Number(s) || 0;
+            };
+
+            const imp1 = parseImporte(rule.importePrimerTramo);
+            const imp2 = parseImporte(rule.importeSegundoTramo);
+
             const milestone = (qtty >= obj2 && obj2 > 0) ? 2 : ((qtty >= obj1 && obj1 > 0) ? 1 : 0);
 
             if (milestone > 0) {
-                const comCol = milestone === 2 ? 'Comisiones Objetivo 2' : 'Comisiones Objetivo 1';
-                
-                if (isValueGroup) {
-                    const gRow = condiciones.find((r:any) => mapObjectiveGroup(r['Productos Tiendas']) === gName);
-                    // Regla TI/TMA: (Volumen euros) * (Tasa tarifa % / 100)
-                    if (gRow) comisionCalculada = qtty * (parseVal(gRow[comCol]) / 100);
+                if (isPercentage) {
+                    const percentage = milestone === 2 ? imp2 : imp1;
+                    comisionCalculada = qtty * (percentage / 100);
                 } else {
-                    const ventasDelGrupo = sSales.filter(venta => getGroupVisual(venta.producto, venta.detalle || venta.sheet || venta.categoria) === gName);
-                    comisionCalculada = ventasDelGrupo.reduce((acc, venta) => {
-                        const pNorm = String(venta.producto).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-                        // Cruzar con Tarifas Excel (Condiciones Tiendas) buscando la fila exacta del producto de esa familia
-                        const filaTarifa = condiciones.find((r:any) => {
-                            const rP = String(r['Productos Tiendas']).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-                            return rP === pNorm;
-                        });
-                        return acc + (filaTarifa ? parseVal(filaTarifa[comCol]) : 0);
-                    }, 0);
+                    const perUnit = milestone === 2 ? imp2 : imp1;
+                    comisionCalculada = qtty * perUnit;
                 }
             }
-            
-            groupComisions[gName] = comisionCalculada;
+
+            groupComisions[ruleName] = comisionCalculada;
             internalTotalComision += comisionCalculada;
         });
 
@@ -477,6 +524,7 @@ export function useComisionesData() {
         maxComisionSeller,
         maxSalesSeller,
         monthSales,
-        extraAssignments
+        extraAssignments,
+        tiendaRules
     };
 }
