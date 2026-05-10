@@ -24,25 +24,76 @@ export default function TrackingDashboard() {
   const [loading, setLoading] = useState(true)
   const [initialLoad, setInitialLoad] = useState(true)
   const [saveStatus, setSaveStatus] = useState<'' | 'Guardando...' | 'Guardado en Nube' | 'Borrador no guardado' | 'Error al guardar'>('')
+  const [comerciales, setComerciales] = useState<any[]>([])
+  const [tiendaRules, setTiendaRules] = useState<any[]>([])
+  const [tiendaHours, setTiendaHours] = useState<any[]>([])
 
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/tracking?month=${periodMonth}&year=${periodYear}`)
-      const data = await res.json()
-      if (data.groups) {
-        const clientGroups = data.groups.map((g: any) => ({
+      const [trackRes, comRes, configRes] = await Promise.all([
+        fetch(`/api/tracking?month=${periodMonth}&year=${periodYear}`),
+        fetch('/api/comerciales'),
+        fetch(`/api/tiendas-comisiones?periodKey=${activePeriodKey}`)
+      ])
+      
+      const comData = await comRes.json()
+      if (comData.success) {
+        setComerciales(comData.comerciales)
+      }
+
+      const configData = await configRes.json()
+      const rules = configData.success ? (configData.rules || []) : []
+      const hours = configData.success ? (configData.hours || []) : []
+      
+      if (configData.success) {
+        setTiendaRules(rules)
+        setTiendaHours(hours)
+      }
+
+      const trackData = await trackRes.json()
+      if (trackData.groups) {
+        let clientGroups = trackData.groups.map((g: any) => ({
             ...g,
             _id: g.id || crypto.randomUUID(),
             rows: g.rows.map((r: any) => ({ ...r, _id: r.id || crypto.randomUUID() }))
         }))
+
+        // Auto-sincronizar los objetivos desde Comisiones si coinciden los nombres
+        clientGroups = clientGroups.map((g: any) => {
+            const matchedRule = rules.find((r:any) => r.nombre.toLowerCase() === g.name.toLowerCase());
+            if (matchedRule) {
+                return {
+                    ...g,
+                    rows: g.rows.map((r: any) => {
+                         const comercialHour = hours.find((h:any) => String(h.comercial).toLowerCase() === String(r.comercialName).toLowerCase());
+                         const horario = comercialHour ? Number(comercialHour.horario) : 0;
+                         let obj1 = 0;
+                         const totalHoras = matchedRule.totalHoras || 0;
+                         if (totalHoras > 0 && horario > 0) {
+                             obj1 = (matchedRule.objPrimerTramo / totalHoras) * horario;
+                         } else {
+                             obj1 = matchedRule.objPrimerTramo || 0;
+                         }
+                         // Excluir temporalmente a Marta (Tienda O2)
+                         if (String(r.comercialName).toLowerCase().includes('marta')) {
+                             obj1 = 0;
+                         }
+                         return { ...r, objectiveMonth: Math.round(obj1 * 10) / 10 };
+                    })
+                };
+            }
+            return g;
+        });
+
         setGroups(clientGroups)
         setInitialLoad(true)
         setTimeout(() => setInitialLoad(false), 500)
       }
+
     } catch(e) { console.error(e) }
     setLoading(false)
-  }, [periodMonth, periodYear])
+  }, [periodMonth, periodYear, activePeriodKey])
 
   useEffect(() => { loadData() }, [loadData])
 
@@ -87,7 +138,16 @@ export default function TrackingDashboard() {
 
   const addGroup = () => {
     if (isReadOnly) return
-    setGroups(prev => [...prev, { _id: crypto.randomUUID(), name: 'NUEVA PALANCA', rows: [] }])
+    const initialRows = comerciales.length > 0 
+      ? comerciales.map(c => ({
+          _id: crypto.randomUUID(),
+          comercialName: c.name,
+          objectiveMonth: 0,
+          week1: 0, week2: 0, week3: 0, week4: 0
+        }))
+      : [{ _id: crypto.randomUUID(), comercialName: 'Nuevo Comercial', objectiveMonth: 0, week1: 0, week2: 0, week3: 0, week4: 0 }]
+      
+    setGroups(prev => [...prev, { _id: crypto.randomUUID(), name: 'NUEVA PALANCA', rows: initialRows }])
   }
 
   const addRow = (gId: string) => {
@@ -149,15 +209,6 @@ export default function TrackingDashboard() {
               {getPeriodBusinessDays(periodYear, periodMonth).passedBusinessDays} <span style={{ fontSize: 14, color: '#94a3b8', fontWeight: 600 }}>/ {getPeriodBusinessDays(periodYear, periodMonth).totalBusinessDays}</span>
             </span>
           </div>
-
-          {/* TOTAL PUNTOS GLOBALES */}
-          <div style={{ padding: '6px 16px', background: '#fef3c7', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8, border: '1px solid #fde68a' }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#b45309' }}>TOTAL PUNTOS:</span>
-            <span style={{ fontSize: 18, fontWeight: 900, color: '#d97706' }}>
-              {groups.reduce((acc, g) => acc + calculateGroup(g, periodYear, periodMonth).points, 0)}
-            </span>
-          </div>
-
 
           {/* SELECTOR DE PERIODO Y BOTON */}
           <PeriodSelector />
@@ -226,7 +277,36 @@ export default function TrackingDashboard() {
                     <input 
                        disabled={isReadOnly}
                        value={g.name} 
-                       onChange={e => setGroups(prev => prev.map(pg => pg._id !== g._id ? pg : {...pg, name: e.target.value}))}
+                       onChange={e => {
+                         const newName = e.target.value;
+                         const matchedRule = tiendaRules.find(r => r.nombre.toLowerCase() === newName.toLowerCase());
+                         
+                         setGroups(prev => prev.map(pg => {
+                           if (pg._id !== g._id) return pg;
+                           
+                           let newRows = pg.rows;
+                           if (matchedRule) {
+                             newRows = pg.rows.map((r: any) => {
+                               const comercialHour = tiendaHours.find((h:any) => String(h.comercial).toLowerCase() === String(r.comercialName).toLowerCase());
+                               const horario = comercialHour ? Number(comercialHour.horario) : 0;
+                               let obj1 = 0;
+                               const totalHoras = matchedRule.totalHoras || 0;
+                               if (totalHoras > 0 && horario > 0) {
+                                   obj1 = (matchedRule.objPrimerTramo / totalHoras) * horario;
+                               } else {
+                                   obj1 = matchedRule.objPrimerTramo || 0;
+                               }
+                               // Excluir temporalmente a Marta (Tienda O2)
+                               if (String(r.comercialName).toLowerCase().includes('marta')) {
+                                   obj1 = 0;
+                               }
+                               return { ...r, objectiveMonth: Math.round(obj1 * 10) / 10 };
+                             });
+                           }
+                           
+                           return { ...pg, name: newName, rows: newRows };
+                         }));
+                       }}
                        style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-main)', border: 'none', background: 'transparent', outline: 'none', opacity: isReadOnly ? 0.7 : 1 }}
                     />
                     {!isReadOnly && (
@@ -301,12 +381,6 @@ export default function TrackingDashboard() {
                       RENDIMIENTO GRUPAL <span title="Cálculos dinámicos en tiempo real"><Info size={14} /></span>
                    </div>
 
-                   {/* PUNTOS PALANCA */}
-                   <div style={{ background: '#fffbeb', padding: 12, borderRadius: 8, border: '1px solid #fde68a', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: '#b45309' }}>Puntos Asignados</span>
-                      <span style={{ fontSize: 18, fontWeight: 800, color: '#d97706' }}>{macro.points} Puntos</span>
-                   </div>
-                   
                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
                       <div style={{ background: 'var(--bg-card)', padding: 12, borderRadius: 8, border: '1px solid var(--border-light)' }}>
                          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>TOTAL VENTAS</div>

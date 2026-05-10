@@ -202,6 +202,12 @@ export function useComisionesData() {
                 groupObj1[ruleName] = rule.objPrimerTramo || 0;
                 groupObj2[ruleName] = rule.objSegundoTramo || 0;
             }
+            
+            // Excluir temporalmente a Marta (Tienda O2)
+            if (String(name).toLowerCase().includes('marta')) {
+                groupObj1[ruleName] = 0;
+                groupObj2[ruleName] = 0;
+            }
         });
 
 
