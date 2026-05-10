@@ -15,13 +15,23 @@ export async function GET() {
   
   const comerciales = allUsers
     .filter((u: any) => normalizeRole(u.role) === 'COMERCIAL' || normalizeRole(u.role) === 'JEFE DE VENTAS')
-    .map((u: any) => ({ 
-      name: u.username, 
-      role: u.role,
-      codigoComercial: u.codigoComercial,
-      team: u.team || 'Sin Equipo',
-      agendaKey: u.codigoComercial || u.username
-    }))
+    .map((u: any) => {
+      let teamStr = u.team;
+      if (!teamStr || teamStr === 'Sin Equipo') {
+          if (u.username.toLowerCase().includes('salva')) {
+              teamStr = 'Jefe Equipo MicroShop';
+          } else {
+              teamStr = 'Equipo MicroShop';
+          }
+      }
+      return { 
+        name: u.username, 
+        role: u.role,
+        codigoComercial: u.codigoComercial,
+        team: teamStr,
+        agendaKey: u.codigoComercial || u.username
+      };
+    })
 
   return NextResponse.json({ success: true, comerciales })
 }

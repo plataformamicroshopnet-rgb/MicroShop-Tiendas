@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
         const start = new Date(startDate)
         const end = new Date(endDate)
 
-        const entries = await prisma.agendaEntry.findMany({
+        const entries = await prisma.agendaCristinaEntry.findMany({
             where: {
                 fecha: {
                     gte: start,
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json()
-        const { agendaKey, fecha, ventas, visitas, teams, demos, estado, observaciones } = body
+        const { agendaKey, fecha, campanas, clientesPropios, dispositivos, baf, repos, bdSalva, competencia, estado, observaciones } = body
 
         if (!agendaKey || !fecha) {
             return NextResponse.json({ error: 'agendaKey and fecha are required' }, { status: 400 })
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
         // 'codigoComercial' por diseño de esquema. Sin embargo, lógicamente está actuando
         // EXCLUSIVAMENTE como el 'agendaKey' estable para la persistencia global de Agenda, 
         // sin contaminarse con el código corporativo puro del sistema.
-        const entry = await prisma.agendaEntry.upsert({
+        const entry = await prisma.agendaCristinaEntry.upsert({
             where: {
                 codigoComercial_fecha: {
                     codigoComercial: agendaKey,
@@ -63,20 +63,26 @@ export async function POST(request: NextRequest) {
                 }
             },
             update: {
-                ventas: ventas !== undefined ? Number(ventas) : undefined,
-                visitas: visitas !== undefined ? Number(visitas) : undefined,
-                teams: teams !== undefined ? Number(teams) : undefined,
-                demos: demos !== undefined ? Number(demos) : undefined,
-                estado: estado !== undefined ? estado : undefined,
-                observaciones: observaciones !== undefined ? observaciones : undefined
+                campanas: campanas !== undefined ? Number(campanas) : undefined,
+                clientesPropios: clientesPropios !== undefined ? Number(clientesPropios) : undefined,
+                dispositivos: dispositivos !== undefined ? Number(dispositivos) : undefined,
+                baf: baf !== undefined ? Number(baf) : undefined,
+                repos: repos !== undefined ? Number(repos) : undefined,
+                bdSalva: bdSalva !== undefined ? Number(bdSalva) : undefined,
+                competencia: competencia !== undefined ? Number(competencia) : undefined,
+                estado,
+                observaciones
             },
             create: {
                 codigoComercial: agendaKey,
-                fecha: targetDate,
-                ventas: Number(ventas) || 0,
-                visitas: Number(visitas) || 0,
-                teams: Number(teams) || 0,
-                demos: Number(demos) || 0,
+                fecha: new Date(fecha),
+                campanas: Number(campanas) || 0,
+                clientesPropios: Number(clientesPropios) || 0,
+                dispositivos: Number(dispositivos) || 0,
+                baf: Number(baf) || 0,
+                repos: Number(repos) || 0,
+                bdSalva: Number(bdSalva) || 0,
+                competencia: Number(competencia) || 0,
                 estado: estado || 'ACTIVO',
                 observaciones: observaciones || null
             }

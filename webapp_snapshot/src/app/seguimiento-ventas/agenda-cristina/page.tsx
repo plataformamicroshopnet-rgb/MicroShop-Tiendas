@@ -43,9 +43,11 @@ export default function AgendaTiendasPage() {
     const [showMailModal, setShowMailModal] = useState(false)
     const [selectedMailDays, setSelectedMailDays] = useState<string[]>([])
 
+    const cristinaComerciales = comerciales.filter(c => !c.name.toLowerCase().includes('salva')).map(c => { if (c.name.toLowerCase().includes('cristina')) return { ...c, team: 'Jefa de Llamadas' }; return c; });
+
     // Modal State
     const [editingCell, setEditingCell] = useState<{ agendaKey: string, nombre: string, fecha: Date } | null>(null)
-    const [editForm, setEditForm] = useState({ ventas: 0, visitas: 0, teams: 0, demos: 0, estado: 'ACTIVO', observaciones: '' })
+    const [editForm, setEditForm] = useState({ campanas: 0, clientesPropios: 0, dispositivos: 0, baf: 0, repos: 0, bdSalva: 0, competencia: 0, estado: 'ACTIVO', observaciones: '' })
     const [saving, setSaving] = useState(false)
 
 
@@ -67,7 +69,7 @@ export default function AgendaTiendasPage() {
                 // 2. Cargar Entradas de la semana (Lunes a Viernes)
                 const startStr = formatDate(currentWeekStart)
                 const endStr = formatDate(addDays(currentWeekStart, 4))
-                const eRes = await fetch(`/api/agenda?startDate=${startStr}&endDate=${endStr}`)
+                const eRes = await fetch(`/api/agenda-cristina?startDate=${startStr}&endDate=${endStr}`)
                 const eData = await eRes.json()
 
                 const map: Record<string, any> = {}
@@ -100,10 +102,7 @@ export default function AgendaTiendasPage() {
 
         setEditingCell({ agendaKey: comercial.agendaKey, nombre: comercial.name, fecha: date })
         setEditForm({
-            ventas: exist?.ventas || 0,
-            visitas: exist?.visitas || 0,
-            teams: exist?.teams || 0,
-            demos: exist?.demos || 0,
+            campanas: exist?.campanas || 0, clientesPropios: exist?.clientesPropios || 0, dispositivos: exist?.dispositivos || 0, baf: exist?.baf || 0, repos: exist?.repos || 0, bdSalva: exist?.bdSalva || 0, competencia: exist?.competencia || 0,
             estado: exist?.estado || 'ACTIVO',
             observaciones: exist?.observaciones || ''
         })
@@ -121,7 +120,7 @@ export default function AgendaTiendasPage() {
         }
 
         try {
-            const res = await fetch('/api/agenda', {
+            const res = await fetch('/api/agenda-cristina', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -147,7 +146,7 @@ export default function AgendaTiendasPage() {
     const renderAgendaTableHTML = (daysToRender: Date[] = weekDays) => {
         let html = `
             <div style="margin-bottom: 20px;">
-                <h2 style="margin:0; font-size:22px; color: #111827;">Agenda Comercial Salva</h2>
+                <h2 style="margin:0; font-size:22px; color: #111827;">Agenda de Llamadas Cristina</h2>
                 <p style="margin:4px 0 0 0; color: #6b7280; font-size:14px;">Semana: ${formatDisplayDate(daysToRender[0])} — ${formatDisplayDate(daysToRender[daysToRender.length - 1])}</p>
             </div>
             <table style="width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 13px;">
@@ -160,28 +159,22 @@ export default function AgendaTiendasPage() {
                 <tbody>
         `;
 
-        comerciales.forEach(c => {
-            let weekVts = 0, weekVis = 0, weekTms = 0, weekDms = 0;
+        cristinaComerciales.forEach(c => {
+            let weekCampanas=0, weekClientes=0, weekDisp=0, weekBaf=0, weekRepos=0, weekBdSalva=0, weekComp=0;
             const rowCells: string[] = [];
 
             daysToRender.forEach(d => {
                 const k = `${c.agendaKey}_${formatDate(d)}`;
                 const ent = entries[k];
                 if (ent) {
-                    weekVts += ent.ventas || 0;
-                    weekVis += ent.visitas || 0;
-                    weekTms += ent.teams || 0;
-                    weekDms += ent.demos || 0;
+                    weekCampanas += ent.campanas || 0; weekClientes += ent.clientesPropios || 0; weekDisp += ent.dispositivos || 0; weekBaf += ent.baf || 0; weekRepos += ent.repos || 0; weekBdSalva += ent.bdSalva || 0; weekComp += ent.competencia || 0;
 
                     let cellHTML = '';
                     if (ent.estado === 'ACTIVO') {
-                        const hasData = (ent.ventas > 0 || ent.visitas > 0 || ent.teams > 0 || (ent.demos && ent.demos > 0));
+                        const hasData = (ent.campanas > 0 || ent.clientesPropios > 0 || ent.dispositivos > 0 || ent.baf > 0 || ent.repos > 0 || ent.bdSalva > 0 || ent.competencia > 0);
                         if (hasData) {
                             cellHTML += `<div style="margin-bottom: 6px; font-weight: bold; font-size: 11px;">`;
-                            if (ent.ventas > 0) cellHTML += `<span style="background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 2px 4px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-right: 4px;">💼 Ventas: ${ent.ventas}</span>`;
-                            if (ent.visitas > 0) cellHTML += `<span style="background: rgba(14, 165, 233, 0.1); color: #0ea5e9; padding: 2px 4px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-right: 4px;">📞 Llamadas: ${ent.visitas}</span>`;
-                            if (ent.teams > 0) cellHTML += `<span style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6; padding: 2px 4px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-right: 4px;">💻 MLPs: ${ent.teams}</span>`;
-                            if (ent.demos > 0) cellHTML += `<span style="background: rgba(245, 158, 11, 0.1); color: #f59e0b; padding: 2px 4px; border-radius: 4px; font-size: 11px; font-weight: 700;">📺 Demos: ${ent.demos}</span>`;
+                            if (ent.campanas > 0) cellHTML += `<span style="background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 2px 4px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-right: 4px; display: inline-block; margin-bottom: 2px;">🎯 Campañas: ${ent.campanas}</span>`; if (ent.clientesPropios > 0) cellHTML += `<span style="background: rgba(14, 165, 233, 0.1); color: #0ea5e9; padding: 2px 4px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-right: 4px; display: inline-block; margin-bottom: 2px;">📞 Cl. Propios: ${ent.clientesPropios}</span>`; if (ent.dispositivos > 0) cellHTML += `<span style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6; padding: 2px 4px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-right: 4px; display: inline-block; margin-bottom: 2px;">💻 Dispos: ${ent.dispositivos}</span>`; if (ent.baf > 0) cellHTML += `<span style="background: rgba(245, 158, 11, 0.1); color: #f59e0b; padding: 2px 4px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-right: 4px; display: inline-block; margin-bottom: 2px;">📺 BAF: ${ent.baf}</span>`; if (ent.repos > 0) cellHTML += `<span style="background: rgba(236, 72, 153, 0.1); color: #ec4899; padding: 2px 4px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-right: 4px; display: inline-block; margin-bottom: 2px;">📦 Repos: ${ent.repos}</span>`; if (ent.bdSalva > 0) cellHTML += `<span style="background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 2px 4px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-right: 4px; display: inline-block; margin-bottom: 2px;">🗃️ BD Salva: ${ent.bdSalva}</span>`; if (ent.competencia > 0) cellHTML += `<span style="background: rgba(63, 98, 18, 0.1); color: #3f6212; padding: 2px 4px; border-radius: 4px; font-size: 11px; font-weight: 700; display: inline-block; margin-bottom: 2px;">⚔️ Compet.: ${ent.competencia}</span>`;
                             cellHTML += `</div>`;
                         }
                         if (ent.observaciones) {
@@ -204,7 +197,7 @@ export default function AgendaTiendasPage() {
                         <div style="font-weight: bold; font-size: 13px; margin-bottom: 4px; color: #111827;">${c.name}</div>
                         <div style="font-size: 11px; color: #6b7280; margin-bottom: 8px;">${c.codigoComercial || ''} • ${c.team}</div>
                         <div style="font-size: 10px; font-weight: bold; padding: 4px 6px; background: #f3f4f6; border-radius: 4px; display: inline-block; color:#4b5563;">
-                            V: ${weekVts} &nbsp;|&nbsp; Lla: ${weekVis} &nbsp;|&nbsp; MLP: ${weekTms} &nbsp;|&nbsp; D: ${weekDms}
+                            🎯 Campañas: ${weekCampanas} &nbsp;|&nbsp; 📞 Cl. Propios: ${weekClientes} &nbsp;|&nbsp; 💻 Dispos: ${weekDisp} &nbsp;|&nbsp; 📺 BAF: ${weekBaf} &nbsp;|&nbsp; 📦 Repos: ${weekRepos} &nbsp;|&nbsp; 🗃️ BD Salva: ${weekBdSalva} &nbsp;|&nbsp; ⚔️ Compet.: ${weekComp}
                         </div>
                     </td>
                     ${rowCells.join('')}
@@ -222,7 +215,7 @@ export default function AgendaTiendasPage() {
         const w = window.open('', '_blank')
         if (w) {
             w.document.write(`
-                <html><head><title>Agenda Comercial Salva - Imprimir</title>
+                <html><head><title>Agenda de Llamadas Cristina - Imprimir</title>
                 <style>@page { size: landscape; margin: 1cm; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }</style>
                 </head>
                 <body style="font-family:sans-serif; margin:0; padding:0;">
@@ -236,7 +229,7 @@ export default function AgendaTiendasPage() {
 
     const generateExcelBuffer = async () => {
         const workbook = new ExcelJS.Workbook()
-        const sheet = workbook.addWorksheet('Agenda Comercial Salva')
+        const sheet = workbook.addWorksheet('Agenda de Llamadas Cristina')
 
         const headers = ['Comercial', ...weekDays.map(d => d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' }).toUpperCase())]
         sheet.addRow(headers)
@@ -249,23 +242,23 @@ export default function AgendaTiendasPage() {
         sheet.getColumn(1).width = 35
         for (let i = 2; i <= 6; i++) sheet.getColumn(i).width = 30
 
-        comerciales.forEach(c => {
-            let weekVts = 0, weekVis = 0, weekTms = 0, weekDms = 0
+        cristinaComerciales.forEach(c => {
+            let weekCampanas=0, weekClientes=0, weekDisp=0, weekBaf=0, weekRepos=0, weekBdSalva=0, weekComp=0;
             const dayCells: string[] = []
 
             weekDays.forEach(d => {
                 const k = `${c.agendaKey}_${formatDate(d)}`
                 const ent = entries[k]
                 if (ent) {
-                    weekVts += ent.ventas || 0
-                    weekVis += ent.visitas || 0
-                    weekTms += ent.teams || 0
-                    weekDms += ent.demos || 0
+                    weekCampanas += ent.campanas || 0
+                    weekClientes += ent.clientesPropios || 0
+                    weekDisp += ent.dispositivos || 0
+                    weekBaf += ent.baf || 0; weekRepos += ent.repos || 0; weekBdSalva += ent.bdSalva || 0; weekComp += ent.competencia || 0
 
                     let cellText = ''
                     if (ent.estado === 'ACTIVO') {
-                        const hasData = (ent.ventas > 0 || ent.visitas > 0 || ent.teams > 0)
-                        if (hasData) cellText += `Ventas: ${ent.ventas || 0} | Llamadas: ${ent.visitas || 0} | MLPs: ${ent.teams || 0} | Demos: ${ent.demos || 0}\n`
+                        const hasData = (ent.campanas > 0 || ent.clientesPropios > 0 || ent.dispositivos > 0 || ent.baf > 0 || ent.repos > 0 || ent.bdSalva > 0 || ent.competencia > 0)
+                        if (hasData) cellText += `C: ${ent.campanas || 0} | CP: ${ent.clientesPropios || 0} | D: ${ent.dispositivos || 0} | B: ${ent.baf || 0} | R: ${ent.repos || 0} | BD: ${ent.bdSalva || 0} | CO: ${ent.competencia || 0}\n`
                         if (ent.observaciones) cellText += `"${ent.observaciones}"`
                         if (!hasData && !ent.observaciones) cellText = '—'
                     } else {
@@ -277,7 +270,7 @@ export default function AgendaTiendasPage() {
                 }
             })
 
-            const comercialHeader = `${c.name}\n${c.codigoComercial || ''} • ${c.team}\nTotal Acumulado: V: ${weekVts}  📞: ${weekVis}  💻: ${weekTms}  📺: ${weekDms}`
+            const comercialHeader = `${c.name}\n${c.codigoComercial || ''} • ${c.team}\nTotal Acumulado: C: ${weekCampanas} | CP: ${weekClientes} | D: ${weekDisp} | B: ${weekBaf} | R: ${weekRepos} | BD: ${weekBdSalva} | CO: ${weekComp}`
             
             const r = sheet.addRow([comercialHeader, ...dayCells])
             r.height = 70
@@ -356,24 +349,27 @@ export default function AgendaTiendasPage() {
         }
     } 
 
-    const renderCellContent = (estado: string, ventas: number, visitas: number, teams: number, demos: number, obj?: string) => {
+    const renderCellContent = (estado: string, ent: any, obj?: string) => {
         if (estado === 'VACACIONES') return <span style={{ color: '#d97706', fontWeight: 600, fontSize: 11 }}>🏖️ Vacaciones</span>
         if (estado === 'BAJA') return <span style={{ color: '#dc2626', fontWeight: 600, fontSize: 11 }}>🏥 Baja Médica</span>
         if (estado === 'LIBRE') return <span style={{ color: '#4b5563', fontWeight: 600, fontSize: 11 }}>☕ Día Libre</span>
         if (estado === 'FORMACION') return <span style={{ color: '#2563eb', fontWeight: 600, fontSize: 11 }}>📚 Formación</span>
         
         // Estado ACTIVO (Mostrar métricas)
-        const hasData = ventas > 0 || visitas > 0 || teams > 0 || demos > 0;
+        const hasData = (ent.campanas > 0 || ent.clientesPropios > 0 || ent.dispositivos > 0 || ent.baf > 0 || ent.repos > 0 || ent.bdSalva > 0 || ent.competencia > 0);
         if (!hasData && !obj) return <span style={{ color: 'var(--border-strong)', fontSize: 11 }}>—</span>
         
         return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, height: '100%', padding: '4px' }}>
                 {hasData && (
                     <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
-                        {ventas > 0 && <span style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', padding: '2px 6px', borderRadius: 4, fontSize: 11, fontWeight: 700 }}>💼 {ventas}</span>}
-                        {visitas > 0 && <span style={{ background: 'rgba(56, 189, 248, 0.1)', color: '#0ea5e9', padding: '2px 6px', borderRadius: 4, fontSize: 11, fontWeight: 700 }}>📞 {visitas}</span>}
-                        {teams > 0 && <span style={{ background: 'rgba(139, 92, 246, 0.1)', color: '#8b5cf6', padding: '2px 6px', borderRadius: 4, fontSize: 11, fontWeight: 700 }}>💻 {teams}</span>}
-                        {demos > 0 && <span style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', padding: '2px 6px', borderRadius: 4, fontSize: 11, fontWeight: 700 }}>📺 {demos}</span>}
+                        {ent.campanas > 0 && <span style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', padding: '2px 4px', borderRadius: 4, fontSize: 11, fontWeight: 700 }}>🎯 {ent.campanas}</span>}
+                        {ent.clientesPropios > 0 && <span style={{ background: 'rgba(14, 165, 233, 0.1)', color: '#0ea5e9', padding: '2px 4px', borderRadius: 4, fontSize: 11, fontWeight: 700 }}>📞 {ent.clientesPropios}</span>}
+                        {ent.dispositivos > 0 && <span style={{ background: 'rgba(139, 92, 246, 0.1)', color: '#8b5cf6', padding: '2px 4px', borderRadius: 4, fontSize: 11, fontWeight: 700 }}>💻 {ent.dispositivos}</span>}
+                        {ent.baf > 0 && <span style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', padding: '2px 4px', borderRadius: 4, fontSize: 11, fontWeight: 700 }}>📺 {ent.baf}</span>}
+                        {ent.repos > 0 && <span style={{ background: 'rgba(236, 72, 153, 0.1)', color: '#ec4899', padding: '2px 4px', borderRadius: 4, fontSize: 11, fontWeight: 700 }}>📦 {ent.repos}</span>}
+                        {ent.bdSalva > 0 && <span style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '2px 4px', borderRadius: 4, fontSize: 11, fontWeight: 700 }}>🗃️ {ent.bdSalva}</span>}
+                        {ent.competencia > 0 && <span style={{ background: 'rgba(63, 98, 18, 0.1)', color: '#3f6212', padding: '2px 4px', borderRadius: 4, fontSize: 11, fontWeight: 700 }}>⚔️ {ent.competencia}</span>}
                     </div>
                 )}
                 {obj && <div style={{ fontSize: 10, color: '#4b5563', fontStyle: 'italic', wordBreak: 'break-word', whiteSpace: 'normal', display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden', padding: '0 4px', lineHeight: 1.2 }}>"{obj}"</div>}
@@ -381,13 +377,13 @@ export default function AgendaTiendasPage() {
         )
     }
 
-    if (authorized === null) return <div style={{ padding: 40, color: 'var(--mercedes-cyan)', fontWeight: 600 }}>Verificando credenciales...</div>
+    if (authorized === null) return <div style={{ padding: 40, color: '#0ea5e9', fontWeight: 600 }}>Verificando credenciales...</div>
 
     return (
         <div style={{ padding: 20 }}>
             
             <PageHeader 
-                title={<><Calendar className="text-cyan" size={28} /> Agenda Comercial Salva</>}
+                title={<><Calendar className="text-cyan" size={28} /> Agenda de Llamadas Cristina</>}
                 subtitle="Tracking diario visual de la Fuerza de Ventas y asistencia."
                 showBack={true}
                 backFallback="/seguimiento-ventas"
@@ -401,7 +397,7 @@ export default function AgendaTiendasPage() {
                     <button onClick={handlePrint} style={{ background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--light-text)', padding: '6px 14px', borderRadius: 6, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
                         <Printer size={16} style={{ verticalAlign: 'middle', marginRight: 6 }} /> Imprimir
                     </button>
-                    <button onClick={handleExcel} style={{ background: 'var(--mercedes-cyan)', border: 'none', color: 'var(--bg-card)', padding: '6px 14px', borderRadius: 6, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+                    <button onClick={handleExcel} style={{ background: '#0ea5e9', border: 'none', color: 'var(--bg-card)', padding: '6px 14px', borderRadius: 6, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
                         <Download size={16} style={{ verticalAlign: 'middle', marginRight: 6 }} /> Excel .xlsx
                     </button>
                 </div>
@@ -446,19 +442,16 @@ export default function AgendaTiendasPage() {
                         <tbody>
                             {loading ? (
                                 <tr><td colSpan={8} style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Cargando cuadrícula...</td></tr>
-                            ) : !Array.isArray(comerciales) || comerciales.length === 0 ? (
+                            ) : !Array.isArray(cristinaComerciales) || cristinaComerciales.length === 0 ? (
                                 <tr><td colSpan={8} style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>No existen comerciales activos.</td></tr>
                             ) : (
-                                comerciales.map((c, i) => {
+                                cristinaComerciales.map((c, i) => {
                                     // Calculate weekly sums
-                                    let weekVts = 0, weekVis = 0, weekTms = 0, weekDms = 0;
+                                    let weekCampanas=0, weekClientes=0, weekDisp=0, weekBaf=0, weekRepos=0, weekBdSalva=0, weekComp=0;
                                     weekDays.forEach(d => {
                                         const k = `${c.agendaKey}_${formatDate(d)}`;
                                         if (entries[k]) {
-                                            weekVts += entries[k].ventas || 0;
-                                            weekVis += entries[k].visitas || 0;
-                                            weekTms += entries[k].teams || 0;
-                                            weekDms += entries[k].demos || 0;
+                                            weekCampanas += entries[k].campanas || 0; weekClientes += entries[k].clientesPropios || 0; weekDisp += entries[k].dispositivos || 0; weekBaf += entries[k].baf || 0; weekRepos += entries[k].repos || 0; weekBdSalva += entries[k].bdSalva || 0; weekComp += entries[k].competencia || 0;
                                         }
                                     });
 
@@ -468,10 +461,7 @@ export default function AgendaTiendasPage() {
                                                 <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: 13 }}>{c.name}</div>
                                                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{c.codigoComercial} • {c.team}</div>
                                                 <div style={{ marginTop: 8, display: 'inline-flex', gap: 8, fontSize: 10, fontWeight: 700, color: '#4b5563', background: 'var(--active-bg)', padding: '2px 8px', borderRadius: 4 }}>
-                                                    <span>💼 {weekVts}</span>
-                                                    <span>📞 {weekVis}</span>
-                                                    <span>💻 {weekTms}</span>
-                                                    <span>📺 {weekDms}</span>
+                                                    <span title="Campañas">🎯 {weekCampanas}</span><span title="Cl. Propios">📞 {weekClientes}</span><span title="Disp">💻 {weekDisp}</span><span title="BAF">📺 {weekBaf}</span><span title="Repos">📦 {weekRepos}</span><span title="BD">🗃️ {weekBdSalva}</span><span title="Comp">⚔️ {weekComp}</span>
                                                 </div>
                                             </td>
                                             {weekDays.map((d, j) => {
@@ -502,7 +492,7 @@ export default function AgendaTiendasPage() {
                                                         onMouseOver={e => !isEditing && (e.currentTarget.style.background = 'var(--active-bg)')}
                                                         onMouseOut={e => !isEditing && (e.currentTarget.style.background = bgColor)}
                                                     >
-                                                        {ent ? renderCellContent(ent.estado, ent.ventas, ent.visitas, ent.teams, ent.demos || 0, ent.observaciones) : (
+                                                        {ent ? renderCellContent(ent.estado, ent, ent.observaciones) : (
                                                             <div style={{ color: 'var(--border-strong)', fontSize: 11, opacity: isWeekend ? 0.3 : 1 }}>+</div>
                                                         )}
                                                     </td>
@@ -521,10 +511,10 @@ export default function AgendaTiendasPage() {
             {editingCell && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <div className="card" style={{ width: 380, background: 'var(--bg-card)', borderRadius: 12, padding: 0, overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
-                        <div style={{ padding: '16px 20px', background: 'var(--mercedes-cyan)', color: 'var(--bg-card)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ padding: '16px 20px', background: '#0ea5e9', color: 'var(--bg-card)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div>
-                                <h3 style={{ margin: 0, fontSize: 16 }}>{editingCell.nombre}</h3>
-                                <div style={{ fontSize: 12, opacity: 0.9 }}>{formatDisplayDate(editingCell.fecha)}</div>
+                                <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>{editingCell.nombre}</h3>
+                                <div style={{ fontSize: 14, opacity: 0.9, marginTop: 2 }}>{formatDisplayDate(editingCell.fecha)}</div>
                             </div>
                             <button onClick={() => setEditingCell(null)} style={{ background: 'transparent', border: 'none', color: 'var(--bg-card)', cursor: 'pointer' }}><X size={20} /></button>
                         </div>
@@ -546,36 +536,48 @@ export default function AgendaTiendasPage() {
                             </div>
 
                             {editForm.estado === 'ACTIVO' && (
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12 }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
                                     <div>
-                                        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#10b981', marginBottom: 6 }}>💼 Ventas</label>
-                                        <input type="number" min="0" value={editForm.ventas === 0 ? '' : editForm.ventas} placeholder="0" onChange={e => setEditForm({...editForm, ventas: parseInt(e.target.value) || 0})} style={{ width: '100%', padding: '8px', borderRadius: 6, border: '1px solid var(--border-strong)', fontSize: 14, textAlign: 'center', outline: 'none' }} />
+                                        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#10b981', marginBottom: 6 }}>🎯 Campañas</label>
+                                        <input type="number" min="0" value={editForm.campanas === 0 ? '' : editForm.campanas} placeholder="0" onChange={e => setEditForm({...editForm, campanas: parseInt(e.target.value) || 0})} style={{ width: '100%', padding: '8px', borderRadius: 6, border: '1px solid var(--border-strong)', fontSize: 14, textAlign: 'center', outline: 'none' }} />
                                     </div>
                                     <div>
-                                        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#0ea5e9', marginBottom: 6 }}>📞 Llamadas</label>
-                                        <input type="number" min="0" value={editForm.visitas === 0 ? '' : editForm.visitas} placeholder="0" onChange={e => setEditForm({...editForm, visitas: parseInt(e.target.value) || 0})} style={{ width: '100%', padding: '8px', borderRadius: 6, border: '1px solid var(--border-strong)', fontSize: 14, textAlign: 'center', outline: 'none' }} />
+                                        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#0ea5e9', marginBottom: 6 }}>📞 Cl. Propios</label>
+                                        <input type="number" min="0" value={editForm.clientesPropios === 0 ? '' : editForm.clientesPropios} placeholder="0" onChange={e => setEditForm({...editForm, clientesPropios: parseInt(e.target.value) || 0})} style={{ width: '100%', padding: '8px', borderRadius: 6, border: '1px solid var(--border-strong)', fontSize: 14, textAlign: 'center', outline: 'none' }} />
                                     </div>
                                     <div>
-                                        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#8b5cf6', marginBottom: 6 }}>💻 MLPs</label>
-                                        <input type="number" min="0" value={editForm.teams === 0 ? '' : editForm.teams} placeholder="0" onChange={e => setEditForm({...editForm, teams: parseInt(e.target.value) || 0})} style={{ width: '100%', padding: '8px', borderRadius: 6, border: '1px solid var(--border-strong)', fontSize: 14, textAlign: 'center', outline: 'none' }} />
+                                        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#8b5cf6', marginBottom: 6 }}>💻 Dispos</label>
+                                        <input type="number" min="0" value={editForm.dispositivos === 0 ? '' : editForm.dispositivos} placeholder="0" onChange={e => setEditForm({...editForm, dispositivos: parseInt(e.target.value) || 0})} style={{ width: '100%', padding: '8px', borderRadius: 6, border: '1px solid var(--border-strong)', fontSize: 14, textAlign: 'center', outline: 'none' }} />
                                     </div>
                                     <div>
-                                        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#f59e0b', marginBottom: 6 }}>📺 Demos</label>
-                                        <input type="number" min="0" value={editForm.demos === 0 ? '' : editForm.demos} placeholder="0" onChange={e => setEditForm({...editForm, demos: parseInt(e.target.value) || 0})} style={{ width: '100%', padding: '8px', borderRadius: 6, border: '1px solid var(--border-strong)', fontSize: 14, textAlign: 'center', outline: 'none' }} />
+                                        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#f59e0b', marginBottom: 6 }}>📺 BAF</label>
+                                        <input type="number" min="0" value={editForm.baf === 0 ? '' : editForm.baf} placeholder="0" onChange={e => setEditForm({...editForm, baf: parseInt(e.target.value) || 0})} style={{ width: '100%', padding: '8px', borderRadius: 6, border: '1px solid var(--border-strong)', fontSize: 14, textAlign: 'center', outline: 'none' }} />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#ec4899', marginBottom: 6 }}>📦 Repos</label>
+                                        <input type="number" min="0" value={editForm.repos === 0 ? '' : editForm.repos} placeholder="0" onChange={e => setEditForm({...editForm, repos: parseInt(e.target.value) || 0})} style={{ width: '100%', padding: '8px', borderRadius: 6, border: '1px solid var(--border-strong)', fontSize: 14, textAlign: 'center', outline: 'none' }} />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#ef4444', marginBottom: 6 }}>🗃️ BD Salva</label>
+                                        <input type="number" min="0" value={editForm.bdSalva === 0 ? '' : editForm.bdSalva} placeholder="0" onChange={e => setEditForm({...editForm, bdSalva: parseInt(e.target.value) || 0})} style={{ width: '100%', padding: '8px', borderRadius: 6, border: '1px solid var(--border-strong)', fontSize: 14, textAlign: 'center', outline: 'none' }} />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#3f6212', marginBottom: 6 }}>⚔️ Compet.</label>
+                                        <input type="number" min="0" value={editForm.competencia === 0 ? '' : editForm.competencia} placeholder="0" onChange={e => setEditForm({...editForm, competencia: parseInt(e.target.value) || 0})} style={{ width: '100%', padding: '8px', borderRadius: 6, border: '1px solid var(--border-strong)', fontSize: 14, textAlign: 'center', outline: 'none' }} />
                                     </div>
                                 </div>
                             )}
 
                             <div>
                                 <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#4b5563', marginBottom: 6 }}>Observaciones Cortas</label>
-                                <textarea maxLength={150} value={editForm.observaciones} onChange={e => setEditForm({...editForm, observaciones: e.target.value})} placeholder="Ej. Bajo en Dispositivos..." style={{ width: '100%', padding: '10px', borderRadius: 6, border: '1px solid var(--border-strong)', fontSize: 13, outline: 'none', resize: 'vertical', minHeight: '80px', fontFamily: 'inherit' }} />
+                                <textarea maxLength={150} value={editForm.observaciones} onChange={e => setEditForm({...editForm, observaciones: e.target.value})} placeholder="Ej. Bajo en Dispos..." style={{ width: '100%', padding: '10px', borderRadius: 6, border: '1px solid var(--border-strong)', fontSize: 13, outline: 'none', resize: 'vertical', minHeight: '80px', fontFamily: 'inherit' }} />
                                 <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4, textAlign: 'right' }}>Max 150 chars</div>
                             </div>
                         </div>
 
                         <div style={{ padding: '12px 20px', background: 'var(--active-bg)', borderTop: '1px solid var(--border-strong)', display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
                             <button onClick={() => setEditingCell(null)} disabled={saving} style={{ background: 'transparent', border: 'none', color: '#4b5563', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
-                            <button onClick={saveEdit} disabled={saving} style={{ background: 'var(--mercedes-cyan)', border: 'none', color: 'var(--bg-card)', fontWeight: 600, fontSize: 13, padding: '8px 16px', borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <button onClick={saveEdit} disabled={saving} style={{ background: '#0ea5e9', border: 'none', color: 'var(--bg-card)', fontWeight: 600, fontSize: 13, padding: '8px 16px', borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
                                 {saving ? 'Guardando...' : <><Save size={16} /> Aplicar Cambios</>}
                             </button>
                         </div>
@@ -587,7 +589,7 @@ export default function AgendaTiendasPage() {
             {showMailModal && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <div className="card" style={{ width: 320, background: 'var(--bg-card)', borderRadius: 12, padding: 0, overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
-                        <div style={{ padding: '16px 20px', background: 'var(--mercedes-cyan)', color: 'var(--bg-card)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ padding: '16px 20px', background: '#0ea5e9', color: 'var(--bg-card)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <h3 style={{ margin: 0, fontSize: 16 }}>Configurar Envío Mail</h3>
                             <button onClick={() => setShowMailModal(false)} style={{ background: 'transparent', border: 'none', color: 'var(--bg-card)', cursor: 'pointer' }}><X size={20} /></button>
                         </div>
@@ -598,7 +600,7 @@ export default function AgendaTiendasPage() {
                                     const dateStr = formatDate(d);
                                     const isSelected = selectedMailDays.includes(dateStr);
                                     return (
-                                        <label key={dateStr} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '8px 12px', background: isSelected ? 'var(--active-bg)' : 'transparent', border: '1px solid', borderColor: isSelected ? 'var(--mercedes-cyan)' : 'var(--border-strong)', borderRadius: 6, transition: 'all 0.2s' }}>
+                                        <label key={dateStr} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '8px 12px', background: isSelected ? 'var(--active-bg)' : 'transparent', border: '1px solid', borderColor: isSelected ? '#0ea5e9' : 'var(--border-strong)', borderRadius: 6, transition: 'all 0.2s' }}>
                                             <input 
                                                 type="checkbox" 
                                                 checked={isSelected}
@@ -618,7 +620,7 @@ export default function AgendaTiendasPage() {
                         </div>
                         <div style={{ padding: '12px 20px', background: 'var(--active-bg)', borderTop: '1px solid var(--border-strong)', display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
                             <button onClick={() => setShowMailModal(false)} style={{ background: 'transparent', border: 'none', color: '#4b5563', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancelar</button>
-                            <button onClick={confirmMail} style={{ background: 'var(--mercedes-cyan)', border: 'none', color: 'var(--bg-card)', fontWeight: 600, fontSize: 13, padding: '8px 16px', borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <button onClick={confirmMail} style={{ background: '#0ea5e9', border: 'none', color: 'var(--bg-card)', fontWeight: 600, fontSize: 13, padding: '8px 16px', borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
                                 <Mail size={16} /> Generar y Copiar
                             </button>
                         </div>

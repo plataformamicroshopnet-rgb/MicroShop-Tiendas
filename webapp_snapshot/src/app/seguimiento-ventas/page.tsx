@@ -37,12 +37,20 @@ export default function SeguimientoVentasPage() {
       textColor: '#3b82f6'
     },
     {
-      title: 'Agenda Comercial',
+      title: 'Agenda Comercial Salva',
       description: 'Tracking diario visual de la Fuerza de Ventas y asistencia.',
       icon: Calendar,
       action: () => router.push('/seguimiento-ventas/agenda'),
       color: 'rgba(16,185,129,0.1)',
       textColor: '#10b981'
+    },
+    {
+      title: 'Agenda de Llamadas Cristina',
+      description: 'Tracking diario visual de llamadas y métricas independientes.',
+      icon: Calendar,
+      action: () => router.push('/seguimiento-ventas/agenda-cristina'),
+      color: 'rgba(236,72,153,0.1)',
+      textColor: '#ec4899'
     },
     {
       title: 'Comisiones Tiendas Completas',

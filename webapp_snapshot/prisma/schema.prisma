@@ -175,6 +175,7 @@ model AgendaEntry {
   ventas          Int      @default(0)
   visitas         Int      @default(0)
   teams           Int      @default(0)
+  demos           Int      @default(0)
   estado          String   @default("ACTIVO")
   observaciones   String?
   createdAt       DateTime @default(now())
@@ -183,6 +184,27 @@ model AgendaEntry {
   @@unique([codigoComercial, fecha])
   @@index([fecha])
 }
+
+model AgendaCristinaEntry {
+  id              String   @id @default(cuid())
+  codigoComercial String
+  fecha           DateTime
+  campanas        Int      @default(0)
+  clientesPropios Int      @default(0)
+  dispositivos    Int      @default(0)
+  baf             Int      @default(0)
+  repos           Int      @default(0)
+  bdSalva         Int      @default(0)
+  competencia     Int      @default(0)
+  estado          String   @default("ACTIVO")
+  observaciones   String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([codigoComercial, fecha])
+  @@index([fecha])
+}
+
 
 model Magazine {
   id          String         @id @default(cuid())
