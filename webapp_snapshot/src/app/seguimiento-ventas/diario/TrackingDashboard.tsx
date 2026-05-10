@@ -178,7 +178,7 @@ export default function TrackingDashboard() {
     if (disabled) {
         const valStr = val === 0 ? '-' : new Intl.NumberFormat('es-ES', { maximumFractionDigits: 1 }).format(val) + (isCurrency ? ' €' : '');
         return (
-            <div style={{ width, padding: '6px', textAlign: 'center', fontWeight: 600, border: '1px solid var(--border-light)', borderRadius: 4, background: 'var(--active-bg)', opacity: 0.8, fontSize: 11, display: 'inline-block', boxSizing: 'border-box', color: 'var(--text-main)' }}>
+            <div style={{ width, padding: '4px', textAlign: 'center', fontWeight: 600, border: '1px solid var(--border-light)', borderRadius: 4, background: 'var(--active-bg)', opacity: 0.8, fontSize: 11, display: 'inline-block', boxSizing: 'border-box', color: 'var(--text-main)' }}>
                 {valStr}
             </div>
         )
@@ -191,7 +191,7 @@ export default function TrackingDashboard() {
           value={val === 0 ? '' : val} 
           onChange={e => updateRow(gId, rId, field, e.target.value)}
           className="ds-input"
-          style={{ width: '100%', padding: '6px', paddingRight: (!disabled && isCurrency) ? '18px' : '6px', textAlign: 'center', fontWeight: 600, border: '1px solid var(--border-light)', borderRadius: 4, background: 'var(--bg-card)', opacity: 1, boxSizing: 'border-box', fontSize: 11 }}
+          style={{ width: '100%', paddingTop: '4px', paddingBottom: '4px', paddingLeft: '4px', paddingRight: (!disabled && isCurrency) ? '18px' : '4px', textAlign: 'center', fontWeight: 600, border: '1px solid var(--border-light)', borderRadius: 4, background: 'var(--bg-card)', opacity: 1, boxSizing: 'border-box', fontSize: 11 }}
         />
         {(!disabled && isCurrency) && (
           <span style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--text-muted)', pointerEvents: 'none', fontWeight: 700 }}>
@@ -262,7 +262,7 @@ export default function TrackingDashboard() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-app)', padding: 20 }}>
       {/* HEADER */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-card)', padding: '16px 24px', borderRadius: 12, boxShadow: '0 4px 6px rgba(0,0,0,0.02)', marginBottom: 24, position: 'sticky', top: 0, zIndex: 100 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-card)', padding: '12px 20px', borderRadius: 12, boxShadow: '0 4px 6px rgba(0,0,0,0.02)', marginBottom: 16, position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <button onClick={() => router.back()} style={{ display: 'flex', alignItems: 'center', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}>
             <ChevronLeft size={24} />
@@ -339,15 +339,15 @@ export default function TrackingDashboard() {
              Este mes activo está vacío. Usa el botón [+ Palanca] del menú superior para añadir comerciales.
           </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
           {augmentedGroups.map((g: any, i: number) => {
             const macro = calculateGroup(g, periodYear, periodMonth)
 
             return (
-              <div key={g._id} style={{ display: 'flex', gap: 20, background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: 16, overflow: 'hidden', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)' }}>
+              <div key={g._id} style={{ display: 'flex', gap: 16, background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: 16, overflow: 'hidden', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)' }}>
                 {/* ZONA IZQUIERDA: FILAS Y METRICAS MANUALES */}
-                <div style={{ flex: 1, padding: 20, overflowX: 'auto' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <div style={{ flex: 1, padding: 16, overflowX: 'auto' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                     <input 
                        disabled={isReadOnly}
                        value={g.name} 
@@ -391,16 +391,16 @@ export default function TrackingDashboard() {
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
                     <thead>
                       <tr style={{ background: 'var(--header-bg)', color: 'var(--text-muted)', textAlign: 'center', fontWeight: 700 }}>
-                        <td style={{ padding: '8px', textAlign: 'left' }}>COMERCIAL</td>
-                        <td style={{ padding: '8px', borderRight: '2px solid #e2e8f0' }}>OBJ MES</td>
-                        <td style={{ padding: '8px', color: '#94a3b8' }}>Etapa 1</td>
-                        <td style={{ padding: '8px', color: '#94a3b8' }}>Etapa 2</td>
-                        <td style={{ padding: '8px', color: '#94a3b8' }}>Etapa 3</td>
-                        <td style={{ padding: '8px', borderRight: '2px solid #e2e8f0', color: '#94a3b8' }}>Etapa 4</td>
-                        <td style={{ padding: '8px', color: 'var(--text-main)' }}>TOTAL</td>
-                        <td style={{ padding: '8px', color: 'var(--text-main)' }}>QUEDAN</td>
-                        <td style={{ padding: '8px', color: 'var(--text-main)' }}>AVANCE %</td>
-                        <td style={{ padding: '8px' }}></td>
+                        <td style={{ padding: '6px', textAlign: 'left' }}>COMERCIAL</td>
+                        <td style={{ padding: '6px', borderRight: '2px solid #e2e8f0' }}>OBJ MES</td>
+                        <td style={{ padding: '6px', color: '#94a3b8' }}>Etapa 1</td>
+                        <td style={{ padding: '6px', color: '#94a3b8' }}>Etapa 2</td>
+                        <td style={{ padding: '6px', color: '#94a3b8' }}>Etapa 3</td>
+                        <td style={{ padding: '6px', borderRight: '2px solid #e2e8f0', color: '#94a3b8' }}>Etapa 4</td>
+                        <td style={{ padding: '6px', color: 'var(--text-main)' }}>TOTAL</td>
+                        <td style={{ padding: '6px', color: 'var(--text-main)' }}>QUEDAN</td>
+                        <td style={{ padding: '6px', color: 'var(--text-main)' }}>AVANCE %</td>
+                        <td style={{ padding: '6px' }}></td>
                       </tr>
                     </thead>
                     <tbody>
@@ -410,7 +410,7 @@ export default function TrackingDashboard() {
 
                         return (
                           <tr key={r._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '8px' }}>
+                            <td style={{ padding: '6px' }}>
                               <input 
                                 disabled={isReadOnly}
                                 value={r.comercialName} 
@@ -418,20 +418,20 @@ export default function TrackingDashboard() {
                                 style={{ width: 120, border: 'none', fontWeight: 600, color: 'var(--text-main)', opacity: isReadOnly ? 0.7 : 1, background: 'transparent' }} 
                               />
                             </td>
-                            <td style={{ padding: '8px', textAlign: 'center', borderRight: '2px solid #f1f5f9' }}>
+                            <td style={{ padding: '6px', textAlign: 'center', borderRight: '2px solid #f1f5f9' }}>
                               {renderCellInput(g._id, r._id, 'objectiveMonth', r.objectiveMonth, false, g.isCurrency, 90)}
                             </td>
-                            <td style={{ padding: '8px', textAlign: 'center' }}>{renderCellInput(g._id, r._id, 'week1', r.week1, g.isAuto, false, 65)}</td>
-                            <td style={{ padding: '8px', textAlign: 'center' }}>{renderCellInput(g._id, r._id, 'week2', r.week2, g.isAuto, false, 65)}</td>
-                            <td style={{ padding: '8px', textAlign: 'center' }}>{renderCellInput(g._id, r._id, 'week3', r.week3, g.isAuto, false, 65)}</td>
-                            <td style={{ padding: '8px', textAlign: 'center', borderRight: '2px solid #f1f5f9' }}>{renderCellInput(g._id, r._id, 'week4', r.week4, g.isAuto, false, 65)}</td>
+                            <td style={{ padding: '6px', textAlign: 'center' }}>{renderCellInput(g._id, r._id, 'week1', r.week1, g.isAuto, false, 65)}</td>
+                            <td style={{ padding: '6px', textAlign: 'center' }}>{renderCellInput(g._id, r._id, 'week2', r.week2, g.isAuto, false, 65)}</td>
+                            <td style={{ padding: '6px', textAlign: 'center' }}>{renderCellInput(g._id, r._id, 'week3', r.week3, g.isAuto, false, 65)}</td>
+                            <td style={{ padding: '6px', textAlign: 'center', borderRight: '2px solid #f1f5f9' }}>{renderCellInput(g._id, r._id, 'week4', r.week4, g.isAuto, false, 65)}</td>
                             
-                            <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold' }}>{num(m.totalReal, g.isCurrency)}</td>
-                            <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', color: m.remaining > 0 ? '#ef4444' : '#22c55e' }}>{num(m.remaining, g.isCurrency)}</td>
-                            <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold' }}>
+                            <td style={{ padding: '6px', textAlign: 'center', fontWeight: 'bold' }}>{num(m.totalReal, g.isCurrency)}</td>
+                            <td style={{ padding: '6px', textAlign: 'center', fontWeight: 'bold', color: m.remaining > 0 ? '#ef4444' : '#22c55e' }}>{num(m.remaining, g.isCurrency)}</td>
+                            <td style={{ padding: '6px', textAlign: 'center', fontWeight: 'bold' }}>
                                <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 12, background: pColor + '20', color: pColor }}>{pct(m.progressPercent)}</span>
                             </td>
-                            <td style={{ padding: '8px', textAlign: 'center' }}>
+                            <td style={{ padding: '6px', textAlign: 'center' }}>
                                {!isReadOnly && (
                                  <button onClick={() => deleteRow(g._id, r._id)} style={{ background: 'transparent', border: 'none', color: 'var(--border-strong)', cursor: 'pointer' }}><Trash2 size={14} /></button>
                                )}
@@ -450,29 +450,29 @@ export default function TrackingDashboard() {
                 </div>
 
                 {/* ZONA DERECHA: PANEL MACRO / KPI */}
-                <div style={{ width: 340, background: 'var(--bg-app)', borderLeft: '1px solid var(--border-light)', padding: 20, display: 'flex', flexDirection: 'column' }}>
-                   <div style={{ color: 'var(--text-muted)', fontSize: 11, fontWeight: 800, letterSpacing: 1, marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+                <div style={{ width: 340, background: 'var(--bg-app)', borderLeft: '1px solid var(--border-light)', padding: 16, display: 'flex', flexDirection: 'column' }}>
+                   <div style={{ color: 'var(--text-muted)', fontSize: 11, fontWeight: 800, letterSpacing: 1, marginBottom: 12, display: 'flex', justifyContent: 'space-between' }}>
                       RENDIMIENTO GRUPAL <span title="Cálculos dinámicos en tiempo real"><Info size={14} /></span>
                    </div>
 
-                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
-                      <div style={{ background: 'var(--bg-card)', padding: 12, borderRadius: 8, border: '1px solid var(--border-light)' }}>
+                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+                      <div style={{ background: 'var(--bg-card)', padding: 10, borderRadius: 8, border: '1px solid var(--border-light)' }}>
                          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>TOTAL VENTAS</div>
                          <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-main)' }}>{num(macro.groupTotalReal, g.isCurrency)}</div>
                       </div>
-                      <div style={{ background: 'var(--bg-card)', padding: 12, borderRadius: 8, border: '1px solid var(--border-light)' }}>
+                      <div style={{ background: 'var(--bg-card)', padding: 10, borderRadius: 8, border: '1px solid var(--border-light)' }}>
                          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>OBJETIVO M.</div>
                          <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-main)' }}>{num(macro.groupTotalObjective, g.isCurrency)}</div>
                       </div>
                    </div>
 
-                   <div style={{ background: macro.groupRemaining <= 0 ? '#dcfce7' : '#fee2e2', padding: 12, borderRadius: 8, marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                   <div style={{ background: macro.groupRemaining <= 0 ? '#dcfce7' : '#fee2e2', padding: 10, borderRadius: 8, marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontSize: 13, fontWeight: 700, color: macro.groupRemaining <= 0 ? '#166534' : '#991b1b' }}>Faltan del Total</span>
                       <span style={{ fontSize: 16, fontWeight: 800, color: macro.groupRemaining <= 0 ? '#166534' : '#991b1b' }}>{num(macro.groupRemaining, g.isCurrency)}</span>
                    </div>
 
-                   <div style={{ background: 'var(--bg-card)', padding: 12, borderRadius: 8, border: '1px solid var(--border-light)', marginBottom: 24 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                   <div style={{ background: 'var(--bg-card)', padding: 10, borderRadius: 8, border: '1px solid var(--border-light)', marginBottom: 16 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>Avance Grupo Todos</span>
                          <span style={{ fontSize: 12, fontWeight: 800, color: '#3b82f6' }}>{pct(macro.groupProgressPercent)}</span>
                       </div>
@@ -481,18 +481,18 @@ export default function TrackingDashboard() {
                       </div>
                    </div>
 
-                   <div style={{ color: 'var(--text-muted)', fontSize: 11, fontWeight: 800, letterSpacing: 1, marginBottom: 12 }}>PROYECCIONES A FIN DE MES</div>
+                   <div style={{ color: 'var(--text-muted)', fontSize: 11, fontWeight: 800, letterSpacing: 1, marginBottom: 8 }}>PROYECCIONES A FIN DE MES</div>
                    
-                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px dashed #cbd5e1' }}>
+                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px dashed #cbd5e1' }}>
                          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Déficit a día {macro.passedBusinessDays} (s/ {macro.totalBusinessDays})</span>
                          <span style={{ fontSize: 12, fontWeight: 700, color: macro.currentDeficit > 0 ? '#ef4444' : '#10b981' }}>{num(Math.abs(macro.currentDeficit), g.isCurrency)} {macro.currentDeficit > 0 ? '⬇' : '⬆'}</span>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px dashed var(--border-strong)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px dashed var(--border-strong)' }}>
                          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Proyectamos (Volumen)</span>
                          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-main)' }}>{num(macro.projectedEOM, g.isCurrency)}</span>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px dashed var(--border-strong)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px dashed var(--border-strong)' }}>
                          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Proyectamos (% Éxito)</span>
                          <span style={{ fontSize: 12, fontWeight: 800, color: macro.projectedPercent >= 1 ? '#10b981' : '#f59e0b' }}>{pct(macro.projectedPercent)}</span>
                       </div>
