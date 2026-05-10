@@ -52,6 +52,110 @@ export function useComisionesData() {
 
     const monthSales = allSales;
 
+    // Parseador de Fórmulas de Productos (Soporta exclusiones con " -")
+    const matchProductFormula = (productName: string, formula: string) => {
+        if (!formula || !productName) return false;
+        const p = String(productName).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+        
+        const orBlocks = formula.split('+').map((b: string) => b.trim());
+        for (const block of orBlocks) {
+            if (!block) continue;
+            const parts = block.split(' -').map(part => part.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim());
+            const mustInclude = parts[0];
+            const mustNotIncludes = parts.slice(1);
+            
+            if (mustInclude && p.includes(mustInclude)) {
+                let isExcluded = false;
+                for (const excl of mustNotIncludes) {
+                    if (excl && p.includes(excl)) {
+                        isExcluded = true;
+                        break;
+                    }
+                }
+                if (!isExcluded) return true;
+            }
+        }
+        return false;
+    };
+    
+    const matchTipoVenta = (sale: any, tipoVentaRaw: string) => {
+        if (!tipoVentaRaw) return false;
+        
+        // El MultiSelectDropdown separa los valores con comas
+        const tipos = tipoVentaRaw.split(',').map(s => s.trim()).filter(Boolean);
+        
+        const cat = sale.categoria || sale.detalle || sale.sheet || '';
+        const prod = sale.producto || '';
+
+        for (const tipoVenta of tipos) {
+            if (tipoVenta === 'FORMULA_LIBRE') continue;
+            
+            let matched = false;
+            switch(tipoVenta) {
+                case 'Alta BAF Total':
+                    matched = cat === 'miMovistar' || cat === 'Resto BAF';
+                    break;
+                case 'Alta BAF Convergente':
+                    matched = cat === 'miMovistar';
+                    break;
+                case 'Dispositivos + Seguro':
+                    matched = cat === 'RENT' || cat === 'Seguro';
+                    break;
+                case 'Dispositivos':
+                    matched = cat === 'RENT';
+                    break;
+                case 'Seguro':
+                    matched = cat === 'Seguro';
+                    break;
+                case 'MPA':
+                    matched = prod.includes('Movistar Prosegur Alarmas');
+                    break;
+                case 'FTTR':
+                    matched = prod.includes('Solución FTTR') || prod.includes('FTTR');
+                    break;
+                case 'Señalización Solar 360':
+                    matched = prod.includes('Solar360');
+                    break;
+                case 'ARPU':
+                    matched = cat === 'Repos' && !prod.includes('Fútbol');
+                    break;
+                case 'Repo Fútbol':
+                    matched = prod.includes('Fútbol') && cat === 'Repos';
+                    break;
+                default:
+                    if (tipoVenta.toLowerCase().trim() === cat.toLowerCase().trim()) {
+                        matched = true;
+                    } else {
+                        const searchString = `${prod} ${sale.detalle || ''} ${sale.grupo || ''}`;
+                        matched = matchProductFormula(searchString, tipoVenta);
+                    }
+                    break;
+            }
+            if (matched) return true;
+        }
+        return false;
+    };
+
+    // Precalcular totales del equipo
+    const teamGroupCounts: Record<string, number> = {};
+    tiendaRules.forEach(rule => { teamGroupCounts[rule.nombre] = 0; });
+
+    monthSales.forEach(s => {
+        let cuotaValue = Number(s.cuota) || 0;
+        if (isNaN(cuotaValue)) cuotaValue = 0;
+        
+        tiendaRules.forEach(rule => {
+            if (matchTipoVenta(s, rule.productosCuentan)) {
+                const isPercentage = String(rule.importePrimerTramo || '').includes('%');
+                if (isPercentage) {
+                    teamGroupCounts[rule.nombre] += cuotaValue;
+                } else {
+                    teamGroupCounts[rule.nombre] += 1;
+                }
+            }
+        });
+    });
+
     const sellerStats = FIXED_SELLERS.map(name => {
         const sSales = monthSales.filter(s => {
             const v = String(s.vendedor || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
@@ -94,71 +198,11 @@ export function useComisionesData() {
                 groupObj1[ruleName] = (rule.objPrimerTramo / totalHoras) * horario;
                 groupObj2[ruleName] = (rule.objSegundoTramo / totalHoras) * horario;
             } else {
-                groupObj1[ruleName] = 0;
-                groupObj2[ruleName] = 0;
+                groupObj1[ruleName] = rule.objPrimerTramo || 0;
+                groupObj2[ruleName] = rule.objSegundoTramo || 0;
             }
         });
 
-        // Parseador de Fórmulas de Productos (Soporta exclusiones con " -")
-        const matchProductFormula = (productName: string, formula: string) => {
-            if (!formula || !productName) return false;
-            const p = String(productName).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-            
-            // Separar por '+' (Condición OR)
-            const orBlocks = formula.split('+').map((b: string) => b.trim());
-            
-            for (const block of orBlocks) {
-                if (!block) continue;
-                
-                // Separar por ' -' (Condición NOT/Exclusión)
-                const parts = block.split(' -').map(part => part.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim());
-                
-                const mustInclude = parts[0];
-                const mustNotIncludes = parts.slice(1);
-                
-                if (mustInclude && p.includes(mustInclude)) {
-                    // Verificar si tiene alguna palabra excluida
-                    let isExcluded = false;
-                    for (const excl of mustNotIncludes) {
-                        if (excl && p.includes(excl)) {
-                            isExcluded = true;
-                            break;
-                        }
-                    }
-                    
-                    if (!isExcluded) return true; // Hizo match y no fue excluido
-                }
-            }
-            return false;
-        };
-        
-        const matchTipoVenta = (sale: any, tipoVenta: string) => {
-            const cat = sale.categoria || sale.detalle || sale.sheet || '';
-            const prod = sale.producto || '';
-            
-            switch(tipoVenta) {
-                case 'Alta BAF Total':
-                    return cat === 'miMovistar' || cat === 'Resto BAF';
-                case 'Alta BAF Convergente':
-                    return cat === 'miMovistar';
-                case 'Dispositivos + Seguro':
-                    return cat === 'RENT' || cat === 'Seguro';
-                case 'MPA':
-                    return prod.includes('Movistar Prosegur Alarmas');
-                case 'FTTR':
-                    return prod.includes('Solución FTTR') || prod.includes('FTTR');
-                case 'Señalización Solar 360':
-                    return prod.includes('Solar360');
-                case 'ARPU':
-                    return cat === 'Repos' && !prod.includes('Fútbol');
-                case 'Repo Fútbol':
-                    return prod.includes('Fútbol') && cat === 'Repos';
-                default:
-                    // Fallback for FORMULA_LIBRE or missing mapping
-                    const searchString = `${prod} ${sale.detalle || ''} ${sale.grupo || ''}`;
-                    return matchProductFormula(searchString, tipoVenta);
-            }
-        };
 
         let totalValueGroupsAmount = 0;
         let totalUnitGroupsAmount = 0;
@@ -189,6 +233,10 @@ export function useComisionesData() {
 
         const profile = getProfile(name);
         let internalTotalComision = 0;
+        let internalTotalConsolidada = 0;
+        let internalTotalPendiente = 0;
+
+        const groupIsConsolidado: Record<string, boolean> = {};
 
         tiendaRules.forEach(rule => {
             const ruleName = rule.nombre;
@@ -200,7 +248,7 @@ export function useComisionesData() {
             const isPercentage = String(rule.importePrimerTramo || '').includes('%');
             
             const parseImporte = (val: any) => {
-                let s = String(val || '0').replace('%', '').trim();
+                let s = String(val || '0').replace(/[^0-9.,\-]/g, '').trim();
                 s = s.replace(',', '.');
                 return Number(s) || 0;
             };
@@ -208,20 +256,91 @@ export function useComisionesData() {
             const imp1 = parseImporte(rule.importePrimerTramo);
             const imp2 = parseImporte(rule.importeSegundoTramo);
 
-            const milestone = (qtty >= obj2 && obj2 > 0) ? 2 : ((qtty >= obj1 && obj1 > 0) ? 1 : 0);
+            const qttyTotal = groupCounts[ruleName] || 0;
+            const qttyPending = groupPending[ruleName] || 0;
+            const qttyFinalizadas = qttyTotal - qttyPending;
 
-            if (milestone > 0) {
-                if (isPercentage) {
-                    const percentage = milestone === 2 ? imp2 : imp1;
-                    comisionCalculada = qtty * (percentage / 100);
-                } else {
-                    const perUnit = milestone === 2 ? imp2 : imp1;
-                    comisionCalculada = qtty * perUnit;
+            let comTotal = 0;
+            let comConsolidada = 0;
+            let comPendiente = 0;
+
+            if (qttyTotal > 0) {
+                let activeImp = imp1;
+                let isConsolidado = (obj1 === 0 && obj2 === 0) || (qttyTotal >= obj1 && obj1 > 0);
+                let isTeamObj2 = false;
+
+                // Evaluar reglas dinámicas del Constructor Visual
+                if (rule.condicionantes && rule.condicionantes.startsWith('[')) {
+                    try {
+                        const conds = JSON.parse(rule.condicionantes);
+                        if (Array.isArray(conds)) {
+                            for (const cond of conds) {
+                                if (cond.type === 'REQUIRE_TEAM_OBJ2') {
+                                    isTeamObj2 = true;
+                                } else if (cond.type === 'REQUIRE_GROUP_QTY') {
+                                    const targetQtty = groupCounts[cond.targetGroup] || 0;
+                                    if (targetQtty < cond.value) {
+                                        isConsolidado = false;
+                                    }
+                                } else if (cond.type === 'REQUIRE_GROUP_PCT') {
+                                    const targetQtty = groupCounts[cond.targetGroup] || 0;
+                                    const targetObj = groupObj1[cond.targetGroup] || 0;
+                                    if (targetObj > 0) {
+                                        const pct = (targetQtty / targetObj) * 100;
+                                        if (pct < cond.value) {
+                                            isConsolidado = false;
+                                        }
+                                    } else {
+                                        if (cond.value > 0 && targetQtty === 0) {
+                                            isConsolidado = false;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Error parsing rule conditions', e);
+                    }
                 }
+
+                if (isTeamObj2) {
+                    const globalObj2 = rule.objSegundoTramo || 0;
+                    const teamTotal = teamGroupCounts[ruleName] || 0;
+                    if (teamTotal >= globalObj2 && globalObj2 > 0 && qttyTotal >= obj1 && obj1 > 0) {
+                        activeImp = imp2;
+                    } else if (qttyTotal >= obj1 && obj1 > 0) {
+                        activeImp = imp1;
+                    } else {
+                        activeImp = imp1;
+                    }
+                } else {
+                    if (qttyTotal >= obj2 && obj2 > 0) activeImp = imp2;
+                    else if (qttyTotal >= obj1 && obj1 > 0) activeImp = imp1;
+                    else activeImp = imp1; // Valorar siempre al Tramo 1 aunque no llegue al objetivo
+                }
+
+                if (isPercentage) {
+                    comTotal = qttyTotal * (activeImp / 100);
+                } else {
+                    comTotal = qttyTotal * activeImp;
+                }
+
+                if (isConsolidado) {
+                    comConsolidada = comTotal;
+                    comPendiente = 0;
+                } else {
+                    comConsolidada = 0;
+                    comPendiente = comTotal;
+                }
+                groupIsConsolidado[ruleName] = isConsolidado;
+            } else {
+                groupIsConsolidado[ruleName] = false;
             }
 
-            groupComisions[ruleName] = comisionCalculada;
-            internalTotalComision += comisionCalculada;
+            groupComisions[ruleName] = comTotal;
+            internalTotalComision += comTotal;
+            internalTotalConsolidada += comConsolidada;
+            internalTotalPendiente += comPendiente;
         });
 
         // Apuntar las comisiones del motor de reglas extra
@@ -472,12 +591,14 @@ export function useComisionesData() {
 
         const numSalesTotal = sSales.length;
 
-        return {
+        const sellerObj = {
             name,
             profile,
             isPlus: profile === 'Plus',
             totalComision: internalTotalComision,
-            totalExtras,
+            totalConsolidada: internalTotalConsolidada + totalExtras,
+            totalPendiente: internalTotalPendiente,
+            totalExtras: totalExtras,
             pendientes,
             ultimaVenta,
             totalSales: numSalesTotal,
@@ -491,8 +612,10 @@ export function useComisionesData() {
             rawSales: sSales,
             rawExtras: [...sExtras, ...virtualKpiExtras],
             virtualKpiExtras, // Exporting to emit later
-            extraGroups
+            extraGroups,
+            groupIsConsolidado
         };
+        return sellerObj;
     });
 
     // EFFECT: Envío subrepticio de extras KPI a base de datos para grabarlos eternamente

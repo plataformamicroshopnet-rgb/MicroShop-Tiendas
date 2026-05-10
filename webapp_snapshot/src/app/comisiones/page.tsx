@@ -10,248 +10,42 @@ import { useGuard } from '@/hooks/useGuard'
 import { useRouter } from 'next/navigation'
 import { normalizeRole } from '@/lib/appConfig'
 import { useEffect } from 'react'
-
 import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts'
 
-const SIMULATOR_CONFIG = {
+
+
     // TODO: Confirmar cifras exactas con el usuario
-    PLUS: {
-        GROUP_RATES: {
-            'TMA': { type: 'percent', value: 0.02 }, // 2% 
-            'TI': { type: 'percent', value: 0.02 },  // 2%
-            'MIC': { type: 'percent', value: 0.02 }, // 2%
-            'BAF': { type: 'fixed', value: 18 },
-            'PORTA': { type: 'fixed', value: 12, label: 'Porta Móvil MV' },
-            'FD': { type: 'fixed', value: 65 },
-            'VOZ': { type: 'fixed', value: 10 },
-            'ACC': { type: 'percent', value: 0.05 },
-            'SVA': { type: 'fixed', value: 5 },
-            'CIBER': { type: 'fixed', value: 15 }
-        },
-        EXTRAS_SIMULATED: [
-            { name: 'Extra FD Nuevo + TMA o Micro 4 Unidades a 5€', amount: 20 },
-            { name: 'Extra FD Nuevo o en Planta + TMA o Micro + Respaldo 5G + TGT 8 Unidades a 30€', amount: 240 },
-            { name: 'Respaldo 5G 15 Unidades entre todo Plus 3 mínimo por Tiendas Bolsa económica de 40€', amount: 40 },
-            { name: 'Bolsa económica de 200€ al trimestre aprobando la nota. Total mensual: 66,66€', amount: 66.66 },
-            { name: 'Extra FD (BAF >=120% FD>=80%) 10 € por FD Total 30€', amount: 30 }
-        ]
-    },
-    BASICO: {
-        GROUP_RATES: { // Importes calcados del Plus por indicación del usuario
-            'TMA': { type: 'percent', value: 0.02 }, 
-            'TI': { type: 'percent', value: 0.02 },  
-            'MIC': { type: 'percent', value: 0.02 }, 
-            'BAF': { type: 'fixed', value: 18 },  
-            'PORTA': { type: 'fixed', value: 12, label: 'Porta Móvil MV' },
-            'FD': { type: 'fixed', value: 65 },   
-            'VOZ': { type: 'fixed', value: 10 },
-            'ACC': { type: 'percent', value: 0.05 },
-            'SVA': { type: 'fixed', value: 5 },
-            'CIBER': { type: 'fixed', value: 15 }
-        },
-        EXTRAS_SIMULATED: [
-            { name: 'Extra Alta FN Flex (BAF >=100% FD>=80%) Obligatorio portar una línea Fija o una línea móvil 6 Unidades a 40€', amount: 240 }
-        ]
-    }
-}
 
-const AspirationalSimulatorModal = ({ isOpen, onClose, s }: { isOpen: boolean, onClose: () => void, s: any }) => {
-    if (!isOpen) return null;
-
-    // Calcular Base Perfecta (Cada meta de grupo cubierta al 100% de Objetivo 2)
-    const baseBreakdown: any[] = [];
-    let baseIdeal = 0;
-
-    const normProfile = s.profile ? s.profile.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : '';
-
-    ALL_GROUPS.forEach(gName => {
-        const obj2 = s.groupObj2[gName] || 0;
-        if (obj2 > 0) {
-            const configObj = SIMULATOR_CONFIG[normProfile as keyof typeof SIMULATOR_CONFIG];
-            if (!configObj) return;
-
-            const rule = configObj.GROUP_RATES[gName as keyof typeof configObj.GROUP_RATES];
-            let gImport = 0;
-            if (rule) {
-                if (rule.type === 'percent') {
-                    gImport = obj2 * rule.value;
-                } else if (rule.type === 'fixed') {
-                    gImport = obj2 * rule.value;
-                }
-            }
-            if (gImport > 0) {
-                baseBreakdown.push({ name: gName, label: (rule as any).label, obj2, amount: gImport, rate: rule.value, type: rule.type });
-                baseIdeal += gImport;
-            }
-        }
-    });
-
-    const configObj = SIMULATOR_CONFIG[normProfile as keyof typeof SIMULATOR_CONFIG];
-    const extras = configObj ? configObj.EXTRAS_SIMULATED : [];
-    const extrasTotal = extras.reduce((acc, curr) => acc + curr.amount, 0);
-
-    const godModeTotal = baseIdeal + extrasTotal;
-
-    // ----- DATOS PARA GRÁFICAS -----
-
-    const combinedElements = [
-        ...baseBreakdown.map(b => ({ name: b.label || b.name, amount: b.amount, isExtra: false })),
-        ...extras.map(e => ({ name: e.name.substring(0, 20) + '...', amount: e.amount, isExtra: true }))
-    ];
-    
-    // Renderizar todas las palancas ordenadas e inyectar su porcentaje
-    const barchartData = combinedElements
-                            .sort((a,b) => b.amount - a.amount)
-                            .map(t => {
-                                const perc = godModeTotal > 0 ? (t.amount / godModeTotal) * 100 : 0;
-                                return {
-                                    name: `${t.name.substring(0, 15)} (${perc.toFixed(0)}%)`,
-                                    amount: t.amount,
-                                    fill: t.isExtra ? '#F59E0B' : '#0D9488'
-                                };
-                            });
-    // -------------------------------
-
-    return (
-        <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.85)',
-            backdropFilter: 'blur(10px)',
-            zIndex: 9999,
-            display: 'flex', justifyContent: 'center', alignItems: 'center',
-            animation: 'fadeIn 0.3s ease-out'
-        }}>
-            <div style={{
-                backgroundColor: 'var(--bg-card)', border: '2px solid rgba(168, 85, 247, 0.4)',
-                borderRadius: '16px', padding: '24px 32px', maxWidth: '950px', width: '90%', maxHeight: '96vh', overflowY: 'auto',
-                boxShadow: '0 20px 60px rgba(168, 85, 247, 0.2)',
-                position: 'relative'
-            }}>
-                <button onClick={onClose} style={{
-                    position: 'absolute', top: '24px', right: '24px',
-                    background: 'transparent', border: 'none', color: 'var(--medium-gray)', cursor: 'pointer', transition: 'color 0.2s'
-                }} onMouseEnter={e => e.currentTarget.style.color = '#A855F7'} onMouseLeave={e => e.currentTarget.style.color = 'var(--medium-gray)'}>
-                    <XCircle size={28} />
-                </button>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: '32px' }}>
-                    <div style={{ backgroundColor: 'rgba(168, 85, 247, 0.1)', padding: '16px', borderRadius: '16px', color: '#A855F7', boxShadow: '0 0 20px rgba(168, 85, 247, 0.2)' }}>
-                        <Crown size={36} />
-                    </div>
-                    <div>
-                        <h2 style={{ margin: 0, fontSize: '28px', fontWeight: 900, color: 'transparent', background: 'linear-gradient(90deg, #A855F7, #D946EF)', WebkitBackgroundClip: 'text', backgroundClip: 'text' }}>El Mes Perfecto: Perfil {s.profile}</h2>
-                        <span style={{ fontSize: '15px', color: 'var(--medium-gray)', fontWeight: 600 }}>
-                            Simulador Aspiracional (Desglose al 100% de Objetivo 2 + Combos Extra)
-                        </span>
-                    </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 350px', gap: '32px' }}>
-                    
-                    {/* MATRIZ DE TABLA BASE */}
-                    <div>
-                        <h3 style={{ fontSize: 18, borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: 8, margin: '0 0 16px 0', color: 'var(--light-text)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <Euro size={16} color="#34d399" /> 1. Cuadrícula Base al Máx.
-                        </h3>
-                        {baseBreakdown.map(g => (
-                            <div key={g.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 8, marginBottom: 8 }}>
-                                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                                    <span style={{ fontWeight: 800, color: 'var(--mercedes-cyan)', width: 100 }}>{g.label || g.name}</span> 
-                                    <span style={{ fontSize: 13, color: 'var(--medium-gray)' }}>
-                                        Obj2: {Math.round(g.obj2).toLocaleString('es-ES')} a {g.type === 'percent' ? `${g.rate * 100}%` : `${g.rate}€`}
-                                    </span>
-                                </div>
-                                <div style={{ fontWeight: 800, color: '#34d399' }}>+{Math.round(g.amount).toLocaleString('es-ES')} €</div>
-                            </div>
-                        ))}
-
-                        <h3 style={{ fontSize: 18, borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: 8, margin: '24px 0 16px 0', color: 'var(--light-text)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <Sparkles size={16} color="#F59E0B" /> 2. Misiones y Combos Extra
-                        </h3>
-                        {extras.map((ex, i) => (
-                            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, padding: '10px 14px', backgroundColor: 'rgba(245, 158, 11, 0.05)', borderRadius: 8, marginBottom: 8, borderLeft: '3px solid #F59E0B' }}>
-                                <div style={{ fontSize: 13, color: 'var(--light-text)', fontWeight: 600, flex: 1, lineHeight: 1.4 }}>{ex.name}</div>
-                                <div style={{ fontWeight: 800, color: '#F59E0B', whiteSpace: 'nowrap' }}>+{Math.round(ex.amount).toLocaleString('es-ES')} €</div>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* CAJA DERECHA: TOTAL Y ESTADÍSTICAS */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                        <div style={{ 
-                            background: 'linear-gradient(135deg, rgba(168,85,247,0.1) 0%, rgba(217,70,239,0.05) 100%)', 
-                            border: '1px solid rgba(168,85,247,0.3)', 
-                            borderRadius: '16px', padding: '24px', textAlign: 'center',
-                            boxShadow: '0 10px 30px rgba(168,85,247,0.1)'
-                        }}>
-                            <div style={{ fontSize: 13, color: '#A855F7', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Potencial Modo Dios</div>
-                            <div style={{ fontSize: 42, fontWeight: 900, color: 'var(--light-text)', textShadow: '0 0 15px rgba(255,255,255,0.2)' }}>
-                                {Math.round(godModeTotal).toLocaleString('es-ES')} <span style={{fontSize: 24, color: '#A855F7'}}>€</span>
-                            </div>
-                            <p style={{ margin: '16px 0 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
-                                Suma de la potencia base proyectada más combos confirmados de tu segmento.
-                            </p>
-                        </div>
-
-                        {/* GRÁFICA: TODAS LAS PALANCAS */}
-                        <div style={{ backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 16, padding: '16px 16px 8px 16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                            <h4 style={{ margin: '0 0 12px 0', fontSize: 12, color: 'var(--medium-gray)', textTransform: 'uppercase', letterSpacing: 1, textAlign: 'center', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6 }}>
-                                <Target size={12} color="#0D9488" /> Top Palancas (Peso %)
-                            </h4>
-                            <div style={{ flex: 1, minHeight: 250 }}>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={barchartData} layout="vertical" margin={{ top: 0, right: 30, left: -20, bottom: 0 }}>
-                                        <XAxis type="number" hide />
-                                        <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'var(--medium-gray)', fontWeight: 600 }} width={140} />
-                                        <RechartsTooltip cursor={{fill: 'rgba(255,255,255,0.02)'}} formatter={(value: any) => [`${Number(value).toLocaleString('es-ES')} €`, 'Inyección']} contentStyle={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, fontSize: 13, fontWeight: 700 }} itemStyle={{ color: 'var(--mercedes-cyan)' }} />
-                                        <Bar dataKey="amount" radius={[0, 6, 6, 0]} barSize={12}>
-                                            {barchartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
-                                        </Bar>
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-        </div>
-    );
-}
 
 const AspirationalSimulatorButton = ({ s }: { s: any }) => {
     const [isHovered, setIsHovered] = React.useState(false);
-    const [showModal, setShowModal] = React.useState(false);
+    const router = useRouter();
 
-    const normProfile = s.profile ? s.profile.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : '';
+    // Activado para perfiles validos (Básico o Plus)
+    const isValidProfile = s.profile === 'Plus' || s.profile === 'Básico' || s.profile === 'Basico';
 
-    // Activado solo si existe configuración (PLUS o BÁSICO)
-    if (!SIMULATOR_CONFIG[normProfile as keyof typeof SIMULATOR_CONFIG]) return null;
+    if (!isValidProfile) return null;
 
     return (
-        <>
-            <div 
-                onClick={() => setShowModal(true)}
-                onMouseEnter={() => setIsHovered(true)}
-                onMouseLeave={() => setIsHovered(false)}
-                style={{ 
-                    display: 'flex', alignItems: 'center', gap: 8, backgroundColor: isHovered ? 'rgba(168, 85, 247, 0.15)' : 'rgba(168, 85, 247, 0.05)', 
-                    padding: '6px 14px', borderRadius: 12, border: '1px solid', borderColor: isHovered ? '#A855F7' : 'rgba(168, 85, 247, 0.3)', 
-                    boxShadow: isHovered ? '0 8px 20px rgba(168,85,247,0.2)' : 'none',
-                    cursor: 'pointer', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                    transform: isHovered ? 'scale(1.02)' : 'none'
-                }} 
-                title="Modo Dios: Simula El Mes Perfecto"
-            >
-                <Diamond size={18} color="#A855F7" fill={isHovered ? 'rgba(168, 85, 247, 0.2)' : 'transparent'} />
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                    <span style={{ fontSize: 10, textTransform: 'uppercase', color: '#D946EF', letterSpacing: 0.5, fontWeight: 800 }}>Simulador {s.profile}</span>
-                    <span style={{ fontSize: 15, fontWeight: 900, color: 'var(--light-text)' }}>Mes Perfecto</span>
-                </div>
+        <div 
+            onClick={() => router.push(`/comisiones/simulador?seller=${encodeURIComponent(s.name)}`)}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            style={{ 
+                display: 'flex', alignItems: 'center', gap: 8, backgroundColor: isHovered ? '#eff6ff' : '#ffffff', 
+                padding: '6px 14px', borderRadius: 12, border: '1px solid', borderColor: isHovered ? '#0078D4' : '#e2e8f0', 
+                boxShadow: isHovered ? '0 8px 20px rgba(0,120,212,0.15)' : '0 2px 5px rgba(0,0,0,0.05)',
+                cursor: 'pointer', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                transform: isHovered ? 'scale(1.02)' : 'none'
+            }} 
+            title="Modo Dios: Simula El Mes Perfecto"
+        >
+            <Diamond size={18} color="#0078D4" fill={isHovered ? 'rgba(0,120,212,0.1)' : 'transparent'} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                <span style={{ fontSize: 10, textTransform: 'uppercase', color: '#0078D4', letterSpacing: 0.5, fontWeight: 800 }}>Simulador</span>
+                <span style={{ fontSize: 15, fontWeight: 900, color: '#1e293b' }}>Mes Perfecto</span>
             </div>
-
-            <AspirationalSimulatorModal isOpen={showModal} onClose={() => setShowModal(false)} s={s} />
-        </>
+        </div>
     )
 }
 
@@ -420,9 +214,9 @@ const FinancialSpeedometer = ({ currentAmount, sellerName }: { currentAmount: nu
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             style={{ 
-                display: 'flex', alignItems: 'center', gap: 8, backgroundColor: isHovered ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.2)', 
-                padding: '6px 14px', borderRadius: 12, border: '1px solid', borderColor: isHovered ? '#0D9488' : 'rgba(13, 148, 136, 0.3)', 
-                boxShadow: isHovered ? '0 8px 20px rgba(13,148,136,0.2)' : 'none',
+                display: 'flex', alignItems: 'center', gap: 8, backgroundColor: isHovered ? '#f0fdf4' : '#ffffff', 
+                padding: '6px 14px', borderRadius: 12, border: '1px solid', borderColor: isHovered ? '#10b981' : '#e2e8f0', 
+                boxShadow: isHovered ? '0 8px 20px rgba(16,185,129,0.15)' : '0 2px 5px rgba(0,0,0,0.05)',
                 cursor: 'pointer', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 transform: isHovered ? 'scale(1.02)' : 'none'
             }} 
@@ -431,11 +225,11 @@ const FinancialSpeedometer = ({ currentAmount, sellerName }: { currentAmount: nu
             {/* Semicírculo Velocímetro Escala Reducida */}
             <div style={{ position: 'relative', width: 32, height: 32, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                 <svg width="32" height="32" viewBox="0 0 32 32" style={{ transform: 'rotate(-90deg)' }}>
-                    <circle cx="16" cy="16" r={14} fill="transparent" stroke="rgba(255,255,255,0.05)" strokeWidth="3" />
+                    <circle cx="16" cy="16" r={14} fill="transparent" stroke="#f1f5f9" strokeWidth="3" />
                     <circle 
                         cx="16" cy="16" r={14} 
                         fill="transparent" 
-                        stroke={progressPercentage >= 100 ? '#10B981' : '#0D9488'} 
+                        stroke={progressPercentage >= 100 ? '#10B981' : '#0ea5e9'} 
                         strokeWidth="3" 
                         strokeDasharray={2 * Math.PI * 14} 
                         strokeDashoffset={mounted ? (2 * Math.PI * 14) - (progressPercentage / 100) * (2 * Math.PI * 14) : (2 * Math.PI * 14)} 
@@ -443,22 +237,22 @@ const FinancialSpeedometer = ({ currentAmount, sellerName }: { currentAmount: nu
                         style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.5s' }} 
                     />
                 </svg>
-                <div style={{ position: 'absolute', color: progressPercentage >= 100 ? '#10B981' : '#0D9488', transition: 'color 0.5s' }}>
+                <div style={{ position: 'absolute', color: progressPercentage >= 100 ? '#10B981' : '#0ea5e9', transition: 'color 0.5s' }}>
                     <Target size={14} strokeWidth={2.5} />
                 </div>
             </div>
 
             {/* Datos Escala Reducida */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                <span style={{ fontSize: 10, textTransform: 'uppercase', color: 'var(--medium-gray)', letterSpacing: 0.5, fontWeight: 800 }}>Proyección Regateo</span>
-                <span style={{ fontSize: 15, fontWeight: 900, color: progressPercentage >= 100 ? '#10B981' : '#0D9488', lineHeight: 1, textShadow: progressPercentage >= 100 ? '0 0 10px rgba(16, 185, 129, 0.4)' : 'none' }}>
+                <span style={{ fontSize: 10, textTransform: 'uppercase', color: '#64748b', letterSpacing: 0.5, fontWeight: 800 }}>Proyección Regateo</span>
+                <span style={{ fontSize: 15, fontWeight: 900, color: progressPercentage >= 100 ? '#10B981' : '#0ea5e9', lineHeight: 1, textShadow: 'none' }}>
                     {targetHito.toLocaleString('es-ES')} €
                 </span>
             </div>
             
             {/* Mini porcentaje lateral Escala Reducida */}
             {mounted && progressPercentage > 0 && (
-                <div style={{ marginLeft: 4, fontSize: 10, fontWeight: 800, color: progressPercentage >= 100 ? '#10B981' : (progressPercentage < 50 ? '#F59E0B' : '#0D9488'), backgroundColor: 'rgba(255,255,255,0.05)', padding: '2px 5px', borderRadius: 6 }}>
+                <div style={{ marginLeft: 4, fontSize: 10, fontWeight: 800, color: progressPercentage >= 100 ? '#10B981' : (progressPercentage < 50 ? '#f59e0b' : '#0ea5e9'), backgroundColor: '#f8fafc', padding: '2px 5px', borderRadius: 6, border: '1px solid #e2e8f0' }}>
                     {Math.round(progressPercentage)}%
                 </div>
             )}
@@ -659,13 +453,6 @@ export default function ComisionesDashboardPage() {
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                         <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--light-text)' }}>{s.name}</div>
-                                        <span style={{ 
-                                            display: 'inline-block', padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600,
-                                            backgroundColor: isPlus ? 'rgba(0,173,239,0.2)' : 'rgba(255,149,0,0.2)',
-                                            color: isPlus ? 'var(--mercedes-cyan)' : '#FF9500'
-                                        }}>
-                                            Perfil {s.profile}
-                                        </span>
                                     </div>
                                 </div>
 
@@ -679,10 +466,22 @@ export default function ComisionesDashboardPage() {
                                     </div>
                                 </div>
                                 
-                                {/* DERECHA: Total */}
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flex: 1 }}>
-                                    <div style={{ fontSize: 18, fontWeight: 800, color: '#34d399' }}>{Math.round(s.totalComision).toLocaleString('es-ES')} €</div>
-                                    {s.totalExtras > 0 && <div style={{ fontSize: 11, color: '#10b981', fontWeight: 700 }}>(Base: {Math.round(s.totalComision - s.totalExtras).toLocaleString()} + Ext: {Math.round(s.totalExtras).toLocaleString()})</div>}
+                                {/* DERECHA: Totales Desglosados */}
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flex: 1 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Importe Consolidado:</div>
+                                        <div style={{ fontSize: 16, fontWeight: 800, color: '#10b981' }}>{s.totalConsolidada.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</div>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Importe por Consolidar:</div>
+                                        <div style={{ fontSize: 15, fontWeight: 700, color: '#f59e0b' }}>{s.totalPendiente.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</div>
+                                    </div>
+                                    <div style={{ width: '100%', height: 1, backgroundColor: 'var(--border-color)', margin: '2px 0' }}></div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--light-text)', textTransform: 'uppercase' }}>Total (Fin + Pte):</div>
+                                        <div style={{ fontSize: 18, fontWeight: 900, color: '#3b82f6' }}>{s.totalComision.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</div>
+                                    </div>
+                                    {s.totalExtras > 0 && <div style={{ fontSize: 10, color: '#a855f7', fontWeight: 700 }}>(Base: {Math.round(s.totalComision - s.totalExtras).toLocaleString()} + Ext: {Math.round(s.totalExtras).toLocaleString()})</div>}
                                 </div>
                             </div>
                             
@@ -692,11 +491,11 @@ export default function ComisionesDashboardPage() {
                                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
                                         <thead>
                                             <tr style={{ 
-                                                backgroundColor: '#eff6ff', 
-                                                color: '#1e3a8a', 
+                                                backgroundColor: '#0078D4', 
+                                                color: '#FFFFFF', 
                                                 textTransform: 'uppercase',
                                                 fontSize: 11,
-                                                borderBottom: '2px solid #bfdbfe'
+                                                borderBottom: 'none'
                                             }}>
                                                 <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700 }}>Nombre Comisión</th>
                                                 <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700 }}>Importe<br/>Primer Tramo</th>
@@ -744,6 +543,7 @@ export default function ComisionesDashboardPage() {
                                                     return Math.round(v).toString();
                                                 }
                                                 const comisionCalculada = s.groupComisions[gName] || 0;
+                                                const isConsolidada = s.groupIsConsolidado[gName] ?? false;
 
                                                 const formatImporteTramo = (val: string | null | undefined) => {
                                                     if (!val) return '-';
@@ -783,8 +583,15 @@ export default function ComisionesDashboardPage() {
                                                         <td style={{ padding: '10px 8px', textAlign: 'center', fontSize: 13, fontWeight: 600 }}>
                                                             {obj2 === 0 ? '-' : (falt2 > 0 ? <span style={{ color: '#ef4444' }}>{format(falt2)}</span> : <span style={{ color: '#10b981' }}>✓</span>)}
                                                         </td>
-                                                        <td style={{ padding: '10px 12px', textAlign: 'right', fontSize: 14, fontWeight: 800, color: '#10b981' }}>
-                                                            {Math.round(comisionCalculada).toLocaleString('es-ES')} €
+                                                        <td style={{ 
+                                                            padding: '10px 12px', 
+                                                            textAlign: 'right', 
+                                                            fontSize: 14, 
+                                                            fontWeight: 800, 
+                                                            color: comisionCalculada > 0 ? (isConsolidada ? '#10b981' : '#d97706') : '#10b981',
+                                                            backgroundColor: comisionCalculada > 0 ? (isConsolidada ? 'transparent' : 'rgba(245, 158, 11, 0.05)') : 'transparent'
+                                                        }}>
+                                                            {comisionCalculada.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
                                                         </td>
                                                     </tr>
                                                 )
@@ -837,7 +644,7 @@ export default function ComisionesDashboardPage() {
                                                     <th style={{ padding: '12px 16px' }}>Producto</th>
                                                     <th style={{ padding: '12px 16px' }}>Cliente</th>
                                                     <th style={{ padding: '12px 16px' }}>CIF</th>
-                                                    <th style={{ padding: '12px 16px' }}>Grupo / Pestaña</th>
+                                                    <th style={{ padding: '12px 16px' }}>Tipo de Venta</th>
                                                     <th style={{ padding: '12px 16px' }}>Fecha</th>
                                                     <th style={{ padding: '12px 16px' }}>Pendiente</th>
                                                 </tr>
@@ -855,7 +662,7 @@ export default function ComisionesDashboardPage() {
                                                             <td style={{ padding: '12px 16px', color: 'var(--light-text)', fontWeight: 600 }}>{venta.producto || '-'}</td>
                                                             <td style={{ padding: '12px 16px', color: 'var(--light-text)' }}>{venta.nombreCliente || '-'}</td>
                                                             <td style={{ padding: '12px 16px', color: 'var(--light-text)' }}>{venta.nif || '-'}</td>
-                                                            <td style={{ padding: '12px 16px', color: 'var(--light-text)' }}>{venta.sheet || '-'}</td>
+                                                            <td style={{ padding: '12px 16px', color: 'var(--light-text)' }}>{venta.categoria || venta.detalle || venta.sheet || '-'}</td>
                                                             <td style={{ padding: '12px 16px', color: 'var(--light-text)' }}>{venta.fecha || '-'}</td>
                                                             <td style={{ padding: '12px 16px' }}>
                                                                 <span style={{ 

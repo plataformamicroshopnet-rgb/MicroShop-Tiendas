@@ -32,7 +32,7 @@ export default function VentasTiendasPage() {
         const codeToNameMap = new Map<string, string>()
         
         comData.comerciales.forEach((c: any) => {
-          if (c.name.toLowerCase() === 'diego') return;
+          if (c.name.toLowerCase() === 'diego' || c.name.toLowerCase() === 'salva') return;
           agrupados.set(normNameLocal(c.name), { name: c.name, hoy: 0, mes: 0, pendientes: 0 })
           if (c.codigoComercial) {
             codeToNameMap.set(c.codigoComercial, c.name)
@@ -49,8 +49,12 @@ export default function VentasTiendasPage() {
             // Agrupar exclusivamente por el comercial real (vendedor) para que coincida con la tabla de detalles
             const rawName = log.vendedor?.trim()
             
-            if (!rawName || rawName.toLowerCase() === 'diego') return
-            if (log.pendiente === 'Anulado' || log.anulado === 'Si') return
+            if (!rawName || rawName.toLowerCase() === 'diego' || rawName.toLowerCase() === 'salva') return
+            
+            const pVal = String(log.pendiente || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()
+            const aVal = String(log.anulado || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()
+            
+            if (pVal === 'anulado' || aVal === 'si') return
 
             const k = normNameLocal(rawName);
 
@@ -64,7 +68,7 @@ export default function VentasTiendasPage() {
               stats.hoy += 1
             }
 
-            if (log.pendiente === 'Si') {
+            if (pVal === 'si') {
               stats.pendientes += 1
             } else {
               stats.mes += 1
@@ -75,7 +79,7 @@ export default function VentasTiendasPage() {
             extrasData.assignments.forEach((ea: any) => {
               if (ea.status === 'CANCELLED' || ea.status === 'PENDING') return
               const rawName = ea.seller?.trim()
-              if (!rawName || rawName.toLowerCase() === 'diego') return
+              if (!rawName || rawName.toLowerCase() === 'diego' || rawName.toLowerCase() === 'salva') return
 
               const k = normNameLocal(rawName);
 
@@ -121,80 +125,7 @@ export default function VentasTiendasPage() {
   return (
     <div className="w-full" style={{ padding: '24px 32px', backgroundColor: 'var(--bg-app)', minHeight: '100vh' }}>
       <style dangerouslySetInnerHTML={{__html: `
-        .premium-card {
-            background-color: var(--bg-card);
-            border-radius: 16px;
-            padding: 18px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            border: 1px solid var(--border-strong);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-        .premium-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
-            border-color: #3b82f6;
-        }
-        .premium-icon-box {
-            background-color: rgba(37, 99, 235, 0.08);
-            padding: 10px;
-            border-radius: 12px;
-            color: #2563eb;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .card-header-user {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            border-bottom: 1px solid var(--border-strong);
-            padding-bottom: 14px;
-        }
-        .user-name {
-            font-size: 18px;
-            font-weight: 600;
-            color: var(--text-main);
-            margin: 0;
-            line-height: 1.2;
-            letter-spacing: -0.3px;
-        }
-        .metrics-container {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        .metric-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .metric-label {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 12px;
-            color: var(--text-muted);
-            font-weight: 500;
-        }
-        .metric-val-secondary {
-            font-size: 16px;
-            font-weight: 500;
-            color: var(--text-main);
-        }
-        .metric-val-secondary.highlight {
-            color: #2563eb;
-            font-weight: 600;
-        }
-        .metric-val-primary {
-            font-size: 22px;
-            font-weight: 700;
-            color: var(--text-main);
-            line-height: 1;
-        }
+        .premium-card-removed { display: none; }
       `}} />
 
       <PageHeader 
@@ -210,47 +141,85 @@ export default function VentasTiendasPage() {
         }
       />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px', marginTop: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '24px', marginTop: '24px' }}>
         {displayedComerciales.map((c, idx) => (
           <div 
             key={idx} 
-            className="premium-card" 
+            style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '24px',
+                padding: '28px',
+                cursor: 'pointer',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                border: '1px solid #e2e8f0',
+                borderLeft: '8px solid #3b82f6',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.03)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '28px',
+                position: 'relative',
+                overflow: 'hidden'
+            }}
+            onMouseEnter={e => {
+                e.currentTarget.style.transform = 'translateY(-6px)';
+                e.currentTarget.style.boxShadow = '0 20px 25px -5px rgba(0, 120, 212, 0.1), 0 8px 10px -6px rgba(0, 120, 212, 0.1)';
+                e.currentTarget.style.borderColor = '#93c5fd';
+            }}
+            onMouseLeave={e => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.03)';
+                e.currentTarget.style.borderColor = '#e2e8f0';
+            }}
             onClick={() => router.push(`/operaciones?vendedor=${encodeURIComponent(c.name)}`)}
           >
-            <div className="card-header-user">
-              <div className="premium-icon-box">
-                <User size={20} strokeWidth={2.5} />
+            {/* Top Header: Avatar + Name */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{
+                  width: 52, height: 52, borderRadius: '16px',
+                  background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#0078D4', fontSize: 22, fontWeight: 800,
+                  boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.8), 0 2px 4px rgba(0,0,0,0.05)'
+              }}>
+                {c.name.charAt(0).toUpperCase()}
               </div>
-              <h2 className="user-name">{c.name}</h2>
+              <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em' }}>
+                  {c.name}
+              </h2>
             </div>
             
-            <div className="metrics-container">
-              <div className="metric-row">
-                <div className="metric-label">
-                  <Briefcase size={14} color="#6b7280" /> Hoy
+            {/* Main Metric (Finalizadas) */}
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12 }}>
+                <div style={{ fontSize: 56, fontWeight: 900, color: '#0078D4', lineHeight: 0.85, letterSpacing: '-0.04em' }}>
+                    {c.mes}
                 </div>
-                <div className={`metric-val-secondary ${c.hoy > 0 ? 'highlight' : ''}`}>
-                  {c.hoy}
+                <div style={{ paddingBottom: 6, fontSize: 13, color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Finalizadas
                 </div>
-              </div>
-              
-              <div className="metric-row" style={{ marginTop: '2px' }}>
-                <div className="metric-label">
-                  <Calendar size={14} color="#6b7280" /> Finalizadas
-                </div>
-                <div className="metric-val-primary">
-                  {c.mes}
-                </div>
-              </div>
+            </div>
 
-              <div className="metric-row" style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px dashed var(--border-color)' }}>
-                <div className="metric-label">
-                  <Clock size={14} color="#f59e0b" /> Pendientes
+            {/* Secondary Metrics (Hoy / Pendientes) */}
+            <div style={{ display: 'flex', gap: 12, marginTop: 'auto' }}>
+                <div style={{ 
+                    flex: 1, backgroundColor: c.hoy > 0 ? '#f0fdf4' : '#f8fafc', border: c.hoy > 0 ? '1px solid #bbf7d0' : '1px solid #f1f5f9',
+                    borderRadius: '16px', padding: '14px', display: 'flex', flexDirection: 'column', gap: 6,
+                    transition: 'all 0.2s'
+                }}>
+                    <span style={{ fontSize: 11, color: c.hoy > 0 ? '#166534' : '#64748b', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Briefcase size={12} strokeWidth={3} /> Hoy
+                    </span>
+                    <span style={{ fontSize: 24, fontWeight: 900, color: c.hoy > 0 ? '#15803d' : '#94a3b8', lineHeight: 1 }}>{c.hoy}</span>
                 </div>
-                <div className="metric-val-primary" style={{ color: '#f59e0b', fontSize: '18px' }}>
-                  {c.pendientes}
+                <div style={{ 
+                    flex: 1, backgroundColor: c.pendientes > 0 ? '#fffbeb' : '#f8fafc', border: c.pendientes > 0 ? '1px solid #fde68a' : '1px solid #f1f5f9',
+                    borderRadius: '16px', padding: '14px', display: 'flex', flexDirection: 'column', gap: 6,
+                    transition: 'all 0.2s'
+                }}>
+                    <span style={{ fontSize: 11, color: c.pendientes > 0 ? '#92400e' : '#64748b', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Clock size={12} strokeWidth={3} /> Ptes
+                    </span>
+                    <span style={{ fontSize: 24, fontWeight: 900, color: c.pendientes > 0 ? '#d97706' : '#94a3b8', lineHeight: 1 }}>{c.pendientes}</span>
                 </div>
-              </div>
             </div>
           </div>
         ))}

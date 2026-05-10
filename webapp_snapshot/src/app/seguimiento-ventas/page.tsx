@@ -53,6 +53,14 @@ export default function SeguimientoVentasPage() {
       textColor: 'rgb(255, 149, 0)'
     },
     {
+      title: 'Comisiones de todo el equipo',
+      description: 'Vista unificada de alto impacto con el ranking de ventas y comisiones totales de todos los comerciales.',
+      icon: Target,
+      action: () => router.push('/seguimiento-ventas/comisiones-equipo'),
+      color: 'rgba(168, 85, 247, 0.1)',
+      textColor: '#a855f7'
+    },
+    {
       title: 'Condiciones, Comisiones Extras del mes y Penalizaciones',
       description: 'Consulta de condiciones, bonificaciones especiales y notas asignadas a este periodo.',
       icon: Target,

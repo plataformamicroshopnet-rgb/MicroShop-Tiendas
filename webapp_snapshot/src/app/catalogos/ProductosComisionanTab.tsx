@@ -1,8 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+
 import { Save, Plus, Trash2, FileText, AlertCircle } from 'lucide-react'
 import { usePeriod } from '@/components/PeriodProvider'
+import RuleConditionBuilder from '@/components/RuleConditionBuilder'
+import ProductTreeSelector from '@/components/ProductTreeSelector'
 
 export default function ProductosComisionanTab() {
   const { activePeriodKey, availablePeriods, isLoadingPeriods } = usePeriod()
@@ -149,21 +152,22 @@ export default function ProductosComisionanTab() {
                     <td style={{ padding: '8px' }}>
                       {(() => {
                         const predefined = ["Alta BAF Total", "Alta BAF Convergente", "Dispositivos + Seguro", "MPA", "FTTR", "Señalización Solar 360", "ARPU", "Repo Fútbol"];
-                        const isPredefined = predefined.includes(rule.productosCuentan);
-                        const selectValue = isPredefined ? rule.productosCuentan : (rule.productosCuentan ? 'FORMULA_LIBRE' : '');
+                        const isFormulaLibre = rule.productosCuentan?.includes('FORMULA_LIBRE');
                         return (
                           <>
-                            <select disabled={isHistoric} value={selectValue} onChange={e => {
-                                const val = e.target.value;
-                                updateRule(idx, 'productosCuentan', val === 'FORMULA_LIBRE' ? '' : val);
-                            }} style={{ width: 180, padding: 6, backgroundColor: isHistoric ? 'transparent' : 'var(--app-bg)', color: 'var(--light-text)', border: isHistoric ? 'none' : '1px solid var(--border-color)', borderRadius: 4 }}>
-                              <option value="">Seleccionar...</option>
-                              {predefined.map(p => <option key={p} value={p}>{p}</option>)}
-                              <option disabled>──────────</option>
-                              <option value="FORMULA_LIBRE">Fórmula Libre (Antiguo)</option>
-                            </select>
-                            {selectValue === 'FORMULA_LIBRE' && (
-                              <textarea disabled={isHistoric} value={rule.productosCuentan || ''} onChange={e => updateRule(idx, 'productosCuentan', e.target.value)} style={{ marginTop: 8, width: 180, padding: 6, backgroundColor: isHistoric ? 'transparent' : 'var(--app-bg)', color: 'var(--light-text)', border: isHistoric ? 'none' : '1px solid var(--border-color)', borderRadius: 4, resize: 'vertical', minHeight: 32 }} placeholder="Fórmula..." />
+                            <ProductTreeSelector 
+                              value={rule.productosCuentan || ''}
+                              onChange={val => updateRule(idx, 'productosCuentan', val)}
+                              disabled={isHistoric}
+                            />
+                            {isFormulaLibre && (
+                              <textarea 
+                                disabled={isHistoric} 
+                                value={rule.productosCuentan || ''} 
+                                onChange={e => updateRule(idx, 'productosCuentan', e.target.value)} 
+                                style={{ marginTop: 8, width: 180, padding: 6, backgroundColor: isHistoric ? 'transparent' : 'var(--app-bg)', color: 'var(--light-text)', border: isHistoric ? 'none' : '1px solid var(--border-color)', borderRadius: 4, resize: 'vertical', minHeight: 32 }} 
+                                placeholder="Fórmula (ej: MPA + FTTR)..." 
+                              />
                             )}
                           </>
                         );
@@ -182,7 +186,12 @@ export default function ProductosComisionanTab() {
                       <input type="text" disabled={isHistoric} value={rule.importeSegundoTramo || ''} onChange={e => updateRule(idx, 'importeSegundoTramo', e.target.value)} style={{ width: 80, padding: 6, backgroundColor: isHistoric ? 'transparent' : 'var(--app-bg)', color: 'var(--light-text)', border: isHistoric ? 'none' : '1px solid var(--border-color)', borderRadius: 4 }} placeholder="€ o %" />
                     </td>
                     <td style={{ padding: '8px' }}>
-                      <textarea disabled={isHistoric} value={rule.condicionantes || ''} onChange={e => updateRule(idx, 'condicionantes', e.target.value)} style={{ width: 220, padding: 6, backgroundColor: isHistoric ? 'transparent' : 'var(--app-bg)', color: 'var(--light-text)', border: isHistoric ? 'none' : '1px solid var(--border-color)', borderRadius: 4, resize: 'vertical', minHeight: 32 }} placeholder="Reglas..." />
+                      <RuleConditionBuilder 
+                        disabled={isHistoric} 
+                        value={rule.condicionantes || ''} 
+                        onChange={val => updateRule(idx, 'condicionantes', val)} 
+                        availableGroups={rules.map(r => r.nombre).filter(Boolean)}
+                      />
                     </td>
                     <td style={{ padding: '8px' }}>
                       <input type="number" step="0.5" disabled={isHistoric} value={rule.totalHoras ?? ''} onChange={e => updateRule(idx, 'totalHoras', e.target.value)} style={{ width: 80, padding: 6, backgroundColor: isHistoric ? 'transparent' : 'var(--app-bg)', color: 'var(--light-text)', border: isHistoric ? 'none' : '1px solid var(--border-color)', borderRadius: 4 }} placeholder="Ej: 262" />

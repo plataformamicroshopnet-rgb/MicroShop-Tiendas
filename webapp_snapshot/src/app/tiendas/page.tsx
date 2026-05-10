@@ -45,33 +45,6 @@ export default function TiendasHubPage() {
       isMain: false
     },
     {
-      title: 'Ofertas Ti',
-      description: 'Repositorio de promociones y ofertas especiales del portafolio TI.',
-      icon: Smartphone,
-      action: () => router.push('/tiendas/ofertas-ti'),
-      bgIcon: 'linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(5,150,105,0.2) 100%)',
-      colorIcon: '#10b981',
-      isMain: false
-    },
-    {
-      title: 'Ofertas TMA',
-      description: 'Promociones, subsidios y campañas exclusivas del entorno TMA.',
-      icon: ShieldCheck,
-      action: () => router.push('/tiendas/ofertas-tma'),
-      bgIcon: 'linear-gradient(135deg, rgba(168,85,247,0.15) 0%, rgba(147,51,234,0.2) 100%)',
-      colorIcon: '#a855f7',
-      isMain: false
-    },
-    {
-      title: 'Ofertas Micro',
-      description: 'Iniciativas y terminales subvencionados para la división Micro.',
-      icon: Tag,
-      action: () => router.push('/tiendas/ofertas-micro'),
-      bgIcon: 'linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(220,38,38,0.2) 100%)',
-      colorIcon: '#ef4444',
-      isMain: false
-    },
-    {
       title: 'Condiciones, Comisiones Extras del mes y Penalizaciones',
       description: 'Consulta de condiciones, bonificaciones especiales y notas asignadas a este periodo.',
       icon: Target,
@@ -158,7 +131,7 @@ export default function TiendasHubPage() {
                 .ds-body { font-size: 14px; }
             }
             @media (min-width: 1024px) {
-                .hub-grid { grid-template-columns: repeat(3, 1fr); }
+                .hub-grid { grid-template-columns: repeat(2, 1fr); }
             }
             
             /* -- COMPONENTS -- */
@@ -182,12 +155,10 @@ export default function TiendasHubPage() {
             }
 
             .hub-card-main {
-                grid-column: 1 / -1;
                 flex-direction: row;
                 align-items: center;
                 gap: 24px;
                 background: linear-gradient(to right, var(--bg-card), var(--active-bg));
-                border-left: 6px solid #3b82f6;
             }
             @media (max-width: 768px) {
                 .hub-card-main {
@@ -259,36 +230,33 @@ export default function TiendasHubPage() {
                 </div>
               )}
               
-              <div className={`hub-card ${isMain ? 'hub-card-main' : ''} ${isEditMode ? 'wiggle-mode' : ''}`} onClick={isEditMode ? undefined : c.action} style={{ cursor: isEditMode ? 'default' : 'pointer' }}>
-                <div className={isMain ? "" : "ds-icon-box"} style={{ 
+              <div className={`hub-card hub-card-main ${isEditMode ? 'wiggle-mode' : ''}`} onClick={isEditMode ? undefined : c.action} style={{ cursor: isEditMode ? 'default' : 'pointer', borderLeft: `6px solid ${c.colorIcon}` }}>
+                <div style={{ 
                 background: c.bgIcon, 
                 color: c.colorIcon, 
-                width: isMain ? 64 : 44, 
-                height: isMain ? 64 : 44, 
+                width: 64, 
+                height: 64, 
                 flexShrink: 0,
-                borderRadius: isMain ? 18 : 12, 
+                borderRadius: 18, 
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center',
-                marginBottom: isMain ? 0 : 16,
                 boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.5)'
               }}>
-                <Icon size={isMain ? 28 : 22} strokeWidth={2.5} />
+                <Icon size={28} strokeWidth={2.5} />
               </div>
               <div style={{ flex: 1 }}>
-                <h3 className={isMain ? "ds-card-main" : "ds-card-stand"} style={{ margin: '0 0 6px 0', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.3px' }}>
+                <h3 className="ds-card-main" style={{ margin: '0 0 6px 0', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.3px', fontSize: 20 }}>
                   {c.title}
                 </h3>
                 <p className="ds-body" style={{ margin: 0, color: 'var(--text-muted)', fontWeight: 500 }}>
                   {c.description}
                 </p>
-                  {isMain && (
-                      <div style={{ marginTop: 16 }}>
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#3b82f6', color: 'var(--bg-card)', padding: '8px 16px', borderRadius: 8, fontWeight: 700, fontSize: 13 }}>
-                              Ir a Operaciones &rarr;
-                          </span>
-                      </div>
-                  )}
+                  <div style={{ marginTop: 16 }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: c.colorIcon, color: '#ffffff', padding: '8px 16px', borderRadius: 8, fontWeight: 700, fontSize: 13, boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                          Acceder &rarr;
+                      </span>
+                  </div>
                 </div>
               </div>
             </div>
