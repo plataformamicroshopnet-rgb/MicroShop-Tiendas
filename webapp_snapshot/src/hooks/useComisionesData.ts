@@ -2,6 +2,91 @@ import { useState, useEffect } from 'react';
 import { getProfile, getGroupVisual, mapObjectiveGroup, ALL_GROUPS, FIXED_SELLERS } from '@/lib/comisiones';
 import { usePeriod } from '@/components/PeriodProvider';
 
+// Parseador de Fórmulas de Productos (Soporta exclusiones con " -")
+export const matchProductFormula = (productName: string, formula: string) => {
+    if (!formula || !productName) return false;
+    const p = String(productName).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+    
+    const orBlocks = formula.split('+').map((b: string) => b.trim());
+    for (const block of orBlocks) {
+        if (!block) continue;
+        const parts = block.split(' -').map(part => part.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim());
+        const mustInclude = parts[0];
+        const mustNotIncludes = parts.slice(1);
+        
+        if (mustInclude && p.includes(mustInclude)) {
+            let isExcluded = false;
+            for (const excl of mustNotIncludes) {
+                if (excl && p.includes(excl)) {
+                    isExcluded = true;
+                    break;
+                }
+            }
+            if (!isExcluded) return true;
+        }
+    }
+    return false;
+};
+
+export const matchTipoVenta = (sale: any, tipoVentaRaw: string) => {
+    if (!tipoVentaRaw) return false;
+    
+    // El MultiSelectDropdown separa los valores con comas
+    const tipos = tipoVentaRaw.split(',').map(s => s.trim()).filter(Boolean);
+    
+    const cat = sale.categoria || sale.detalle || sale.sheet || '';
+    const prod = sale.producto || '';
+
+    for (const tipoVenta of tipos) {
+        if (tipoVenta === 'FORMULA_LIBRE') continue;
+        
+        let matched = false;
+        switch(tipoVenta) {
+            case 'Alta BAF Total':
+                matched = cat === 'miMovistar' || cat === 'Resto BAF';
+                break;
+            case 'Alta BAF Convergente':
+                matched = cat === 'miMovistar';
+                break;
+            case 'Dispositivos + Seguro':
+                matched = cat === 'RENT' || cat === 'Seguro';
+                break;
+            case 'Dispositivos':
+                matched = cat === 'RENT';
+                break;
+            case 'Seguro':
+                matched = cat === 'Seguro';
+                break;
+            case 'MPA':
+                matched = prod.includes('Movistar Prosegur Alarmas');
+                break;
+            case 'FTTR':
+                matched = prod.includes('Solución FTTR') || prod.includes('FTTR');
+                break;
+            case 'Señalización Solar 360':
+                matched = prod.includes('Solar360');
+                break;
+            case 'ARPU':
+                matched = cat === 'Repos' && !prod.includes('Fútbol');
+                break;
+            case 'Repo Fútbol':
+                matched = prod.includes('Fútbol') && cat === 'Repos';
+                break;
+            default:
+                if (tipoVenta.toLowerCase().trim() === cat.toLowerCase().trim()) {
+                    matched = true;
+                } else {
+                    const searchString = `${prod} ${sale.detalle || ''} ${sale.grupo || ''}`;
+                    matched = matchProductFormula(searchString, tipoVenta);
+                }
+                break;
+        }
+        if (matched) return true;
+    }
+    return false;
+};
+
+
 export function useComisionesData() {
     const { activePeriodKey } = usePeriod();
     const [loading, setLoading] = useState(true);
@@ -51,90 +136,6 @@ export function useComisionesData() {
     }, [activePeriodKey]);
 
     const monthSales = allSales;
-
-    // Parseador de Fórmulas de Productos (Soporta exclusiones con " -")
-    const matchProductFormula = (productName: string, formula: string) => {
-        if (!formula || !productName) return false;
-        const p = String(productName).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-        
-        const orBlocks = formula.split('+').map((b: string) => b.trim());
-        for (const block of orBlocks) {
-            if (!block) continue;
-            const parts = block.split(' -').map(part => part.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim());
-            const mustInclude = parts[0];
-            const mustNotIncludes = parts.slice(1);
-            
-            if (mustInclude && p.includes(mustInclude)) {
-                let isExcluded = false;
-                for (const excl of mustNotIncludes) {
-                    if (excl && p.includes(excl)) {
-                        isExcluded = true;
-                        break;
-                    }
-                }
-                if (!isExcluded) return true;
-            }
-        }
-        return false;
-    };
-    
-    const matchTipoVenta = (sale: any, tipoVentaRaw: string) => {
-        if (!tipoVentaRaw) return false;
-        
-        // El MultiSelectDropdown separa los valores con comas
-        const tipos = tipoVentaRaw.split(',').map(s => s.trim()).filter(Boolean);
-        
-        const cat = sale.categoria || sale.detalle || sale.sheet || '';
-        const prod = sale.producto || '';
-
-        for (const tipoVenta of tipos) {
-            if (tipoVenta === 'FORMULA_LIBRE') continue;
-            
-            let matched = false;
-            switch(tipoVenta) {
-                case 'Alta BAF Total':
-                    matched = cat === 'miMovistar' || cat === 'Resto BAF';
-                    break;
-                case 'Alta BAF Convergente':
-                    matched = cat === 'miMovistar';
-                    break;
-                case 'Dispositivos + Seguro':
-                    matched = cat === 'RENT' || cat === 'Seguro';
-                    break;
-                case 'Dispositivos':
-                    matched = cat === 'RENT';
-                    break;
-                case 'Seguro':
-                    matched = cat === 'Seguro';
-                    break;
-                case 'MPA':
-                    matched = prod.includes('Movistar Prosegur Alarmas');
-                    break;
-                case 'FTTR':
-                    matched = prod.includes('Solución FTTR') || prod.includes('FTTR');
-                    break;
-                case 'Señalización Solar 360':
-                    matched = prod.includes('Solar360');
-                    break;
-                case 'ARPU':
-                    matched = cat === 'Repos' && !prod.includes('Fútbol');
-                    break;
-                case 'Repo Fútbol':
-                    matched = prod.includes('Fútbol') && cat === 'Repos';
-                    break;
-                default:
-                    if (tipoVenta.toLowerCase().trim() === cat.toLowerCase().trim()) {
-                        matched = true;
-                    } else {
-                        const searchString = `${prod} ${sale.detalle || ''} ${sale.grupo || ''}`;
-                        matched = matchProductFormula(searchString, tipoVenta);
-                    }
-                    break;
-            }
-            if (matched) return true;
-        }
-        return false;
-    };
 
     // Precalcular totales del equipo
     const teamGroupCounts: Record<string, number> = {};

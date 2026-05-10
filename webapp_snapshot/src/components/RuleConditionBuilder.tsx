@@ -20,7 +20,7 @@ interface Props {
 
 export default function RuleConditionBuilder({ value, onChange, disabled, availableGroups }: Props) {
   const [isOpen, setIsOpen] = useState(false)
-  
+
   let conditions: RuleCondition[] = []
   try {
     if (value && value.startsWith('[')) {
@@ -52,7 +52,7 @@ export default function RuleConditionBuilder({ value, onChange, disabled, availa
 
   return (
     <div style={{ position: 'relative' }}>
-      <button 
+      <button
         type="button"
         disabled={disabled}
         onClick={() => setIsOpen(!isOpen)}
@@ -108,8 +108,8 @@ export default function RuleConditionBuilder({ value, onChange, disabled, availa
             {conditions.map((cond, idx) => (
               <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: 6, backgroundColor: '#0f172a', padding: 8, borderRadius: 6, border: '1px solid #1e293b' }}>
                 <div style={{ display: 'flex', gap: 6 }}>
-                  <select 
-                    value={cond.type} 
+                  <select
+                    value={cond.type}
                     onChange={e => handleUpdate(idx, 'type', e.target.value)}
                     style={{ flex: 1, padding: 4, fontSize: 11, backgroundColor: '#1e293b', color: '#f8fafc', border: '1px solid #334155', borderRadius: 4 }}
                   >
@@ -121,24 +121,24 @@ export default function RuleConditionBuilder({ value, onChange, disabled, availa
                     <Trash2 size={14} />
                   </button>
                 </div>
-                
-                
+
+
                 {cond.type !== 'REQUIRE_TEAM_OBJ2' && (
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                    <select 
-                      value={cond.targetGroup} 
+                    <select
+                      value={cond.targetGroup}
                       onChange={e => handleUpdate(idx, 'targetGroup', e.target.value)}
                       style={{ flex: 2, padding: 4, fontSize: 11, backgroundColor: '#1e293b', color: '#f8fafc', border: '1px solid #334155', borderRadius: 4 }}
                     >
                       <option value="">Selecciona grupo...</option>
                       {availableGroups.map(g => <option key={g} value={g}>{g}</option>)}
                     </select>
-                    
+
                     <span style={{ color: '#94a3b8', fontSize: 11 }}>{cond.type === 'REQUIRE_GROUP_PCT' ? '>=' : '>='}</span>
-                    
-                    <input 
-                      type="number" 
-                      value={cond.value} 
+
+                    <input
+                      type="number"
+                      value={cond.value}
                       onChange={e => handleUpdate(idx, 'value', Number(e.target.value))}
                       style={{ flex: 1, padding: 4, fontSize: 11, backgroundColor: '#1e293b', color: '#f8fafc', border: '1px solid #334155', borderRadius: 4 }}
                     />
@@ -150,11 +150,11 @@ export default function RuleConditionBuilder({ value, onChange, disabled, availa
 
             {conditions.length === 0 && !isLegacyText && (
               <div style={{ fontSize: 12, color: '#64748b', textAlign: 'center', padding: '10px 0' }}>
-                Sin condiciones adicionales.<br/>Se consolidará al llegar a su propio objetivo.
+                Sin condiciones adicionales.<br />Se consolidará al llegar a su propio objetivo.
               </div>
             )}
           </div>
-          
+
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
             <button type="button" onClick={() => setIsOpen(false)} style={{ background: '#3b82f6', color: 'white', border: 'none', padding: '4px 12px', borderRadius: 4, fontSize: 12, cursor: 'pointer' }}>
               Cerrar
