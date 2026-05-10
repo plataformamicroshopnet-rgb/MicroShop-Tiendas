@@ -31,13 +31,13 @@ const ChartBars = ({ data, maxValue, barColor }: { data: any[], maxValue: number
               {item.name}
             </div>
             <div style={{ flex: 1, position: 'relative', height: '22px' }}>
-              <div style={{ 
-                position: 'absolute', 
-                left: 0, 
-                top: 0, 
-                bottom: 0, 
-                width: `${percentage}%`, 
-                backgroundColor: barColor, 
+              <div style={{
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: `${percentage}%`,
+                backgroundColor: barColor,
                 borderRadius: '0 4px 4px 0',
                 boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
                 display: 'flex',
@@ -144,14 +144,15 @@ export default function TorneosVentasPage() {
 
   return (
     <div className="w-full" style={{ backgroundColor: '#f8fafc', minHeight: '100vh', padding: '24px 0 40px' }}>
-      <PageHeader 
+      <PageHeader
         title={<><Trophy color="#eab308" size={28} /> Torneos de Ventas</>}
         subtitle="Ranking en tiempo real, competición y medallas por objetivos."
         showBack={true}
       />
 
       <div style={{ padding: '24px 32px 0' }}>
-        <style dangerouslySetInnerHTML={{__html: `
+        <style dangerouslySetInnerHTML={{
+          __html: `
           .torneo-table {
             width: 100%;
             border-collapse: collapse;
@@ -225,8 +226,8 @@ export default function TorneosVentasPage() {
                     <tr key={row.name} style={getRowStyle(row.pos)}>
                       <td style={{ fontSize: row.pos <= 3 ? '20px' : '14px' }}>{getMedal(row.pos)}</td>
                       <td>
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           className="trofeo-input"
                           placeholder="-"
                           value={trofeos[`col1-${row.pos}`] || ''}
@@ -257,8 +258,8 @@ export default function TorneosVentasPage() {
                     <tr key={row.name} style={getRowStyle(row.pos)}>
                       <td style={{ fontSize: row.pos <= 3 ? '20px' : '14px' }}>{getMedal(row.pos)}</td>
                       <td>
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           className="trofeo-input"
                           placeholder="-"
                           value={trofeos[`col2-${row.pos}`] || ''}
@@ -289,8 +290,8 @@ export default function TorneosVentasPage() {
                     <tr key={row.name} style={getRowStyle(row.pos)}>
                       <td style={{ fontSize: row.pos <= 3 ? '20px' : '14px' }}>{getMedal(row.pos)}</td>
                       <td>
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           className="trofeo-input"
                           placeholder="-"
                           value={trofeos[`col3-${row.pos}`] || ''}

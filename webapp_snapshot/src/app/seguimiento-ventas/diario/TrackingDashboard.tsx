@@ -2,8 +2,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, Save, Plus, Trash2, TrendingUp, AlertCircle, Info, FileSpreadsheet, Calendar, Lock } from 'lucide-react'
-import { calculateRow, calculateGroup, getPeriodBusinessDays } from '@/lib/trackingCalculations'
+import { calculateRow, calculateGroup, getPeriodBusinessDays, getMonthBusinessDays } from '@/lib/trackingCalculations'
 import { usePeriod } from '@/components/PeriodProvider'
+import { useComisionesData, matchTipoVenta } from '@/hooks/useComisionesData'
 import { PeriodSelector } from '@/components/PeriodSelector'
 import { useGuard } from '@/hooks/useGuard'
 import { canEdit } from '@/lib/permissions'
@@ -12,6 +13,7 @@ export default function TrackingDashboard() {
   const router = useRouter()
   const { activePeriodKey, availablePeriods } = usePeriod()
   const activePeriodStatus = availablePeriods?.find(p => p.period_key === activePeriodKey)?.status || 'ACTIVE'
+  const { sellerStats, loading: comLoading } = useComisionesData()
   
   const periodYear = activePeriodKey ? Number(activePeriodKey.split('_')[0]) : new Date().getFullYear()
   const periodMonth = activePeriodKey ? Number(activePeriodKey.split('_')[1]) : new Date().getMonth() + 1
@@ -171,19 +173,91 @@ export default function TrackingDashboard() {
   }
 
   // Renderizadores UI Base
-  const renderCellInput = (gId: string, rId: string, field: string, val: number) => (
-    <input 
-      type="number" 
-      disabled={isReadOnly}
-      value={val === 0 ? '' : val} 
-      onChange={e => updateRow(gId, rId, field, e.target.value)}
-      className="ds-input"
-      style={{ width: 60, padding: '6px', textAlign: 'center', fontWeight: 600, border: '1px solid var(--border-light)', borderRadius: 4, background: isReadOnly ? 'var(--active-bg)' : 'var(--bg-card)', opacity: isReadOnly ? 0.6 : 1 }}
-    />
-  )
+  const renderCellInput = (gId: string, rId: string, field: string, val: number, autoDisabled: boolean = false, isCurrency: boolean = false, width: number = 60) => {
+    const disabled = isReadOnly || autoDisabled;
+    if (disabled) {
+        const valStr = val === 0 ? '-' : new Intl.NumberFormat('es-ES', { maximumFractionDigits: 1 }).format(val) + (isCurrency ? ' €' : '');
+        return (
+            <div style={{ width, padding: '6px', textAlign: 'center', fontWeight: 600, border: '1px solid var(--border-light)', borderRadius: 4, background: 'var(--active-bg)', opacity: 0.8, fontSize: 11, display: 'inline-block', boxSizing: 'border-box', color: 'var(--text-main)' }}>
+                {valStr}
+            </div>
+        )
+    }
+    return (
+      <div style={{ position: 'relative', width, display: 'inline-block' }}>
+        <input 
+          type="number" 
+          disabled={disabled}
+          value={val === 0 ? '' : val} 
+          onChange={e => updateRow(gId, rId, field, e.target.value)}
+          className="ds-input"
+          style={{ width: '100%', padding: '6px', paddingRight: (!disabled && isCurrency) ? '18px' : '6px', textAlign: 'center', fontWeight: 600, border: '1px solid var(--border-light)', borderRadius: 4, background: 'var(--bg-card)', opacity: 1, boxSizing: 'border-box', fontSize: 11 }}
+        />
+        {(!disabled && isCurrency) && (
+          <span style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--text-muted)', pointerEvents: 'none', fontWeight: 700 }}>
+            €
+          </span>
+        )}
+      </div>
+    )
+  }
 
-  const num = (n: number) => new Intl.NumberFormat('es-ES', { maximumFractionDigits: 1 }).format(n)
+  const num = (n: number, isCurrency: boolean = false) => {
+    const formatted = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 1 }).format(n);
+    return isCurrency ? formatted + ' €' : formatted;
+  }
   const pct = (n: number) => `${(n * 100).toFixed(1)}%`
+
+  const augmentedGroups = useMemo(() => {
+    if (!sellerStats || sellerStats.length === 0) return groups;
+    
+    const { totalBusinessDays } = getPeriodBusinessDays(periodYear, periodMonth);
+    const q1 = totalBusinessDays / 4;
+    const q2 = totalBusinessDays / 2;
+    const q3 = (totalBusinessDays * 3) / 4;
+
+    return groups.map((g: any) => {
+        const matchedRule = tiendaRules.find(rule => rule.nombre.toLowerCase() === g.name.toLowerCase());
+        if (!matchedRule) return g;
+        
+        const isPercentage = String(matchedRule.importePrimerTramo || '').includes('%');
+        
+        return {
+            ...g,
+            isAuto: true,
+            isCurrency: isPercentage,
+            rows: g.rows.map((r: any) => {
+                let w1 = 0, w2 = 0, w3 = 0, w4 = 0;
+                
+                const sStat = sellerStats.find(s => s.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === String(r.comercialName).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim());
+                
+                if (sStat && sStat.rawSales) {
+                    sStat.rawSales.forEach((sale: any) => {
+                        if (matchTipoVenta(sale, matchedRule.productosCuentan)) {
+                            let cuotaValue = isPercentage ? (Number(sale.cuota) || 0) : 1;
+                            const d = new Date(sale.timestamp);
+                            const day = d.getDate();
+                            const bDay = getMonthBusinessDays(periodYear, periodMonth, day);
+                            
+                            if (bDay <= q1) w1 += cuotaValue;
+                            else if (bDay <= q2) w2 += cuotaValue;
+                            else if (bDay <= q3) w3 += cuotaValue;
+                            else w4 += cuotaValue;
+                        }
+                    });
+                }
+                
+                return { 
+                    ...r, 
+                    week1: Math.round(w1 * 10) / 10, 
+                    week2: Math.round(w2 * 10) / 10, 
+                    week3: Math.round(w3 * 10) / 10, 
+                    week4: Math.round(w4 * 10) / 10 
+                };
+            })
+        }
+    });
+  }, [groups, sellerStats, tiendaRules]);
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-app)', padding: 20 }}>
@@ -221,9 +295,9 @@ export default function TrackingDashboard() {
         </div>
       </div>
 
-      {loading ? (
+      {(loading || comLoading) ? (
           <div style={{ padding: 60, textAlign: 'center', color: 'var(--text-muted)', fontWeight: 600 }}>Calculando arquitectura dimensional...</div>
-      ) : groups.length === 0 && activePeriodStatus === 'DRAFT' ? (
+      ) : augmentedGroups.length === 0 && activePeriodStatus === 'DRAFT' ? (
           <div style={{ padding: 80, textAlign: 'center', background: 'var(--bg-card)', borderRadius: 16, border: '1px dashed var(--border-strong)', maxWidth: 640, margin: '80px auto' }}>
             <div style={{ background: 'var(--mercedes-cyan)', width: 64, height: 64, borderRadius: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
               <TrendingUp size={32} color="var(--bg-card)" />
@@ -260,13 +334,13 @@ export default function TrackingDashboard() {
             </button>
             )}
           </div>
-      ) : groups.length === 0 && activePeriodStatus === 'ACTIVE' ? (
+      ) : augmentedGroups.length === 0 && activePeriodStatus === 'ACTIVE' ? (
           <div style={{ padding: 80, textAlign: 'center', color: 'var(--text-muted)', fontWeight: 600 }}>
              Este mes activo está vacío. Usa el botón [+ Palanca] del menú superior para añadir comerciales.
           </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-          {groups.map((g: any, i: number) => {
+          {augmentedGroups.map((g: any, i: number) => {
             const macro = calculateGroup(g, periodYear, periodMonth)
 
             return (
@@ -314,15 +388,15 @@ export default function TrackingDashboard() {
                     )}
                   </div>
                   
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
                     <thead>
                       <tr style={{ background: 'var(--header-bg)', color: 'var(--text-muted)', textAlign: 'center', fontWeight: 700 }}>
                         <td style={{ padding: '8px', textAlign: 'left' }}>COMERCIAL</td>
                         <td style={{ padding: '8px', borderRight: '2px solid #e2e8f0' }}>OBJ MES</td>
-                        <td style={{ padding: '8px', color: '#94a3b8' }}>S1</td>
-                        <td style={{ padding: '8px', color: '#94a3b8' }}>S2</td>
-                        <td style={{ padding: '8px', color: '#94a3b8' }}>S3</td>
-                        <td style={{ padding: '8px', borderRight: '2px solid #e2e8f0', color: '#94a3b8' }}>S4</td>
+                        <td style={{ padding: '8px', color: '#94a3b8' }}>Etapa 1</td>
+                        <td style={{ padding: '8px', color: '#94a3b8' }}>Etapa 2</td>
+                        <td style={{ padding: '8px', color: '#94a3b8' }}>Etapa 3</td>
+                        <td style={{ padding: '8px', borderRight: '2px solid #e2e8f0', color: '#94a3b8' }}>Etapa 4</td>
                         <td style={{ padding: '8px', color: 'var(--text-main)' }}>TOTAL</td>
                         <td style={{ padding: '8px', color: 'var(--text-main)' }}>QUEDAN</td>
                         <td style={{ padding: '8px', color: 'var(--text-main)' }}>AVANCE %</td>
@@ -345,15 +419,15 @@ export default function TrackingDashboard() {
                               />
                             </td>
                             <td style={{ padding: '8px', textAlign: 'center', borderRight: '2px solid #f1f5f9' }}>
-                              {renderCellInput(g._id, r._id, 'objectiveMonth', r.objectiveMonth)}
+                              {renderCellInput(g._id, r._id, 'objectiveMonth', r.objectiveMonth, false, g.isCurrency, 90)}
                             </td>
-                            <td style={{ padding: '8px', textAlign: 'center' }}>{renderCellInput(g._id, r._id, 'week1', r.week1)}</td>
-                            <td style={{ padding: '8px', textAlign: 'center' }}>{renderCellInput(g._id, r._id, 'week2', r.week2)}</td>
-                            <td style={{ padding: '8px', textAlign: 'center' }}>{renderCellInput(g._id, r._id, 'week3', r.week3)}</td>
-                            <td style={{ padding: '8px', textAlign: 'center', borderRight: '2px solid #f1f5f9' }}>{renderCellInput(g._id, r._id, 'week4', r.week4)}</td>
+                            <td style={{ padding: '8px', textAlign: 'center' }}>{renderCellInput(g._id, r._id, 'week1', r.week1, g.isAuto, false, 65)}</td>
+                            <td style={{ padding: '8px', textAlign: 'center' }}>{renderCellInput(g._id, r._id, 'week2', r.week2, g.isAuto, false, 65)}</td>
+                            <td style={{ padding: '8px', textAlign: 'center' }}>{renderCellInput(g._id, r._id, 'week3', r.week3, g.isAuto, false, 65)}</td>
+                            <td style={{ padding: '8px', textAlign: 'center', borderRight: '2px solid #f1f5f9' }}>{renderCellInput(g._id, r._id, 'week4', r.week4, g.isAuto, false, 65)}</td>
                             
-                            <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold' }}>{num(m.totalReal)}</td>
-                            <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', color: m.remaining > 0 ? '#ef4444' : '#22c55e' }}>{num(m.remaining)}</td>
+                            <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold' }}>{num(m.totalReal, g.isCurrency)}</td>
+                            <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', color: m.remaining > 0 ? '#ef4444' : '#22c55e' }}>{num(m.remaining, g.isCurrency)}</td>
                             <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold' }}>
                                <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 12, background: pColor + '20', color: pColor }}>{pct(m.progressPercent)}</span>
                             </td>
@@ -384,23 +458,23 @@ export default function TrackingDashboard() {
                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
                       <div style={{ background: 'var(--bg-card)', padding: 12, borderRadius: 8, border: '1px solid var(--border-light)' }}>
                          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>TOTAL VENTAS</div>
-                         <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-main)' }}>{num(macro.groupTotalReal)}</div>
+                         <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-main)' }}>{num(macro.groupTotalReal, g.isCurrency)}</div>
                       </div>
                       <div style={{ background: 'var(--bg-card)', padding: 12, borderRadius: 8, border: '1px solid var(--border-light)' }}>
                          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>OBJETIVO M.</div>
-                         <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-main)' }}>{num(macro.groupTotalObjective)}</div>
+                         <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-main)' }}>{num(macro.groupTotalObjective, g.isCurrency)}</div>
                       </div>
                    </div>
 
                    <div style={{ background: macro.groupRemaining <= 0 ? '#dcfce7' : '#fee2e2', padding: 12, borderRadius: 8, marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontSize: 13, fontWeight: 700, color: macro.groupRemaining <= 0 ? '#166534' : '#991b1b' }}>Faltan del Total</span>
-                      <span style={{ fontSize: 18, fontWeight: 800, color: macro.groupRemaining <= 0 ? '#166534' : '#991b1b' }}>{num(macro.groupRemaining)}</span>
+                      <span style={{ fontSize: 16, fontWeight: 800, color: macro.groupRemaining <= 0 ? '#166534' : '#991b1b' }}>{num(macro.groupRemaining, g.isCurrency)}</span>
                    </div>
 
                    <div style={{ background: 'var(--bg-card)', padding: 12, borderRadius: 8, border: '1px solid var(--border-light)', marginBottom: 24 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>Avance Grupo Todos</span>
-                         <span style={{ fontSize: 14, fontWeight: 800, color: '#3b82f6' }}>{pct(macro.groupProgressPercent)}</span>
+                         <span style={{ fontSize: 12, fontWeight: 800, color: '#3b82f6' }}>{pct(macro.groupProgressPercent)}</span>
                       </div>
                       <div style={{ width: '100%', height: 6, background: 'var(--border-light)', borderRadius: 3, overflow: 'hidden' }}>
                          <div style={{ width: Math.min(macro.groupProgressPercent * 100, 100) + '%', height: '100%', background: '#3b82f6' }} />
@@ -412,15 +486,15 @@ export default function TrackingDashboard() {
                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px dashed #cbd5e1' }}>
                          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Déficit a día {macro.passedBusinessDays} (s/ {macro.totalBusinessDays})</span>
-                         <span style={{ fontSize: 14, fontWeight: 700, color: macro.currentDeficit > 0 ? '#ef4444' : '#10b981' }}>{num(Math.abs(macro.currentDeficit))} {macro.currentDeficit > 0 ? '⬇' : '⬆'}</span>
+                         <span style={{ fontSize: 12, fontWeight: 700, color: macro.currentDeficit > 0 ? '#ef4444' : '#10b981' }}>{num(Math.abs(macro.currentDeficit), g.isCurrency)} {macro.currentDeficit > 0 ? '⬇' : '⬆'}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px dashed var(--border-strong)' }}>
                          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Proyectamos (Volumen)</span>
-                         <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-main)' }}>{num(macro.projectedEOM)}</span>
+                         <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-main)' }}>{num(macro.projectedEOM, g.isCurrency)}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px dashed var(--border-strong)' }}>
                          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Proyectamos (% Éxito)</span>
-                         <span style={{ fontSize: 14, fontWeight: 800, color: macro.projectedPercent >= 1 ? '#10b981' : '#f59e0b' }}>{pct(macro.projectedPercent)}</span>
+                         <span style={{ fontSize: 12, fontWeight: 800, color: macro.projectedPercent >= 1 ? '#10b981' : '#f59e0b' }}>{pct(macro.projectedPercent)}</span>
                       </div>
                    </div>
 
