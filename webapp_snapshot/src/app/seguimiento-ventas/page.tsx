@@ -45,14 +45,6 @@ export default function SeguimientoVentasPage() {
       textColor: '#10b981'
     },
     {
-      title: 'Agenda de Llamadas Cristina',
-      description: 'Tracking diario visual de llamadas y métricas independientes.',
-      icon: Calendar,
-      action: () => router.push('/seguimiento-ventas/agenda-cristina'),
-      color: 'rgba(236,72,153,0.1)',
-      textColor: '#ec4899'
-    },
-    {
       title: 'Comisiones Tiendas Completas',
       description: 'Liquidación grupal y métricas completas de todas las comisiones.',
       icon: Calculator,
@@ -96,8 +88,8 @@ export default function SeguimientoVentasPage() {
       description: 'Ranking en tiempo real, competición y medallas por objetivos.',
       icon: Trophy,
       action: () => router.push('/torneos-ventas'),
-      color: 'rgba(234, 179, 8, 0.1)',
-      textColor: '#eab308'
+      color: 'rgba(16, 185, 129, 0.1)',
+      textColor: '#10b981'
     }
   ]
 

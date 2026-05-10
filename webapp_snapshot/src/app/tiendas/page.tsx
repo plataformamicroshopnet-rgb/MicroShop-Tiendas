@@ -67,8 +67,8 @@ export default function TiendasHubPage() {
       description: 'Ranking en tiempo real, competición y medallas por objetivos.',
       icon: Trophy,
       action: () => router.push('/torneos-ventas'),
-      bgIcon: 'linear-gradient(135deg, rgba(234, 179, 8, 0.15) 0%, rgba(202, 138, 4, 0.2) 100%)',
-      colorIcon: '#eab308',
+      bgIcon: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.2) 100%)',
+      colorIcon: '#10b981',
       isMain: false
     }
   ]

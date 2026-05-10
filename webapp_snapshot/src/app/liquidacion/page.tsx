@@ -1212,6 +1212,12 @@ export default function LiquidacionesPage() {
                 description: 'Cuadre automático entre fórmula PLUS + BÁSICO, Operaciones Telefónica y desglose por grupo. Detecta incoherencias económicas.',
                 icon: Zap,
                 view: 'auditoria' as ViewType
+            },
+            {
+                title: 'Agenda de Llamadas Cristina',
+                description: 'Tracking diario visual de llamadas y métricas independientes.',
+                icon: Calendar,
+                href: '/seguimiento-ventas/agenda-cristina'
             }
         ];
 
