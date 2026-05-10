@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
-import { Briefcase, CreditCard, Smartphone, ShieldCheck, Tag, Target, Globe, Settings2, ArrowUp, ArrowDown, Save, X } from 'lucide-react'
+import { Briefcase, CreditCard, Smartphone, ShieldCheck, Tag, Target, Globe, Settings2, ArrowUp, ArrowDown, Save, X, Trophy } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useGuard } from '@/hooks/useGuard'
 import { PeriodSelector } from '@/components/PeriodSelector'
@@ -60,6 +60,15 @@ export default function TiendasHubPage() {
       action: () => router.push('/tiendas/condiciones-plus'),
       bgIcon: 'linear-gradient(135deg, rgba(0, 173, 239, 0.15) 0%, rgba(0, 150, 200, 0.2) 100%)',
       colorIcon: 'var(--mercedes-cyan)',
+      isMain: false
+    },
+    {
+      title: 'Torneos de Ventas',
+      description: 'Ranking en tiempo real, competición y medallas por objetivos.',
+      icon: Trophy,
+      action: () => router.push('/torneos-ventas'),
+      bgIcon: 'linear-gradient(135deg, rgba(234, 179, 8, 0.15) 0%, rgba(202, 138, 4, 0.2) 100%)',
+      colorIcon: '#eab308',
       isMain: false
     }
   ]

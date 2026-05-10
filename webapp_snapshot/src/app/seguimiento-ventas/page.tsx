@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
-import { Package, LineChart, ChevronLeft, Calendar, Globe, Calculator, Building2, Target, Briefcase, Settings2, ArrowUp, ArrowDown, Save, X } from 'lucide-react'
+import { Package, LineChart, ChevronLeft, Calendar, Globe, Calculator, Building2, Target, Briefcase, Settings2, ArrowUp, ArrowDown, Save, X, Trophy } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useGuard } from '@/hooks/useGuard'
 import { PageHeader } from '@/components/PageHeader'
@@ -90,6 +90,14 @@ export default function SeguimientoVentasPage() {
       action: () => router.push('/seguimiento-ventas/combos'),
       color: 'rgba(30,58,95,0.08)',
       textColor: '#1e3a5f'
+    },
+    {
+      title: 'Torneos de Ventas',
+      description: 'Ranking en tiempo real, competición y medallas por objetivos.',
+      icon: Trophy,
+      action: () => router.push('/torneos-ventas'),
+      color: 'rgba(234, 179, 8, 0.1)',
+      textColor: '#eab308'
     }
   ]
 
