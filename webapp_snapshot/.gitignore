@@ -43,3 +43,5 @@ next-env.d.ts
 prisma/database.sqlite
 prisma/temp_restore*
 scripts/*
+!scripts/start-prod.js
+!scripts/close_tracking.ts
