@@ -646,7 +646,7 @@ export default function CatalogosPage() {
         const rowDesde = (row.desde || '').trim()
         
         // BULLETPROOF MATCHING: Elimina todos los espacios para evitar fallos por saltos de línea, dobles espacios o caracteres invisibles.
-        const normalize = (s: string) => (s || '').replace(/\s+/g, '').toLowerCase()
+        const normalize = (s: string | undefined | null) => (s || '').replace(/\s+/g, '').toLowerCase()
         const pNameNorm = normalize(row.producto)
         
         const isCompositeMatch = (it: ProductItem) => {
