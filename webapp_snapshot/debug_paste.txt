@@ -1,7 +1,41 @@
-BAF no miMovistar/BAF no Fusión	Fibra 300 Mb	Fibra 300 Mb	19,90 €	1,50	29,85 €	01/05/2026	31/05/2026
-BAF no miMovistar/BAF no Fusión	Fibra 600 Mb	Fibra 600 Mb	24,90 €	1,50	37,35 €	01/05/2026	31/05/2026
-BAF no miMovistar/BAF no Fusión	Fibra 1Gb	Fibra 1Gb	29,90 €	1,50	44,85 €	01/05/2026	31/05/2026
-BAF no miMovistar/BAF no Fusión	Fibra Adicional 300 Mb	Fibra Adicional 300 Mb	15,00 €	1,50	22,50 €	01/05/2026	31/05/2026
-BAF no miMovistar/BAF no Fusión	Fibra Adicional 600 Mb	Fibra Adicional 600 Mb	20,00 €	1,50	30,00 €	01/05/2026	31/05/2026
-BAF no miMovistar/BAF no Fusión	Fibra Adicional 1Gb	Fibra Adicional 1Gb	25,00 €	1,50	37,50 €	01/05/2026	31/05/2026
-O2	Fibra + Móvil	Fibra + Móvil	35,00 €	0,00	35,00 €	01/05/2026	31/05/2026
+Fibra y movil	Fibra 600 Mb linea movil 60 Gb	 80,00 € 	01/05/2026
+Fibra y movil	Fibra 600 Mb 2 lineas moviles (10 Gb+ 40 Gb)	 83,00 € 	01/05/2026
+Fibra y movil	Fibra 1 Gb Linea movil 120 Gb	 92,00 € 	01/05/2026
+Fibra y movil Interna	Fibra 600 Mb linea movil 60 Gb	 80,00 € 	01/05/2026
+Fibra y movil Interna	Fibra 600 Mb 2 lineas moviles (10 Gb+ 40 Gb)	 83,00 € 	01/05/2026
+Fibra y movil Interna	Fibra 1 Gb Linea movil 120 Gb	 92,00 € 	01/05/2026
+Fibra, movil y TV	Fibra 600 Mb linea movil 35 Gb Movistar +	 92,00 € 	01/05/2026
+Fibra, movil y TV	Fibra 600 Mb linea movil 60 Gb Movistar + y Neflix	 105,00 € 	01/05/2026
+Fibra, movil y TV	Fibra 1 Gb Linea movil 350 Gb Movistar +	 115,00 € 	01/05/2026
+Fibra, movil y TV	Fibra 1 Gb Linea movil 375 Gb Movistar + y Neflix	 120,00 € 	01/05/2026
+Fibra, movil y TV Interna	Fibra 600 Mb linea movil 35 Gb Movistar +	 92,00 € 	01/05/2026
+Fibra, movil y TV Interna	Fibra 600 Mb linea movil 60 Gb Movistar + y Neflix	 105,00 € 	01/05/2026
+Fibra, movil y TV Interna	Fibra 1 Gb Linea movil 350 Gb Movistar +	 115,00 € 	01/05/2026
+Fibra, movil y TV Interna	Fibra 1 Gb Linea movil 375 Gb Movistar + y Neflix	 120,00 € 	01/05/2026
+Linea Movil adicional	Linea Movil adicional 40Gb	 13,00 € 	01/05/2026
+Linea Movil adicional	Linea Movil adicional 150Gb	 14,00 € 	01/05/2026
+Linea Movil adicional	Linea Movil adicional 300Gb	 15,00 € 	01/05/2026
+Linea Movil adicional Interna	Linea Movil adicional 40Gb	 13,00 € 	01/05/2026
+Linea Movil adicional Interna	Linea Movil adicional 150Gb	 14,00 € 	01/05/2026
+Linea Movil adicional Interna	Linea Movil adicional 300Gb	 15,00 € 	01/05/2026
+Fibra Adicional	Fibra Adicional 300 Mb	 11,00 € 	01/05/2026
+Fibra Adicional	Fibra Adicional 600 Mb	 15,00 € 	01/05/2026
+Fibra Adicional	Fibra Adicional 1 Gb	 21,00 € 	01/05/2026
+Fibra Adicional Interna	Fibra Adicional 300 Mb	 11,00 € 	01/05/2026
+Fibra Adicional Interna	Fibra Adicional 600 Mb	 15,00 € 	01/05/2026
+Fibra Adicional Interna	Fibra Adicional 1 Gb	 21,00 € 	01/05/2026
+Fibra	Fibra 300Mb	 40,00 € 	01/05/2026
+Fibra	Fibra 600Mb	 50,00 € 	01/05/2026
+Fibra	Fibra 1G	 65,00 € 	01/05/2026
+Fibra Interna	Fibra 300Mb	 40,00 € 	01/05/2026
+Fibra Interna	Fibra 600Mb	 50,00 € 	01/05/2026
+Fibra Interna	Fibra 1G	 65,00 € 	01/05/2026
+Linea Movil	Linea Movil 50Gb	 10,00 € 	01/05/2026
+Linea Movil	Linea Movil 100Gb	 20,00 € 	01/05/2026
+Linea Movil	Linea Movil 150Gb	 36,00 € 	01/05/2026
+Linea Movil	Linea Movil 300Gb	 45,00 € 	01/05/2026
+Linea Movil Interna	Linea Movil 50Gb	 10,00 € 	01/05/2026
+Linea Movil Interna	Linea Movil 100Gb	 20,00 € 	01/05/2026
+Linea Movil Interna	Linea Movil 150Gb	 36,00 € 	01/05/2026
+Linea Movil Interna	Linea Movil 300Gb	 45,00 € 	01/05/2026
+TV	MoviStar+	 7,00 € 	01/05/2026

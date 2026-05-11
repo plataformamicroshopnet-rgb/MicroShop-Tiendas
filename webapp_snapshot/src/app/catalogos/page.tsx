@@ -172,6 +172,8 @@ export default function CatalogosPage() {
             pName = `${String(it.subcategoria).trim().toLowerCase()}_${String(it.gama).trim().toLowerCase()}_${pName}`;
           } else if (cat === 'RENT') {
             pName = `${String(it.fabricante).trim().toLowerCase()}_${String(it.subcategoria).trim().toLowerCase()}_${String(it.gama).trim().toLowerCase()}_${pName}`;
+          } else if (cat === 'O2') {
+            pName = `${String(it.subcategoria).trim().toLowerCase()}_${pName}`;
           }
 
           if (!byProduct[pName]) byProduct[pName] = [];
@@ -647,9 +649,17 @@ export default function CatalogosPage() {
         const normalize = (s: string) => (s || '').replace(/\s+/g, '').toLowerCase()
         const pNameNorm = normalize(row.producto)
         
+        const isCompositeMatch = (it: ProductItem) => {
+          if (activeTab === 'O2') return normalize(it.subcategoria) === normalize(row.categoria);
+          if (activeTab === 'RENT') return normalize(it.fabricante) === normalize(row.fabricante) && normalize(it.subcategoria) === normalize(row.categoria) && normalize(it.gama) === normalize(row.gama);
+          if (activeTab === 'miMovistar' || activeTab === 'Resto BAF') return normalize(it.subcategoria) === normalize(row.subcategoria) && normalize(it.gama) === normalize(row.gama);
+          return true;
+        };
+
         let matchIndex = updatedItems.findIndex(it => 
            normalize(it.producto) === pNameNorm && 
-           (it.validFrom || '').trim() === rowDesde
+           (it.validFrom || '').trim() === rowDesde &&
+           isCompositeMatch(it)
         )
 
         // MIGRATION FALLBACK: Si no hay coincidencia exacta por fecha, 
@@ -658,7 +668,7 @@ export default function CatalogosPage() {
         if (matchIndex === -1) {
           matchIndex = updatedItems.findIndex(it => {
             const dbName = normalize(it.producto);
-            return dbName.includes(pNameNorm) || pNameNorm.includes(dbName);
+            return (dbName.includes(pNameNorm) || pNameNorm.includes(dbName)) && isCompositeMatch(it);
           })
         }
 
