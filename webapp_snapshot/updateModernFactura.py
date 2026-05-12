@@ -1,111 +1,10 @@
-import AutoPrint from '@/components/AutoPrint'
-import { PrismaClient } from '@prisma/client'
-import { notFound } from 'next/navigation'
+﻿import re
 
-const prisma = new PrismaClient()
+filepath = 'src/app/movilfree/print/[id]/page.tsx'
+with open(filepath, 'r', encoding='utf-8') as f:
+    content = f.read()
 
-export default async function PrintInvoice({ params, searchParams }: { params: { id: string }, searchParams: { type: string } }) {
-  // Fix Next.js 15 async params
-  const resolvedParams = await params;
-  const id = resolvedParams.id;
-  const resolvedSearchParams = await searchParams;
-  const type = resolvedSearchParams.type || 'ticket';
-
-  const sale = await prisma.movilFreeSale.findUnique({ where: { id: id } })
-  if (!sale) return notFound()
-
-  // We need Client data if it's a Factura (A4)
-  let client = null;
-  if (type === 'factura' && sale.nifCliente && sale.nifCliente !== 'CONTADO') {
-    client = await prisma.movilFreeClient.findUnique({ where: { nif: sale.nifCliente } })
-  }
-
-  const items = JSON.parse(sale.listaProductos)
-  
-  // Calculations
-  const subtotal = sale.importeTotal / 1.21;
-  const taxes = sale.importeTotal - subtotal;
-
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
-  }
-
-  if (type === 'ticket') {
-    return (
-      <div id="print-section" style={{ background: 'white', padding: 10, minHeight: '100vh', color: 'black' }}>
-        <style dangerouslySetInnerHTML={{ __html: `
-          @media print {
-            body * { visibility: hidden; }
-            #print-section, #print-section * { visibility: visible; }
-            #print-section { position: absolute; left: 0; top: 0; margin: 0; padding: 0; width: 100%; }
-            @page { margin: 0; }
-          }
-          #print-section { font-family: monospace; margin: 0 auto; width: 300px; color: black; }
-          .center { text-align: center; }
-          .bold { font-weight: bold; }
-          .item-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
-          .separator { border-bottom: 1px dashed black; margin: 10px 0; }
-          .table-totals { width: 100%; text-align: right; }
-        `}} />
-        <AutoPrint />
-        
-        <div className="center">
-          <img src="/images/media__1778608332264.png" style={{ width: 150, marginBottom: 10 }} />
-          <div className="bold">MICRO-INFOR SALAMANCA, S.L.</div>
-          <div>C.I.F.: B-37290293</div>
-          <div>C/ ALARCÓN, 2 BAJO</div>
-          <div>37007-SALAMANCA TLF:923214407</div>
-        </div>
-        
-        <div className="separator"></div>
-        <div className="center bold">FACTURA SIMPLIFICADA #{sale.numeroFactura || '---'}</div>
-        <div className="separator"></div>
-
-        <div>
-          {items.map((i: any, idx: number) => (
-            <div className="item-row" key={idx}>
-              <div style={{ flex: 1, paddingRight: 10 }}>{i.cantidad}x {i.nombre}</div>
-              <div>{(i.cantidad * i.precio).toFixed(2)}</div>
-            </div>
-          ))}
-        </div>
-
-        <div className="separator"></div>
-        
-        <table className="table-totals">
-          <tbody>
-            <tr>
-              <td>SUBTOTAL SIN IMPUESTOS</td>
-              <td>{subtotal.toFixed(2)}</td>
-            </tr>
-            <tr>
-              <td>I.V.A. (21%)</td>
-              <td>{taxes.toFixed(2)}</td>
-            </tr>
-            <tr className="bold" style={{ fontSize: 16 }}>
-              <td>TOTAL FACTURA EUR</td>
-              <td>{sale.importeTotal.toFixed(2)}</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div style={{ marginTop: 20 }}>
-          <div>FORMA DE PAGO: Efectivo / Tarjeta</div>
-          <div>FECHA: {formatDate(sale.fechaVenta)}</div>
-        </div>
-
-        <div className="separator"></div>
-        <div className="center" style={{ fontSize: 11 }}>
-          CONDICIONES DE COMPRA SEGÚN LEY EN VIGENCIA RDL 1/2007<br/>
-          PLAZO DEVOLUCIÓN: 7 DÍAS HÁBILES<br/>
-          SE ABONARÁ EL IMPORTE EN FORMA DE VALE DESCUENTO.<br/>
-          **CONSERVE ESTE TICKET PARA DEVOLUCIONES O GARANTÍAS**
-        </div>
-      </div>
-    )
-  }
-
-  // A4 FACTURA (MODERN DESIGN)
+modern_factura = """  // A4 FACTURA (MODERN DESIGN)
   return (
     <div id="print-section" style={{ background: 'white', padding: '40px 60px', minHeight: '100vh', color: '#2d3748', fontFamily: "'Inter', 'Segoe UI', sans-serif" }}>
       <style dangerouslySetInnerHTML={{ __html: `
@@ -252,4 +151,16 @@ export default async function PrintInvoice({ params, searchParams }: { params: {
       </div>
     </div>
   )
-}
+}"""
+
+content = re.sub(
+    r"  // A4 FACTURA\n  return \(\n    <div id=\"print-section\".*?\n\}",
+    modern_factura,
+    content,
+    flags=re.DOTALL
+)
+
+with open(filepath, 'w', encoding='utf-8') as f:
+    f.write(content)
+
+print("Updated to modern factura")
