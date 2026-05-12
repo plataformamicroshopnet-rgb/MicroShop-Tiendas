@@ -55,7 +55,7 @@ export default function AvancePalancasPage() {
       return { targetT1, targetT2, totalCount, quantity: totalCount, pjeT1, pjeT2, finalizadas, pendientes, isMonetary }
   }
 
-  const renderProgressBar = (target: number, pje: number, isMonetary: boolean, totalCount: number, color: string, label: string) => {
+  const renderProgressBar = (target: number, pje: number, isMonetary: boolean, totalCount: number, color: string, colorEnd: string, label: string) => {
       if (target === 0) {
           return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
@@ -65,10 +65,10 @@ export default function AvancePalancasPage() {
                        {isMonetary ? formatCurrency(totalCount) : `${totalCount} uds`}
                     </span>
                  </div>
-                 <div style={{ height: 16, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 4, position: 'relative' }}>
-                    <div style={{ position: 'absolute', inset: 0, backgroundColor: color, borderRadius: 4, opacity: 0.3 }}></div>
+                 <div style={{ height: 12, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 6, position: 'relative', overflow: 'hidden' }}>
+                    <div style={{ position: 'absolute', inset: 0, backgroundColor: color, borderRadius: 6, opacity: 0.15 }}></div>
                     <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                       <span style={{ color: 'var(--light-text)', fontSize: 10, fontWeight: 900 }}>
+                       <span style={{ color: 'var(--light-text)', fontSize: 9, fontWeight: 900 }}>
                            {pje % 1 === 0 ? pje : pje.toFixed(1)}%
                        </span>
                     </div>
@@ -77,34 +77,49 @@ export default function AvancePalancasPage() {
           )
       }
 
+      const isSuperado = pje >= 100;
       const displayPje = Math.min(Math.round(pje), 100)
       
       return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 'bold' }}>
-                <span style={{ color: color }}>{label}</span>
-                <span style={{ color: 'var(--light-text)' }}>
+                <span style={{ color: color, textShadow: isSuperado ? `0 0 10px ${color}60` : 'none' }}>{label}</span>
+                <span style={{ color: 'var(--text-main)', fontWeight: 800 }}>
                    {isMonetary 
                       ? `${formatCurrency(totalCount)} / ${formatCurrency(target)}` 
                       : `${totalCount} / ${target}`}
                 </span>
              </div>
              
-             <div style={{ height: 16, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 4, position: 'relative' }}>
-                <div style={{ height: '100%', width: `${Math.min(pje, 100)}%`, backgroundColor: color, borderRadius: 4, transition: 'width 0.5s ease', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: pje > 15 ? 6 : 0, overflow: 'hidden' }}>
-                    {pje > 15 && (
-                        <span style={{ color: '#000', fontSize: 10, fontWeight: 900 }}>
-                            {pje % 1 === 0 ? pje : pje.toFixed(1)}%
-                        </span>
-                    )}
+             <div style={{ height: 12, backgroundColor: 'var(--section-bg)', borderRadius: 6, position: 'relative', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)' }}>
+                <div style={{ 
+                    height: '100%', 
+                    width: `${Math.min(pje, 100)}%`, 
+                    background: `linear-gradient(90deg, ${color}, ${colorEnd})`, 
+                    borderRadius: 6, 
+                    transition: 'width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'flex-end', 
+                    paddingRight: pje > 15 ? 6 : 0, 
+                    overflow: 'hidden',
+                    boxShadow: isSuperado ? `0 0 12px ${color}80` : 'none'
+                }}>
                 </div>
-                {pje <= 15 && (
-                    <span style={{ position: 'absolute', left: `${Math.min(pje, 100)}%`, top: '50%', transform: 'translateY(-50%)', paddingLeft: 6, color: 'var(--light-text)', fontSize: 10, fontWeight: 800 }}>
-                        {pje % 1 === 0 ? pje : pje.toFixed(1)}%
-                    </span>
-                )}
-                {pje >= 100 && (
-                     <div style={{ position: 'absolute', top: 0, right: 0, height: '100%', width: 2, backgroundColor: 'var(--bg-card)', boxShadow: '0 0 5px #fff' }}></div>
+                <span style={{ 
+                    position: 'absolute', 
+                    left: pje > 15 ? `calc(${Math.min(pje, 100)}% - 6px)` : `${Math.min(pje, 100)}%`, 
+                    top: '50%', 
+                    transform: pje > 15 ? 'translate(-100%, -50%)' : 'translate(6px, -50%)', 
+                    color: pje > 15 ? '#000' : 'var(--text-main)', 
+                    fontSize: 9, 
+                    fontWeight: 900,
+                    textShadow: pje > 15 ? 'none' : '0 1px 2px rgba(0,0,0,0.5)'
+                }}>
+                    {pje % 1 === 0 ? pje : pje.toFixed(1)}%
+                </span>
+                {isSuperado && (
+                     <div style={{ position: 'absolute', top: 0, right: 0, height: '100%', width: 2, backgroundColor: '#fff', boxShadow: '0 0 8px #fff', borderRadius: 2 }}></div>
                 )}
              </div>
           </div>
@@ -135,7 +150,7 @@ export default function AvancePalancasPage() {
           </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
         {tiendaRules.map((rule, idx) => {
           const stats = getStatsForLever(rule)
           const isActive = activeLeverFilter === rule.nombre
@@ -154,30 +169,38 @@ export default function AvancePalancasPage() {
                 display: 'flex', 
                 flexDirection: 'column', 
                 gap: '16px', 
-                padding: '16px 16px 0 16px', // No padding bottom, handled by footer
-                border: isActive ? '2px solid var(--mercedes-cyan)' : '1px solid var(--border-color)',
-                backgroundColor: isActive ? 'rgba(0,173,239,0.03)' : 'var(--card-bg)',
-                boxShadow: theme === 'light' ? '0 4px 6px rgba(0,0,0,0.05)' : 'none',
+                padding: '20px', 
+                border: isActive ? '1px solid var(--mercedes-cyan)' : '1px solid rgba(255,255,255,0.05)',
+                backgroundColor: isActive ? 'rgba(0,173,239,0.05)' : 'var(--card-bg)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '16px',
+                boxShadow: isActive ? '0 0 20px rgba(0, 173, 239, 0.15)' : (theme === 'light' ? '0 8px 16px rgba(0,0,0,0.05)' : '0 8px 16px rgba(0,0,0,0.3)'),
                 cursor: 'pointer',
-                transition: 'all 0.2s ease',
+                transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
+                position: 'relative',
                 overflow: 'hidden'
               }}
               onMouseEnter={(e) => {
                 if (!isActive) {
                   e.currentTarget.style.transform = 'translateY(-4px)'
-                  e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.15)'
+                  e.currentTarget.style.boxShadow = theme === 'light' ? '0 12px 24px rgba(0,0,0,0.1)' : '0 12px 24px rgba(0,0,0,0.4)'
+                  e.currentTarget.style.border = '1px solid rgba(255,255,255,0.1)'
                 }
               }}
               onMouseLeave={(e) => {
                 if (!isActive) {
                   e.currentTarget.style.transform = 'none'
-                  e.currentTarget.style.boxShadow = theme === 'light' ? '0 4px 6px rgba(0,0,0,0.05)' : 'none'
+                  e.currentTarget.style.boxShadow = theme === 'light' ? '0 8px 16px rgba(0,0,0,0.05)' : '0 8px 16px rgba(0,0,0,0.3)'
+                  e.currentTarget.style.border = '1px solid rgba(255,255,255,0.05)'
                 }
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              {/* Subtle background gradient glow */}
+              <div style={{ position: 'absolute', top: -50, right: -50, width: 100, height: 100, background: 'radial-gradient(circle, rgba(0,173,239,0.1) 0%, rgba(0,0,0,0) 70%)', borderRadius: '50%', pointerEvents: 'none' }} />
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ backgroundColor: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: 6, fontWeight: 900, color: 'var(--light-text)', fontSize: 16 }}>
+                      <div style={{ backgroundColor: isActive ? 'var(--mercedes-cyan)' : 'rgba(255,255,255,0.08)', padding: '6px 12px', borderRadius: 8, fontWeight: 900, color: isActive ? '#000' : 'var(--medium-gray)', fontSize: 16, transition: 'all 0.3s ease' }}>
                           {rule.nombre}
                       </div>
                   </div>
@@ -189,12 +212,13 @@ export default function AvancePalancasPage() {
                       if (globalTarget > 0) {
                           return (
                               <div style={{ 
-                                  fontSize: 12, 
-                                  fontWeight: 'bold', 
-                                  padding: '4px 8px', 
-                                  borderRadius: 4, 
-                                  backgroundColor: remaining > 0 ? 'rgba(255, 149, 0, 0.1)' : 'rgba(52, 199, 89, 0.1)',
-                                  color: remaining > 0 ? '#FF9500' : '#34C759'
+                                  fontSize: 11, 
+                                  fontWeight: 800, 
+                                  padding: '4px 10px', 
+                                  borderRadius: 20, 
+                                  backgroundColor: remaining > 0 ? '#EA580C' : '#16A34A',
+                                  color: '#FFFFFF',
+                                  boxShadow: remaining > 0 ? '0 4px 10px rgba(234, 88, 12, 0.3)' : '0 4px 10px rgba(22, 163, 74, 0.3)'
                               }}>
                                   {remaining > 0 ? `Faltan T1: ${isMonetary ? formatCurrency(remaining) : remaining + ' uds'}` : '✓ T1 Superado'}
                               </div>
@@ -204,54 +228,37 @@ export default function AvancePalancasPage() {
                   })()}
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 16 }}>
-                  {/* BARRA TRAMO 2 (VERDE) */}
-                  {renderProgressBar(stats.targetT2, stats.pjeT2, stats.isMonetary, stats.totalCount, '#34C759', 'TRAMO 2')}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 4, zIndex: 1 }}>
+                  {/* BARRA TRAMO 2 (VERDE ESMERALDA) */}
+                  {renderProgressBar(stats.targetT2, stats.pjeT2, stats.isMonetary, stats.totalCount, '#059669', '#10B981', 'TRAMO 2')}
 
-                  {/* BARRA TRAMO 1 (AZUL) */}
-                  {renderProgressBar(stats.targetT1, stats.pjeT1, stats.isMonetary, stats.totalCount, 'var(--mercedes-cyan)', 'TRAMO 1')}
+                  {/* BARRA TRAMO 1 (CYAN MERCEDES) */}
+                  {renderProgressBar(stats.targetT1, stats.pjeT1, stats.isMonetary, stats.totalCount, '#0284C7', '#0EA5E9', 'TRAMO 1')}
               </div>
 
-              {/* FOOTER GRIS ONELAKE STYLE */}
+              {/* INTEGRATED METRICS PANEL */}
               <div style={{ 
-                  marginTop: 'auto',
-                  borderTop: '1px solid var(--border-color)', 
-                  backgroundColor: 'var(--section-bg)', 
-                  margin: '0 -16px 0 -16px', 
-                  padding: '12px 16px', 
+                  marginTop: 8,
+                  backgroundColor: 'rgba(0,0,0,0.15)', 
+                  borderRadius: 12,
+                  padding: '12px', 
                   display: 'flex', 
                   justifyContent: 'space-between',
-                  alignItems: 'center'
+                  alignItems: 'center',
+                  border: '1px solid rgba(255,255,255,0.03)',
+                  zIndex: 1
               }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', flex: 1, fontSize: 11, gap: 2 }}>
-                      <span style={{ fontSize: 10, color: 'var(--medium-gray)', marginBottom: 2, fontWeight: 'bold' }}>TRAMO 2</span>
-                      <span style={{ color: 'var(--light-text)' }}>
-                          {(stats.targetT2 || 0) > 0 
-                             ? (stats.isMonetary ? `${formatCurrency(stats.totalCount)} / ${formatCurrency(stats.targetT2)}` : `${stats.totalCount} / ${stats.targetT2} uds`)
-                             : (stats.isMonetary ? `${formatCurrency(stats.totalCount)}` : `${stats.totalCount} uds`)}
-                      </span>
-                      <span style={{ color: 'var(--light-text)' }}>
-                          F: {stats.isMonetary ? formatCurrency(stats.finalizadas) : stats.finalizadas} | 
-                          P: {stats.isMonetary ? formatCurrency(stats.pendientes) : stats.pendientes}
-                      </span>
-                      <span style={{ fontWeight: 'bold', color: stats.pjeT2 >= 100 ? '#34C759' : '#34C759' }}>
-                          {stats.pjeT2 % 1 === 0 ? `${stats.pjeT2}%` : `${stats.pjeT2.toFixed(1)}%`}
+                  <div style={{ display: 'flex', flexDirection: 'column', flex: 1, fontSize: 11, gap: 4 }}>
+                      <span style={{ fontSize: 10, color: 'var(--medium-gray)', fontWeight: 800, letterSpacing: 0.5 }}>FINALIZADAS</span>
+                      <span style={{ color: 'var(--text-main)', fontSize: 14, fontWeight: 900 }}>
+                          {stats.isMonetary ? formatCurrency(stats.finalizadas) : stats.finalizadas}
                       </span>
                   </div>
-                  <div style={{ width: 1, height: 45, backgroundColor: 'var(--border-color)', margin: '0 12px' }}></div>
-                  <div style={{ display: 'flex', flexDirection: 'column', flex: 1, textAlign: 'right', fontSize: 11, gap: 2 }}>
-                      <span style={{ fontSize: 10, color: 'var(--medium-gray)', marginBottom: 2, fontWeight: 'bold' }}>TRAMO 1</span>
-                      <span style={{ color: 'var(--light-text)' }}>
-                          {(stats.targetT1 || 0) > 0 
-                             ? (stats.isMonetary ? `${formatCurrency(stats.totalCount)} / ${formatCurrency(stats.targetT1)}` : `${stats.totalCount} / ${stats.targetT1} uds`)
-                             : (stats.isMonetary ? `${formatCurrency(stats.totalCount)}` : `${stats.totalCount} uds`)}
-                      </span>
-                      <span style={{ color: 'var(--light-text)' }}>
-                          F: {stats.isMonetary ? formatCurrency(stats.finalizadas) : stats.finalizadas} | 
-                          P: {stats.isMonetary ? formatCurrency(stats.pendientes) : stats.pendientes}
-                      </span>
-                      <span style={{ fontWeight: 'bold', color: stats.pjeT1 >= 100 ? '#34C759' : 'var(--mercedes-cyan)' }}>
-                          {stats.pjeT1 % 1 === 0 ? `${stats.pjeT1}%` : `${stats.pjeT1.toFixed(1)}%`}
+                  <div style={{ width: 1, height: 30, backgroundColor: 'rgba(255,255,255,0.05)', margin: '0 12px' }}></div>
+                  <div style={{ display: 'flex', flexDirection: 'column', flex: 1, textAlign: 'right', fontSize: 11, gap: 4 }}>
+                      <span style={{ fontSize: 10, color: '#FF9500', fontWeight: 800, letterSpacing: 0.5 }}>PENDIENTES</span>
+                      <span style={{ color: stats.pendientes > 0 ? '#FF9500' : 'var(--text-main)', fontSize: 14, fontWeight: 900 }}>
+                          {stats.isMonetary ? formatCurrency(stats.pendientes) : stats.pendientes}
                       </span>
                   </div>
               </div>
@@ -309,31 +316,32 @@ export default function AvancePalancasPage() {
                      const isPed = String(sale.pendiente || '').trim().toUpperCase() === 'SI' || String(sale.pendiente || '').trim().toUpperCase() === 'PED' || String(sale.estado || '').trim().toUpperCase() === 'PENDIENTE'
                      const isAnul = String(sale.anulado || '').trim().toUpperCase() === 'SI' || String(sale.pendiente || '').trim().toUpperCase() === 'ANULADO' || String(sale.estado || '').trim().toUpperCase() === 'ANULADO'
                      let statusText = 'Completado'
-                     let statusBg = 'rgba(52, 199, 89, 0.1)'
-                     let statusColor = '#34C759'
+                     let statusBg = 'rgba(16, 185, 129, 0.15)'
+                     let statusColor = '#10B981'
+                     let statusBorder = '1px solid rgba(16, 185, 129, 0.3)'
                      
-                     if (isAnul) { statusText = 'Anulado'; statusBg = 'rgba(239, 68, 68, 0.1)'; statusColor = '#EF4444' }
-                     else if (isPed) { statusText = 'Pendiente'; statusBg = 'rgba(255, 149, 0, 0.1)'; statusColor = '#FF9500' }
+                     if (isAnul) { statusText = 'Anulado'; statusBg = 'rgba(239, 68, 68, 0.15)'; statusColor = '#EF4444'; statusBorder = '1px solid rgba(239, 68, 68, 0.3)' }
+                     else if (isPed) { statusText = 'Pendiente'; statusBg = 'rgba(255, 149, 0, 0.15)'; statusColor = '#FF9500'; statusBorder = '1px solid rgba(255, 149, 0, 0.3)' }
 
                      // Simple import calculation fallback for simplified view
                      let val = sale.importe || sale.cuota || 0
 
                      return (
-                      <tr key={i} style={{ borderBottom: '1px solid var(--border-color)', verticalAlign: 'middle' }}>
-                        <td style={{ padding: '10px 16px', whiteSpace: 'nowrap' }}>{sale.fecha}</td>
-                        <td style={{ padding: '10px 16px', fontWeight: 'bold' }}>{sale.vendedor}</td>
-                        <td style={{ padding: '10px 16px' }}>{sale.nif}</td>
-                        <td style={{ padding: '10px 16px' }}>{sale.nombreCliente || '-'}</td>
-                        <td style={{ padding: '10px 16px', color: 'var(--mercedes-cyan)', fontWeight: 600 }}>{sale.codigo}</td>
-                        <td style={{ padding: '10px 16px' }}>{sale.producto}</td>
-                        <td style={{ padding: '10px 16px', textAlign: 'center', fontWeight: 'bold', color: 'var(--light-text)' }}>
+                      <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', verticalAlign: 'middle', transition: 'background-color 0.2s', cursor: 'default' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)'} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                        <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>{sale.fecha}</td>
+                        <td style={{ padding: '12px 16px', fontWeight: 800, color: 'var(--text-main)' }}>{sale.vendedor}</td>
+                        <td style={{ padding: '12px 16px' }}>{sale.nif}</td>
+                        <td style={{ padding: '12px 16px' }}>{sale.nombreCliente || '-'}</td>
+                        <td style={{ padding: '12px 16px', color: 'var(--mercedes-cyan)', fontWeight: 800 }}>{sale.codigo}</td>
+                        <td style={{ padding: '12px 16px' }}>{sale.producto}</td>
+                        <td style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 800, color: 'var(--text-main)' }}>
                             {formatCurrency(val)}
                         </td>
-                        <td style={{ padding: '10px 16px', textAlign: 'center', color: 'var(--medium-gray)' }}>
+                        <td style={{ padding: '12px 16px', textAlign: 'center', color: 'var(--medium-gray)' }}>
                            <span style={{ display: 'inline-block', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={sale.anotaciones}>{sale.anotaciones || '-'}</span>
                         </td>
-                        <td style={{ padding: '10px 16px', textAlign: 'center' }}>
-                            <span style={{ backgroundColor: statusBg, color: statusColor, padding: '4px 8px', borderRadius: 4, fontSize: 11, fontWeight: 'bold' }}>
+                        <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                            <span style={{ backgroundColor: statusBg, color: statusColor, padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 800, border: statusBorder }}>
                                 {statusText}
                             </span>
                         </td>

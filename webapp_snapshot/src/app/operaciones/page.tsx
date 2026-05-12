@@ -250,7 +250,7 @@ function CommercialDashboard({ data, activeExtras = [], isComercial }: { data: a
                 <tr key={i} style={{ borderBottom: '1px solid var(--border-color)', verticalAlign: 'top' }}>
                   <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>{sale.fecha}</td>
                   <td style={{ padding: '12px 16px', fontWeight: 600 }}>{sale.vendedor}</td>
-                  <td style={{ padding: '12px 16px', color: 'var(--medium-gray)' }}>{sale.detalle === 'Ti' ? 'Contratos Móvil' : (sale.detalle || '-')}</td>
+                  <td style={{ padding: '12px 16px', color: 'var(--medium-gray)' }}>{sale.detalle === 'Ti' ? 'Contratos Móvil' : sale.detalle === 'O2' ? 'O2 MovilFree' : (sale.detalle || '-')}</td>
                   <td style={{ padding: '12px 16px' }}>{sale.producto}</td>
                   <td style={{ padding: '12px 16px' }}>{sale.nombreCliente || '-'}</td>
                   <td style={{ padding: '12px 16px' }}>{sale.nif}</td>
@@ -642,7 +642,7 @@ function OperationsContent() {
               Fecha: s.fecha || '-',
               Código: s.codigo || '-',
               Grupo: s.imei || '-',
-              TipoVenta: s.detalle === 'Ti' ? 'Contratos Móvil' : (s.detalle || '-'),
+              TipoVenta: s.detalle === 'Ti' ? 'Contratos Móvil' : s.detalle === 'O2' ? 'O2 MovilFree' : (s.detalle || '-'),
               Producto: s.producto || '-',
               NombreCliente: s.nombreCliente || '-',
               NIF: s.nif || '-',
@@ -857,7 +857,7 @@ function OperationsContent() {
                       {editingId === sale.id ? <input value={editForm.imei || ''} onChange={e => handleEditChange('imei', e.target.value)} style={{ width: 120, padding: 4 }} /> : (sale.imei || '-')}
                     </td>
                     <td style={{ padding: '16px', color: 'var(--medium-gray)' }}>
-                      {editingId === sale.id ? <input value={editForm.detalle || ''} onChange={e => handleEditChange('detalle', e.target.value)} style={{ width: 100, padding: 4 }} /> : (sale.detalle === 'Ti' ? 'Contratos Móvil' : (sale.detalle || '-'))}
+                      {editingId === sale.id ? <input value={editForm.detalle || ''} onChange={e => handleEditChange('detalle', e.target.value)} style={{ width: 100, padding: 4 }} /> : (sale.detalle === 'Ti' ? 'Contratos Móvil' : sale.detalle === 'O2' ? 'O2 MovilFree' : (sale.detalle || '-'))}
                     </td>
                     <td style={{ padding: '16px' }}>
                       {editingId === sale.id ? <input value={editForm.producto} onChange={e => handleEditChange('producto', e.target.value)} style={{ width: 120, padding: 4 }} /> : sale.producto}

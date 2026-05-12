@@ -12,11 +12,11 @@ const getMedal = (pos: number) => {
   return pos;
 }
 
-const getRowStyle = (pos: number) => {
-  if (pos === 1) return { backgroundColor: '#ffd700', fontWeight: 'bold' };
-  if (pos === 2) return { backgroundColor: '#e0e0e0', fontWeight: 'bold' };
-  if (pos === 3) return { backgroundColor: '#cd7f32', fontWeight: 'bold' };
-  return { backgroundColor: '#ffffff' };
+const getRowClass = (pos: number) => {
+  if (pos === 1) return 'row-oro';
+  if (pos === 2) return 'row-plata';
+  if (pos === 3) return 'row-bronce';
+  return 'row-normal';
 }
 
 const ChartBars = ({ data, maxValue, barColor }: { data: any[], maxValue: number, barColor: string }) => {
@@ -86,7 +86,9 @@ export default function TorneosVentasPage() {
   }
 
   // Calculate Data
-  let arr1 = sellerStats.map(s => {
+  const validSellers = sellerStats.filter(s => s.name !== 'Marta');
+
+  let arr1 = validSellers.map(s => {
     let val = 0;
     s.rawSales.forEach((rs: any) => {
       const cat = rs.categoria || rs.detalle || rs.sheet || '';
@@ -98,7 +100,7 @@ export default function TorneosVentasPage() {
     return { name: s.name, value: val };
   });
 
-  let arr2 = sellerStats.map(s => {
+  let arr2 = validSellers.map(s => {
     let val = 0;
     s.rawSales.forEach((rs: any) => {
       const cat = rs.categoria || rs.detalle || rs.sheet || '';
@@ -111,7 +113,7 @@ export default function TorneosVentasPage() {
     return { name: s.name, value: val };
   });
 
-  let arr3 = sellerStats.map(s => {
+  let arr3 = validSellers.map(s => {
     let count = 0;
     s.rawSales.forEach((rs: any) => {
       const cat = rs.categoria || rs.detalle || rs.sheet || '';
@@ -150,59 +152,115 @@ export default function TorneosVentasPage() {
         showBack={true}
       />
 
-      <div style={{ padding: '24px 32px 0' }}>
+      <div style={{ padding: '0px 32px 0' }}>
         <style dangerouslySetInnerHTML={{
           __html: `
           .torneo-table {
             width: 100%;
-            border-collapse: collapse;
+            border-collapse: separate;
+            border-spacing: 0 2px;
             font-size: 14px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
           }
           .torneo-table th {
-            color: white;
-            font-weight: bold;
-            padding: 12px 8px;
+            color: #64748b;
+            font-weight: 800;
+            padding: 8px 8px;
             text-align: center;
-            border: 1px solid rgba(255,255,255,0.2);
-            height: 57px; /* Fija la altura para igualar entre tablas */
+            vertical-align: bottom;
+            border-bottom: 3px solid #e2e8f0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 12px;
+            height: 52px;
           }
           .torneo-table td {
             padding: 2px 8px;
             text-align: center;
-            border: 1px solid #e2e8f0;
-            color: #1e293b;
-            height: 28px; /* Fija la altura de las filas */
+            color: #334155;
+            border: none;
+            background: #ffffff;
+            transition: all 0.2s ease;
+            height: 28px;
           }
-          .header-blue { background-color: #3b82f6; }
-          .header-green { background-color: #65a30d; }
-          .header-orange { background-color: #f97316; }
+          
+          .torneo-row td:first-child { border-top-left-radius: 10px; border-bottom-left-radius: 10px; }
+          .torneo-row td:last-child { border-top-right-radius: 10px; border-bottom-right-radius: 10px; }
+
+          .torneo-row {
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+          }
+          .torneo-row:hover td {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+            z-index: 10;
+            position: relative;
+          }
+
+          .header-blue th { border-bottom-color: #3b82f6; }
+          .header-green th { border-bottom-color: #10b981; }
+          .header-orange th { border-bottom-color: #f97316; }
 
           .grid-container {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 12px; /* Espacio limpio entre tablas */
+            gap: 24px;
+            padding: 16px 20px;
+            background: #f8fafc;
+            border-radius: 16px;
           }
+
+          .row-oro td {
+            background: linear-gradient(90deg, rgba(250,204,21,0.06) 0%, rgba(250,204,21,0.18) 100%);
+            font-weight: 800;
+            color: #854d0e;
+          }
+          .row-oro td:first-child { border-left: 5px solid #eab308; }
+
+          .row-plata td {
+            background: linear-gradient(90deg, rgba(148,163,184,0.05) 0%, rgba(148,163,184,0.15) 100%);
+            font-weight: 800;
+            color: #334155;
+          }
+          .row-plata td:first-child { border-left: 5px solid #94a3b8; }
+
+          .row-bronce td {
+            background: linear-gradient(90deg, rgba(180,83,9,0.04) 0%, rgba(180,83,9,0.12) 100%);
+            font-weight: 800;
+            color: #78350f;
+          }
+          .row-bronce td:first-child { border-left: 5px solid #d97706; }
           
+          .row-normal td { 
+            border-bottom: 1px solid #f1f5f9; 
+            border-top: 1px solid #f1f5f9; 
+          }
+
           .trofeo-input {
             width: 100%;
-            height: 100%;
+            height: 24px;
             background: transparent;
-            border: none;
+            border: 1px solid transparent;
             outline: none;
             text-align: center;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600;
             color: inherit;
             cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s;
+          }
+          .trofeo-input:hover {
+            background: rgba(255,255,255,0.6);
           }
           .trofeo-input:focus {
             cursor: text;
-            background: rgba(255, 255, 255, 0.5);
-            border-radius: 4px;
+            background: #fff;
+            border: 1px solid #cbd5e1;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            color: #1e293b;
           }
           .trofeo-input::placeholder {
-            color: rgba(30, 41, 59, 0.3);
+            color: rgba(100, 116, 139, 0.4);
             font-weight: normal;
           }
         `}} />
@@ -223,7 +281,7 @@ export default function TorneosVentasPage() {
                 </thead>
                 <tbody>
                   {dataCol1.map(row => (
-                    <tr key={row.name} style={getRowStyle(row.pos)}>
+                    <tr key={row.name} className={`torneo-row ${getRowClass(row.pos)}`}>
                       <td style={{ fontSize: row.pos <= 3 ? '20px' : '14px' }}>{getMedal(row.pos)}</td>
                       <td>
                         <input
@@ -255,7 +313,7 @@ export default function TorneosVentasPage() {
                 </thead>
                 <tbody>
                   {dataCol2.map(row => (
-                    <tr key={row.name} style={getRowStyle(row.pos)}>
+                    <tr key={row.name} className={`torneo-row ${getRowClass(row.pos)}`}>
                       <td style={{ fontSize: row.pos <= 3 ? '20px' : '14px' }}>{getMedal(row.pos)}</td>
                       <td>
                         <input
@@ -287,7 +345,7 @@ export default function TorneosVentasPage() {
                 </thead>
                 <tbody>
                   {dataCol3.map(row => (
-                    <tr key={row.name} style={getRowStyle(row.pos)}>
+                    <tr key={row.name} className={`torneo-row ${getRowClass(row.pos)}`}>
                       <td style={{ fontSize: row.pos <= 3 ? '20px' : '14px' }}>{getMedal(row.pos)}</td>
                       <td>
                         <input

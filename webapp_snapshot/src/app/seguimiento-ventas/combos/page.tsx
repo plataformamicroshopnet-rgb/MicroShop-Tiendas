@@ -4,6 +4,7 @@ import React, { useEffect, useState, useMemo } from 'react'
 import { PageHeader } from '@/components/PageHeader'
 import { usePeriod } from '@/components/PeriodProvider'
 import { useGuard } from '@/hooks/useGuard'
+import { getGroupVisual } from '@/lib/comisiones'
 
 const COMERCIAL_CODES: { name: string; code: string }[] = [
           { name: 'Cristina', code: 'PINDI0023997' },
@@ -16,9 +17,9 @@ const COMERCIAL_CODES: { name: string; code: string }[] = [
           { name: 'Lara',     code: 'PINDI0023995' }
         ]
 
-const NAVY  = '#1e3a5f'
-const CYAN  = '#e8f4fd'
-const CYAN2 = '#cce4f6'
+const NAVY  = '#00ADEF'
+const CYAN  = '#e5f7fd'
+const CYAN2 = '#ccedfb'
 
 export default function CombosPage() {
   const { authorized } = useGuard('MODULE_JEFE_TIENDAS')
@@ -37,45 +38,58 @@ export default function CombosPage() {
   }, [activePeriodKey])
 
   const prod = (s: any) => (s.producto || s.detalle || '').toLowerCase()
-  const isRespaldo5G = (s: any) => prod(s).includes('respaldo 5g') || prod(s).includes('respaldo5g')
-  const isTGTBase    = (s: any) => prod(s).includes('tgt') && !prod(s).includes('soporte') && !prod(s).includes('ciber')
-  const isTGTSop     = (s: any) => prod(s).includes('tgt') && prod(s).includes('soporte')
-  const isTGTCib     = (s: any) => prod(s).includes('tgt') && prod(s).includes('ciber')
-  const isTMAorMicro = (s: any) => ['tma','micro'].includes((s.detalle||'').toLowerCase())
-
-  const allNifsTMamic = useMemo(
-    () => new Set(allSales.filter(isTMAorMicro).map((s: any) => (s.nif||'').toUpperCase())),
-    [allSales]
-  )
+  
+  // Lógica de 8 columnas personalizadas
+  const isBafTotal = (s: any) => prod(s).includes('baf total') || (prod(s).includes('fibra') && !prod(s).includes('movil') && !prod(s).includes('móvil'))
+  const isBafConv = (s: any) => prod(s).includes('baf convergente') || prod(s).includes('fd total') || prod(s).includes('fd flex') || (prod(s).includes('fibra') && (prod(s).includes('movil') || prod(s).includes('móvil')))
+  const isDispSeg = (s: any) => prod(s).includes('dispositivo') || prod(s).includes('seguro') || prod(s).includes('rent') || getGroupVisual(s.producto, s.detalle) === 'REN'
+  const isMpa = (s: any) => prod(s).includes('mpa') || prod(s).includes('alarma') || getGroupVisual(s.producto, s.detalle) === 'MPA'
+  const isFttr = (s: any) => prod(s).includes('fttr')
+  const isSolar = (s: any) => prod(s).includes('solar') || prod(s).includes('señaliz')
+  const isArpu = (s: any) => prod(s).includes('arpu') || prod(s).includes('ficción') || prod(s).includes('netflix') || prod(s).includes('movistar+') || prod(s).includes('adicional') || prod(s).includes('tv')
+  const isRepoFutbol = (s: any) => prod(s).includes('futbol') || prod(s).includes('fútbol') || prod(s).includes('repo f')
 
   const rows = useMemo(() => COMERCIAL_CODES.map(({ name, code }) => {
     const mine = allSales.filter((s: any) => s.vendedor === name)
     const clients = (list: any[]) => [...new Set(
       list.map((s: any) => `${(s.nif||'').toUpperCase()} – ${s.nombreCliente||''}`.trim())
     )]
-    const r5g     = mine.filter(isRespaldo5G)
-    const tgt     = mine.filter(isTGTBase)
-    const tgtSop  = mine.filter(isTGTSop)
-    const tgtCib  = mine.filter(isTGTCib)
-    const c5g     = r5g.filter((s: any)  => allNifsTMamic.has((s.nif||'').toUpperCase()))
-    const cTGT    = [...tgt,...tgtSop,...tgtCib].filter((s: any) => allNifsTMamic.has((s.nif||'').toUpperCase()))
+    
+    const sumImporte = (list: any[]) => list.reduce((sum, s) => {
+      const val = parseFloat(String(s.importe || '0').replace(',', '.'))
+      return sum + (isNaN(val) ? 0 : val)
+    }, 0)
+    
+    const bafTotal = mine.filter(isBafTotal)
+    const bafConv = mine.filter(isBafConv)
+    const dispSeg = mine.filter(isDispSeg)
+    const mpa = mine.filter(isMpa)
+    const fttr = mine.filter(isFttr)
+    const solar = mine.filter(isSolar)
+    const arpu = mine.filter(isArpu)
+    const repoFutbol = mine.filter(isRepoFutbol)
+
     return { name, code,
-      r5g:    { n: r5g.length,    cl: clients(r5g)    },
-      tgt:    { n: tgt.length,    cl: clients(tgt)    },
-      tgtSop: { n: tgtSop.length, cl: clients(tgtSop) },
-      tgtCib: { n: tgtCib.length, cl: clients(tgtCib) },
-      c5g:    { n: c5g.length,    cl: clients(c5g)    },
-      cTGT:   { n: cTGT.length,   cl: clients(cTGT)   },
+      bafTotal: { n: bafTotal.length, cl: clients(bafTotal) },
+      bafConv: { n: bafConv.length, cl: clients(bafConv) },
+      dispSeg: { n: sumImporte(dispSeg), cl: clients(dispSeg) },
+      mpa: { n: mpa.length, cl: clients(mpa) },
+      fttr: { n: fttr.length, cl: clients(fttr) },
+      solar: { n: solar.length, cl: clients(solar) },
+      arpu: { n: sumImporte(arpu), cl: clients(arpu) },
+      repoFutbol: { n: repoFutbol.length, cl: clients(repoFutbol) },
     }
-  }), [allSales, allNifsTMamic])
+  }), [allSales])
 
   const totals = {
-    r5g:    rows.reduce((s,r) => s + r.r5g.n,    0),
-    tgt:    rows.reduce((s,r) => s + r.tgt.n,    0),
-    tgtSop: rows.reduce((s,r) => s + r.tgtSop.n, 0),
-    tgtCib: rows.reduce((s,r) => s + r.tgtCib.n, 0),
-    c5g:    rows.reduce((s,r) => s + r.c5g.n,    0),
-    cTGT:   rows.reduce((s,r) => s + r.cTGT.n,   0),
+    bafTotal: rows.reduce((s,r) => s + r.bafTotal.n, 0),
+    bafConv: rows.reduce((s,r) => s + r.bafConv.n, 0),
+    dispSeg: rows.reduce((s,r) => s + r.dispSeg.n, 0),
+    mpa: rows.reduce((s,r) => s + r.mpa.n, 0),
+    fttr: rows.reduce((s,r) => s + r.fttr.n, 0),
+    solar: rows.reduce((s,r) => s + r.solar.n, 0),
+    arpu: rows.reduce((s,r) => s + r.arpu.n, 0),
+    repoFutbol: rows.reduce((s,r) => s + r.repoFutbol.n, 0),
   }
 
   const thS = (center = false): React.CSSProperties => ({
@@ -84,7 +98,7 @@ export default function CombosPage() {
     letterSpacing: 0.5, textAlign: center ? 'center' : 'left', whiteSpace: 'nowrap',
   })
 
-  const Cell = ({ data, id }: { data: { n: number; cl: string[] }; id: string }) => (
+  const Cell = ({ data, id, isEuro }: { data: { n: number; cl: string[] }; id: string; isEuro?: boolean }) => (
     <td style={{ padding: '11px 14px', textAlign: 'center' }}>
       <span
         onClick={() => data.cl.length > 0 && setExpanded(expanded === id ? null : id)}
@@ -95,7 +109,7 @@ export default function CombosPage() {
           cursor: data.cl.length > 0 ? 'pointer' : 'default',
           textDecoration: data.cl.length > 0 ? 'underline dotted' : 'none',
         }}
-      >{data.n}</span>
+      >{isEuro && data.n > 0 ? `${data.n.toFixed(2)} €` : data.n}</span>
     </td>
   )
 
@@ -104,25 +118,27 @@ export default function CombosPage() {
   return (
     <div style={{ padding: '24px 32px', paddingBottom: 80, background: 'var(--bg-app)', minHeight: '100vh' }}>
       <PageHeader
-        title="💘 Combos Cupido + TGT + Respaldo 5G"
-        subtitle="Cross-sell por comercial · Clic en cualquier número para ver los clientes"
+        title="Comparativa Rapida de Ventas"
+        subtitle="Rendimiento por comercial · Clic en cualquier número para ver los clientes"
         showBack
         backFallback="/seguimiento-ventas"
       />
 
-      {/* KPI strip — full width, even distribution */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 10, marginTop: 24, marginBottom: 28 }}>
+      {/* KPI strip */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10, marginTop: 24, marginBottom: 28 }}>
         {[
-          { label: '🌐 Respaldo 5G',  v: totals.r5g },
-          { label: '📦 TGT (base)',   v: totals.tgt },
-          { label: '🖥 TGT Soporte',  v: totals.tgtSop },
-          { label: '🔐 TGT Ciber',    v: totals.tgtCib },
-          { label: '⚡ Combo 5G',     v: totals.c5g },
-          { label: '⚡ Combo TGT',    v: totals.cTGT },
+          { label: 'Alta BAF Total', v: totals.bafTotal, isEuro: false },
+          { label: 'Alta BAF Conv.', v: totals.bafConv, isEuro: false },
+          { label: 'Disp. + Seguros', v: totals.dispSeg, isEuro: true },
+          { label: 'MPA', v: totals.mpa, isEuro: false },
+          { label: 'FTTR', v: totals.fttr, isEuro: false },
+          { label: 'Solar 360', v: totals.solar, isEuro: false },
+          { label: 'ARPU', v: totals.arpu, isEuro: true },
+          { label: 'Repo Fútbol', v: totals.repoFutbol, isEuro: false },
         ].map(k => (
-          <div key={k.label} style={{ background: CYAN, borderRadius: 10, padding: '12px 16px', textAlign: 'center' }}>
-            <div style={{ fontSize: 10, color: NAVY, fontWeight: 700, marginBottom: 4, textTransform: 'uppercase' }}>{k.label}</div>
-            <div style={{ fontSize: 22, fontWeight: 900, color: NAVY }}>{k.v}</div>
+          <div key={k.label} style={{ background: CYAN, borderRadius: 10, padding: '12px 8px', textAlign: 'center' }}>
+            <div style={{ fontSize: 10, color: NAVY, fontWeight: 700, marginBottom: 4, textTransform: 'uppercase', lineHeight: 1.2, height: 24 }}>{k.label}</div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: NAVY }}>{k.isEuro && k.v > 0 ? `${k.v.toFixed(2)} €` : k.v}</div>
           </div>
         ))}
       </div>
@@ -135,37 +151,39 @@ export default function CombosPage() {
             <thead>
               <tr>
                 <th style={thS()}>Comercial</th>
-                <th style={thS(true)}>Código</th>
-                <th style={thS(true)}>Respaldo 5G</th>
-                <th style={thS(true)}>TGT (usuario)</th>
-                <th style={thS(true)}>TGT – Soporte Inf.</th>
-                <th style={thS(true)}>TGT – Ciberseguridad</th>
-                <th style={thS(true)}>5G + TMA/Micro</th>
-                <th style={thS(true)}>TGT + TMA/Micro</th>
+                <th style={thS(true)}>Alta BAF Total</th>
+                <th style={thS(true)}>Alta BAF Conv.</th>
+                <th style={thS(true)}>Disp. + Seguros</th>
+                <th style={thS(true)}>MPA</th>
+                <th style={thS(true)}>FTTR</th>
+                <th style={thS(true)}>Solar 360</th>
+                <th style={thS(true)}>ARPU</th>
+                <th style={thS(true)}>Repo Fútbol</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row, idx) => {
                 const bg = idx % 2 === 0 ? CYAN : '#fff'
                 const cells = [
-                  { data: row.r5g,    id: `${row.name}-r5g`    },
-                  { data: row.tgt,    id: `${row.name}-tgt`    },
-                  { data: row.tgtSop, id: `${row.name}-tgtSop` },
-                  { data: row.tgtCib, id: `${row.name}-tgtCib` },
-                  { data: row.c5g,    id: `${row.name}-c5g`    },
-                  { data: row.cTGT,   id: `${row.name}-cTGT`   },
+                  { data: row.bafTotal,    id: `${row.name}-bafTotal`,    isEuro: false },
+                  { data: row.bafConv,     id: `${row.name}-bafConv`,     isEuro: false },
+                  { data: row.dispSeg,     id: `${row.name}-dispSeg`,     isEuro: true  },
+                  { data: row.mpa,         id: `${row.name}-mpa`,         isEuro: false },
+                  { data: row.fttr,        id: `${row.name}-fttr`,        isEuro: false },
+                  { data: row.solar,       id: `${row.name}-solar`,       isEuro: false },
+                  { data: row.arpu,        id: `${row.name}-arpu`,        isEuro: true  },
+                  { data: row.repoFutbol,  id: `${row.name}-repoFutbol`,  isEuro: false },
                 ]
                 const openCell = cells.find(c => expanded === c.id)
                 return (
                   <React.Fragment key={row.name}>
                     <tr style={{ background: bg, borderBottom: `1px solid ${CYAN2}` }}>
                       <td style={{ padding: '11px 14px', fontWeight: 700, color: NAVY }}>{row.name}</td>
-                      <td style={{ padding: '11px 14px', fontFamily: 'monospace', fontSize: 11.5, color: '#64748b', textAlign: 'center' }}>{row.code}</td>
-                      {cells.map(c => <Cell key={c.id} data={c.data} id={c.id} />)}
+                      {cells.map(c => <Cell key={c.id} data={c.data} id={c.id} isEuro={c.isEuro} />)}
                     </tr>
                     {openCell && openCell.data.cl.length > 0 && (
                       <tr style={{ background: '#f0f7ff', borderBottom: `1px solid ${CYAN2}` }}>
-                        <td colSpan={8} style={{ padding: '14px 22px' }}>
+                        <td colSpan={9} style={{ padding: '14px 22px' }}>
                           <div style={{ fontSize: 12, fontWeight: 700, color: NAVY, marginBottom: 8 }}>
                             👥 Clientes — {row.name}:
                           </div>
@@ -186,9 +204,19 @@ export default function CombosPage() {
             <tfoot>
               <tr style={{ background: NAVY, color: '#fff', fontWeight: 900 }}>
                 <td style={{ padding: '12px 14px', fontSize: 13 }}>Total</td>
-                <td style={{ padding: '12px 14px' }} />
-                {[totals.r5g, totals.tgt, totals.tgtSop, totals.tgtCib, totals.c5g, totals.cTGT].map((v, i) => (
-                  <td key={i} style={{ padding: '12px 14px', textAlign: 'center', fontSize: 14 }}>{v}</td>
+                {[
+                  { v: totals.bafTotal, isEuro: false },
+                  { v: totals.bafConv, isEuro: false },
+                  { v: totals.dispSeg, isEuro: true },
+                  { v: totals.mpa, isEuro: false },
+                  { v: totals.fttr, isEuro: false },
+                  { v: totals.solar, isEuro: false },
+                  { v: totals.arpu, isEuro: true },
+                  { v: totals.repoFutbol, isEuro: false }
+                ].map((k, i) => (
+                  <td key={i} style={{ padding: '12px 14px', textAlign: 'center', fontSize: 14 }}>
+                    {k.isEuro && k.v > 0 ? `${k.v.toFixed(2)} €` : k.v}
+                  </td>
                 ))}
               </tr>
             </tfoot>

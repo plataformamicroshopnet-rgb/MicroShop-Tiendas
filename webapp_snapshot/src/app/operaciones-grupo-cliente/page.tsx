@@ -7,17 +7,19 @@ import { useGuard } from '@/hooks/useGuard'
 import { renderDashboardData, calculateDynamicCommission } from '@/lib/salesUtils'
 import * as XLSX from 'xlsx'
 
-// ── Tabs ─────────────────────────────────────────────────────────────
+// ── Tabs ────────────────────────────────────────────────────────────
 const TABS = [
-  { id: 'fd',     label: 'FD',          emoji: '🔌', color: '#059669', grupo: 'FD'     },
-  { id: 'baf',    label: 'BAF / 5G',    emoji: '📡', color: '#BE185D', grupo: 'BAF'    },
-  { id: 'alta',   label: 'Alta Móvil',  emoji: '📶', color: '#7C3AED', grupo: 'ALTA'   },
-  { id: 'porta',  label: 'Portas Móvil',emoji: '🔄', color: '#D97706', grupo: 'PORTA'  },
-  { id: 'tma',    label: 'TMA',         emoji: '📱', color: '#6366F1', grupo: 'TMA'    },
-  { id: 'ti',     label: 'Ti',          emoji: '🖥️', color: '#0D9488', grupo: 'TI'     },
-  { id: 'micro',  label: 'Micro',       emoji: '💻', color: '#0891B2', grupo: 'MICRO'  },
-  { id: 'mpa',    label: 'MPA',         emoji: '📲', color: '#8B5CF6', grupo: 'MPA'    },
-  { id: 'extras', label: 'Extras',      emoji: '⚡', color: '#10b981', grupo: 'EXTRAS' },
+  { id: 'contratos_movil', label: 'Contratos Móvil', emoji: '📱', color: '#059669', grupo: 'TI' },
+  { id: 'rent',            label: 'Rent',            emoji: '🔄', color: '#BE185D', grupo: 'REN' },
+  { id: 'o2',              label: 'O2 MovilFree',    emoji: '🔵', color: '#005D82', grupo: 'O2' },
+  { id: 'seguro',          label: 'Seguro',          emoji: '🛡️', color: '#10B981', grupo: 'SEGURO' },
+  { id: 'mimovi',          label: 'miMovistar',      emoji: '🏠', color: '#7C3AED', grupo: 'MIMOVI' },
+  { id: 'tv',              label: 'Suscripciones TV',emoji: '📺', color: '#D97706', grupo: 'TV' },
+  { id: 'prepago',         label: 'Prepago',         emoji: '💳', color: '#6366F1', grupo: 'PREPAGO' },
+  { id: 'varios',          label: 'Varios',          emoji: '📦', color: '#8B5CF6', grupo: 'VARIOS' },
+  { id: 'repos',           label: 'Repos',           emoji: '🔁', color: '#0891B2', grupo: 'REPOS' },
+  { id: 'resto',           label: 'Resto BAF',       emoji: '📡', color: '#3B82F6', grupo: 'RESTO_BAF' },
+  { id: 'extras',          label: 'Extras',          emoji: '⚡', color: '#10b981', grupo: 'EXTRAS' },
 ]
 
 const PLUS_CODES = ['plus 1ks', 'plus 1sk', 'plus nfg', 'plus n7d', 'plus k2z', 'plus zf7']
@@ -32,21 +34,22 @@ const fmt = (v: number) =>
 
 const filterByTab = (sale: any, tabId: string): boolean => {
   if (tabId === 'extras') return false // extras come from extraAssignments, not sales
-  const g = (sale.grupo || '').toUpperCase()
   const d = (sale.detalle || '').toLowerCase().trim()
+  const c = (sale.categoria || '').toLowerCase().trim()
+  const val = d || c
+  
   switch (tabId) {
-    case 'tma':   return d === 'tma'
-    case 'micro': return d === 'micro'
-    case 'ti':    return d === 'ti'
-    case 'mpa':   return d === 'mpa' || g === 'MPA' || g === 'ALARMAS' || (sale.producto || '').toLowerCase().includes('alarma')
-    case 'fd':    {
-      if (g === 'REN' && (sale.producto || '').toLowerCase().includes('dispositivo')) return false
-      return ['FD','FN','PF','REN'].includes(g)
-    }
-    case 'porta': return g === 'PORTA'
-    case 'alta':  return g === 'ALTA'
-    case 'baf':   return ['BAF','MBAF'].includes(g)
-    default:      return false
+    case 'contratos_movil': return val === 'ti' || val === 'contratos móvil' || val === 'contratos movil'
+    case 'rent':            return val === 'rent'
+    case 'o2':              return val === 'o2' || val === 'o2 movilfree'
+    case 'seguro':          return val === 'seguro'
+    case 'mimovi':          return val === 'mimovi' || val === 'mimovistar'
+    case 'tv':              return val === 'tv' || val === 'suscripciones tv'
+    case 'prepago':         return val === 'prepago'
+    case 'varios':          return val === 'varios'
+    case 'repos':           return val === 'repos'
+    case 'resto':           return val === 'resto baf'
+    default:                return false
   }
 }
 
@@ -523,8 +526,8 @@ function GrupoClienteContent() {
     const tabSales = sales.filter((s: any) => filterByTab(s, tab.id))
     if (tabSales.length === 0) return []
 
-    const flatMode = tab.id === 'alta' || tab.id === 'porta'
-    const dedupeInfo = tab.id === 'tma' || tab.id === 'ti' || tab.id === 'micro'
+    const flatMode = tab.id === 'prepago' || tab.id === 'varios'
+    const dedupeInfo = tab.id === 'contratos_movil' || tab.id === 'rent'
     const exportRows: any[] = []
     const nifGroups = groupSalesByNif(tabSales)
 
@@ -815,87 +818,100 @@ function GrupoClienteContent() {
               return { label: '> 100%', col: '#2563eb' }
             }
             const renderCard = (info: TramoInfo, label: string, color: string, totalImporte: number, tramoAmt: number, tramoProyectado: number) => {
-              if (info.pje === 0 && info.tramoVal === 0) return null
-              const pje = info.pje
-              const pjeP = info.pjeProyectado
+              if (!info || (info.pje === 0 && info.tramoVal === 0)) return null
+              const pje = info.pje || 0
+              const isPercentage = info.isPercentage
+
+              const TRAMOS = [
+                { p: 50, label: '< 50%', col: '#EF4444', bg: '#FEE2E2' },
+                { p: 80, label: '50-80%', col: '#F59E0B', bg: '#FEF3C7' },
+                { p: 100, label: '80-100%', col: '#10B981', bg: '#D1FAE5' },
+                { p: 999, label: '> 100%', col: '#3B82F6', bg: '#DBEAFE' }
+              ]
+              
+              const tramoLabel = pje < 50 ? TRAMOS[0] : pje < 80 ? TRAMOS[1] : pje <= 100 ? TRAMOS[2] : TRAMOS[3]
+              const activeColor = tramoLabel.col
+              const activeBg = tramoLabel.bg
               const barPct = Math.min(pje, 130)
-              const tramoLabel  = getTramoLabel(pje)
-              const tramoPLabel = getTramoLabel(pjeP)
-              const liquidDesc = info.isPercentage ? `${info.tramoVal}% s/importe` : `${fmt(info.tramoVal)}/ud`
-              const liquidDescP = info.isPercentage ? `${info.tramoValProyectado}% s/importe` : `${fmt(info.tramoValProyectado)}/ud`
+
               return (
-                <div style={{ flex: 1, minWidth: 320, background: 'var(--bg-card)', border: `1px solid ${color}40`, borderRadius: 14, padding: '18px 22px' }}>
-                  {/* Header */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+                <div style={{ flex: 1, minWidth: '100%', background: '#fff', border: `1px solid ${color}40`, borderRadius: 16, padding: '24px 32px', position: 'relative', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+                  
+                  {/* Top Row */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                        <span style={{ background: color, color: '#fff', fontSize: 11, fontWeight: 800, padding: '2px 10px', borderRadius: 20 }}>{label}</span>
-                        <span style={{ fontSize: 12, color: 'var(--medium-gray)' }}>Estado del Tramo</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ background: color, color: '#fff', fontSize: 13, fontWeight: 800, padding: '4px 12px', borderRadius: 20, letterSpacing: 1 }}>{label}</span>
+                        <span style={{ fontSize: 15, color: 'var(--medium-gray)', fontWeight: 500 }}>Estado del Tramo</span>
                       </div>
-                      <div style={{ fontSize: 13, color: 'var(--medium-gray)' }}>
-                        Liquidación actual: <strong style={{ color }}>{liquidDesc}</strong>
+                      <div style={{ marginTop: 12, fontSize: 16, color: 'var(--medium-gray)' }}>
+                        Liquidación actual: <strong style={{ color }}>{info.tramoVal}{isPercentage ? '%' : '€/ud'}</strong>
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 11, color: 'var(--medium-gray)', marginBottom: 2 }}>Pago de este grupo</div>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, justifyContent: 'flex-end' }}>
-                        <div style={{ fontSize: 20, fontWeight: 900, color }}>{fmt(tramoAmt)}</div>
-                      </div>
+                      <div style={{ fontSize: 14, color: 'var(--medium-gray)', marginBottom: 4 }}>Pago de este grupo</div>
+                      <div style={{ fontSize: 32, fontWeight: 900, color }}>{fmt(tramoAmt)}</div>
                     </div>
                   </div>
 
-                  {/* % Cumplimiento grande */}
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>
-                    <div style={{ fontSize: 40, fontWeight: 900, color: tramoLabel.col, lineHeight: 1 }}>{pje.toFixed(1)}%</div>
-                    <div style={{ fontSize: 13, color: 'var(--medium-gray)' }}>cumplimiento actual</div>
-                    <div style={{ marginLeft: 'auto', fontSize: 12, background: `${tramoLabel.col}18`, color: tramoLabel.col, fontWeight: 700, padding: '4px 12px', borderRadius: 20, border: `1px solid ${tramoLabel.col}40` }}>
+                  {/* Percentage Row */}
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginTop: 28, marginBottom: 32 }}>
+                    <span style={{ fontSize: 56, fontWeight: 900, color: activeColor, letterSpacing: -1, lineHeight: 1 }}>{pje.toFixed(1)}%</span>
+                    <span style={{ fontSize: 16, color: 'var(--medium-gray)', fontWeight: 500 }}>cumplimiento actual</span>
+                    <span style={{ marginLeft: 'auto', background: activeBg, color: activeColor, border: `1px solid ${activeColor}40`, padding: '8px 20px', borderRadius: 24, fontWeight: 700, fontSize: 14 }}>
                       Tramo {tramoLabel.label}
-                    </div>
+                    </span>
                   </div>
 
-                  {/* Barra de progreso con marcas de tramo */}
-                  <div style={{ position: 'relative', marginBottom: 6 }}>
-                    {/* Fondo segmentado */}
-                    <div style={{ display: 'flex', height: 12, borderRadius: 8, overflow: 'hidden', gap: 2 }}>
-                      {TRAMOS.map((t, i) => (
-                        <div key={i} style={{ flex: i < 3 ? 30 : 30, background: t.bg, position: 'relative' }} />
-                      ))}
+                  {/* Progress Bar */}
+                  <div style={{ position: 'relative', marginBottom: 48 }}>
+                    {/* Background segments */}
+                    <div style={{ display: 'flex', height: 14, borderRadius: 8, overflow: 'hidden' }}>
+                      <div style={{ width: '38.4%', background: '#FEE2E2', borderRight: '2px solid #fff' }} /> {/* 0-50% */}
+                      <div style={{ width: '23.1%', background: '#FEF3C7', borderRight: '2px solid #fff' }} /> {/* 50-80% */}
+                      <div style={{ width: '15.4%', background: '#D1FAE5', borderRight: '2px solid #fff' }} /> {/* 80-100% */}
+                      <div style={{ width: '23.1%', background: '#DBEAFE' }} /> {/* >100% */}
                     </div>
-                    {/* Barra de progreso encima */}
-                    <div style={{ position: 'absolute', top: 0, left: 0, width: `${Math.min(barPct / 1.3, 100)}%`, height: 12, borderRadius: 8, background: `linear-gradient(90deg, ${tramoLabel.col}aa, ${tramoLabel.col})`, transition: 'width 0.6s ease', boxShadow: `0 0 6px ${tramoLabel.col}60` }} />
-                    {/* Marcas */}
-                    {[50, 80, 100].map(mark => (
-                      <div key={mark} style={{ position: 'absolute', top: -4, left: `${(mark / 130) * 100}%`, width: 2, height: 20, background: 'var(--border-color)', transform: 'translateX(-50%)' }} />
-                    ))}
-                  </div>
-                  {/* Etiquetas bajo la barra */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--medium-gray)', marginBottom: 12 }}>
-                    <span>0%</span><span>50%</span><span>80%</span><span>100%</span><span>+</span>
+                    
+                    {/* Fill */}
+                    <div style={{ position: 'absolute', top: 0, left: 0, width: `${(barPct / 130) * 100}%`, height: 14, borderRadius: 8, background: `linear-gradient(90deg, ${activeColor}99, ${activeColor})`, transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)', boxShadow: `0 2px 10px ${activeColor}50` }} />
+                    
+                    {/* Markers */}
+                    <div style={{ position: 'absolute', top: 22, left: 0, fontSize: 12, color: 'var(--medium-gray)', fontWeight: 600 }}>0%</div>
+                    <div style={{ position: 'absolute', top: 22, left: '38.4%', transform: 'translateX(-50%)', fontSize: 12, color: 'var(--medium-gray)', fontWeight: 600 }}>50%</div>
+                    <div style={{ position: 'absolute', top: 22, left: '61.5%', transform: 'translateX(-50%)', fontSize: 12, color: 'var(--medium-gray)', fontWeight: 600 }}>80%</div>
+                    <div style={{ position: 'absolute', top: 22, left: '76.9%', transform: 'translateX(-50%)', fontSize: 12, color: 'var(--medium-gray)', fontWeight: 600 }}>100%</div>
+                    <div style={{ position: 'absolute', top: 22, right: 0, fontSize: 12, color: 'var(--medium-gray)', fontWeight: 600 }}>+</div>
                   </div>
 
-                  {/* Escalera de tramos */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 4 }}>
+                  {/* Tramos Boxes */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 28 }}>
                     {TRAMOS.map((t, i) => {
                       const isActive = (i === 0 && pje < 50) || (i === 1 && pje >= 50 && pje < 80) || (i === 2 && pje >= 80 && pje <= 100) || (i === 3 && pje > 100)
                       return (
-                        <div key={i} style={{ background: isActive ? t.bg : 'var(--active-bg)', border: isActive ? `2px solid ${t.col}` : '1px solid var(--border-color)', borderRadius: 8, padding: '6px 8px', textAlign: 'center' }}>
-                          <div style={{ fontSize: 10, color: isActive ? t.col : 'var(--medium-gray)', fontWeight: isActive ? 800 : 400 }}>{t.label}</div>
-                          {isActive && <div style={{ fontSize: 10, color: t.col, fontWeight: 900, marginTop: 2 }}>← AQUÍ</div>}
+                        <div key={i} style={{
+                          background: isActive ? t.bg : '#f8fafc',
+                          border: isActive ? `2px solid ${t.col}` : '1px solid #e2e8f0',
+                          borderRadius: 12, padding: '16px 8px', textAlign: 'center',
+                          display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
+                          height: 70
+                        }}>
+                          <div style={{ fontSize: 15, color: isActive ? t.col : 'var(--medium-gray)', fontWeight: isActive ? 800 : 500 }}>{t.label}</div>
+                          {isActive && <div style={{ fontSize: 12, color: t.col, fontWeight: 900, marginTop: 4 }}>← AQUÍ</div>}
                         </div>
                       )
                     })}
                   </div>
 
-                  {/* Importe base */}
-                  <div style={{ marginTop: 10, fontSize: 12, color: 'var(--medium-gray)', borderTop: '1px solid var(--border-color)', paddingTop: 8 }}>
-                    Base de cálculo: <strong style={{ color: 'var(--light-text)' }}>{fmt(totalImporte)}</strong>
-                    {info.isPercentage && <> × {info.tramoVal}% = <strong style={{ color }}>{fmt(tramoAmt)}</strong></>}
+                  {/* Footer Base de Cálculo */}
+                  <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 20, fontSize: 14, color: 'var(--medium-gray)' }}>
+                    Base de cálculo: <strong style={{ color: '#1e293b', fontSize: 15 }}>{fmt(totalImporte)}</strong>
                   </div>
                 </div>
               )
             }
             return (
-              <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 24, marginBottom: 32, flexDirection: 'column' }}>
                 {renderCard(plusInfo,   'PLUS',   '#00ADEF', plusTotal,   plusTramoAmt,   plusTramoProyectado)}
                 {renderCard(basicoInfo, 'BÁSICO', '#F59E0B', basicoTotal, basicoTramoAmt, basicoTramoProyectado)}
               </div>
@@ -903,9 +919,9 @@ function GrupoClienteContent() {
           })()}
 
           {/* ── Sections ── */}
-          <SectionTable label="Código Plus"   badge="PLUS"   badgeColor="#00ADEF" groups={plusGroups}   tabColor={tab.color} tramoInfo={plusInfo}   dashRows={plusDash?.rows} flatRows={activeTab === 'alta' || activeTab === 'porta'} dedupeInfo={activeTab === 'tma' || activeTab === 'ti' || activeTab === 'micro'} />
-          <SectionTable label="Código Básico" badge="BÁSICO" badgeColor="#F59E0B" groups={basicoGroups} tabColor={tab.color} tramoInfo={basicoInfo} dashRows={basicoDash?.rows} flatRows={activeTab === 'alta' || activeTab === 'porta'} dedupeInfo={activeTab === 'tma' || activeTab === 'ti' || activeTab === 'micro'} />
-          <SectionTable label="Otros Códigos" badge="OTROS"   badgeColor="#6B7280" groups={otrosGroups}  tabColor={tab.color} tramoInfo={{ tramoVal: 0, isPercentage: false, pje: 0, pjeProyectado: 0, tramoValProyectado: 0 }} flatRows={activeTab === 'alta' || activeTab === 'porta'} dedupeInfo={activeTab === 'tma' || activeTab === 'ti' || activeTab === 'micro'} />
+          <SectionTable label="Código Plus"   badge="PLUS"   badgeColor="#00ADEF" groups={plusGroups}   tabColor={tab.color} tramoInfo={plusInfo}   dashRows={plusDash?.rows} flatRows={activeTab === 'prepago' || activeTab === 'varios'} dedupeInfo={activeTab === 'contratos_movil' || activeTab === 'rent'} />
+          <SectionTable label="Código Básico" badge="BÁSICO" badgeColor="#F59E0B" groups={basicoGroups} tabColor={tab.color} tramoInfo={basicoInfo} dashRows={basicoDash?.rows} flatRows={activeTab === 'prepago' || activeTab === 'varios'} dedupeInfo={activeTab === 'contratos_movil' || activeTab === 'rent'} />
+          <SectionTable label="Otros Códigos" badge="OTROS"   badgeColor="#6B7280" groups={otrosGroups}  tabColor={tab.color} tramoInfo={{ tramoVal: 0, isPercentage: false, pje: 0, pjeProyectado: 0, tramoValProyectado: 0 }} flatRows={activeTab === 'prepago' || activeTab === 'varios'} dedupeInfo={activeTab === 'contratos_movil' || activeTab === 'rent'} />
 
           {/* ── Grand total ── */}
           <div style={{ marginTop: 8, padding: '18px 28px', background: `${tab.color}15`, border: `2px solid ${tab.color}40`, borderRadius: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

@@ -43,7 +43,6 @@ export default function BottomNav() {
     { name: 'Jefe Tiendas', href: '/seguimiento-ventas', icon: LineChart, permission: 'MODULE_JEFE_TIENDAS', matchPaths: ['/seguimiento-ventas'] },
     { name: 'Back Office', href: '/back-office', icon: FolderOpen, permission: 'MODULE_BACK_OFFICE', matchPaths: ['/back-office'] },
     { name: 'Liquidaciones', href: '/liquidacion', icon: Euro, permission: 'MODULE_LIQUIDACION', matchPaths: ['/liquidacion'] },
-    { name: 'Dirección', href: '/direccion-tiendas', icon: Building2, permission: 'MODULE_DIRECCION', matchPaths: ['/direccion-tiendas'] },
     { name: 'Admin', href: '/admin', icon: Settings, permission: 'MODULE_ADMIN', matchPaths: ['/admin'] },
   ]
 

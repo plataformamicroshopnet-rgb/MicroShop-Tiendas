@@ -461,3 +461,17 @@ model TiendaComercialHour {
 
   @@index([periodKey])
 }
+
+model CajaEntry {
+  id                 String      @id @default(uuid())
+  tienda             String      // 'Auxiliadora', 'Villamayor', 'Béjar', 'Correhuela', 'MovilFree', 'Central'
+  fecha              String      // Formato YYYY-MM-DD
+  concepto           String
+  detalle            String
+  importe            Float
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  vendedor           String?     // Usuario que lo registró
+  estadoTrazabilidad String?     // 'ROJO', 'NARANJA', 'VERDE', null
+}
+

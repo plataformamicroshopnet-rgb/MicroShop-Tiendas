@@ -329,7 +329,6 @@ export default function AdminDashboardPage() {
             { name: 'Jefe Tiendas', href: '/seguimiento-ventas', permission: 'MODULE_JEFE_TIENDAS' },
             { name: 'Back Office', href: '/back-office', permission: 'MODULE_BACK_OFFICE' },
             { name: 'Liquidaciones', href: '/liquidacion', permission: 'MODULE_LIQUIDACION' },
-            { name: 'Dirección Tiendas', href: '/direccion-tiendas', permission: 'MODULE_DIRECCION' },
             { name: 'Admin', href: '/admin', permission: 'MODULE_ADMIN' },
           ].map((item) => {
             if (user && !can(user, item.permission)) return null;

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
-import { Briefcase, CreditCard, Smartphone, ShieldCheck, Tag, Target, Globe, Settings2, ArrowUp, ArrowDown, Save, X, Trophy } from 'lucide-react'
+import { Briefcase, CreditCard, Smartphone, ShieldCheck, Tag, Target, Globe, Settings2, ArrowUp, ArrowDown, Save, X, Calculator } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useGuard } from '@/hooks/useGuard'
 import { PeriodSelector } from '@/components/PeriodSelector'
@@ -40,8 +40,17 @@ export default function TiendasHubPage() {
       description: 'Cálculo de retribuciones, métricas de éxito y liquidaciones en tiempo real.',
       icon: CreditCard,
       action: () => router.push('/comisiones'),
-      bgIcon: 'linear-gradient(135deg, rgba(245,158,11,0.15) 0%, rgba(217,119,6,0.2) 100%)',
-      colorIcon: '#f59e0b',
+      bgIcon: 'linear-gradient(135deg, rgba(0, 173, 239, 0.15) 0%, rgba(0, 150, 200, 0.2) 100%)',
+      colorIcon: 'var(--mercedes-cyan)',
+      isMain: false
+    },
+    {
+      title: 'Caja',
+      description: 'Gestión de entradas, salidas y trazabilidad de efectivo entre tiendas y Central.',
+      icon: Calculator,
+      action: () => router.push('/tiendas/caja'),
+      bgIcon: 'linear-gradient(135deg, rgba(0, 173, 239, 0.15) 0%, rgba(0, 150, 200, 0.2) 100%)',
+      colorIcon: 'var(--mercedes-cyan)',
       isMain: false
     },
     {
@@ -51,24 +60,6 @@ export default function TiendasHubPage() {
       action: () => router.push('/tiendas/condiciones-mensuales'),
       bgIcon: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.2) 100%)',
       colorIcon: '#f59e0b',
-      isMain: false
-    },
-    {
-      title: 'Condiciones y Extras Tiendas',
-      description: 'Consultar tabla de objetivos, comisiones y KPIs extendidos',
-      icon: Briefcase,
-      action: () => router.push('/tiendas/condiciones-plus'),
-      bgIcon: 'linear-gradient(135deg, rgba(0, 173, 239, 0.15) 0%, rgba(0, 150, 200, 0.2) 100%)',
-      colorIcon: 'var(--mercedes-cyan)',
-      isMain: false
-    },
-    {
-      title: 'Torneos de Ventas',
-      description: 'Ranking en tiempo real, competición y medallas por objetivos.',
-      icon: Trophy,
-      action: () => router.push('/torneos-ventas'),
-      bgIcon: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.2) 100%)',
-      colorIcon: '#10b981',
       isMain: false
     }
   ]

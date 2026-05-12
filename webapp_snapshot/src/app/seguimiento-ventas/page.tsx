@@ -44,6 +44,7 @@ export default function SeguimientoVentasPage() {
       color: 'rgba(16,185,129,0.1)',
       textColor: '#10b981'
     },
+
     {
       title: 'Comisiones Tiendas Completas',
       description: 'Liquidación grupal y métricas completas de todas las comisiones.',
@@ -67,17 +68,10 @@ export default function SeguimientoVentasPage() {
       action: () => router.push('/seguimiento-ventas/condiciones-mensuales'),
       color: 'rgba(245, 158, 11, 0.1)',
     },
+
     {
-      title: 'Condiciones y Extras Tiendas',
-      description: 'Consultar tabla de objetivos, comisiones y KPIs extendidos',
-      icon: Briefcase,
-      action: () => router.push('/seguimiento-ventas/condiciones-plus'),
-      color: 'rgba(0,173,239,0.1)',
-      textColor: 'var(--mercedes-cyan)'
-    },
-    {
-      title: 'Combos Cupido + TGT + Respaldo 5G',
-      description: 'Cross-sell por comercial: Respaldo 5G, TGT y combos con TMA/Micro. Clic en cada cifra para ver clientes.',
+      title: 'Comparativa Rapida de Ventas',
+      description: 'Cross-sell por comercial: Palancas principales de comisiones. Clic en cada cifra para ver clientes.',
       icon: Target,
       action: () => router.push('/seguimiento-ventas/combos'),
       color: 'rgba(30,58,95,0.08)',
@@ -136,44 +130,50 @@ export default function SeguimientoVentasPage() {
   return (
     <div className="w-full" style={{ padding: '24px 32px', backgroundColor: 'var(--bg-app)', minHeight: '100vh' }}>
       <style dangerouslySetInnerHTML={{__html: `
-        .premium-card {
-            background-color: var(--bg-card);
+        .hub-grid {
+            display: grid;
+            gap: 16px;
+            grid-template-columns: 1fr;
+        }
+        
+        @media (min-width: 768px) {
+            .hub-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (min-width: 1024px) {
+            .hub-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        .hub-card {
+            background: var(--bg-card);
             border-radius: 16px;
             padding: 20px;
             cursor: pointer;
             transition: all 0.2s ease;
-            border: 1px solid var(--border-strong);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 4px 10px -5px rgba(15, 23, 42, 0.05);
             display: flex;
             flex-direction: column;
-            gap: 16px;
-        }
-        .premium-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
-            border-color: #3b82f6;
-        }
-        .card-icon-wrapper {
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
             justify-content: center;
+            height: 100%;
         }
-        .card-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: var(--text-main);
-            margin: 0 0 6px 0;
-            line-height: 1.25;
-            letter-spacing: -0.3px;
+        .hub-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px -10px rgba(15, 23, 42, 0.1);
+            border-color: rgba(226, 232, 240, 0);
         }
-        .card-desc {
-            font-size: 15px;
-            color: var(--text-muted);
-            line-height: 1.45;
-            margin: 0;
+
+        .hub-card-main {
+            flex-direction: row;
+            align-items: center;
+            gap: 24px;
+            background: linear-gradient(to right, var(--bg-card), var(--active-bg));
+        }
+        @media (max-width: 768px) {
+            .hub-card-main {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 16px;
+            }
         }
 
         @keyframes wiggle {
@@ -217,16 +217,13 @@ export default function SeguimientoVentasPage() {
           }
         />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px', marginTop: '24px' }}>
+      <div className="hub-grid" style={{ marginTop: '24px' }}>
         {sortedCards.map((c, i) => {
           const Icon = c.icon
+          const iconColor = c.textColor || '#3b82f6';
+          
           return (
-            <div 
-              key={c.title} 
-              className={`premium-card ${isEditMode ? 'wiggle-mode' : ''}`} 
-              onClick={isEditMode ? undefined : c.action}
-              style={{ position: 'relative', cursor: isEditMode ? 'default' : 'pointer' }}
-            >
+            <div key={c.title} style={{ position: 'relative' }}>
               {isEditMode && (
                 <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 10, display: 'flex', gap: 4, background: 'var(--bg-card)', padding: 4, borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.1)', border: '1px solid var(--border-light)' }}>
                   <button onClick={(e) => { e.stopPropagation(); moveCard(i, 'up') }} disabled={i === 0} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 8, border: 'none', background: i === 0 ? 'transparent' : 'var(--bg-input)', color: i === 0 ? 'var(--border-strong)' : 'var(--text-main)', cursor: i === 0 ? 'not-allowed' : 'pointer' }}>
@@ -237,16 +234,34 @@ export default function SeguimientoVentasPage() {
                   </button>
                 </div>
               )}
-              <div className="card-icon-wrapper" style={{ backgroundColor: c.color, color: c.textColor }}>
-                <Icon size={22} strokeWidth={2.5} />
-              </div>
-              <div>
-                <h3 className="card-title">
-                  {c.title}
-                </h3>
-                <p className="card-desc">
-                  {c.description}
-                </p>
+              
+              <div 
+                  className={`hub-card hub-card-main ${isEditMode ? 'wiggle-mode' : ''}`} 
+                  onClick={isEditMode ? undefined : c.action} 
+                  style={{ cursor: isEditMode ? 'default' : 'pointer', borderLeft: `6px solid ${iconColor}` }}
+              >
+                <div style={{ 
+                    background: c.color || 'rgba(59, 130, 246, 0.1)', 
+                    color: iconColor, 
+                    width: 64, 
+                    height: 64, 
+                    flexShrink: 0,
+                    borderRadius: 18, 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.05)'
+                }}>
+                  <Icon size={28} strokeWidth={2.5} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ margin: '0 0 6px 0', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.3px', fontSize: 20 }}>
+                    {c.title}
+                  </h3>
+                  <p style={{ margin: 0, color: 'var(--text-muted)', fontWeight: 500, fontSize: 14, lineHeight: 1.4 }}>
+                    {c.description}
+                  </p>
+                </div>
               </div>
             </div>
           )

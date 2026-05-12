@@ -35,7 +35,7 @@ export default function NuevaVentaPage() {
         pendiente: 'No', // Si / No / Anulado
         importe: '',
         imei: '',
-        rentConCoste: 'No',
+        rentConCoste: '',
         seguro: '',
         seguroImporte: 0,
         fabricante: '',
@@ -204,7 +204,7 @@ export default function NuevaVentaPage() {
           pendiente: 'No',
           importe: '',
           imei: '',
-          rentConCoste: 'No',
+          rentConCoste: '',
           seguro: '',
           seguroImporte: 0,
           fabricante: '',
@@ -234,7 +234,7 @@ export default function NuevaVentaPage() {
           pendiente: 'No',
           importe: '',
           imei: '',
-          rentConCoste: 'No',
+          rentConCoste: '',
           seguro: '',
           seguroImporte: 0,
           fabricante: '',
@@ -262,7 +262,7 @@ export default function NuevaVentaPage() {
           pendiente: 'No',
           importe: '',
           imei: '',
-          rentConCoste: 'No',
+          rentConCoste: '',
           seguro: '',
           seguroImporte: 0,
           fabricante: '',
@@ -303,7 +303,7 @@ export default function NuevaVentaPage() {
         setSelectedTienda('')
         setFormData({
           vendedor: '', nombreCliente: '', codigo: '', nif: '', telefonoMovil: '', telefonoFijo: '', boletin: '', anotaciones: '',
-          productos: [{ categoria: '', producto: '', telf: '', noCliente: '', pendiente: 'No', importe: '', imei: '', rentConCoste: 'No', seguro: '', seguroImporte: 0, fabricante: '', subcategoria: '', gama: '', isLibre: false, isSwap: false, facturacionAnterior: '', facturacionNueva: '' }]
+          productos: [{ categoria: '', producto: '', telf: '', noCliente: '', pendiente: 'No', importe: '', imei: '', rentConCoste: '', seguro: '', seguroImporte: 0, fabricante: '', subcategoria: '', gama: '', isLibre: false, isSwap: false, facturacionAnterior: '', facturacionNueva: '' }]
         })
       } else {
         setError(data.error || 'Error al guardar la venta')
@@ -517,7 +517,23 @@ export default function NuevaVentaPage() {
                           </div>
                           <div>
                             <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>Rent con coste</label>
-                            <select className="form-select" value={prod.rentConCoste} onChange={e => handleProductChange(index, 'rentConCoste', e.target.value)} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
+                            <select 
+                              className="form-select" 
+                              value={prod.rentConCoste || ''} 
+                              onChange={e => {
+                                const val = e.target.value;
+                                if (val === '') {
+                                  handleProductChange(index, 'rentConCoste', val);
+                                } else {
+                                  if (window.confirm(`Has seleccionado: ${val === 'Si' ? 'SÍ' : 'NO'} para Rent con coste.\n\n¿Es correcta esta elección?`)) {
+                                    handleProductChange(index, 'rentConCoste', val);
+                                  }
+                                }
+                              }} 
+                              required
+                              style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}
+                            >
+                              <option value="">Selecciona...</option>
                               <option value="No">No</option>
                               <option value="Si">Sí</option>
                             </select>

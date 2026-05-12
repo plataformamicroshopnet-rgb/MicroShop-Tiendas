@@ -1171,22 +1171,10 @@ export default function LiquidacionesPage() {
     const renderMenu = () => {
         const menuCardsRaw = [
             {
-                title: 'Repesca Trimestral',
-                description: 'Simulador de repescas agrupando ventas e importes de 3 meses para el cálculo económico.',
-                icon: RefreshCcw,
-                view: 'repesca' as ViewType
-            },
-            {
                 title: 'Ventas vs Importes PLUS',
                 description: 'Control y cálculo automático de comisiones fijadas para el segmento superior.',
                 icon: Briefcase,
                 view: 'basico' as ViewType
-            },
-            {
-                title: 'Ventas vs Importes BÁSICO',
-                description: 'Cálculo de liquidaciones consolidadas para el perfil captador base.',
-                icon: FileText,
-                view: 'plus' as ViewType
             },
             {
                 title: 'Operaciones Telefónica',
@@ -1195,23 +1183,10 @@ export default function LiquidacionesPage() {
                 view: 'operaciones' as ViewType
             },
             {
-                title: 'Cruce de Operaciones',
-                description: 'Módulo comparativo cruzado. Actualmente en fase de compilación subyacente.',
-                icon: Repeat,
-                view: 'cruce' as ViewType,
-                isSub: true
-            },
-            {
                 title: 'Operaciones por Grupo Cliente',
                 description: 'Análisis consolidado de ventas agrupadas por NIF/CIF y producto — secciones Plus y Básico.',
                 icon: Users,
                 href: '/operaciones-grupo-cliente'
-            },
-            {
-                title: 'Auditoría de Importes',
-                description: 'Cuadre automático entre fórmula PLUS + BÁSICO, Operaciones Telefónica y desglose por grupo. Detecta incoherencias económicas.',
-                icon: Zap,
-                view: 'auditoria' as ViewType
             },
             {
                 title: 'Agenda de Llamadas Cristina',
@@ -1620,7 +1595,7 @@ export default function LiquidacionesPage() {
                     nif: sale.nif || '-',
                     telefono: sale.telf || '-',
                     codigo: sale.codigo || '-',
-                    tipoVenta: sale.detalle === 'Ti' ? 'Contratos Móvil' : (sale.detalle || '-'),
+                    tipoVenta: sale.detalle === 'Ti' ? 'Contratos Móvil' : sale.detalle === 'O2' ? 'O2 MovilFree' : (sale.detalle || '-'),
                     producto: sale.producto || 'Sin especificar',
                     comision: Number(comisionEuros),
                     varios: sale.anotaciones || '-',
@@ -1729,7 +1704,7 @@ export default function LiquidacionesPage() {
                                             {isEditing ? <input className="form-input" style={{ padding: '0 4px', width: 80 }} value={editForm.codigo || ''} onChange={e => setEditForm({ ...editForm, codigo: e.target.value })} /> : (s.codigo || '-')}
                                         </td>
                                         <td>
-                                            {isEditing ? <input className="form-input" style={{ padding: '0 4px', width: 100 }} value={editForm.detalle || ''} onChange={e => setEditForm({ ...editForm, detalle: e.target.value })} /> : (s.detalle === 'Ti' ? 'Contratos Móvil' : (s.detalle || '-'))}
+                                            {isEditing ? <input className="form-input" style={{ padding: '0 4px', width: 100 }} value={editForm.detalle || ''} onChange={e => setEditForm({ ...editForm, detalle: e.target.value })} /> : (s.detalle === 'Ti' ? 'Contratos Móvil' : s.detalle === 'O2' ? 'O2 MovilFree' : (s.detalle || '-'))}
                                         </td>
                                         <td>
                                             {isEditing ? (
@@ -1964,7 +1939,7 @@ export default function LiquidacionesPage() {
                                 <X size={20} />
                             </button>
                             <button onClick={() => {
-                                const defaultCards = ['Repesca Trimestral', 'Ventas vs Importes PLUS', 'Ventas vs Importes BÁSICO', 'Operaciones Telefónica', 'Cruce de Operaciones', 'Operaciones por Grupo Cliente']
+                                const defaultCards = ['Ventas vs Importes PLUS', 'Operaciones Telefónica', 'Operaciones por Grupo Cliente']
                                 const currentOrder = cardOrder.length > 0 ? cardOrder : defaultCards;
                                 localStorage.setItem('telefonica_card_order', JSON.stringify(currentOrder));
                                 setIsEditMode(false);
@@ -1975,7 +1950,7 @@ export default function LiquidacionesPage() {
                         ) : (
                             <button onClick={() => { 
                                 setIsEditMode(true); 
-                                if(cardOrder.length === 0) setCardOrder(['Repesca Trimestral', 'Ventas vs Importes PLUS', 'Ventas vs Importes BÁSICO', 'Operaciones Telefónica', 'Cruce de Operaciones', 'Operaciones por Grupo Cliente']); 
+                                if(cardOrder.length === 0) setCardOrder(['Ventas vs Importes PLUS', 'Operaciones Telefónica', 'Operaciones por Grupo Cliente']); 
                             }} title="Personalizar Orden" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: '50%', background: 'transparent', border: '1px solid var(--border-strong)', color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={e => e.currentTarget.style.color = '#3b82f6'} onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}>
                                 <Settings2 size={20} />
                             </button>
