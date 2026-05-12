@@ -30,30 +30,12 @@ export default function AdminDashboardPage() {
 
   const cards = [
     {
-      title: 'Condiciones y Extras Tiendas',
-      description: 'Configurar tabla de objetivos, comisiones y KPIs extendidos',
-      icon: Briefcase,
-      action: () => router.push('/admin/condiciones-plus'),
-      color: 'rgba(0,173,239,0.1)',
-      textColor: 'var(--mercedes-cyan)',
-      permission: 'MANAGE_CATALOG'
-    },
-    {
       title: 'Condiciones, Comisiones Extras del mes y Penalizaciones',
       description: 'Escribir condiciones, notas y comisiones estra para el mes en curso.',
       icon: FileEdit,
       action: () => router.push('/admin/condiciones-mensuales'),
       color: 'rgba(245, 158, 11, 0.1)',
       textColor: '#f59e0b',
-      permission: 'MODULE_ADMIN'
-    },
-    {
-      title: 'Extras Plus y Básico',
-      description: 'Configurar cruces automáticos de productos y comisiones extras.',
-      icon: Settings,
-      action: () => router.push('/admin/extras'),
-      color: 'rgba(0,173,239,0.1)',
-      textColor: 'var(--mercedes-cyan)',
       permission: 'MODULE_ADMIN'
     },
     {
@@ -90,33 +72,6 @@ export default function AdminDashboardPage() {
       textColor: '#2563eb'
     },
     {
-      title: 'Revista Corporativa',
-      description: 'Subir y administrar el historial de revistas premium.',
-      icon: BookOpen,
-      action: () => router.push('/admin/revistas'),
-      color: 'rgba(59, 130, 246, 0.1)',
-      textColor: '#3b82f6',
-      permission: 'MANAGE_MAGAZINES'
-    },
-    {
-      title: 'Catálogo Dispositivos',
-      description: 'Publicar catálogos en formato apaisado.',
-      icon: Smartphone,
-      action: () => router.push('/admin/catalogos-movistar'),
-      color: 'rgba(16, 185, 129, 0.1)',
-      textColor: '#10b981',
-      permission: 'MANAGE_MAGAZINES'
-    },
-    {
-      title: 'Dosier Empresas',
-      description: 'Administrar dosieres corporativos B2B.',
-      icon: Briefcase,
-      action: () => router.push('/admin/dosier-empresas'),
-      color: 'rgba(245, 158, 11, 0.1)',
-      textColor: '#f59e0b',
-      permission: 'MANAGE_MAGAZINES'
-    },
-    {
       title: 'Trazabilidad y Accesos',
       description: 'Auditoría en tiempo real de navegación de usuarios.',
       icon: Activity,
@@ -124,14 +79,6 @@ export default function AdminDashboardPage() {
       color: 'rgba(236, 72, 153, 0.1)',
       textColor: '#ec4899',
       permission: 'MODULE_ADMIN'
-    },
-    {
-      title: theme === 'dark' ? 'Modo Día' : 'Modo Noche',
-      description: 'Cambiar el tema visual de la plataforma.',
-      icon: theme === 'dark' ? Sun : Moon,
-      action: toggleTheme,
-      color: 'rgba(255, 149, 0, 0.1)',
-      textColor: '#FF9500'
     },
     {
       title: 'Entrada de Datos',
@@ -243,32 +190,7 @@ export default function AdminDashboardPage() {
             border: 2px dashed #3b82f6 !important;
         }
 
-        /* Hero Card Específica */
-        .hero-card {
-            grid-column: 1 / -1;
-            order: -1;
-            padding: 16px 20px;
-        }
-        .hero-card .card-icon-wrapper {
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
-        }
-        .hero-card .card-title {
-            font-size: 18px;
-        }
-        .hero-card .card-desc {
-            font-size: 14px;
-        }
-        
-        @media (min-width: 640px) {
-            .hero-card {
-                flex-direction: row;
-                align-items: center;
-                gap: 20px;
-                padding: 18px 24px;
-            }
-        }
+
       `}} />
 
       {/* HEADER LOCAL */}
@@ -384,20 +306,18 @@ export default function AdminDashboardPage() {
 
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-        gap: '16px',
-        marginTop: '8px'
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: '24px',
+        marginTop: '16px'
       }}>
         {sortedCards.map((c: any, i) => {
           const Icon = c.icon
-          const isHero = c.title === 'Gestión de Periodos Operativos'
-
           return (
             <div
               key={c.title}
-              className={`premium-card ${isHero ? 'hero-card' : ''} ${isEditMode ? 'wiggle-mode' : ''}`}
+              className={`premium-card ${isEditMode ? 'wiggle-mode' : ''}`}
               onClick={isEditMode ? undefined : c.action}
-              style={{ position: 'relative', cursor: isEditMode ? 'default' : 'pointer' }}
+              style={{ position: 'relative', cursor: isEditMode ? 'default' : 'pointer', borderLeft: `5px solid ${c.textColor}` }}
             >
               {isEditMode && (
                 <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 10, display: 'flex', gap: 4, background: 'var(--bg-card)', padding: 4, borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.1)', border: '1px solid var(--border-light)' }}>
@@ -410,7 +330,7 @@ export default function AdminDashboardPage() {
                 </div>
               )}
               <div className="card-icon-wrapper" style={{ backgroundColor: c.color, color: c.textColor }}>
-                <Icon size={isHero ? 26 : 22} strokeWidth={2.5} />
+                <Icon size={22} strokeWidth={2.5} />
               </div>
               <div>
                 <h3 className="card-title">

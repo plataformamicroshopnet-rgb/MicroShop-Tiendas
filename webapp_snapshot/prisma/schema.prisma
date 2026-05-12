@@ -483,6 +483,7 @@ model MovilFreeProduct {
   precio      Float
   coste       Float    @default(0)
   stock       Int      @default(0)
+  imei        String?  // Opcional, 15 digitos
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }

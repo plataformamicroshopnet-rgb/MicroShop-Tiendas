@@ -14,12 +14,13 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         categoria: data.categoria,
         precio: Number(data.precio),
         coste: Number(data.coste),
-        stock: Number(data.stock)
+        stock: Number(data.stock),
+        imei: data.imei || null
       }
     })
     return NextResponse.json(item)
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    console.error('PUT Error:', e); return NextResponse.json({ error: e.message, fullError: e }, { status: 500 })
   }
 }
 
@@ -30,6 +31,6 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     await prisma.movilFreeProduct.delete({ where: { id: id } })
     return NextResponse.json({ success: true })
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    console.error('PUT Error:', e); return NextResponse.json({ error: e.message, fullError: e }, { status: 500 })
   }
 }

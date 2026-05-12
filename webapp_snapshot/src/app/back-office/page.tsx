@@ -28,8 +28,8 @@ export default function BackOfficePage() {
       description: 'Registra nuevas operaciones de catálogo fijo, móvil o TI en el sistema unificado.',
       icon: Building2,
       href: '/nueva-venta',
-      color: 'rgba(37, 99, 235, 0.1)',
-      textColor: '#2563eb'
+      color: 'rgba(14, 165, 233, 0.1)',
+      textColor: '#0ea5e9'
     } : null,
     {
       title: 'Registro de Operaciones',
@@ -44,9 +44,9 @@ export default function BackOfficePage() {
       description: 'Acceso directo a las operaciones en estado Pendiente para su tramitación.',
       icon: List,
       href: '/operaciones?filter=pendientes',
-      color: 'rgba(245, 158, 11, 0.1)',
-      textColor: '#d97706',
-      border: '1px solid rgba(245, 158, 11, 0.2)'
+      color: 'rgba(239, 68, 68, 0.1)',
+      textColor: '#ef4444',
+      border: '1px solid rgba(239, 68, 68, 0.2)'
     }
   ]
 
@@ -177,7 +177,7 @@ export default function BackOfficePage() {
 
       <div style={{
         display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', 
+        gridTemplateColumns: '1fr', 
         gap: '16px',
         marginTop: '16px'
       }}>
@@ -185,7 +185,7 @@ export default function BackOfficePage() {
           const Icon = c.icon
           
           const cardContent = (
-            <div className={`premium-card ${isEditMode ? 'wiggle-mode' : ''}`} style={{ position: 'relative', border: c.border || '1px solid transparent' }}>
+            <div className={`premium-card ${isEditMode ? 'wiggle-mode' : ''}`} style={{ position: 'relative', border: c.border || '1px solid transparent', borderLeft: `5px solid ${c.textColor}` }}>
               {isEditMode && (
                 <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 10, display: 'flex', gap: 4, background: 'var(--bg-card)', padding: 4, borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.1)', border: '1px solid var(--border-light)' }}>
                   <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); moveCard(i, 'up') }} disabled={i === 0} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 8, border: 'none', background: i === 0 ? 'transparent' : 'var(--bg-input)', color: i === 0 ? 'var(--border-strong)' : 'var(--text-main)', cursor: i === 0 ? 'not-allowed' : 'pointer' }}>

@@ -1,17 +1,10 @@
-import { NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
-const prisma = new PrismaClient()
+﻿import re
 
-export async function GET() {
-  try {
-    const items = await prisma.movilFreeProduct.findMany({ orderBy: { createdAt: 'desc' } })
-    return NextResponse.json(items)
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
-  }
-}
+filepath = 'src/app/api/movilfree/products/route.ts'
+with open(filepath, 'r', encoding='utf-8') as f:
+    content = f.read()
 
-export async function POST(req: Request) {
+new_post = """export async function POST(req: Request) {
   try {
     const data = await req.json()
     if (Array.isArray(data)) {
@@ -31,4 +24,16 @@ export async function POST(req: Request) {
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
   }
-}
+}"""
+
+content = re.sub(
+    r"export async function POST\(req: Request\) \{.*?return NextResponse\.json\(\{ error: e\.message \}, \{ status: 500 \}\)\n  \}\n\}",
+    new_post,
+    content,
+    flags=re.DOTALL
+)
+
+with open(filepath, 'w', encoding='utf-8') as f:
+    f.write(content)
+
+print("Updated Products API for bulk insert")

@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, Edit, ArrowLeftRight, Package, Users, ShoppingCart, RefreshCcw, Save, X, Search } from 'lucide-react'
+import { Plus, Trash2, ShoppingCart, X, Users, ArrowLeftRight, RefreshCcw, Package, Edit, Save, Search, Edit2 } from 'lucide-react'
 
 // --- Types ---
-type Product = { id: string; nombre: string; categoria: string; precio: number; coste: number; stock: number; createdAt: string }
+type Product = { id: string; nombre: string; categoria: string; precio: number; coste: number; stock: number; createdAt: string; imei?: string }
 type Client = { id: string; nif: string; nombre: string; direccion?: string; poblacion?: string; provincia?: string; cp?: string; movil?: string; fijo?: string; email: string; totalComprado: number }
 type Sale = { id: string; numeroFactura?: number; vendedor: string; nifCliente: string; nombreCliente: string; listaProductos: string; importeTotal: number; estado: string; fechaVenta: string; motivoDevolucion: string }
 
@@ -29,13 +29,80 @@ export default function MovilFreeApp() {
   // --- Subcomponents ---
   
   // 1. INVENTARIO
-  const [newProd, setNewProd] = useState({ nombre: '', categoria: 'Accesorio', precio: 0, coste: 0, stock: 0 })
+  const [newProd, setNewProd] = useState({ nombre: '', categoria: 'Accesorio', precio: 0, coste: 0, stock: 0, imei: '' })
+  const [showPasteModal, setShowPasteModal] = useState(false)
+  const [pasteText, setPasteText] = useState('')
+  const [searchInvProducts, setSearchInvProducts] = useState('')
+  const [searchClients, setSearchClients] = useState('')
+  const [searchSales, setSearchSales] = useState('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const handleBulkPaste = async () => {
+    if(!pasteText.trim()) return
+    const rows = pasteText.split('\n').filter(r => r.trim() !== '')
+    const newProducts = rows.map(r => {
+      const cols = r.split('\t')
+      return {
+        nombre: cols[0] ? cols[0].trim() : 'Desconocido',
+        categoria: cols[1] ? cols[1].trim() : 'Terminal',
+        coste: parseFloat((cols[2] || '0').replace(',', '.')) || 0,
+        precio: parseFloat((cols[3] || '0').replace(',', '.')) || 0,
+        stock: parseInt((cols[5] || '1'), 10) || 1,
+        imei: cols[6] ? cols[6].trim() : ''
+      }
+    })
+    
+    try {
+      const res = await fetch('/api/movilfree/products', { method: 'POST', body: JSON.stringify(newProducts) })
+      if (!res.ok) throw new Error('Error al guardar en masa')
+      
+      const prodsRes = await fetch('/api/movilfree/products')
+      const data = await prodsRes.json()
+      setProducts(data)
+      
+      setShowPasteModal(false)
+      setPasteText('')
+      alert(`¡Se han añadido ${newProducts.length} productos correctamente!`)
+    } catch(e: any) {
+      alert(e.message)
+    }
+  }
+
+  const [editingProductId, setEditingProductId] = useState<string | null>(null)
+  const [editProdData, setEditProdData] = useState<any>(null)
+
+  const handleSaveEditProduct = async () => {
+    if(!editProdData) return;
+    try {
+      const res = await fetch(`/api/movilfree/products/${editingProductId}`, { method: 'PUT', body: JSON.stringify(editProdData) })
+      if(res.ok) {
+        setProducts(products.map(p => p.id === editingProductId ? editProdData : p))
+        setEditingProductId(null)
+        setEditProdData(null)
+      } else {
+        const errRes = await res.json(); alert('Error al guardar: ' + (errRes.error || JSON.stringify(errRes)))
+      }
+    } catch(e:any) { alert(e.message) }
+  }
+
+  const handleDeleteProduct = async (id: string) => {
+    if(!confirm('¿Seguro que quieres borrar este producto permanentemente?')) return;
+    try {
+      const res = await fetch(`/api/movilfree/products/${id}`, { method: 'DELETE' })
+      if(res.ok) {
+        setProducts(products.filter(p => p.id !== id))
+      } else {
+        alert('Error al borrar')
+      }
+    } catch(e:any) { alert(e.message) }
+  }
+
   const handleCreateProduct = async () => {
     if(!newProd.nombre) return alert('El nombre es obligatorio')
     const res = await fetch('/api/movilfree/products', { method: 'POST', body: JSON.stringify(newProd) })
     const created = await res.json()
     setProducts([created, ...products])
-    setNewProd({ nombre: '', categoria: 'Accesorio', precio: 0, coste: 0, stock: 0 })
+    setNewProd({ nombre: '', categoria: 'Accesorio', precio: 0, coste: 0, stock: 0, imei: '' })
   }
   const updateStock = async (id: string, newStock: number) => {
     const p = products.find(x => x.id === id)
@@ -64,7 +131,8 @@ export default function MovilFreeApp() {
   const [printModalSale, setPrintModalSale] = useState<Sale | null>(null)
   const [cart, setCart] = useState<{product: Product, cantidad: number}[]>([])
   const [selectedClient, setSelectedClient] = useState('')
-  const [saleVendedor, setSaleVendedor] = useState('')
+  const [clientName, setClientName] = useState('')
+  const [showSuggestions, setShowSuggestions] = useState(false)
   
   const addToCart = (p: Product) => {
     if (p.stock <= 0) return alert('No hay stock de este producto')
@@ -80,14 +148,14 @@ export default function MovilFreeApp() {
   const handleCheckout = async () => {
     if(cart.length === 0) return alert('El carrito está vacío')
     const total = cart.reduce((acc, item) => acc + (item.product.precio * 1.21 * item.cantidad), 0)
-    const cl = clients.find(c => c.nif === selectedClient)
+    const cl = clients.find(c => c.nif === selectedClient || c.nombre === clientName)
     
     const payload = {
-      vendedor: saleVendedor || 'Marta',
-      nifCliente: selectedClient || 'CONTADO',
-      nombreCliente: cl ? cl.nombre : 'Cliente Contado',
+      vendedor: 'Sistema',
+      nifCliente: selectedClient || (cl ? cl.nif : 'CONTADO'),
+      nombreCliente: clientName || (cl ? cl.nombre : 'Cliente Contado'),
       importeTotal: total,
-      listaProductos: cart.map(c => ({ id: c.product.id, nombre: c.product.nombre, cantidad: c.cantidad, precio: c.product.precio * 1.21 }))
+      listaProductos: cart.map(c => ({ id: c.product.id, nombre: c.product.nombre, cantidad: c.cantidad, precio: c.product.precio * 1.21, coste: c.product.coste }))
     }
 
     const res = await fetch('/api/movilfree/sales', { method: 'POST', body: JSON.stringify(payload) })
@@ -174,8 +242,9 @@ export default function MovilFreeApp() {
           </div>
         </div>
 
-        {/* TABS */}
-        <div style={{ display: 'flex', gap: 16, marginBottom: 32 }}>
+        {/* TABS & SEARCH */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
+          <div style={{ display: 'flex', gap: 16 }}>
           <button onClick={() => setActiveTab('ventas')} style={{ padding: '12px 24px', borderRadius: 12, border: 'none', background: activeTab === 'ventas' ? '#E91E97' : 'white', color: activeTab === 'ventas' ? 'white' : '#666', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: activeTab === 'ventas' ? '0 4px 12px rgba(233,30,151,0.2)' : 'none' }}>
             <ShoppingCart size={18} /> Punto de Venta
           </button>
@@ -188,6 +257,23 @@ export default function MovilFreeApp() {
           <button onClick={() => setActiveTab('devoluciones')} style={{ padding: '12px 24px', borderRadius: 12, border: 'none', background: activeTab === 'devoluciones' ? '#E91E97' : 'white', color: activeTab === 'devoluciones' ? 'white' : '#666', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: activeTab === 'devoluciones' ? '0 4px 12px rgba(233,30,151,0.2)' : 'none' }}>
             <RefreshCcw size={18} /> Histórico & Devoluciones
           </button>
+          </div>
+
+          <div style={{ position: 'relative', width: '450px' }}>
+            <Search size={18} style={{ position: 'absolute', left: 14, top: 13, color: '#0284c7' }} />
+            {activeTab === 'ventas' && (
+              <input placeholder="Buscar producto en Punto de Venta..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} style={{ width: '100%', padding: '12px 16px 12px 44px', borderRadius: 12, border: '1px solid #bae6fd', background: '#f0f9ff', color: '#0369a1', fontSize: 14 }} />
+            )}
+            {activeTab === 'productos' && (
+              <input placeholder="Buscar producto en Inventario..." value={searchInvProducts} onChange={e=>setSearchInvProducts(e.target.value)} style={{ width: '100%', padding: '12px 16px 12px 44px', borderRadius: 12, border: '1px solid #bae6fd', background: '#f0f9ff', color: '#0369a1', fontSize: 14 }} />
+            )}
+            {activeTab === 'clientes' && (
+              <input placeholder="Buscar cliente por NIF o Nombre..." value={searchClients} onChange={e=>setSearchClients(e.target.value)} style={{ width: '100%', padding: '12px 16px 12px 44px', borderRadius: 12, border: '1px solid #bae6fd', background: '#f0f9ff', color: '#0369a1', fontSize: 14 }} />
+            )}
+            {activeTab === 'devoluciones' && (
+              <input placeholder="Buscar venta (NIF, Factura, Vendedor, Estado)..." value={searchSales} onChange={e=>setSearchSales(e.target.value)} style={{ width: '100%', padding: '12px 16px 12px 44px', borderRadius: 12, border: '1px solid #bae6fd', background: '#f0f9ff', color: '#0369a1', fontSize: 14 }} />
+            )}
+          </div>
         </div>
 
         {/* CONTENIDO TABS */}
@@ -241,14 +327,70 @@ export default function MovilFreeApp() {
               <div style={{ background: '#f8f9fa', padding: 24, borderRadius: 16 }}>
                 <h3 style={{ color: '#333', margin: '0 0 16px 0' }}>Carrito Actual</h3>
                 
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ fontSize: 12, fontWeight: 'bold', color: '#666' }}>Cliente (NIF opcional)</label>
-                  <input type="text" value={selectedClient} onChange={e => setSelectedClient(e.target.value)} placeholder="Ej: 12345678Z" style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #ddd', marginTop: 4 }} />
-                </div>
-                
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ fontSize: 12, fontWeight: 'bold', color: '#666' }}>Vendedor</label>
-                  <input type="text" value={saleVendedor} onChange={e => setSaleVendedor(e.target.value)} placeholder="Ej: Marta" style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #ddd', marginTop: 4 }} />
+                <div style={{ marginBottom: 16, position: 'relative' }}>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: 12, fontWeight: 'bold', color: '#666' }}>NIF/CIF Opcional</label>
+                      <input 
+                        type="text" 
+                        value={selectedClient} 
+                        onChange={e => {
+                          setSelectedClient(e.target.value);
+                          setShowSuggestions(true);
+                          const match = clients.find(c => c.nif.toLowerCase().includes(e.target.value.toLowerCase()));
+                          if (match && e.target.value.length > 2) setClientName(match.nombre);
+                        }} 
+                        onFocus={() => setShowSuggestions(true)}
+                        placeholder="Ej: 12345678Z" 
+                        maxLength={9}
+                        style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #ddd', marginTop: 4 }} 
+                      />
+                    </div>
+                    <div style={{ flex: 2 }}>
+                      <label style={{ fontSize: 12, fontWeight: 'bold', color: '#666' }}>Nombre Cliente</label>
+                      <input 
+                        type="text" 
+                        value={clientName} 
+                        onChange={e => {
+                          setClientName(e.target.value);
+                          setShowSuggestions(true);
+                          const match = clients.find(c => c.nombre.toLowerCase().includes(e.target.value.toLowerCase()));
+                          if (match && e.target.value.length > 2) setSelectedClient(match.nif);
+                        }} 
+                        onFocus={() => setShowSuggestions(true)}
+                        placeholder="Ej: Juan Pérez" 
+                        style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #ddd', marginTop: 4 }} 
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Autocomplete Dropdown */}
+                  {showSuggestions && (selectedClient.length > 1 || clientName.length > 1) && (
+                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: '1px solid #eee', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 10, maxHeight: 150, overflowY: 'auto', marginTop: 4 }}>
+                      {clients
+                        .filter(c => (selectedClient && c.nif.toLowerCase().includes(selectedClient.toLowerCase())) || (clientName && c.nombre.toLowerCase().includes(clientName.toLowerCase())))
+                        .slice(0, 5)
+                        .map(c => (
+                          <div 
+                            key={c.id} 
+                            onClick={() => {
+                              setSelectedClient(c.nif);
+                              setClientName(c.nombre);
+                              setShowSuggestions(false);
+                            }}
+                            style={{ padding: '10px 12px', cursor: 'pointer', borderBottom: '1px solid #f8f9fa', display: 'flex', justifyContent: 'space-between' }}
+                          >
+                            <strong style={{ color: '#E91E97', fontSize: 13 }}>{c.nif}</strong>
+                            <span style={{ fontSize: 13, color: '#333' }}>{c.nombre}</span>
+                          </div>
+                      ))}
+                      {clients.filter(c => (selectedClient && c.nif.toLowerCase().includes(selectedClient.toLowerCase())) || (clientName && c.nombre.toLowerCase().includes(clientName.toLowerCase()))).length === 0 && (
+                        <div style={{ padding: '10px 12px', fontSize: 12, color: '#888', textAlign: 'center' }}>
+                          Nuevo cliente (se usará el nombre escrito)
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ minHeight: 200, background: 'white', borderRadius: 8, padding: 16, marginBottom: 16, border: '1px solid #eee' }}>
@@ -310,7 +452,7 @@ export default function MovilFreeApp() {
           {activeTab === 'productos' && (
             <div>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr 1fr 1fr auto', gap: 12, marginBottom: 24, background: '#f8f9fa', padding: 16, borderRadius: 12, alignItems: 'end' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr 1fr 1fr 1.2fr auto', gap: 12, marginBottom: 24, background: '#f8f9fa', padding: 16, borderRadius: 12, alignItems: 'end' }}>
                 <div>
                   <label style={{fontSize: 12, fontWeight: 'bold', color: '#666'}}>Producto</label>
                   <input placeholder="Nombre" value={newProd.nombre} onChange={e=>setNewProd({...newProd, nombre: e.target.value})} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ddd', marginTop: 4 }} />
@@ -340,8 +482,29 @@ export default function MovilFreeApp() {
                   <label style={{fontSize: 12, fontWeight: 'bold', color: '#666'}}>Stock</label>
                   <input type="number" placeholder="Uds." value={newProd.stock || ''} onChange={e=>setNewProd({...newProd, stock: Number(e.target.value)})} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ddd', marginTop: 4 }} />
                 </div>
-                <button onClick={handleCreateProduct} style={{ background: fuchsia, color: 'white', border: 'none', padding: '12px 20px', borderRadius: 6, fontWeight: 'bold', cursor: 'pointer', height: 40 }}>Añadir</button>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button onClick={handleCreateProduct} style={{ background: fuchsia, color: 'white', border: 'none', padding: '12px 20px', borderRadius: 6, fontWeight: 'bold', cursor: 'pointer', height: 40, whiteSpace: 'nowrap' }}>Añadir</button>
+                  <button onClick={() => setShowPasteModal(true)} style={{ background: '#4CAF50', color: 'white', border: 'none', padding: '12px 20px', borderRadius: 6, fontWeight: 'bold', cursor: 'pointer', height: 40, whiteSpace: 'nowrap' }}>Excel 📋</button>
+                </div>
               </div>
+
+              {showPasteModal && (
+                <div style={{ background: '#e8f5e9', padding: 16, borderRadius: 12, marginBottom: 24, border: '1px solid #4CAF50' }}>
+                  <h3 style={{ marginTop: 0, color: '#2e7d32' }}>Importar desde Excel</h3>
+                  <p style={{ fontSize: 13, color: '#333' }}>Copia las filas desde tu Excel respetando el orden de estas 6 columnas: <strong>Nombre, Categoría, Coste, Precio, PVP, Stock</strong>. Pégalas aquí:</p>
+                  <textarea 
+                    value={pasteText}
+                    onChange={e => setPasteText(e.target.value)}
+                    style={{ width: '100%', height: 150, padding: 10, borderRadius: 6, border: '1px solid #ddd', fontFamily: 'monospace', whiteSpace: 'pre' }}
+                    placeholder="Ejemplo:&#10;Funda Silicona&#9;Accesorio&#9;2,50&#9;5,00&#9;6,05&#9;10&#9;123456789012345"
+                  />
+                  <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+                    <button onClick={handleBulkPaste} style={{ background: '#4CAF50', color: 'white', border: 'none', padding: '10px 20px', borderRadius: 6, fontWeight: 'bold', cursor: 'pointer' }}>Procesar y Guardar</button>
+                    <button onClick={() => setShowPasteModal(false)} style={{ background: '#ccc', color: '#333', border: 'none', padding: '10px 20px', borderRadius: 6, fontWeight: 'bold', cursor: 'pointer' }}>Cancelar</button>
+                  </div>
+                </div>
+              )}
+
 
               {newProd.precio > 0 && newProd.coste > 0 && (
                 <div style={{ marginBottom: 24, fontSize: 14, color: '#555', background: '#e6fffa', padding: '8px 16px', borderRadius: 8, display: 'inline-block' }}>
@@ -350,39 +513,72 @@ export default function MovilFreeApp() {
               )}
 
 
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 14 }}>
                 <thead>
                   
                   <tr style={{ background: lightPink, color: fuchsia }}>
-                    <th style={{ padding: 12, borderRadius: '8px 0 0 8px' }}>Producto</th>
-                    <th style={{ padding: 12 }}>Categoría</th>
-                    <th style={{ padding: 12 }}>Coste</th>
-                    <th style={{ padding: 12 }}>Precio (s/IVA)</th>
-                    <th style={{ padding: 12 }}>P.V.P (c/IVA)</th>
-                    <th style={{ padding: 12 }}>Ganancia</th>
-                    <th style={{ padding: 12, borderRadius: '0 8px 8px 0' }}>Stock (Uds)</th>
+                    <th style={{ padding: 10, borderRadius: '8px 0 0 8px', width: 'auto' }}>Producto</th>
+                    <th style={{ padding: 10, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}>Categoría</th>
+                    <th style={{ padding: 10, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}>Coste</th>
+                    <th style={{ padding: 10, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}>Precio (s/IVA)</th>
+                    <th style={{ padding: 10, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}>P.V.P (c/IVA)</th>
+                    <th style={{ padding: 10, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}>Ganancia</th>
+                    <th style={{ padding: 10, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}>IMEI</th>
+                    <th style={{ padding: 10, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}>Stock</th>
+                    <th style={{ padding: 10, borderRadius: '0 8px 8px 0', textAlign: 'center', width: '1%', whiteSpace: 'nowrap' }}>Acciones</th>
                   </tr>
 
                 </thead>
                 <tbody>
-                  {products.map(p => (
-                    <tr key={p.id} style={{ borderBottom: '1px solid #eee' }}>
-                      
-                      <td style={{ padding: 12, fontWeight: 'bold' }}>{p.nombre}</td>
-                      <td style={{ padding: 12, color: '#666' }}>
-                        <span style={{ background: '#eee', padding: '4px 8px', borderRadius: 4, fontSize: 11 }}>{p.categoria}</span>
-                      </td>
-                      <td style={{ padding: 12, color: '#888' }}>{formatMoney(p.coste)}</td>
-                      <td style={{ padding: 12 }}>{formatMoney(p.precio)}</td>
-                      <td style={{ padding: 12, fontWeight: 'bold', color: fuchsia }}>{formatMoney(p.precio * 1.21)}</td>
-                      <td style={{ padding: 12, fontWeight: 'bold', color: '#276749' }}>{formatMoney(p.precio - p.coste)}</td>
-                      <td style={{ padding: 12 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                          <button onClick={() => updateStock(p.id, p.stock - 1)} style={{ width: 28, height: 28, borderRadius: 14, border: '1px solid #ddd', background: 'white', cursor: 'pointer' }}>-</button>
-                          <span style={{ fontWeight: 'bold', width: 20, textAlign: 'center', color: p.stock === 0 ? 'red' : 'inherit' }}>{p.stock}</span>
-                          <button onClick={() => updateStock(p.id, p.stock + 1)} style={{ width: 28, height: 28, borderRadius: 14, border: 'none', background: fuchsia, color: 'white', cursor: 'pointer' }}>+</button>
-                        </div>
-                      </td>
+                  {products.filter(p => p.nombre.toLowerCase().includes(searchInvProducts.toLowerCase())).map(p => (
+                    <tr key={p.id} style={{ borderBottom: '1px solid #eee', background: editingProductId === p.id ? '#fdf2f8' : 'transparent' }}>
+                      {editingProductId === p.id ? (
+                        <>
+                          <td style={{ padding: 10 }}><input value={editProdData?.nombre || ''} onChange={e => setEditProdData({...editProdData, nombre: e.target.value})} style={{ width: '100%', padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none' }} /></td>
+                          <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}>
+                            <select value={editProdData?.categoria || ''} onChange={e => setEditProdData({...editProdData, categoria: e.target.value})} style={{ width: '100%', padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none' }}>
+                              <option>Terminal</option><option>Accesorio</option><option>Servicio</option><option>Reparación</option>
+                            </select>
+                          </td>
+                          <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}><input type="number" value={editProdData?.coste || 0} onChange={e => setEditProdData({...editProdData, coste: Number(e.target.value)})} style={{ width: 70, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center' }} /></td>
+                          <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}><input type="number" value={editProdData?.precio || 0} onChange={e => setEditProdData({...editProdData, precio: Number(e.target.value)})} style={{ width: 70, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center' }} /></td>
+                          <td style={{ padding: 10, fontWeight: 'bold', color: fuchsia, whiteSpace: 'nowrap', textAlign: 'center' }}>{formatMoney((editProdData?.precio || 0) * 1.21)}</td>
+                          <td style={{ padding: 10, fontWeight: 'bold', color: '#276749', whiteSpace: 'nowrap', textAlign: 'center' }}>{formatMoney((editProdData?.precio || 0) - (editProdData?.coste || 0))}</td>
+                          <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}><input value={editProdData?.imei || ''} maxLength={15} onChange={e => setEditProdData({...editProdData, imei: e.target.value.replace(/\D/g,'')})} style={{ width: 110, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center', fontSize: 13, fontFamily: 'monospace' }} /></td>
+                          <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}><input type="number" value={editProdData?.stock || 0} onChange={e => setEditProdData({...editProdData, stock: Number(e.target.value)})} style={{ width: 50, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center' }} /></td>
+                          <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                              <button onClick={handleSaveEditProduct} style={{ background: '#4CAF50', color: 'white', border: 'none', padding: 8, borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center' }} title="Guardar"><Save size={16} /></button>
+                              <button onClick={() => { setEditingProductId(null); setEditProdData(null); }} style={{ background: '#f43f5e', color: 'white', border: 'none', padding: 8, borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center' }} title="Cancelar"><X size={16} /></button>
+                            </div>
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td style={{ padding: 10, fontWeight: 'bold' }}>{p.nombre}</td>
+                          <td style={{ padding: 10, color: '#666', whiteSpace: 'nowrap', textAlign: 'center' }}>
+                            <span style={{ background: '#eee', padding: '4px 8px', borderRadius: 4, fontSize: 11 }}>{p.categoria}</span>
+                          </td>
+                          <td style={{ padding: 10, color: '#888', whiteSpace: 'nowrap', textAlign: 'center' }}>{formatMoney(p.coste)}</td>
+                          <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}>{formatMoney(p.precio)}</td>
+                          <td style={{ padding: 10, fontWeight: 'bold', color: fuchsia, whiteSpace: 'nowrap', textAlign: 'center' }}>{formatMoney(p.precio * 1.21)}</td>
+                          <td style={{ padding: 10, fontWeight: 'bold', color: '#276749', whiteSpace: 'nowrap', textAlign: 'center' }}>{formatMoney(p.precio - p.coste)}</td>
+                          <td style={{ padding: 10, color: '#555', fontSize: 13, fontFamily: 'monospace', whiteSpace: 'nowrap', textAlign: 'center' }}>{p.imei || '-'}</td>
+                          <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
+                              <button onClick={() => updateStock(p.id, p.stock - 1)} style={{ width: 24, height: 24, borderRadius: 12, border: '1px solid #ddd', background: 'white', cursor: 'pointer' }}>-</button>
+                              <span style={{ fontWeight: 'bold', width: 16, textAlign: 'center', color: p.stock === 0 ? 'red' : 'inherit' }}>{p.stock}</span>
+                              <button onClick={() => updateStock(p.id, p.stock + 1)} style={{ width: 24, height: 24, borderRadius: 12, border: 'none', background: fuchsia, color: 'white', cursor: 'pointer' }}>+</button>
+                            </div>
+                          </td>
+                          <td style={{ padding: 10, whiteSpace: 'nowrap' }}>
+                            <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                              <button onClick={() => { setEditingProductId(p.id); setEditProdData({...p}); }} style={{ background: 'white', color: '#0ea5e9', border: '1px solid #e0f2fe', padding: 8, borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }} title="Editar"><Edit2 size={16} /></button>
+                              <button onClick={() => handleDeleteProduct(p.id)} style={{ background: 'white', color: '#f43f5e', border: '1px solid #ffe4e6', padding: 8, borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }} title="Borrar"><Trash2 size={16} /></button>
+                            </div>
+                          </td>
+                        </>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -396,7 +592,7 @@ export default function MovilFreeApp() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24, background: '#f8f9fa', padding: 16, borderRadius: 12, alignItems: 'end' }}>
                 <div>
                   <label style={{fontSize: 12, fontWeight: 'bold', color: '#666'}}>DNI/CIF</label>
-                  <input placeholder="12345678Z" value={newClient.nif} onChange={e=>setNewClient({...newClient, nif: e.target.value})} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ddd', marginTop: 4 }} />
+                  <input placeholder="12345678Z" value={newClient.nif} maxLength={9} onChange={e=>setNewClient({...newClient, nif: e.target.value})} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ddd', marginTop: 4 }} />
                 </div>
                 <div>
                   <label style={{fontSize: 12, fontWeight: 'bold', color: '#666'}}>Nombre</label>
@@ -433,6 +629,7 @@ export default function MovilFreeApp() {
                 <button onClick={handleCreateClient} style={{ background: '#E91E97', color: 'white', border: 'none', padding: '12px 20px', borderRadius: 6, fontWeight: 'bold', cursor: 'pointer', height: 40 }}>Registrar Cliente</button>
               </div>
 
+                            <h3 style={{ margin: 0, color: '#333', marginBottom: 16 }}>Listado de Clientes</h3>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
                 <thead>
                   <tr style={{ background: '#FFF0F9', color: '#E91E97' }}>
@@ -444,16 +641,16 @@ export default function MovilFreeApp() {
                   </tr>
                 </thead>
                 <tbody>
-                  {clients.map(c => (
+                  {clients.filter(c => c.nif.toLowerCase().includes(searchClients.toLowerCase())).map(c => (
                     <tr key={c.id} style={{ borderBottom: '1px solid #eee' }}>
                       <td style={{ padding: 12, fontWeight: 'bold', color: '#555' }}>{c.nif}</td>
                       <td style={{ padding: 12, fontWeight: 'bold' }}>{c.nombre}</td>
-                      <td style={{ padding: 12, color: '#666' }}>
+                      <td style={{ padding: 8, color: '#666' }}>
                         {c.movil && <div>📱 {c.movil}</div>}
                         {c.fijo && <div>📞 {c.fijo}</div>}
                         {c.email && <div>✉️ {c.email}</div>}
                       </td>
-                      <td style={{ padding: 12, color: '#666' }}>
+                      <td style={{ padding: 8, color: '#666' }}>
                         <div>{c.direccion || '-'}</div>
                         <div>{c.cp || ''} {c.poblacion || ''} {c.provincia ? `(${c.provincia})` : ''}</div>
                       </td>
@@ -468,6 +665,49 @@ export default function MovilFreeApp() {
           {/* TAB: DEVOLUCIONES E HISTORICO */}
           {activeTab === 'devoluciones' && (
             <div>
+              {/* Dashboard de Beneficios, Filtro de Fechas y Búsqueda */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 20 }}>
+                <h3 style={{ margin: 0, color: '#333' }}>Histórico de Ventas</h3>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, alignItems: 'stretch' }}>
+                  <div style={{ background: '#f0f9ff', padding: '16px', borderRadius: 12, border: '1px solid #bae6fd', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <div style={{ fontSize: 11, textTransform: 'uppercase', color: '#0284c7', fontWeight: 'bold', marginBottom: 8 }}>Desde Fecha</div>
+                    <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={{ border: 'none', background: 'white', padding: '8px 12px', borderRadius: 6, outline: 'none', fontSize: 14, color: '#0369a1', width: '100%', boxSizing: 'border-box' }} />
+                  </div>
+                  
+                  <div style={{ background: '#f0f9ff', padding: '16px', borderRadius: 12, border: '1px solid #bae6fd', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <div style={{ fontSize: 11, textTransform: 'uppercase', color: '#0284c7', fontWeight: 'bold', marginBottom: 8 }}>Hasta Fecha</div>
+                    <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ border: 'none', background: 'white', padding: '8px 12px', borderRadius: 6, outline: 'none', fontSize: 14, color: '#0369a1', width: '100%', boxSizing: 'border-box' }} />
+                  </div>
+
+                  <div style={{ background: '#FFF0F9', padding: '16px', borderRadius: 12, border: '1px solid #fdd8e7', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <div style={{ fontSize: 11, textTransform: 'uppercase', color: '#E91E97', fontWeight: 'bold', marginBottom: 8 }}>Total Ventas (IVA inc.)</div>
+                    <div style={{ fontSize: 24, fontWeight: '900', color: '#E91E97' }}>
+                      {new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(
+                        sales.filter(s => s.estado === 'COMPLETADA' && (!dateFrom || new Date(s.fechaVenta) >= new Date(dateFrom)) && (!dateTo || new Date(s.fechaVenta) <= new Date(dateTo + 'T23:59:59')))
+                        .reduce((acc, s) => acc + s.importeTotal, 0)
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div style={{ background: '#e8f5e9', padding: '16px', borderRadius: 12, border: '1px solid #c8e6c9', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <div style={{ fontSize: 11, textTransform: 'uppercase', color: '#2e7d32', fontWeight: 'bold', marginBottom: 8 }}>Ganancias (Sin IVA)</div>
+                    <div style={{ fontSize: 24, fontWeight: '900', color: '#2e7d32' }}>
+                      {new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(
+                        sales.filter(s => s.estado === 'COMPLETADA' && (!dateFrom || new Date(s.fechaVenta) >= new Date(dateFrom)) && (!dateTo || new Date(s.fechaVenta) <= new Date(dateTo + 'T23:59:59')))
+                        .reduce((acc, s) => {
+                          try {
+                            const list = JSON.parse(s.listaProductos);
+                            const cost = list.reduce((cAcc: number, item: any) => cAcc + ((item.coste !== undefined ? item.coste : (products.find(p => p.id === item.id)?.coste || 0)) * item.cantidad), 0);
+                            return acc + ((s.importeTotal / 1.21) - cost);
+                          } catch(e) { return acc; }
+                        }, 0)
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 14 }}>
                 <thead>
                   <tr style={{ background: lightPink, color: fuchsia }}>
@@ -480,7 +720,14 @@ export default function MovilFreeApp() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sales.map(s => {
+                  {sales.filter(s => 
+                    ((!dateFrom || new Date(s.fechaVenta) >= new Date(dateFrom)) && (!dateTo || new Date(s.fechaVenta) <= new Date(dateTo + 'T23:59:59'))) && 
+                    ((s.nombreCliente || '').toLowerCase().includes(searchSales.toLowerCase()) ||
+                    (s.nifCliente || '').toLowerCase().includes(searchSales.toLowerCase()) ||
+                    (s.vendedor || '').toLowerCase().includes(searchSales.toLowerCase()) ||
+                    (s.estado || '').toLowerCase().includes(searchSales.toLowerCase()) ||
+                    (s.numeroFactura ? s.numeroFactura.toString() : '').includes(searchSales))
+                  ).map(s => {
                     const isDev = s.estado === 'DEVUELTA'
                     const items = JSON.parse(s.listaProductos || '[]')
                     return (
