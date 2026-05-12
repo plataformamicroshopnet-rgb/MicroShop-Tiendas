@@ -85,7 +85,7 @@ export async function POST(request: Request) {
       const fechaStr = `${d}/${m}/${y}`
 
       let sheetCategory = 'OP'
-      if (['Fija y Móvil', 'Ti', 'RENT', 'Micro'].includes(prod.categoria)) {
+      if (['Fija y Móvil', 'Ti', 'Rent', 'Micro'].includes(prod.categoria)) {
         sheetCategory = 'Venta Fija'
       }
 

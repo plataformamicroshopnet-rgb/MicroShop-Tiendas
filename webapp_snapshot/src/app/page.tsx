@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { FileText, BookOpen, Library } from 'lucide-react'
+import { FileText, BookOpen, Library, Trophy } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
 import { FeaturedMagazine } from '@/components/FeaturedMagazine'
 import { FeaturedDocument } from '@/components/FeaturedDocument'
@@ -39,6 +39,41 @@ export default function DashboardPage() {
         showTheme={true}
         showBack={false}
       />
+
+      <Link href="/torneos-ventas" style={{ textDecoration: 'none', display: 'block', marginBottom: '24px', outline: 'none' }}>
+        <div 
+          style={{
+            background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.15) 100%)',
+            borderRadius: 12,
+            padding: '20px',
+            border: '1px solid rgba(245, 158, 11, 0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+            cursor: 'pointer',
+            transition: 'all 0.3s ease',
+            boxShadow: '0 4px 14px -5px rgba(0,0,0,0.05)'
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.transform = 'translateY(-2px)'
+            e.currentTarget.style.boxShadow = '0 8px 24px -10px rgba(245, 158, 11, 0.25)'
+            e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.6)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.transform = 'none'
+            e.currentTarget.style.boxShadow = '0 4px 14px -5px rgba(0,0,0,0.05)'
+            e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.3)'
+          }}
+        >
+          <div style={{ backgroundColor: '#f59e0b', padding: '12px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Trophy size={28} color="#fff" />
+          </div>
+          <div>
+            <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: 800, color: '#d97706' }}>Torneos de Ventas</h3>
+            <p style={{ margin: 0, color: 'var(--text-main)', fontSize: '14px', fontWeight: 500 }}>Ranking en tiempo real, competición y medallas por objetivos.</p>
+          </div>
+        </div>
+      </Link>
 
       {stats.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '24px' }}>

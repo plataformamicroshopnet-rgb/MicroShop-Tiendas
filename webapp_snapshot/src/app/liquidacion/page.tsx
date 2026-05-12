@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState, useMemo } from 'react'
-import { Euro, Calendar, ArrowLeft, Save, ClipboardList, X, Trash2, Settings, Download, Briefcase, FileText, BarChart2, Repeat, Zap, Settings2, ArrowUp, ArrowDown, Users, RefreshCcw } from 'lucide-react'
+import { Euro, Calendar, ArrowLeft, Save, ClipboardList, X, Trash2, Settings, Download, Briefcase, FileText, BarChart2, Repeat, Zap, Settings2, ArrowUp, ArrowDown, Users, RefreshCcw, Map } from 'lucide-react'
 import ExcelJS from 'exceljs'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -1193,6 +1193,18 @@ export default function LiquidacionesPage() {
                 description: 'Tracking diario visual de llamadas y métricas independientes.',
                 icon: Calendar,
                 href: '/seguimiento-ventas/agenda-cristina'
+            },
+            {
+                title: 'Rentabilidad por Tiendas',
+                description: 'Visión agrupada de personal, ventas y rentabilidad segmentada por tienda.',
+                icon: Briefcase,
+                href: '/liquidacion/rentabilidad-tiendas'
+            },
+            {
+                title: 'Territorial Tiendas / O2',
+                description: 'Configuración y cálculo de tramos territoriales por tienda y O2 MovilFree.',
+                icon: Map,
+                href: '/liquidacion/territorial'
             }
         ];
 
@@ -1481,7 +1493,7 @@ export default function LiquidacionesPage() {
                  if (!val && (det === 'ti' || det === 'tma' || det === 'rent' || det === 'micro')) {
                      let catalogKey = '';
                      if (det === 'ti') catalogKey = 'Ti';
-                     if (det === 'tma' || det === 'rent') catalogKey = 'RENT';
+                     if (det === 'tma' || det === 'rent') catalogKey = 'Rent';
                      if (det === 'micro') catalogKey = 'Micro';
                      
                      const list = catalogs[catalogKey] || [];
@@ -1514,10 +1526,10 @@ export default function LiquidacionesPage() {
             
             let overrideBaseValue: number | undefined = undefined;
             if (det === 'ti' || det === 'tma' || det === 'rent' || det === 'micro') {
-                // Ensure we map back to the EXACT object key in catalogs since it stores as 'Ti', 'RENT', 'Micro'
+                // Ensure we map back to the EXACT object key in catalogs since it stores as 'Ti', 'Rent', 'Micro'
                 let catalogKey = '';
                 if (det === 'ti') catalogKey = 'Ti';
-                if (det === 'tma' || det === 'rent') catalogKey = 'RENT';
+                if (det === 'tma' || det === 'rent') catalogKey = 'Rent';
                 if (det === 'micro') catalogKey = 'Micro';
                 
                 const list = catalogs[catalogKey] || [];

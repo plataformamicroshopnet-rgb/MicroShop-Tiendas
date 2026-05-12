@@ -139,7 +139,7 @@ export default function NuevaVentaPage() {
          })
          if (selectedItem) {
             const cat = newProducts[index].categoria
-            if (cat === 'O2' || cat === 'Seguro' || cat === 'Suscripciones TV' || cat === 'PREPAGO' || cat === 'Varios') {
+            if (cat === 'O2' || cat === 'Seguro' || cat === 'Suscripciones TV' || cat === 'Prepago' || cat === 'Varios') {
               newProducts[index].importe = selectedItem.comision || ''
             } else if (cat === 'Repos') {
                if (selectedItem.comisionConCoste && Number(selectedItem.comisionConCoste) > 0) {
@@ -153,12 +153,12 @@ export default function NuevaVentaPage() {
               const baseCom = Number(selectedItem.comision) || 0;
               const mult = Number(selectedItem.comisionConCoste) || 0;
               newProducts[index].importe = String(baseCom * (mult === 0 ? 1 : mult));
-            } else if (cat === 'Ti' || cat === 'TMA' || cat === 'Micro' || cat === 'RENT') {
+            } else if (cat === 'Ti' || cat === 'TMA' || cat === 'Micro' || cat === 'Rent') {
               newProducts[index].importe = selectedItem.anual || selectedItem.mensual || ''
             } else {
               newProducts[index].importe = selectedItem.mensual || selectedItem.anual || ''
             }
-            if (cat === 'RENT') {
+            if (cat === 'Rent') {
               newProducts[index].fabricante = selectedItem.fabricante || ''
               newProducts[index].subcategoria = selectedItem.subcategoria || ''
               newProducts[index].gama = selectedItem.gama || ''
@@ -421,7 +421,7 @@ export default function NuevaVentaPage() {
                   )}
                 </div>
                 
-                {prod.categoria === 'RENT' ? (
+                {prod.categoria === 'Rent' ? (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'stretch' }}>
                     {/* COLUMNA 1: TIPO DE VENTA */}
                     <div style={{ flex: '1', minWidth: '250px', backgroundColor: '#B8D5F6', borderRadius: '8px', padding: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -439,7 +439,7 @@ export default function NuevaVentaPage() {
                         <label style={{ fontSize: 13, color: '#1B3D6A', display: 'block', marginBottom: 4 }}>Fabricante</label>
                         <input list={`fab-${index}`} className="form-input" value={prod.fabricante} onChange={e => handleProductChange(index, 'fabricante', e.target.value)} placeholder="Buscar..." style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
                         <datalist id={`fab-${index}`}>
-                          {[...new Set((catalogs['RENT'] || []).filter((p:any) => !prod.subcategoria || p.subcategoria === prod.subcategoria).map((p:any) => p.fabricante).filter(Boolean))].sort().map(f => <option key={String(f)} value={String(f)} />)}
+                          {[...new Set((catalogs['Rent'] || []).filter((p:any) => !prod.subcategoria || p.subcategoria === prod.subcategoria).map((p:any) => p.fabricante).filter(Boolean))].sort().map(f => <option key={String(f)} value={String(f)} />)}
                         </datalist>
                       </div>
 
@@ -447,7 +447,7 @@ export default function NuevaVentaPage() {
                         <label style={{ fontSize: 13, color: '#1B3D6A', display: 'block', marginBottom: 4 }}>Categoría</label>
                         <input list={`cat-${index}`} className="form-input" value={prod.subcategoria} onChange={e => handleProductChange(index, 'subcategoria', e.target.value)} placeholder="Buscar..." style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
                         <datalist id={`cat-${index}`}>
-                          {[...new Set((catalogs['RENT'] || []).filter((p:any) => !prod.fabricante || p.fabricante === prod.fabricante).map((p:any) => p.subcategoria).filter(Boolean))].sort().map(c => <option key={String(c)} value={String(c)} />)}
+                          {[...new Set((catalogs['Rent'] || []).filter((p:any) => !prod.fabricante || p.fabricante === prod.fabricante).map((p:any) => p.subcategoria).filter(Boolean))].sort().map(c => <option key={String(c)} value={String(c)} />)}
                         </datalist>
                       </div>
                     </div>
@@ -462,7 +462,7 @@ export default function NuevaVentaPage() {
                         <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>Producto</label>
                         <input list={`prod-${index}`} className="form-input" value={prod.producto} onChange={e => handleProductChange(index, 'producto', e.target.value)} placeholder="Escribe para buscar..." required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
                         <datalist id={`prod-${index}`}>
-                          {(catalogs['RENT'] || []).filter((p:any) => (!prod.fabricante || p.fabricante === prod.fabricante) && (!prod.subcategoria || p.subcategoria === prod.subcategoria)).map((p:any) => p.producto).filter((p:any, i:number, self:any[]) => self.indexOf(p) === i).sort().map((p:any) => <option key={String(p)} value={String(p)} />)}
+                          {(catalogs['Rent'] || []).filter((p:any) => (!prod.fabricante || p.fabricante === prod.fabricante) && (!prod.subcategoria || p.subcategoria === prod.subcategoria)).map((p:any) => p.producto).filter((p:any, i:number, self:any[]) => self.indexOf(p) === i).sort().map((p:any) => <option key={String(p)} value={String(p)} />)}
                         </datalist>
                       </div>
 
@@ -803,7 +803,7 @@ export default function NuevaVentaPage() {
                       })()}
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
                         <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label className="form-label" style={{ color: '#555' }}>{(prod.categoria === 'O2' || prod.categoria === 'Suscripciones TV' || prod.categoria === 'PREPAGO' || prod.categoria === 'Varios' || prod.categoria === 'Repos') ? 'Comisión' : 'Importe'}</label>
+                          <label className="form-label" style={{ color: '#555' }}>{(prod.categoria === 'O2' || prod.categoria === 'Suscripciones TV' || prod.categoria === 'Prepago' || prod.categoria === 'Varios' || prod.categoria === 'Repos') ? 'Comisión' : 'Importe'}</label>
                           <div style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
                             <input 
                               type="number" 

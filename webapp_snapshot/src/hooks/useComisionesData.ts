@@ -49,10 +49,10 @@ export const matchTipoVenta = (sale: any, tipoVentaRaw: string) => {
                 matched = cat === 'miMovistar';
                 break;
             case 'Dispositivos + Seguro':
-                matched = cat === 'RENT' || cat === 'Seguro';
+                matched = cat === 'Rent' || cat === 'Seguro';
                 break;
             case 'Dispositivos':
-                matched = cat === 'RENT';
+                matched = cat === 'Rent';
                 break;
             case 'Seguro':
                 matched = cat === 'Seguro';

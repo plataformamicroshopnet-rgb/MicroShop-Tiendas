@@ -79,7 +79,7 @@ type ProductItem = {
   importStatus?: 'new' | 'updated' | 'missing' | 'unchanged'
 }
 
-const CATEGORIES = ['Fija y Móvil', 'Ti', 'RENT', 'Seguro', 'O2', 'miMovistar', 'Suscripciones TV', 'PREPAGO', 'Varios', 'Repos', 'Resto BAF']
+const CATEGORIES = ['Fija y Móvil', 'Ti', 'Rent', 'Seguro', 'O2', 'miMovistar', 'Suscripciones TV', 'Prepago', 'Varios', 'Repos', 'Resto BAF']
 
 export default function CatalogosPage() {
   const { authorized } = useGuard('MODULE_ADMIN', 'MANAGE_CATALOG')
@@ -98,7 +98,7 @@ export default function CatalogosPage() {
   const previousPeriod = currentIndex > 0 ? sortedPeriods[currentIndex - 1] : null
 
   const [catalogs, setCatalogs] = useState<Record<string, ProductItem[]>>({
-    "Fija y Móvil": [], "Ti": [], "RENT": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": [], "PREPAGO": [], "Varios": [], "Repos": [], "Resto BAF": []
+    "Fija y Móvil": [], "Ti": [], "Rent": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": [], "Prepago": [], "Varios": [], "Repos": [], "Resto BAF": []
   })
   const [activeTab, setActiveTab] = useState('Fija y Móvil')
   const isProductTab = CATEGORIES.includes(activeTab) && activeTab !== 'Objetivos Tiendas' && activeTab !== 'Objetivos Captador' && activeTab !== 'Productos que Comisionan'
@@ -117,7 +117,7 @@ export default function CatalogosPage() {
       .then(res => res.json())
       .then(data => {
         if (data.success) {
-          const mapped: Record<string, ProductItem[]> = { "Fija y Móvil": [], "Ti": [], "RENT": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": [], "PREPAGO": [], "Varios": [], "Repos": [], "Resto BAF": [] }
+          const mapped: Record<string, ProductItem[]> = { "Fija y Móvil": [], "Ti": [], "Rent": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": [], "Prepago": [], "Varios": [], "Repos": [], "Resto BAF": [] }
           for (const [cat, items] of Object.entries(data.catalogs as Record<string, any[]>)) {
              if (!mapped[cat]) mapped[cat] = [];
              mapped[cat] = [...mapped[cat], ...items.map((it: any) => ({
@@ -170,7 +170,7 @@ export default function CatalogosPage() {
           // Generate a composite key for specific categories where name alone isn't unique
           if (cat === 'miMovistar' || cat === 'Resto BAF') {
             pName = `${String(it.subcategoria).trim().toLowerCase()}_${String(it.gama).trim().toLowerCase()}_${pName}`;
-          } else if (cat === 'RENT') {
+          } else if (cat === 'Rent') {
             pName = `${String(it.fabricante).trim().toLowerCase()}_${String(it.subcategoria).trim().toLowerCase()}_${String(it.gama).trim().toLowerCase()}_${pName}`;
           } else if (cat === 'O2') {
             pName = `${String(it.subcategoria).trim().toLowerCase()}_${pName}`;
@@ -309,7 +309,7 @@ export default function CatalogosPage() {
         const res = await fetch(`/api/catalogs?legacyOnly=1`)
         const data = await res.json()
         if (data.success) {
-            const mapped: Record<string, ProductItem[]> = { "Fija y Móvil": [], "Ti": [], "RENT": [], "Micro": [], "O2": [] }
+            const mapped: Record<string, ProductItem[]> = { "Fija y Móvil": [], "Ti": [], "Rent": [], "Micro": [], "O2": [] }
             let totalItems = 0
             for (const [cat, items] of Object.entries(data.catalogs as Record<string, any[]>)) {
                 if (!mapped[cat]) mapped[cat] = [];
@@ -352,8 +352,8 @@ export default function CatalogosPage() {
       const item = { ...newCat[index], [field]: value }
       
       // Autocálculo TMA y Micro y Ti
-      if (cat === 'Ti' || cat === 'RENT' || cat === 'Micro') {
-        const factor = (cat === 'RENT' || cat === 'Micro') ? 24 : 12;
+      if (cat === 'Ti' || cat === 'Rent' || cat === 'Micro') {
+        const factor = (cat === 'Rent' || cat === 'Micro') ? 24 : 12;
         if (field === 'cuotaMensual') {
           item.cuotaAnual = Math.round(Number(value) * factor * 100) / 100
         } else if (field === 'cuotaAnual') {
@@ -370,10 +370,10 @@ export default function CatalogosPage() {
     setSearch('')
     setCatalogs(prev => {
       const newItem: ProductItem = { id: Date.now().toString(), producto: '', validFrom: '', validTo: '' }
-      if (cat === 'Ti' || cat === 'RENT' || cat === 'Micro') {
+      if (cat === 'Ti' || cat === 'Rent' || cat === 'Micro') {
         newItem.cuotaMensual = 0
         newItem.cuotaAnual = 0
-        if (cat === 'RENT') {
+        if (cat === 'Rent') {
            newItem.comision = ''
            newItem.comisionConCoste = ''
         }
@@ -385,7 +385,7 @@ export default function CatalogosPage() {
         newItem.gama = ''
         newItem.comision = 0
         newItem.comisionConCoste = 1
-      } else if (cat === 'Suscripciones TV' || cat === 'PREPAGO') {
+      } else if (cat === 'Suscripciones TV' || cat === 'Prepago') {
         newItem.comision = ''
       } else if (cat === 'Seguro' || cat === 'Varios') {
         newItem.subcategoria = ''
@@ -482,7 +482,7 @@ export default function CatalogosPage() {
     lines.forEach((line) => {
       const parts = line.split('\t').map(p => p.trim().replace(/___NEWLINE___/g, '\n'))
       if (parts.length > 0 && (parts[0] || (activeTab === 'miMovistar' && parts[2]))) {
-        if (activeTab === 'RENT') {
+        if (activeTab === 'Rent') {
           // Detectar si el usuario ha pegado el formato con las fechas en medio (después del producto)
           // Ejemplo: Fabricante | Categoria | Producto | Desde | Hasta | Gama | Cuota | Comision | Comision Coste
           const isDate = (s: string) => /^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/.test((s || '').trim());
@@ -609,7 +609,7 @@ export default function CatalogosPage() {
               hasta: parts.length > 7 ? parts[7] : '',
             })
           }
-        } else if (activeTab === 'Suscripciones TV' || activeTab === 'PREPAGO') {
+        } else if (activeTab === 'Suscripciones TV' || activeTab === 'Prepago') {
           excelData.push({
             categoria: parts[0] || '',
             producto: parts[1] || '',
@@ -651,7 +651,7 @@ export default function CatalogosPage() {
         
         const isCompositeMatch = (it: ProductItem) => {
           if (activeTab === 'O2') return normalize(it.subcategoria) === normalize(row.categoria);
-          if (activeTab === 'RENT') return normalize(it.fabricante) === normalize(row.fabricante) && normalize(it.subcategoria) === normalize(row.categoria) && normalize(it.gama) === normalize(row.gama);
+          if (activeTab === 'Rent') return normalize(it.fabricante) === normalize(row.fabricante) && normalize(it.subcategoria) === normalize(row.categoria) && normalize(it.gama) === normalize(row.gama);
           if (activeTab === 'miMovistar' || activeTab === 'Resto BAF') return normalize(it.subcategoria) === normalize(row.subcategoria) && normalize(it.gama) === normalize(row.gama);
           return true;
         };
@@ -677,7 +677,7 @@ export default function CatalogosPage() {
           item.importStatus = 'unchanged'
           let changed = false
 
-          if (activeTab === 'RENT') {
+          if (activeTab === 'Rent') {
             if (item.fabricante !== row.fabricante) { item.fabricante = row.fabricante; changed = true; }
             if (item.subcategoria !== row.categoria) { item.subcategoria = row.categoria; changed = true; }
             if (item.gama !== row.gama) { item.gama = row.gama; changed = true; }
@@ -700,11 +700,11 @@ export default function CatalogosPage() {
             if (item.comision !== row.comision) { item.comision = row.comision; changed = true; }
             if (item.comisionConCoste !== row.comisionConCoste) { item.comisionConCoste = row.comisionConCoste; changed = true; }
             if (item.producto !== row.producto) { item.producto = row.producto; changed = true; }
-          } else if (activeTab === 'Suscripciones TV' || activeTab === 'PREPAGO') {
+          } else if (activeTab === 'Suscripciones TV' || activeTab === 'Prepago') {
             if (item.comision !== row.comision) { item.comision = row.comision; changed = true; }
           }
 
-          if (activeTab === 'RENT') {
+          if (activeTab === 'Rent') {
             const expectedAnual = Math.round(amount * 100) / 100
             const expectedMensual = Math.round((amount / 24) * 100) / 100
             if (item.cuotaAnual !== expectedAnual) {
@@ -779,7 +779,7 @@ export default function CatalogosPage() {
             importStatus: 'new' as const
           }
 
-          if (activeTab === 'RENT') {
+          if (activeTab === 'Rent') {
             newItem.fabricante = row.fabricante
             newItem.subcategoria = row.categoria
             newItem.gama = row.gama
@@ -809,7 +809,7 @@ export default function CatalogosPage() {
             newItem.gama = row.gama
             newItem.comision = row.comision
             newItem.comisionConCoste = row.comisionConCoste
-          } else if (activeTab === 'Suscripciones TV' || activeTab === 'PREPAGO') {
+          } else if (activeTab === 'Suscripciones TV' || activeTab === 'Prepago') {
             newItem.comision = row.comision
           } else {
             newItem.cuota = Math.round(amount * 100) / 100
@@ -926,12 +926,12 @@ export default function CatalogosPage() {
       <div style={{ display: 'flex', gap: 8, marginBottom: 20, borderBottom: '1px solid var(--border-color)', paddingBottom: 16, flexWrap: 'wrap' }}>
         {([
           { cat: 'Ti', tip: 'Terminal de Instalación: dispositivos y servicios con contrato de 12 meses. El precio mensual se introduce y el sistema calcula automáticamente el importe total anual (×12).' },
-          { cat: 'RENT', tip: 'Terminal Móvil en Alquiler: dispositivos bajo contrato de 24 meses. Introduce la cuota total a 24 meses.' },
+          { cat: 'Rent', tip: 'Terminal Móvil en Alquiler: dispositivos bajo contrato de 24 meses. Introduce la cuota total a 24 meses.' },
           { cat: 'Seguro', tip: 'Catálogo de seguros para dispositivos. Introduce la categoría, cuota y comisión.' },
           { cat: 'O2', tip: 'Catálogo de productos y tarifas de O2. Introduce la categoría, nombre y comisión.' },
           { cat: 'miMovistar', tip: 'Catálogo de paquetes miMovistar. Configura categorías, tipos, productos multilínea y su estructura de comisiones por multiplicador.' },
           { cat: 'Suscripciones TV', tip: 'Catálogo de suscripciones de televisión. Introduce la categoría, nombre, comisión y fechas.' },
-          { cat: 'PREPAGO', tip: 'Catálogo de productos prepago. Introduce la categoría, nombre de producto y comisión.' },
+          { cat: 'Prepago', tip: 'Catálogo de productos prepago. Introduce la categoría, nombre de producto y comisión.' },
           { cat: 'Varios', tip: 'Catálogo de productos varios (alarmas, migraciones, etc). Introduce categoría, nombre, cuota total y comisión.' },
           { cat: 'Repos', tip: 'Catálogo de Reposiciones. Introduce categoría, nombre, cuota total, comisión y multiplicador.' },
           { cat: 'Resto BAF', tip: 'Catálogo para Resto BAF. Estructura idéntica a miMovistar.' },
@@ -996,12 +996,12 @@ export default function CatalogosPage() {
         <div className="card" style={{ padding: 20, marginBottom: 20, border: '1px dashed var(--mercedes-cyan)', backgroundColor: 'rgba(0,173,239,0.05)' }}>
           <h4 style={{ marginBottom: 8, color: 'var(--light-text)' }}>Importación Masiva a {activeTab === 'Ti' ? 'Contratos Móvil' : activeTab}</h4>
           <p style={{ fontSize: 13, color: 'var(--medium-gray)', marginBottom: 12 }}>
-            Pega tu lista desde Excel. Orden esperado de columnas: <code>{activeTab === 'Ti' ? 'Nombre Producto [TAB] Descripción [TAB] Comisión [TAB] Desde [TAB] Hasta' : activeTab === 'RENT' ? 'Fabricante [TAB] Categoría [TAB] Producto [TAB] Gama [TAB] Cuota Total [TAB] Comisión [TAB] Comisión Coste [TAB] Desde [TAB] Hasta' : activeTab === 'Seguro' ? 'Categoría [TAB] Nombre de Producto [TAB] Cuota Total (€) [TAB] Comision [TAB] Desde [TAB] Hasta' : 'Nombre Producto [TAB] Precio [TAB] Desde [TAB] Hasta'}</code>. (Las fechas son opcionales).
+            Pega tu lista desde Excel. Orden esperado de columnas: <code>{activeTab === 'Ti' ? 'Nombre Producto [TAB] Descripción [TAB] Comisión [TAB] Desde [TAB] Hasta' : activeTab === 'Rent' ? 'Fabricante [TAB] Categoría [TAB] Producto [TAB] Gama [TAB] Cuota Total [TAB] Comisión [TAB] Comisión Coste [TAB] Desde [TAB] Hasta' : activeTab === 'Seguro' ? 'Categoría [TAB] Nombre de Producto [TAB] Cuota Total (€) [TAB] Comision [TAB] Desde [TAB] Hasta' : 'Nombre Producto [TAB] Precio [TAB] Desde [TAB] Hasta'}</code>. (Las fechas son opcionales).
           </p>
           <textarea 
             rows={5}
             className="form-textarea"
-            placeholder={activeTab === 'Ti' ? "Ejemplo:\nPorta AV Ilimitada\tAltas de Prepago\t15\t01/05/2026\t31/05/2026" : activeTab === 'RENT' ? "Ejemplo:\nAPPLE\tACCESORIO\tAirPods\tMEDIA\t122.80\t2.46\t4.91\t01/05/2026" : activeTab === 'O2' ? "Ejemplo:\nFibra y movil\tFibra 600 Mb linea movil 60 Gb\t80,00\t01/05/2026\t31/05/2026" : activeTab === 'Seguro' ? "Ejemplo:\nSeguro\tSmartphone\t200,00\t18,00\t01/05/2026\t31/05/2026" : "Ejemplo:\nPorta AV Ilimitada\t20\nAlta MV\t15"}
+            placeholder={activeTab === 'Ti' ? "Ejemplo:\nPorta AV Ilimitada\tAltas de Prepago\t15\t01/05/2026\t31/05/2026" : activeTab === 'Rent' ? "Ejemplo:\nAPPLE\tACCESORIO\tAirPods\tMEDIA\t122.80\t2.46\t4.91\t01/05/2026" : activeTab === 'O2' ? "Ejemplo:\nFibra y movil\tFibra 600 Mb linea movil 60 Gb\t80,00\t01/05/2026\t31/05/2026" : activeTab === 'Seguro' ? "Ejemplo:\nSeguro\tSmartphone\t200,00\t18,00\t01/05/2026\t31/05/2026" : "Ejemplo:\nPorta AV Ilimitada\t20\nAlta MV\t15"}
             value={bulkText}
             onChange={e => setBulkText(e.target.value)}
             style={{ marginBottom: 12 }}
@@ -1019,7 +1019,7 @@ export default function CatalogosPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
             <thead>
               <tr style={{ backgroundColor: 'var(--active-bg)', borderBottom: '1px solid var(--border-color)' }}>
-                {activeTab === 'RENT' ? (
+                {activeTab === 'Rent' ? (
                   <>
                     <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '12%' }}>Fabricante</th>
                     <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '14%' }}>Categoría</th>
@@ -1051,7 +1051,7 @@ export default function CatalogosPage() {
                     <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 90 }}>Mult.</th>
                     <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 100 }}>Comisión X (€)</th>
                   </>
-                ) : activeTab === 'Suscripciones TV' || activeTab === 'PREPAGO' ? (
+                ) : activeTab === 'Suscripciones TV' || activeTab === 'Prepago' ? (
                   <>
                     <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '25%' }}>Categoría</th>
                     <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '35%' }}>Nombre de Producto</th>
@@ -1099,7 +1099,7 @@ export default function CatalogosPage() {
 
                   return (
                     <tr key={item.id || index} style={{ borderBottom: '1px solid var(--table-border)', backgroundColor: item.importStatus === 'missing' ? 'rgba(255, 69, 58, 0.05)' : item.importStatus === 'new' ? 'rgba(52, 199, 89, 0.05)' : item.importStatus === 'updated' ? 'rgba(255, 204, 0, 0.05)' : 'transparent' }}>
-                      {activeTab === 'RENT' ? (
+                      {activeTab === 'Rent' ? (
                         <>
                           <td style={{ padding: '12px 20px' }}>
                             <input 
@@ -1244,7 +1244,7 @@ export default function CatalogosPage() {
                             </div>
                           </td>
                         </>
-                      ) : activeTab === 'Suscripciones TV' || activeTab === 'PREPAGO' ? (
+                      ) : activeTab === 'Suscripciones TV' || activeTab === 'Prepago' ? (
                         <>
                           <td style={{ padding: '12px 20px' }}>
                             <input 

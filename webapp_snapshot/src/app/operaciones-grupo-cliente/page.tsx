@@ -15,7 +15,7 @@ const TABS = [
   { id: 'seguro',          label: 'Seguro',          emoji: '🛡️', color: '#10B981', grupo: 'SEGURO' },
   { id: 'mimovi',          label: 'miMovistar',      emoji: '🏠', color: '#7C3AED', grupo: 'MIMOVI' },
   { id: 'tv',              label: 'Suscripciones TV',emoji: '📺', color: '#D97706', grupo: 'TV' },
-  { id: 'prepago',         label: 'Prepago',         emoji: '💳', color: '#6366F1', grupo: 'PREPAGO' },
+  { id: 'prepago',         label: 'Prepago',         emoji: '💳', color: '#6366F1', grupo: 'Prepago' },
   { id: 'varios',          label: 'Varios',          emoji: '📦', color: '#8B5CF6', grupo: 'VARIOS' },
   { id: 'repos',           label: 'Repos',           emoji: '🔁', color: '#0891B2', grupo: 'REPOS' },
   { id: 'resto',           label: 'Resto BAF',       emoji: '📡', color: '#3B82F6', grupo: 'RESTO_BAF' },

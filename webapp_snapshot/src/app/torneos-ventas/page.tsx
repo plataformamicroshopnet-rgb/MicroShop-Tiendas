@@ -92,7 +92,7 @@ export default function TorneosVentasPage() {
     let val = 0;
     s.rawSales.forEach((rs: any) => {
       const cat = rs.categoria || rs.detalle || rs.sheet || '';
-      if (cat === 'RENT' || cat === 'Seguro') {
+      if (cat === 'Rent' || cat === 'Seguro') {
         let cuota = Number(rs.cuota) || 0;
         val += cuota;
       }

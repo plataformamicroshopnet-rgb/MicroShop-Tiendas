@@ -574,9 +574,9 @@ function OperationsContent() {
       if (det === 'O2' || det === 'Seguro' || det === 'miMovistar') {
          bypassCommissionCalc = true;
          finalImporte = Number(sale.importe || sale.cuota || 0);
-      } else if (det === 'Ti' || det === 'TMA' || det === 'Micro' || det === 'RENT') {
+      } else if (det === 'Ti' || det === 'TMA' || det === 'Micro' || det === 'Rent') {
          bypassCommissionCalc = true;
-         const catalogKey = det === 'TMA' ? 'RENT' : det;
+         const catalogKey = det === 'TMA' ? 'Rent' : det;
          const list = catalogs[catalogKey] || [];
          const foundList = list.filter((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
          if (foundList.length > 0) {
@@ -585,7 +585,7 @@ function OperationsContent() {
                const properlyDated = foundList.find((c: any) => isVentaWithinDates(sale.fecha, c.validFrom, c.validTo));
                if (properlyDated) found = properlyDated;
             }
-            if (det === 'TMA' || det === 'RENT') {
+            if (det === 'TMA' || det === 'Rent') {
                 const isConCoste = sale.rentConCoste && (sale.rentConCoste.toLowerCase() === 'sí' || sale.rentConCoste.toLowerCase() === 'si');
                 if (isConCoste) {
                     finalImporte = Number(String(found.comisionConCoste || 0).replace(',','.'));

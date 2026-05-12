@@ -76,14 +76,6 @@ export default function SeguimientoVentasPage() {
       action: () => router.push('/seguimiento-ventas/combos'),
       color: 'rgba(30,58,95,0.08)',
       textColor: '#1e3a5f'
-    },
-    {
-      title: 'Torneos de Ventas',
-      description: 'Ranking en tiempo real, competición y medallas por objetivos.',
-      icon: Trophy,
-      action: () => router.push('/torneos-ventas'),
-      color: 'rgba(16, 185, 129, 0.1)',
-      textColor: '#10b981'
     }
   ]
 
