@@ -102,7 +102,7 @@ export async function POST(request: Request) {
         fecha: fechaStr,
         codigo: data.codigo || '',
         producto: prod.producto,
-        nombreCliente: data.nombreCliente.toUpperCase(),
+        nombreCliente: data.nombreCliente,
         nif: data.nif.toUpperCase(),
         potencial: prod.noCliente || '',
         telf: prod.telf || '',

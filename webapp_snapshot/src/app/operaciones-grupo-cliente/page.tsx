@@ -105,20 +105,15 @@ function calcNifTramo(subtotal: number, units: number, info: TramoInfo): number 
 
 // ── Section table ─────────────────────────────────────────────────────
 function SectionTable({
-  label, badge, badgeColor, groups, tabColor, tramoInfo, dashRows, flatRows, dedupeInfo
+  label, badge, badgeColor, groups, tabColor
 }: {
   label: string; badge: string; badgeColor: string
-  groups: NifGroup[]; tabColor: string; tramoInfo: TramoInfo
-  dashRows?: any[]; flatRows?: boolean; dedupeInfo?: boolean
+  groups: NifGroup[]; tabColor: string;
 }) {
   if (groups.length === 0) return null
 
   const sectionTotal = groups.reduce((s, g) => s + g.subtotal, 0)
   const totalUnits   = groups.reduce((s, g) => s + g.sales.length, 0)
-  // Use per-sale calculateDynamicCommission for correct multi-rate totals (all tabs)
-  const totalTramo = dashRows && dashRows.length > 0
-    ? groups.reduce((sum, g) => sum + g.sales.reduce((s2: number, sale: any) => s2 + calculateDynamicCommission(sale, dashRows), 0), 0)
-    : calcNifTramo(sectionTotal, totalUnits, tramoInfo)
 
   return (
     <div style={{ marginBottom: 36 }}>
@@ -127,8 +122,7 @@ function SectionTable({
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '10px 18px', marginBottom: 0,
         background: `${badgeColor}18`, borderRadius: '12px 12px 0 0',
-        border: `1px solid ${badgeColor}40`, borderBottom: 'none',
-      }}>
+        border: `1px solid ${badgeColor}40`, borderBottom: 'none' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ background: badgeColor, color: '#fff', fontSize: 11, fontWeight: 800, padding: '3px 10px', borderRadius: 20, letterSpacing: 1 }}>{badge}</span>
           <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--light-text)' }}>{label}</span>
@@ -136,8 +130,6 @@ function SectionTable({
         </div>
         <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
           <span style={{ fontSize: 13, color: 'var(--medium-gray)' }}>Total: <strong style={{ color: 'var(--light-text)' }}>{fmt(sectionTotal)}</strong></span>
-          {tramoInfo.pje > 0 && <span style={{ fontSize: 12, color: badgeColor, background: `${badgeColor}18`, padding: '2px 10px', borderRadius: 20 }}>{tramoInfo.pje.toFixed(1)}% → {tramoInfo.tramoVal}{tramoInfo.isPercentage ? '%' : '€/u'}</span>}
-          <span style={{ fontSize: 13, color: badgeColor }}>Tramo: <strong>{tramoInfo.tramoVal > 0 ? fmt(totalTramo) : '—'}</strong></span>
         </div>
       </div>
 
@@ -146,134 +138,37 @@ function SectionTable({
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 800 }}>
           <thead>
             <tr style={{ background: 'var(--active-bg)' }}>
-              {['Cliente (NIF)', 'Empresa', 'Fecha Tram.', 'Teléfono', 'Código', 'Comercial', 'Productos', 'Uds.', 'Total', 'Pago por tramo'].map((h, i) => (
+              {['Cliente (NIF)', 'Nombre del Cliente', 'Fecha Tram.', 'Teléfono', 'Código', 'Comercial', 'Productos', 'Uds.', 'Total'].map((h, i) => (
                 <th key={i} style={{
                   padding: '10px 14px', textAlign: i >= 7 ? 'right' : 'left',
                   whiteSpace: 'nowrap', color: 'var(--medium-gray)', fontWeight: 600, fontSize: 11,
                   textTransform: 'uppercase', letterSpacing: 0.5,
-                  borderBottom: `2px solid ${badgeColor}60`,
-                }}>{h}</th>
+                  borderBottom: `2px solid ${badgeColor}60` }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {flatRows
-              // ── PLANO: una fila por venta individual ────────────────
-              ? groups.flatMap((group, gi) => {
-                  const rowBg = gi % 2 === 0 ? 'transparent' : `${badgeColor}08`
-                  return group.sales.map((sale: any, si: number) => {
-                    const isLast = si === group.sales.length - 1
-                    const tramo = dashRows && dashRows.length > 0
-                      ? calculateDynamicCommission(sale, dashRows)
-                      : calcNifTramo(Number(sale.cuota ?? 0), 1, tramoInfo)
-                    return (
-                      <tr key={`${gi}-${si}`} style={{ background: rowBg, borderBottom: isLast ? `2px solid ${badgeColor}30` : `1px dashed var(--border-color)`, verticalAlign: 'middle' }}>
-                        <td style={{ padding: '12px 14px', color: 'var(--medium-gray)', fontSize: 12, whiteSpace: 'nowrap', borderRight: '1px solid var(--border-color)' }}>{group.nif}</td>
-                        <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--light-text)', borderRight: '1px solid var(--border-color)' }}>{group.nombre}</td>
-                        <td style={{ padding: '12px 14px', color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{sale.fecha || '—'}</td>
-                        <td style={{ padding: '12px 14px', color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{sale.telf || '—'}</td>
-                        <td style={{ padding: '12px 14px', fontSize: 11.5, color: 'var(--medium-gray)', borderRight: '1px solid var(--border-color)' }}>{sale.codigo || '—'}</td>
-                        <td style={{ padding: '12px 14px', fontWeight: 600, borderRight: '1px solid var(--border-color)' }}>{sale.vendedor || '—'}</td>
-                        <td style={{ padding: '12px 14px', color: 'var(--light-text)', maxWidth: 280 }}>{sale.producto || '—'}</td>
-                        <td style={{ padding: '12px 14px', textAlign: 'right' }}>
-                          <span style={{ background: `${tabColor}22`, color: tabColor, borderRadius: 20, padding: '3px 11px', fontWeight: 800, fontSize: 13 }}>1</span>
-                        </td>
-                        <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: 'var(--light-text)', fontSize: 13, whiteSpace: 'nowrap' }}>{fmt(Number(sale.cuota ?? 0))}</td>
-                        <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 800, color: badgeColor, fontSize: 13, whiteSpace: 'nowrap' }}>{tramoInfo.tramoVal > 0 ? fmt(tramo) : '—'}</td>
-                      </tr>
-                    )
-                  })
-                })
-              // ── AGRUPADO: una fila por producto ────────────
-              : groups.map((group, gi) => {
-              const rowBg  = gi % 2 === 0 ? 'transparent' : `${badgeColor}08`
-              const first  = group.sales[0] || {}
-              const prodMap = new Map<string, { sales: any[]; subtotal: number }>()
-              group.sales.forEach((s: any) => {
-                const key = (s.producto || '—').trim()
-                if (!prodMap.has(key)) prodMap.set(key, { sales: [], subtotal: 0 })
-                const pg = prodMap.get(key)!
-                pg.sales.push(s)
-                pg.subtotal += Number(s.cuota ?? 0)
-              })
-              const prodGroups = Array.from(prodMap.entries())
-              const span = prodGroups.length
-              return prodGroups.map(([producto, pg], pi) => {
-                const isLastProd = pi === span - 1
-                const prodTramo = dashRows && dashRows.length > 0
-                  ? pg.sales.reduce((sum: number, s: any) => sum + calculateDynamicCommission(s, dashRows), 0)
-                  : calcNifTramo(pg.subtotal, pg.sales.length, tramoInfo)
-                let telefons = pg.sales.map((s: any) => s.telf || group.telf).filter(Boolean)
-                let fechas = pg.sales.map((s: any) => s.fecha).filter(Boolean)
-                
-                if (dedupeInfo) {
-                  telefons = Array.from(new Set(telefons))
-                  fechas = Array.from(new Set(fechas))
-                }
-
+            {groups.flatMap((group, gi) => {
+              return group.sales.map((sale: any, si: number) => {
+                const rowBg = si % 2 === 0 ? 'transparent' : `${badgeColor}08`
+                const isLast = si === group.sales.length - 1
                 return (
-                  <tr
-                    key={`${gi}-${pi}`}
-                    style={{
-                      background: rowBg,
-                      borderBottom: isLastProd ? `2px solid ${badgeColor}30` : `1px dashed var(--border-color)`,
-                      verticalAlign: 'top',
-                    }}
-                  >
-                    <td style={{
-                      padding: '12px 14px', color: 'var(--medium-gray)', fontSize: 12,
-                      whiteSpace: 'nowrap', verticalAlign: 'top',
-                      borderRight: '1px solid var(--border-color)'
-                    }}>{group.nif}</td>
-                    
-                    <td style={{
-                      padding: '12px 14px', fontWeight: 600, color: 'var(--light-text)',
-                      verticalAlign: 'top',
-                      borderRight: '1px solid var(--border-color)'
-                    }}>{group.nombre}</td>
-                    
-                    <td style={{ padding: '12px 14px', color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>
-                      {fechas.length > 1
-                        ? <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                            {fechas.map((f, fi) => <span key={fi}>{f}</span>)}
-                          </div>
-                        : fechas[0] || '—'
-                      }
-                    </td>
-
-                    <td style={{ padding: '12px 14px', color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>
-                      {telefons.length > 1
-                        ? <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                            {telefons.map((t, ti) => <span key={ti}>{t}</span>)}
-                          </div>
-                        : telefons[0] || '—'
-                      }
-                    </td>
-                    
-                    <td style={{
-                      padding: '12px 14px', fontSize: 11.5, color: 'var(--medium-gray)',
-                      verticalAlign: 'top',
-                      borderRight: '1px solid var(--border-color)'
-                    }}>{first.codigo}</td>
-                    
-                    <td style={{
-                      padding: '12px 14px', fontWeight: 600, verticalAlign: 'top',
-                      borderRight: '1px solid var(--border-color)'
-                    }}>{first.vendedor}</td>
-                    
-                    <td style={{ padding: '12px 14px', color: 'var(--light-text)', maxWidth: 280 }}>{producto}</td>
+                  <tr key={`${gi}-${si}`} style={{ background: rowBg, borderBottom: isLast ? `2px solid ${badgeColor}30` : `1px dashed var(--border-color)`, verticalAlign: 'middle' }}>
+                    <td style={{ padding: '12px 14px', color: 'var(--medium-gray)', fontSize: 12, whiteSpace: 'nowrap', borderRight: '1px solid var(--border-color)' }}>{group.nif}</td>
+                    <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--light-text)', borderRight: '1px solid var(--border-color)' }}>{group.nombre || '—'}</td>
+                    <td style={{ padding: '12px 14px', color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{sale.fecha || '—'}</td>
+                    <td style={{ padding: '12px 14px', color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{sale.telf || '—'}</td>
+                    <td style={{ padding: '12px 14px', fontSize: 11.5, color: 'var(--medium-gray)', borderRight: '1px solid var(--border-color)' }}>{sale.codigo || '—'}</td>
+                    <td style={{ padding: '12px 14px', fontWeight: 600, borderRight: '1px solid var(--border-color)' }}>{sale.vendedor || '—'}</td>
+                    <td style={{ padding: '12px 14px', color: 'var(--light-text)', maxWidth: 280 }}>{sale.producto || '—'}</td>
                     <td style={{ padding: '12px 14px', textAlign: 'right' }}>
-                      <span style={{ background: `${tabColor}22`, color: tabColor, borderRadius: 20, padding: '3px 11px', fontWeight: 800, fontSize: 13 }}>
-                        {pg.sales.length}
-                      </span>
+                      <span style={{ background: `${tabColor}22`, color: tabColor, borderRadius: 20, padding: '3px 11px', fontWeight: 800, fontSize: 13 }}>1</span>
                     </td>
-                    <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: 'var(--light-text)', fontSize: 13, whiteSpace: 'nowrap' }}>{fmt(pg.subtotal)}</td>
-                    <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 800, color: badgeColor, fontSize: 13, whiteSpace: 'nowrap' }}>{tramoInfo.tramoVal > 0 ? fmt(prodTramo) : '—'}</td>
+                    <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: 'var(--light-text)', fontSize: 13, whiteSpace: 'nowrap' }}>{fmt(Number(sale.cuota ?? 0))}</td>
                   </tr>
                 )
               })
             })}
-
           </tbody>
         </table>
       </div>
@@ -439,7 +334,7 @@ function GrupoClienteContent() {
                     { label: 'COMERCIAL',        right: false },
                     { label: 'CONCEPTO / REGLA', right: false },
                     { label: 'TOTAL',            right: true  },
-                    { label: 'PAGO POR TRAMO',   right: true  },
+                    
                   ].map(h => (
                     <th key={h.label} style={{ padding: '10px 14px', textAlign: h.right ? 'right' : 'left', color: 'var(--medium-gray)', fontWeight: 700, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, background: 'var(--active-bg)' }}>{h.label}</th>
                   ))}
@@ -551,9 +446,7 @@ function GrupoClienteContent() {
             Comercial: s.vendedor || '—',
             Producto: s.producto || '—',
             Uds: 1,
-            'Cuota Bruta': fmtN(Number(s.cuota ?? 0)),
-            'Pago por Tramo': fmtN(tramo)
-          })
+            'Cuota Bruta': fmtN(Number(s.cuota ?? 0)) })
         })
       } else {
         const prodMap = new Map<string, { sales: any[]; subtotal: number }>()
@@ -591,9 +484,7 @@ function GrupoClienteContent() {
             Comercial: first.vendedor || '—',
             Producto: first.producto || '—',
             Uds: pg.sales.length,
-            'Cuota Bruta': fmtN(pg.subtotal),
-            'Pago por Tramo': fmtN(tramo)
-          })
+            'Cuota Bruta': fmtN(pg.subtotal) })
         })
       }
     })
@@ -624,9 +515,8 @@ function GrupoClienteContent() {
       Cliente:   ea.customerName || '—',
       Regla:     ea.rule?.name || 'Extra Manual',
       Canal:     ea.rule?.channelType || '—',
-      'Pago por Tramo': fmtN(ea.telecomRewardAmount || 0),
-      'Importe Comercial': fmtN(ea.sellerRewardAmount || 0),
-    }))
+      
+      'Importe Comercial': fmtN(ea.sellerRewardAmount || 0) }))
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(extrasRows.length ? extrasRows : [{ Info: 'Sin extras' }]), 'Extras')
     XLSX.writeFile(wb, `OGC_PorGrupo_${periodLabel}.xlsx`)
   }
@@ -664,9 +554,7 @@ function GrupoClienteContent() {
         Comercial: ea.seller || '—',
         Producto: ea.rule?.name || 'Extra Manual',
         Uds: 1,
-        'Cuota Bruta': 0,
-        'Pago por Tramo': fmtN(ea.telecomRewardAmount || 0)
-      })
+        'Cuota Bruta': 0 })
     })
 
     const ws = XLSX.utils.json_to_sheet(allRows.length ? allRows : [{ Info: 'Sin operaciones' }])
@@ -688,19 +576,16 @@ function GrupoClienteContent() {
       return {
         Grupo:             `${t.emoji} ${t.label}`,
         'Nº Ventas':       tabSls.length,
-        'Cuota Bruta':     fmtN(tabSls.reduce((a: number, s: any) => a + Number(s.cuota ?? 0), 0)),
-        'Pago por Tramo (€)': fmtN(plusTramo + basicoTramo),
-      }
+        'Cuota Bruta':     fmtN(tabSls.reduce((a: number, s: any) => a + Number(s.cuota ?? 0), 0)) }
     })
     // Extras row
     const extrasTotal = extraAssignments.reduce((a: number, e: any) => a + (e.telecomRewardAmount || 0), 0)
-    summaryRows.push({ Grupo: '⚡ Extras', 'Nº Ventas': extraAssignments.length, 'Cuota Bruta': 0, 'Pago por Tramo (€)': fmtN(extrasTotal) })
+    summaryRows.push({ Grupo: '⚡ Extras', 'Nº Ventas': extraAssignments.length, 'Cuota Bruta': 0 })
     // Grand total
     summaryRows.push({
       Grupo: 'TOTAL',
       'Nº Ventas':       summaryRows.reduce((a, r) => a + (r['Nº Ventas'] as number), 0),
-      'Cuota Bruta':     fmtN(summaryRows.reduce((a, r) => a + (r['Cuota Bruta'] as number), 0)),
-      'Pago por Tramo (€)': fmtN(summaryRows.reduce((a, r) => a + (r['Pago por Tramo (€)'] as number), 0)),
+      'Cuota Bruta':     fmtN(summaryRows.reduce((a, r) => a + (r['Cuota Bruta'] as number), 0))
     })
     const ws = XLSX.utils.json_to_sheet(summaryRows)
     const wb = XLSX.utils.book_new()
@@ -718,9 +603,7 @@ function GrupoClienteContent() {
           <div>
             <h4 style={{ margin: '0 0 10px 0', color: 'var(--mercedes-cyan)', fontSize: 15 }}>Análisis por Grupo Cliente</h4>
             <p style={{ margin: 0, lineHeight: 1.5, fontSize: 13 }}>
-              Ventas agrupadas por NIF con desglose por producto. El <strong>Pago por tramo</strong> se calcula
-              automáticamente usando las tablas de comisiones (Ventas vs Importes PLUS / BÁSICO) y el % cumplimiento
-              acumulado del período activo.
+              Ventas agrupadas por NIF con desglose por producto. 
             </p>
           </div>
         }
@@ -738,8 +621,7 @@ function GrupoClienteContent() {
             padding: '9px 18px', borderRadius: 10, border: `1px solid ${btn.color}40`,
             background: `${btn.color}12`, color: btn.color,
             fontWeight: 700, fontSize: 13, cursor: 'pointer',
-            transition: 'all 0.15s',
-          }}
+            transition: 'all 0.15s' }}
             onMouseEnter={e => { e.currentTarget.style.background = `${btn.color}22`; e.currentTarget.style.transform = 'translateY(-1px)' }}
             onMouseLeave={e => { e.currentTarget.style.background = `${btn.color}12`; e.currentTarget.style.transform = 'none' }}
           >
@@ -761,8 +643,7 @@ function GrupoClienteContent() {
               display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10,
               border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: active ? 700 : 500,
               background: active ? t.color : 'transparent', color: active ? '#fff' : 'var(--medium-gray)',
-              transition: 'all 0.15s',
-            }}>
+              transition: 'all 0.15s' }}>
               {t.emoji} {t.label}
               {active && count > 0 && (
                 <span style={{ background: 'rgba(255,255,255,0.25)', borderRadius: 20, fontSize: 11, fontWeight: 800, padding: '1px 7px' }}>{count}</span>
@@ -919,9 +800,9 @@ function GrupoClienteContent() {
           })()}
 
           {/* ── Sections ── */}
-          <SectionTable label="Código Plus"   badge="PLUS"   badgeColor="#00ADEF" groups={plusGroups}   tabColor={tab.color} tramoInfo={plusInfo}   dashRows={plusDash?.rows} flatRows={activeTab === 'prepago' || activeTab === 'varios'} dedupeInfo={activeTab === 'contratos_movil' || activeTab === 'rent'} />
-          <SectionTable label="Código Básico" badge="BÁSICO" badgeColor="#F59E0B" groups={basicoGroups} tabColor={tab.color} tramoInfo={basicoInfo} dashRows={basicoDash?.rows} flatRows={activeTab === 'prepago' || activeTab === 'varios'} dedupeInfo={activeTab === 'contratos_movil' || activeTab === 'rent'} />
-          <SectionTable label="Otros Códigos" badge="OTROS"   badgeColor="#6B7280" groups={otrosGroups}  tabColor={tab.color} tramoInfo={{ tramoVal: 0, isPercentage: false, pje: 0, pjeProyectado: 0, tramoValProyectado: 0 }} flatRows={activeTab === 'prepago' || activeTab === 'varios'} dedupeInfo={activeTab === 'contratos_movil' || activeTab === 'rent'} />
+          <SectionTable label="Código Plus" badge="PLUS" badgeColor="#00ADEF" groups={plusGroups} tabColor={tab.color} />
+          <SectionTable label="Código Básico" badge="BÁSICO" badgeColor="#F59E0B" groups={basicoGroups} tabColor={tab.color} />
+          <SectionTable label="Otros Códigos" badge="OTROS" badgeColor="#6B7280" groups={otrosGroups} tabColor={tab.color} />
 
           {/* ── Grand total ── */}
           <div style={{ marginTop: 8, padding: '18px 28px', background: `${tab.color}15`, border: `2px solid ${tab.color}40`, borderRadius: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

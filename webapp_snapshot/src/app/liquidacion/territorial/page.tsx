@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Save, Plus, Trash2, Settings, Building2 } from 'lucide-react'
+import { ArrowLeft, X, Save, Plus, Trash2, Settings, Building2 } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
 import { usePeriod } from '@/components/PeriodProvider'
 import { TIENDAS_COMERCIALES } from '@/lib/constants'
@@ -41,6 +41,7 @@ export default function TerritorialPage() {
 
   // Modal para configurar "Por Tienda"
   const [modalStoreTargets, setModalStoreTargets] = useState<{ ruleId: string, tramo: 1 | 2 } | null>(null)
+  const [modalSalesList, setModalSalesList] = useState<{ store: string, ruleName: string, logs: any[], isMoneyType: boolean } | null>(null)
 
   useEffect(() => {
     if (!activePeriodKey) return;
@@ -51,7 +52,7 @@ export default function TerritorialPage() {
       fetch(`/api/territorial?periodKey=${activePeriodKey}`).then(r => r.json())
     ])
     .then(([salesRes, rulesRes]) => {
-      if (salesRes.success) setSales(salesRes.sales || [])
+      if (salesRes.success) setSales(salesRes.logs || [])
       if (rulesRes.success) {
         setTiendasRules(rulesRes.tiendas || [])
         setO2Rules(rulesRes.o2 || [])
@@ -85,8 +86,8 @@ export default function TerritorialPage() {
   }
 
   // --- Helpers Ventas ---
-  const countSalesForStoreAndType = (storeName: string, tipoVenta: string) => {
-    if (!tipoVenta) return 0;
+  const getSalesDataForStoreAndType = (storeName: string, tipoVenta: string) => {
+    if (!tipoVenta) return { value: 0, logs: [] };
     
     const isProductMatch = (sale: any) => matchTipoVenta(sale, tipoVenta);
 
@@ -106,16 +107,27 @@ export default function TerritorialPage() {
       return isProductMatch(s);
     });
 
-    // Si es "Dispositivos" o algo que parece dinero, podríamos querer sumar los importes en lugar de contar?
-    // Según la imagen, Dispositivos tiene un objetivo de "96.542 €" y un importe de "3,5%".
-    // Eso requiere sumar importes.
     const isMoneyType = tipoVenta.toLowerCase().includes('dispositivos') || tipoVenta.toLowerCase().includes('importe');
 
     if (isMoneyType) {
-      return filtered.reduce((acc, s) => acc + (parseFloat(s.importe || s.cuota || '0') || 0), 0);
+      return { value: filtered.reduce((acc, s) => acc + (parseFloat(s.importe || s.cuota || '0') || 0), 0), logs: filtered };
     }
     
-    return filtered.length;
+    return { value: filtered.length, logs: filtered };
+  }
+
+  const renderSalesCell = (value: number, logs: any[], storeName: string, rule: any) => {
+    const isMoney = String(rule.tipoVenta).toLowerCase().includes('dispositivos');
+    const displayVal = isMoney ? new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(value) : value;
+    if (value === 0) return <span>{displayVal}</span>;
+    return (
+      <span 
+        onClick={() => setModalSalesList({ store: storeName, ruleName: rule.nombre || rule.tipoVenta, logs, isMoneyType: isMoney })}
+        style={{ cursor: 'pointer', color: '#0284c7', textDecoration: 'underline' }}
+      >
+        {displayVal}
+      </span>
+    );
   }
 
   // --- Handlers Tiendas ---
@@ -135,22 +147,37 @@ export default function TerritorialPage() {
     }])
   }
 
-  const parseNumber = (val: string) => parseFloat((val || '0').replace(/[^0-9,-.]/g, '').replace(',','.')) || 0;
+  const parseNumber = (val: string) => {
+    let s = String(val || '0').replace(/[^0-9.,\-]/g, '').trim();
+    s = s.replace(/\./g, '').replace(',', '.');
+    return parseFloat(s) || 0;
+  }
 
-  const calculateTiendaImporte = (rule: any, storeName: string, salesCount: number) => {
+  const calculateTiendaImporte = (rule: any, storeName: string, salesCount: number, salesTot: number) => {
     let earned = 0;
     
     // Eval 1er Tramo
     let target1 = 0;
-    if (rule.obj1Type === 'per_store') target1 = parseNumber(rule.obj1Stores?.[storeName] || '0');
-    else target1 = parseNumber(rule.obj1Global);
+    let isReached1 = false;
+    if (rule.obj1Type === 'per_store') {
+      target1 = parseNumber(rule.obj1Stores?.[storeName] || '0');
+      isReached1 = target1 > 0 && salesCount >= target1;
+    } else {
+      target1 = parseNumber(rule.obj1Global);
+      isReached1 = target1 > 0 && salesTot >= target1;
+    }
 
     // Eval 2do Tramo
     let target2 = 0;
-    if (rule.obj2Type === 'per_store') target2 = parseNumber(rule.obj2Stores?.[storeName] || '0');
-    else target2 = parseNumber(rule.obj2Global);
+    let isReached2 = false;
+    if (rule.obj2Type === 'per_store') {
+      target2 = parseNumber(rule.obj2Stores?.[storeName] || '0');
+      isReached2 = target2 > 0 && salesCount >= target2;
+    } else {
+      target2 = parseNumber(rule.obj2Global);
+      isReached2 = target2 > 0 && salesTot >= target2;
+    }
 
-    const isMoneyType = String(rule.tipoVenta).toLowerCase().includes('dispositivos');
     const import1Num = parseNumber(rule.importe1);
     const import2Num = parseNumber(rule.importe2);
 
@@ -158,12 +185,12 @@ export default function TerritorialPage() {
     const isPct2 = String(rule.importe2).includes('%');
 
     // Si supera Tramo 2
-    if (target2 > 0 && salesCount >= target2) {
+    if (isReached2) {
       if (isPct2) earned = salesCount * (import2Num / 100);
       else earned = import2Num;
     } 
     // Si no supera Tramo 2 pero supera Tramo 1
-    else if (target1 > 0 && salesCount >= target1) {
+    else if (isReached1) {
       if (isPct1) earned = salesCount * (import1Num / 100);
       else earned = import1Num;
     }
@@ -186,24 +213,48 @@ export default function TerritorialPage() {
   const calculateO2Importe = (rule: any, totalSales: number) => {
     let bonus = 0;
     
-    // Encontrar el tramo Mes más alto alcanzado
     for (const tramo of [...TRAMOS_MES].reverse()) {
       if (totalSales >= tramo.min) {
-        bonus += parseNumber(rule.tramosMes[tramo.key] || '0');
-        break; // Solo el tramo más alto
+        bonus += parseNumber(rule.tramosMes?.[tramo.key] || '0');
+        break;
       }
     }
 
-    // Calcular Conectividad (siempre se paga por unidad)
-    const conectVal = parseNumber(rule.conectividad || '0');
-    bonus += (totalSales * conectVal);
+    for (const tramo of [...TRAMOS_TRIM].reverse()) {
+      if (totalSales >= tramo.min) {
+        bonus += parseNumber(rule.tramosTrim?.[tramo.key] || '0');
+        break;
+      }
+    }
 
-    // NOTA: Los tramos trimestrales requieren lógica de ventas trimestrales.
-    // Como estamos en un solo mes en este dashboard, es complejo calcular el trimestre exacto
-    // a menos que sumemos los periodos anteriores. Por ahora lo dejamos disponible para el UI.
+    if (totalSales > 0) {
+      bonus += parseNumber(rule.conectividad || '0');
+    }
 
     return bonus;
   }
+
+  // Pre-calcular totales
+  // Pre-calcular totales
+  const grandTotalTiendas = tiendasRules.reduce((acc, rule) => {
+    const dataAux = getSalesDataForStoreAndType('Auxiliadora 45', rule.tipoVenta);
+    const dataCor = getSalesDataForStoreAndType('Correhuela', rule.tipoVenta);
+    const dataVil = getSalesDataForStoreAndType('Villamayor', rule.tipoVenta);
+    const dataBej = getSalesDataForStoreAndType('Béjar', rule.tipoVenta);
+    const salesTot = dataAux.value + dataCor.value + dataVil.value + dataBej.value;
+
+    const impAux = calculateTiendaImporte(rule, 'Auxiliadora 45', dataAux.value, salesTot);
+    const impCor = calculateTiendaImporte(rule, 'Correhuela', dataCor.value, salesTot);
+    const impVil = calculateTiendaImporte(rule, 'Villamayor', dataVil.value, salesTot);
+    const impBej = calculateTiendaImporte(rule, 'Béjar', dataBej.value, salesTot);
+    
+    return acc + impAux + impCor + impVil + impBej;
+  }, 0);
+
+  const grandTotalO2 = o2Rules.reduce((acc, rule) => {
+    const dataO2 = getSalesDataForStoreAndType('O2', rule.tipoVenta);
+    return acc + calculateO2Importe(rule, dataO2.value);
+  }, 0);
 
   if (isLoadingPeriods || loading) return <div style={{ padding: 40, textAlign: 'center' }}>Cargando datos...</div>
 
@@ -223,57 +274,79 @@ export default function TerritorialPage() {
             Periodo Activo: <strong>{activePeriodKey}</strong>
           </p>
         </div>
-        <button 
-          onClick={handleSave} 
-          disabled={saving}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--mercedes-cyan)', color: 'var(--bg-card)', border: 'none', padding: '10px 20px', borderRadius: 8, fontWeight: 'bold', cursor: 'pointer', opacity: saving ? 0.7 : 1 }}
-        >
-          <Save size={18} /> {saving ? 'Guardando...' : 'Guardar Cambios'}
-        </button>
-      </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+            <div style={{ display: 'flex', gap: 24, borderRight: '1px solid var(--border-color)', paddingRight: 24 }}>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 11, color: 'var(--medium-gray)', textTransform: 'uppercase', fontWeight: 'bold' }}>Total Tiendas</div>
+                <div style={{ fontSize: 18, color: '#10b981', fontWeight: 'bold' }}>{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(grandTotalTiendas)}</div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 11, color: 'var(--medium-gray)', textTransform: 'uppercase', fontWeight: 'bold' }}>Total O2</div>
+                <div style={{ fontSize: 18, color: '#10b981', fontWeight: 'bold' }}>{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(grandTotalO2)}</div>
+              </div>
+            </div>
+            <button 
+              onClick={handleSave} 
+              disabled={saving}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--mercedes-cyan)', color: 'var(--bg-card)', border: 'none', padding: '10px 20px', borderRadius: 8, fontWeight: 'bold', cursor: 'pointer', opacity: saving ? 0.7 : 1 }}
+            >
+              <Save size={18} /> {saving ? 'Guardando...' : 'Guardar Cambios'}
+            </button>
+          </div>
+        </div>
 
       {/* TABLA 1: TERRITORIAL TIENDAS */}
-      <div className="card" style={{ padding: 0, marginBottom: 32, overflow: 'hidden' }}>
-        <div style={{ background: '#38bdf8', color: '#fff', padding: '12px', textAlign: 'center', fontWeight: 'bold', fontSize: 16 }}>
+      <div className="card" style={{ padding: 0, marginBottom: 32, overflow: 'visible', position: 'relative', zIndex: 20 }}>
+        <div style={{ background: '#38bdf8', color: '#fff', padding: '6px 4px', textAlign: 'center', fontWeight: 'bold', fontSize: 16 }}>
           TERRITORIAL TIENDAS
         </div>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 1000 }}>
+        <div style={{ overflow: 'visible' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 1200 }}>
             <thead>
-              <tr style={{ background: '#7dd3fc', color: '#0f172a' }}>
-                <th style={{ padding: '12px' }}>Nombre Comisión</th>
-                <th style={{ padding: '12px' }}>Tipo de Venta</th>
-                <th style={{ padding: '12px' }}>Obj. Primer Tramo</th>
-                <th style={{ padding: '12px' }}>Importe 1º</th>
-                <th style={{ padding: '12px' }}>Obj. Segundo Tramo</th>
-                <th style={{ padding: '12px' }}>Importe 2º</th>
-                <th style={{ padding: '12px' }}>VENTAS AUXILIADORA 45</th>
-                <th style={{ padding: '12px' }}>VENTAS CORREHUELA</th>
-                <th style={{ padding: '12px' }}>VENTAS VILLAMAYOR</th>
-                <th style={{ padding: '12px' }}>VENTAS BEJAR</th>
-                <th style={{ padding: '12px' }}>VENTAS TOTAL</th>
-                <th style={{ padding: '12px' }}>IMPORTE</th>
-                <th style={{ padding: '12px' }}></th>
+              <tr style={{ background: '#0284c7', color: '#ffffff' }}>
+                <th style={{ padding: '6px 4px' }}>Nombre Comisión</th>
+                <th style={{ padding: '6px 4px' }}>Tipo de Venta</th>
+                <th style={{ padding: '6px 4px' }}>Obj. Primer Tramo</th>
+                <th style={{ padding: '6px 4px' }}>Importe 1º</th>
+                <th style={{ padding: '6px 4px' }}>Obj. Segundo Tramo</th>
+                <th style={{ padding: '6px 4px' }}>Importe 2º</th>
+                <th style={{ padding: '6px 4px' }}>VENTAS AUXILIADORA 45</th>
+                <th style={{ padding: '6px 4px' }}>VENTAS CORREHUELA</th>
+                <th style={{ padding: '6px 4px' }}>VENTAS VILLAMAYOR</th>
+                <th style={{ padding: '6px 4px' }}>VENTAS BEJAR</th>
+                <th style={{ padding: '6px 4px' }}>VENTAS TOTAL</th>
+                <th style={{ padding: '6px 4px' }}>IMPORTE</th>
+                <th style={{ padding: '6px 4px' }}></th>
               </tr>
             </thead>
             <tbody>
               {tiendasRules.map((rule, idx) => {
-                const salesAux = countSalesForStoreAndType('Auxiliadora 45', rule.tipoVenta);
-                const salesCor = countSalesForStoreAndType('Correhuela', rule.tipoVenta);
-                const salesVil = countSalesForStoreAndType('Villamayor', rule.tipoVenta);
-                const salesBej = countSalesForStoreAndType('Béjar', rule.tipoVenta);
+                const dataAux = getSalesDataForStoreAndType('Auxiliadora 45', rule.tipoVenta);
+                const dataCor = getSalesDataForStoreAndType('Correhuela', rule.tipoVenta);
+                const dataVil = getSalesDataForStoreAndType('Villamayor', rule.tipoVenta);
+                const dataBej = getSalesDataForStoreAndType('Béjar', rule.tipoVenta);
+                const salesAux = dataAux.value;
+                const salesCor = dataCor.value;
+                const salesVil = dataVil.value;
+                const salesBej = dataBej.value;
                 const salesTot = salesAux + salesCor + salesVil + salesBej;
+                
+                const obj1Target = rule.obj1Type === 'global' ? parseNumber(rule.obj1Global) : 0;
+                const obj2Target = rule.obj2Type === 'global' ? parseNumber(rule.obj2Global) : 0;
+                let activeTramo = 0;
+                if (obj2Target > 0 && salesTot >= obj2Target) activeTramo = 2;
+                else if (obj1Target > 0 && salesTot >= obj1Target) activeTramo = 1;
 
-                const impAux = calculateTiendaImporte(rule, 'Auxiliadora 45', salesAux);
-                const impCor = calculateTiendaImporte(rule, 'Correhuela', salesCor);
-                const impVil = calculateTiendaImporte(rule, 'Villamayor', salesVil);
-                const impBej = calculateTiendaImporte(rule, 'Béjar', salesBej);
+                const impAux = calculateTiendaImporte(rule, 'Auxiliadora 45', salesAux, salesTot);
+                const impCor = calculateTiendaImporte(rule, 'Correhuela', salesCor, salesTot);
+                const impVil = calculateTiendaImporte(rule, 'Villamayor', salesVil, salesTot);
+                const impBej = calculateTiendaImporte(rule, 'Béjar', salesBej, salesTot);
                 const totalImporte = impAux + impCor + impVil + impBej;
 
                 return (
-                  <tr key={rule.id} style={{ borderBottom: '1px solid var(--border-color)', background: idx % 2 === 0 ? 'var(--bg-card)' : 'var(--section-bg)' }}>
-                    <td style={{ padding: 8 }}><input value={rule.nombre} onChange={e => { const r = [...tiendasRules]; r[idx].nombre = e.target.value; setTiendasRules(r); }} className="form-input" style={{ width: '100%', minWidth: 120 }} placeholder="Ej: Altas BAF" /></td>
-                    <td style={{ padding: 8 }}>
+                  <tr key={rule.id} style={{ borderBottom: '1px solid var(--border-color)', background: idx % 2 === 0 ? 'var(--bg-card)' : 'var(--section-bg)', position: 'relative', zIndex: 1000 - idx }}>
+                    <td style={{ padding: 4 }}><input value={rule.nombre} onChange={e => { const r = [...tiendasRules]; r[idx].nombre = e.target.value; setTiendasRules(r); }} className="form-input" style={{ width: '100%', minWidth: 120 }} placeholder="Ej: Altas BAF" /></td>
+                    <td style={{ padding: 4 }}>
                       <ProductTreeSelector 
                         value={rule.tipoVenta || ''} 
                         onChange={val => { const r = [...tiendasRules]; r[idx].tipoVenta = val; setTiendasRules(r); }} 
@@ -282,7 +355,7 @@ export default function TerritorialPage() {
                     </td>
                     
                     {/* Obj 1 */}
-                    <td style={{ padding: 8 }}>
+                    <td style={{ padding: 4 }}>
                       <div style={{ display: 'flex', gap: 4 }}>
                         <select value={rule.obj1Type} onChange={e => { const r = [...tiendasRules]; r[idx].obj1Type = e.target.value; setTiendasRules(r); }} className="form-input" style={{ width: 60, padding: 4 }}>
                           <option value="global">Unif.</option>
@@ -295,10 +368,10 @@ export default function TerritorialPage() {
                         )}
                       </div>
                     </td>
-                    <td style={{ padding: 8 }}><input value={rule.importe1} onChange={e => { const r = [...tiendasRules]; r[idx].importe1 = e.target.value; setTiendasRules(r); }} className="form-input" style={{ width: 60 }} placeholder="Ej: 20%" /></td>
+                    <td style={{ padding: 4 }}><input value={rule.importe1} onChange={e => { const r = [...tiendasRules]; r[idx].importe1 = e.target.value; setTiendasRules(r); }} className="form-input" style={{ width: 60, backgroundColor: activeTramo === 1 ? '#dcfce7' : '', color: activeTramo === 1 ? '#166534' : '', fontWeight: activeTramo === 1 ? 'bold' : 'normal', borderColor: activeTramo === 1 ? '#22c55e' : '' }} placeholder="Ej: 20%" /></td>
 
                     {/* Obj 2 */}
-                    <td style={{ padding: 8 }}>
+                    <td style={{ padding: 4 }}>
                       <div style={{ display: 'flex', gap: 4 }}>
                         <select value={rule.obj2Type} onChange={e => { const r = [...tiendasRules]; r[idx].obj2Type = e.target.value; setTiendasRules(r); }} className="form-input" style={{ width: 60, padding: 4 }}>
                           <option value="global">Unif.</option>
@@ -311,17 +384,17 @@ export default function TerritorialPage() {
                         )}
                       </div>
                     </td>
-                    <td style={{ padding: 8 }}><input value={rule.importe2} onChange={e => { const r = [...tiendasRules]; r[idx].importe2 = e.target.value; setTiendasRules(r); }} className="form-input" style={{ width: 60 }} placeholder="Ej: 30%" /></td>
+                    <td style={{ padding: 4 }}><input value={rule.importe2} onChange={e => { const r = [...tiendasRules]; r[idx].importe2 = e.target.value; setTiendasRules(r); }} className="form-input" style={{ width: 60, backgroundColor: activeTramo === 2 ? '#dcfce7' : '', color: activeTramo === 2 ? '#166534' : '', fontWeight: activeTramo === 2 ? 'bold' : 'normal', borderColor: activeTramo === 2 ? '#22c55e' : '' }} placeholder="Ej: 30%" /></td>
 
                     {/* Resultados */}
-                    <td style={{ padding: 8, textAlign: 'center', fontWeight: 'bold' }}>{String(rule.tipoVenta).toLowerCase().includes('dispositivos') ? `${salesAux.toFixed(2)} €` : salesAux}</td>
-                    <td style={{ padding: 8, textAlign: 'center', fontWeight: 'bold' }}>{String(rule.tipoVenta).toLowerCase().includes('dispositivos') ? `${salesCor.toFixed(2)} €` : salesCor}</td>
-                    <td style={{ padding: 8, textAlign: 'center', fontWeight: 'bold' }}>{String(rule.tipoVenta).toLowerCase().includes('dispositivos') ? `${salesVil.toFixed(2)} €` : salesVil}</td>
-                    <td style={{ padding: 8, textAlign: 'center', fontWeight: 'bold' }}>{String(rule.tipoVenta).toLowerCase().includes('dispositivos') ? `${salesBej.toFixed(2)} €` : salesBej}</td>
-                    <td style={{ padding: 8, textAlign: 'center', fontWeight: 'bold', color: 'var(--mercedes-cyan)' }}>{String(rule.tipoVenta).toLowerCase().includes('dispositivos') ? `${salesTot.toFixed(2)} €` : salesTot}</td>
-                    <td style={{ padding: 8, textAlign: 'center', fontWeight: 'bold', color: '#10b981', fontSize: 14 }}>{totalImporte.toFixed(2)} €</td>
+                    <td style={{ padding: 4, textAlign: 'center', fontWeight: 'bold' }}>{renderSalesCell(salesAux, dataAux.logs, 'Auxiliadora 45', rule)}</td>
+                    <td style={{ padding: 4, textAlign: 'center', fontWeight: 'bold' }}>{renderSalesCell(salesCor, dataCor.logs, 'Correhuela', rule)}</td>
+                    <td style={{ padding: 4, textAlign: 'center', fontWeight: 'bold' }}>{renderSalesCell(salesVil, dataVil.logs, 'Villamayor', rule)}</td>
+                    <td style={{ padding: 4, textAlign: 'center', fontWeight: 'bold' }}>{renderSalesCell(salesBej, dataBej.logs, 'Béjar', rule)}</td>
+                    <td style={{ padding: 4, textAlign: 'center', fontWeight: 'bold', color: 'var(--mercedes-cyan)' }}>{String(rule.tipoVenta).toLowerCase().includes('dispositivos') ? `${new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(salesTot)}` : salesTot}</td>
+                    <td style={{ padding: 4, textAlign: 'center', fontWeight: 'bold', color: '#10b981', fontSize: 14 }}>{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(totalImporte)}</td>
                     
-                    <td style={{ padding: 8, textAlign: 'center' }}>
+                    <td style={{ padding: 4, textAlign: 'center' }}>
                       <button onClick={() => { const r = [...tiendasRules]; r.splice(idx, 1); setTiendasRules(r); }} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={16}/></button>
                     </td>
                   </tr>
@@ -338,33 +411,48 @@ export default function TerritorialPage() {
       </div>
 
       {/* TABLA 2: O2 MOVILFREE */}
-      <div className="card" style={{ padding: 0, marginBottom: 32, overflow: 'hidden' }}>
-        <div style={{ background: '#38bdf8', color: '#fff', padding: '12px', textAlign: 'center', fontWeight: 'bold', fontSize: 16 }}>
+      <div className="card" style={{ padding: 0, marginBottom: 32, overflow: 'visible', position: 'relative', zIndex: 10 }}>
+        <div style={{ background: '#38bdf8', color: '#fff', padding: '6px 4px', textAlign: 'center', fontWeight: 'bold', fontSize: 16 }}>
           TERRITORIAL O2 MOVILFREE
         </div>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 1000 }}>
+        <div style={{ overflow: 'visible' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 1200 }}>
             <thead>
-              <tr style={{ background: '#7dd3fc', color: '#0f172a' }}>
-                <th style={{ padding: '12px' }}>Nombre Comisión</th>
-                <th style={{ padding: '12px' }}>Tipo de Venta</th>
-                {TRAMOS_MES.map(t => <th key={t.key} style={{ padding: '12px', fontSize: 11 }}>{t.label}</th>)}
-                {TRAMOS_TRIM.map(t => <th key={t.key} style={{ padding: '12px', fontSize: 11 }}>{t.label}</th>)}
-                <th style={{ padding: '12px' }}>Conect.</th>
-                <th style={{ padding: '12px' }}>VENTAS TOTAL O2</th>
-                <th style={{ padding: '12px' }}>IMPORTE</th>
-                <th style={{ padding: '12px' }}></th>
+              <tr style={{ background: '#0284c7', color: '#ffffff' }}>
+                <th style={{ padding: '6px 4px' }}>Nombre Comisión</th>
+                <th style={{ padding: '6px 4px' }}>Tipo de Venta</th>
+                {TRAMOS_MES.map(t => <th key={t.key} style={{ padding: '6px 4px', fontSize: 11 }}>{t.label}</th>)}
+                {TRAMOS_TRIM.map(t => <th key={t.key} style={{ padding: '6px 4px', fontSize: 11 }}>{t.label}</th>)}
+                <th style={{ padding: '6px 4px' }}>Conect.</th>
+                <th style={{ padding: '6px 4px' }}>VENTAS TOTAL O2</th>
+                <th style={{ padding: '6px 4px' }}>IMPORTE</th>
+                <th style={{ padding: '6px 4px' }}></th>
               </tr>
             </thead>
             <tbody>
               {o2Rules.map((rule, idx) => {
-                const totalSales = countSalesForStoreAndType('O2', rule.tipoVenta);
+                const dataO2 = getSalesDataForStoreAndType('O2', rule.tipoVenta);
+                const totalSales = dataO2.value;
                 const totalImporte = calculateO2Importe(rule, totalSales);
+                let highestTramoMesKey = '';
+                for (const tramo of [...TRAMOS_MES].reverse()) {
+                  if (totalSales >= tramo.min) {
+                    highestTramoMesKey = tramo.key;
+                    break;
+                  }
+                }
+                let highestTramoTrimKey = '';
+                for (const tramo of [...TRAMOS_TRIM].reverse()) {
+                  if (totalSales >= tramo.min) {
+                    highestTramoTrimKey = tramo.key;
+                    break;
+                  }
+                }
 
                 return (
-                  <tr key={rule.id} style={{ borderBottom: '1px solid var(--border-color)', background: idx % 2 === 0 ? 'var(--bg-card)' : 'var(--section-bg)' }}>
-                    <td style={{ padding: 8 }}><input value={rule.nombre} onChange={e => { const r = [...o2Rules]; r[idx].nombre = e.target.value; setO2Rules(r); }} className="form-input" style={{ width: '100%', minWidth: 100 }} /></td>
-                    <td style={{ padding: 8 }}>
+                  <tr key={rule.id} style={{ borderBottom: '1px solid var(--border-color)', background: idx % 2 === 0 ? 'var(--bg-card)' : 'var(--section-bg)', position: 'relative', zIndex: 1000 - idx }}>
+                    <td style={{ padding: 4 }}><input value={rule.nombre} onChange={e => { const r = [...o2Rules]; r[idx].nombre = e.target.value; setO2Rules(r); }} className="form-input" style={{ width: '100%', minWidth: 100 }} /></td>
+                    <td style={{ padding: 4 }}>
                       <ProductTreeSelector 
                         value={rule.tipoVenta || ''} 
                         onChange={val => { const r = [...o2Rules]; r[idx].tipoVenta = val; setO2Rules(r); }} 
@@ -373,25 +461,25 @@ export default function TerritorialPage() {
                     </td>
                     
                     {TRAMOS_MES.map(t => (
-                      <td key={t.key} style={{ padding: 8 }}>
-                        <input value={rule.tramosMes?.[t.key] || ''} onChange={e => { const r = [...o2Rules]; r[idx].tramosMes = { ...(r[idx].tramosMes || {}), [t.key]: e.target.value }; setO2Rules(r); }} className="form-input" style={{ width: 60 }} placeholder="€" />
+                      <td key={t.key} style={{ padding: 4 }}>
+                        <input value={rule.tramosMes?.[t.key] || ''} onChange={e => { const r = [...o2Rules]; r[idx].tramosMes = { ...(r[idx].tramosMes || {}), [t.key]: e.target.value }; setO2Rules(r); }} className="form-input" style={{ width: 60, backgroundColor: highestTramoMesKey === t.key ? '#dcfce7' : '', color: highestTramoMesKey === t.key ? '#166534' : '', fontWeight: highestTramoMesKey === t.key ? 'bold' : 'normal', borderColor: highestTramoMesKey === t.key ? '#22c55e' : '' }} placeholder="€" />
                       </td>
                     ))}
 
                     {TRAMOS_TRIM.map(t => (
-                      <td key={t.key} style={{ padding: 8 }}>
-                        <input value={rule.tramosTrim?.[t.key] || ''} onChange={e => { const r = [...o2Rules]; r[idx].tramosTrim = { ...(r[idx].tramosTrim || {}), [t.key]: e.target.value }; setO2Rules(r); }} className="form-input" style={{ width: 60 }} placeholder="€" />
+                      <td key={t.key} style={{ padding: 4 }}>
+                        <input value={rule.tramosTrim?.[t.key] || ''} onChange={e => { const r = [...o2Rules]; r[idx].tramosTrim = { ...(r[idx].tramosTrim || {}), [t.key]: e.target.value }; setO2Rules(r); }} className="form-input" style={{ width: 60, backgroundColor: highestTramoTrimKey === t.key ? '#dcfce7' : '', color: highestTramoTrimKey === t.key ? '#166534' : '', fontWeight: highestTramoTrimKey === t.key ? 'bold' : 'normal', borderColor: highestTramoTrimKey === t.key ? '#22c55e' : '' }} placeholder="€" />
                       </td>
                     ))}
 
-                    <td style={{ padding: 8 }}>
-                       <input value={rule.conectividad} onChange={e => { const r = [...o2Rules]; r[idx].conectividad = e.target.value; setO2Rules(r); }} className="form-input" style={{ width: 50 }} placeholder="€" />
+                    <td style={{ padding: 4 }}>
+                       <input value={rule.conectividad || ''} onChange={e => { const r = [...o2Rules]; r[idx].conectividad = e.target.value; setO2Rules(r); }} className="form-input" style={{ width: 50, backgroundColor: totalSales > 0 && parseNumber(rule.conectividad) > 0 ? '#dcfce7' : '', color: totalSales > 0 && parseNumber(rule.conectividad) > 0 ? '#166534' : '', fontWeight: totalSales > 0 && parseNumber(rule.conectividad) > 0 ? 'bold' : 'normal', borderColor: totalSales > 0 && parseNumber(rule.conectividad) > 0 ? '#22c55e' : '' }} placeholder="€" />
                     </td>
 
-                    <td style={{ padding: 8, textAlign: 'center', fontWeight: 'bold', color: 'var(--mercedes-cyan)' }}>{totalSales}</td>
-                    <td style={{ padding: 8, textAlign: 'center', fontWeight: 'bold', color: '#10b981', fontSize: 14 }}>{totalImporte.toFixed(2)} €</td>
+                    <td style={{ padding: 4, textAlign: 'center', fontWeight: 'bold', color: 'var(--mercedes-cyan)' }}>{renderSalesCell(totalSales, dataO2.logs, 'O2', rule)}</td>
+                    <td style={{ padding: 4, textAlign: 'center', fontWeight: 'bold', color: '#10b981', fontSize: 14 }}>{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(totalImporte)}</td>
                     
-                    <td style={{ padding: 8, textAlign: 'center' }}>
+                    <td style={{ padding: 4, textAlign: 'center' }}>
                       <button onClick={() => { const r = [...o2Rules]; r.splice(idx, 1); setO2Rules(r); }} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={16}/></button>
                     </td>
                   </tr>
@@ -458,6 +546,48 @@ export default function TerritorialPage() {
           </div>
         )
       })()}
+
+      {/* MODAL LISTA DE VENTAS */}
+      {modalSalesList && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+          <div className="card" style={{ width: 800, maxWidth: '95%', maxHeight: '80vh', display: 'flex', flexDirection: 'column', padding: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ margin: 0, color: 'var(--mercedes-cyan)' }}>Ventas {modalSalesList.store} - {modalSalesList.ruleName}</h3>
+              <button onClick={() => setModalSalesList(null)} style={{ background: 'transparent', border: 'none', color: 'var(--medium-gray)', cursor: 'pointer' }}><X size={20}/></button>
+            </div>
+            
+            <div style={{ overflowY: 'auto', flex: 1 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ background: 'var(--section-bg)', textAlign: 'left' }}>
+                    <th style={{ padding: 8 }}>Vendedor</th>
+                    <th style={{ padding: 8 }}>Cliente</th>
+                    <th style={{ padding: 8 }}>NIF/Tel</th>
+                    <th style={{ padding: 8 }}>Producto</th>
+                    <th style={{ padding: 8 }}>Fecha</th>
+                    {modalSalesList.isMoneyType && <th style={{ padding: 8 }}>Importe</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {modalSalesList.logs.map((log: any, idx: number) => (
+                    <tr key={idx} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                      <td style={{ padding: 8 }}>{log.vendedor}</td>
+                      <td style={{ padding: 8 }}>{log.nombreCliente || '-'}</td>
+                      <td style={{ padding: 8 }}>{log.nif || log.linea || '-'}</td>
+                      <td style={{ padding: 8 }}>{log.producto} {log.detalle && log.detalle.toLowerCase() !== 'varios' ? `(${log.detalle})` : ''}</td>
+                      <td style={{ padding: 8 }}>{new Date(log.timestamp).toLocaleDateString('es-ES')}</td>
+                      {modalSalesList.isMoneyType && <td style={{ padding: 8 }}>{log.importe || log.cuota} €</td>}
+                    </tr>
+                  ))}
+                  {modalSalesList.logs.length === 0 && (
+                    <tr><td colSpan={6} style={{ padding: 16, textAlign: 'center' }}>No hay ventas registradas.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   )

@@ -464,14 +464,57 @@ model TiendaComercialHour {
 
 model CajaEntry {
   id                 String      @id @default(uuid())
-  tienda             String      // 'Auxiliadora', 'Villamayor', 'Béjar', 'Correhuela', 'MovilFree', 'Central'
+  tienda             String      // 'Auxiliadora', 'Villamayor', 'BÃ©jar', 'Correhuela', 'MovilFree', 'Central'
   fecha              String      // Formato YYYY-MM-DD
   concepto           String
   detalle            String
   importe            Float
   createdAt          DateTime    @default(now())
   updatedAt          DateTime    @updatedAt
-  vendedor           String?     // Usuario que lo registró
+  vendedor           String?     // Usuario que lo registrÃ³
   estadoTrazabilidad String?     // 'ROJO', 'NARANJA', 'VERDE', null
+}
+
+
+model MovilFreeProduct {
+  id          String   @id @default(cuid())
+  nombre      String
+  categoria   String   @default("Varios")
+  precio      Float
+  coste       Float    @default(0)
+  stock       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model MovilFreeClient {
+  id            String   @id @default(cuid())
+  nif           String   @unique
+  nombre        String
+  direccion     String?
+  poblacion     String?
+  provincia     String?
+  cp            String?
+  movil         String?
+  fijo          String?
+  email         String?
+  totalComprado Float    @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model MovilFreeSale {
+  id               String   @id @default(cuid())
+  numeroFactura    Int?     @unique
+  vendedor         String?
+  nifCliente       String?
+  nombreCliente    String?
+  listaProductos   String   // JSON stringified array of { id, nombre, cantidad, precio, subtotal, cantidadDevuelta }
+  importeTotal     Float
+  estado           String   @default("COMPLETADA") // "COMPLETADA", "DEVUELTA", "DEVOLUCION_PARCIAL"
+  motivoDevolucion String?
+  fechaVenta       DateTime @default(now())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
