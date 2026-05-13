@@ -50,7 +50,7 @@ export default function NuevaVentaPage() {
   })
 
   useEffect(() => {
-    fetch('/api/catalogs')
+    fetch(`/api/catalogs?_t=${Date.now()}`)
       .then(res => res.json())
       .then(data => {
         if (data.success) {

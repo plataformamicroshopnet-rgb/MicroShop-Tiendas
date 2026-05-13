@@ -49,6 +49,7 @@ export default function Sidebar() {
     { name: 'Jefe Tiendas', href: '/seguimiento-ventas', icon: LineChart, permission: 'MODULE_JEFE_TIENDAS' },
     { name: 'Back Office', href: '/back-office', icon: FolderOpen, permission: 'MODULE_BACK_OFFICE' },
     { name: 'Liquidaciones', href: '/liquidacion', icon: Euro, permission: 'MODULE_LIQUIDACION' },
+    { name: 'Cristina Admin', href: '/cristina-admin', icon: BookOpen, permission: 'MODULE_TIENDAS' },
     { name: 'Admin', href: '/admin', icon: Settings, permission: 'MODULE_ADMIN' },
   ]
 

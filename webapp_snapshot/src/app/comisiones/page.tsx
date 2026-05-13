@@ -277,7 +277,8 @@ export default function ComisionesDashboardPage() {
         maxComisionSeller,
         maxSalesSeller,
         monthSales,
-        tiendaRules
+        tiendaRules,
+        o2Rules
     } = useComisionesData()
 
     useEffect(() => {
@@ -510,7 +511,9 @@ export default function ComisionesDashboardPage() {
                                             </tr>
                                         </thead>
                                         <tbody style={{ backgroundColor: '#ffffff' }}>
-                                            {tiendaRules && tiendaRules.length > 0 ? tiendaRules.map((rule: any, idx: number) => {
+                                            {(() => {
+                                                const activeRulesForSeller = String(s.name).toLowerCase().includes('marta') ? (o2Rules || []) : (tiendaRules || []);
+                                                return activeRulesForSeller.length > 0 ? activeRulesForSeller.map((rule: any, idx: number) => {
                                                 const isAlternate = idx % 2 === 0;
                                                 const rowBg = isAlternate ? '#ffffff' : '#f8fafc';
                                                 const gName = rule.nombre;
@@ -595,7 +598,8 @@ export default function ComisionesDashboardPage() {
                                                         </td>
                                                     </tr>
                                                 )
-                                            }) : <tr><td colSpan={10} style={{padding: 20, textAlign: 'center', color: '#64748b'}}>No hay reglas de comisión configuradas para este mes.</td></tr>}
+                                            }) : <tr><td colSpan={10} style={{padding: 20, textAlign: 'center', color: '#64748b'}}>No hay reglas de comisión configuradas para este mes.</td></tr>
+                                            })()}
                                             {s.extraGroups && s.extraGroups.length > 0 && s.extraGroups.map((eg: any, idx: number) => (
                                                 <tr key={`extra-${idx}`} style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: '#ecfdf5', transition: 'background 0.2s', color: '#065f46' }}>
                                                     <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>

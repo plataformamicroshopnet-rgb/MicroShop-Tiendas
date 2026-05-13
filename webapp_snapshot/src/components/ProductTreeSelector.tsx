@@ -20,7 +20,7 @@ export default function ProductTreeSelector({ value, onChange, disabled, placeho
   const selectedValues = value ? value.split(',').map(s => s.trim()).filter(Boolean) : []
 
   useEffect(() => {
-    fetch('/api/catalogs')
+    fetch(`/api/catalogs?_t=${Date.now()}`)
       .then(res => res.json())
       .then(data => {
         if (data.success) {
@@ -57,7 +57,7 @@ export default function ProductTreeSelector({ value, onChange, disabled, placeho
   const predefined = ["Alta BAF Total", "Alta BAF Convergente", "Dispositivos", "Seguro", "MPA", "FTTR", "Señalización Solar 360", "ARPU", "Repo Fútbol"];
   
   // Extraemos categorias excluyendo algunas si hace falta, pero mostramos todas las que vienen del server
-  const categories = Object.keys(catalogs).sort()
+  const categories = Object.keys(catalogs).filter(cat => cat !== 'Fija' && cat !== 'M\u00f3vil' && cat !== 'Mvil' && cat !== 'Micro').sort()
 
   const isLegacy = value && !selectedValues.some(v => predefined.includes(v) || categories.includes(v) || Object.values(catalogs).flat().some(p => p.producto === v)) && !selectedValues.includes('FORMULA_LIBRE')
 
@@ -180,7 +180,7 @@ export default function ProductTreeSelector({ value, onChange, disabled, placeho
               
               return (
                 <div key={cat} style={{ display: 'flex', flexDirection: 'column' }}>
-                  {renderCheckbox(cat, cat, true, () => toggleCat(cat), isExpanded)}
+                  {renderCheckbox(cat === 'O2' ? 'O2 MovilFree' : cat, cat, true, () => toggleCat(cat), isExpanded)}
                   
                   {isExpanded && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingLeft: 24, marginTop: 2 }}>

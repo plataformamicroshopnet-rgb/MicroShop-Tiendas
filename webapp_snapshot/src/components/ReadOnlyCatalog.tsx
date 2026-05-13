@@ -25,7 +25,7 @@ export default function ReadOnlyCatalog({ category, title, iconColor }: ReadOnly
   const [search, setSearch] = useState('')
 
   useEffect(() => {
-    fetch('/api/catalogs')
+    fetch(`/api/catalogs?_t=${Date.now()}`)
       .then(res => res.json())
       .then(data => {
         if (data.success && data.catalogs && data.catalogs[category]) {

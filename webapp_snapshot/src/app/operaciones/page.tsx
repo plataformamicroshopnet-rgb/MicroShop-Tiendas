@@ -353,7 +353,7 @@ function OperationsContent() {
       fetch(`/api/objetivos?periodKey=${activePeriodKey}&strictPeriod=1`).then(res => res.json()).catch(() => ({ success: true, objetivos: { Pyme: {}, Captador: {} } })),
       fetch(`/api/importes-pyme?periodKey=${activePeriodKey}&strictPeriod=1`).then(res => res.json()).catch(() => ({})),
       fetch(`/api/importes-plus?periodKey=${activePeriodKey}&strictPeriod=1`).then(res => res.json()).catch(() => ({})),
-      fetch('/api/catalogs').then(res => res.json()).catch(() => ({})),
+      fetch(`/api/catalogs?_t=${Date.now()}`).then(res => res.json()).catch(() => ({})),
       fetch(`/api/extras/assignments?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({}))
     ]).then(([authData, sData, objData, pymeData, plusData, catData, extrasData]) => {
       if (authData && authData.authenticated) {

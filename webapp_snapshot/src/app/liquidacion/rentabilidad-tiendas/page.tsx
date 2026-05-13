@@ -58,7 +58,7 @@ export default function RentabilidadTiendasPage() {
 
         const [salesRes, catRes, pymeRes, plusRes, objRes] = await Promise.all([
           fetch(`/api/sales?period=${periodStr}&strictPeriod=1`).catch(() => null),
-          fetch('/api/catalogs').catch(() => null),
+          fetch(`/api/catalogs?_t=${Date.now()}`).catch(() => null),
           fetch(`/api/importes-pyme?periodKey=${activePeriodKey}&strictPeriod=1`).catch(() => null),
           fetch(`/api/importes-plus?periodKey=${activePeriodKey}&strictPeriod=1`).catch(() => null),
           fetch(`/api/objetivos?periodKey=${activePeriodKey}&strictPeriod=1`).catch(() => null)

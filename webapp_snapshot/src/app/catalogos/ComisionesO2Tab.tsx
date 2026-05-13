@@ -7,7 +7,7 @@ import { usePeriod } from '@/components/PeriodProvider'
 import RuleConditionBuilder from '@/components/RuleConditionBuilder'
 import ProductTreeSelector from '@/components/ProductTreeSelector'
 
-export default function ProductosComisionanTab() {
+export default function ComisionesO2Tab() {
   const { activePeriodKey, availablePeriods, isLoadingPeriods } = usePeriod()
   const activePeriodObj = availablePeriods.find(p => p.period_key === activePeriodKey)
   const isHistoric = activePeriodObj?.status === 'HISTORIC'
@@ -21,12 +21,15 @@ export default function ProductosComisionanTab() {
   useEffect(() => {
     if (!activePeriodKey) return
     setLoading(true)
-    fetch(`/api/tiendas-comisiones?periodKey=${activePeriodKey}`)
+    fetch(`/api/settings?key=o2_rules_v2_${activePeriodKey}`)
       .then(r => r.json())
       .then(res => {
-        if (res.success) {
-          setRules(res.rules || [])
-          setHours(res.hours || [])
+        if (res.success && res.value) {
+          try {
+            const parsed = JSON.parse(res.value);
+            setRules(parsed.rules || [])
+            setHours(parsed.hours || [])
+          } catch(e) {}
         }
         setLoading(false)
       })
@@ -37,10 +40,10 @@ export default function ProductosComisionanTab() {
     if (isHistoric) return alert('No puedes modificar un mes histórico.')
     setSaving(true)
     try {
-      const res = await fetch('/api/tiendas-comisiones', {
+      const res = await fetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ periodKey: activePeriodKey, rules, hours })
+        body: JSON.stringify({ key: `o2_rules_v2_${activePeriodKey}`, value: JSON.stringify({ rules, hours }) })
       })
       const apiRes = await res.json()
       if (apiRes.success) {
@@ -120,7 +123,7 @@ export default function ProductosComisionanTab() {
         {/* TABLA 1: REGLAS GLOBALES */}
         <div className="card" style={{ padding: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h3 style={{ margin: 0, color: 'var(--mercedes-cyan)' }}>1. Reglas Globales y Tramos de Comisiones</h3>
+            <h3 style={{ margin: 0, color: 'var(--mercedes-cyan)' }}>1. Reglas Globales O2 / MovilFree</h3>
             {!isHistoric && (
               <button onClick={addRule} className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
                 <Plus size={16} /> Añadir Regla

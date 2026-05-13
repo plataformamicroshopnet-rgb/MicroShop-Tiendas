@@ -125,7 +125,7 @@ export default function LiquidacionesPage() {
         // 1. Fetch Global Data (Solo la primera vez)
         Promise.all([
             fetch('/api/auth/me').then(res => res.json()).catch(() => ({})),
-            fetch('/api/catalogs').then(res => res.json()).catch(() => ({}))
+            fetch(`/api/catalogs?_t=${Date.now()}`).then(res => res.json()).catch(() => ({}))
         ]).then(([authData, catData]) => {
             if (authData && authData.authenticated) {
                 setUser(authData.user)

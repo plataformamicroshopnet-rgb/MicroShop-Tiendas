@@ -1,4 +1,5 @@
 'use client'
+import ComisionesO2Tab from './ComisionesO2Tab'
 
 import { useEffect, useState, useRef } from 'react'
 import { Save, Search, Plus, Trash2, FileText, AlertCircle, Target, Euro, Box, ChevronLeft, Lock } from 'lucide-react'
@@ -101,7 +102,7 @@ export default function CatalogosPage() {
     "Fija y Móvil": [], "Ti": [], "Rent": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": [], "Prepago": [], "Varios": [], "Repos": [], "Resto BAF": []
   })
   const [activeTab, setActiveTab] = useState('Fija y Móvil')
-  const isProductTab = CATEGORIES.includes(activeTab) && activeTab !== 'Objetivos Tiendas' && activeTab !== 'Objetivos Captador' && activeTab !== 'Productos que Comisionan'
+  const isProductTab = CATEGORIES.includes(activeTab) && activeTab !== 'Objetivos Tiendas' && activeTab !== 'Comisiones O2 y MovilFree' && activeTab !== 'Objetivos Captador' && activeTab !== 'Productos que Comisionan' && activeTab !== 'Comisiones O2 y MovilFree'
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [search, setSearch] = useState('')
@@ -937,6 +938,7 @@ export default function CatalogosPage() {
           { cat: 'Resto BAF', tip: 'Catálogo para Resto BAF. Estructura idéntica a miMovistar.' },
           { cat: 'Objetivos Tiendas', tip: 'Define los objetivos cuantitativos del mes para las tiendas. Son la base del cálculo de cumplimiento y comisiones.' },
           { cat: 'Productos que Comisionan', tip: 'Configura las reglas globales y objetivos que aplicarán a los comerciales de la tienda en este mes.' },
+          { cat: 'Comisiones O2 y MovilFree', tip: 'Configuración del motor matemático de comisiones y bonos específicos para O2 y MovilFree.' },
         ] as const).map(({ cat, tip }) => (
           <TooltipBox key={cat} title={cat} content={tip} position="bottom">
             <button
@@ -1648,7 +1650,8 @@ export default function CatalogosPage() {
       )}
 
       {!isProductTab && activeTab === 'Productos que Comisionan' && <ProductosComisionanTab />}
-      {!isProductTab && activeTab !== 'Productos que Comisionan' && <ObjetivosTab activeSegment={activeTab === 'Objetivos Tiendas' ? 'Pyme' : 'Captador'} />}
+      {!isProductTab && activeTab === 'Comisiones O2 y MovilFree' && <ComisionesO2Tab />}
+      {!isProductTab && activeTab !== 'Productos que Comisionan' && activeTab !== 'Comisiones O2 y MovilFree' && <ObjetivosTab activeSegment={activeTab === 'Objetivos Tiendas' ? 'Pyme' : 'Captador'} />}
     </div>
   )
 }

@@ -519,3 +519,39 @@ model MovilFreeSale {
   updatedAt        DateTime @updatedAt
 }
 
+
+model StockItem {
+  id              String   @id @default(cuid())
+  tabCategory     String   // 'Exclusivos', 'Rent', 'Dispositivos OJO', 'Accesorios', 'Demos'
+  producto        String
+  pvd             Float    @default(0)
+  pvp             Float    @default(0)
+  udsCorrehuela   Int      @default(0)
+  udsAuxiliadora  Int      @default(0)
+  udsBejar        Int      @default(0)
+  udsVillamayor   Int      @default(0)
+  udsMovilfree    Int      @default(0)
+  observaciones   String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tabCategory])
+}
+
+model Vencimiento {
+  id           String   @id @default(cuid())
+  proveedor    String
+  fechaFactura String
+  albaran      String?
+  nFactura     String?
+  vencimiento  String
+  pagado       Boolean  @default(false)
+  recargo      Float    @default(0)
+  tarjetas     Float    @default(0)
+  accesorios   Float    @default(0)
+  moviles      Float    @default(0)
+  iva          Float    @default(0)
+  totalFactura Float    @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}

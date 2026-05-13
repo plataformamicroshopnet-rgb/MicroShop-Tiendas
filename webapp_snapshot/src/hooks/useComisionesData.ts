@@ -96,6 +96,8 @@ export function useComisionesData() {
     const [activeRules, setActiveRules] = useState<any[]>([]); // KPI Rules fetch
     const [tiendaRules, setTiendaRules] = useState<any[]>([]);
     const [tiendaHours, setTiendaHours] = useState<any[]>([]);
+    const [o2Rules, setO2Rules] = useState<any[]>([]);
+    const [o2Hours, setO2Hours] = useState<any[]>([]);
     
     const [selectedSellerFilter, setSelectedSellerFilter] = useState<string | null>(null);
 
@@ -107,9 +109,10 @@ export function useComisionesData() {
             fetch(`/api/condiciones-plus?periodKey=${activePeriodKey}&strictPeriod=1`).then(res => res.json()).catch(() => ({ rows: [] })),
             fetch(`/api/extras/assignments?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({ data: [] })),
             fetch('/api/extras/rules').then(res => res.json()).catch(() => ({ rules: [] })),
-            fetch(`/api/tiendas-comisiones?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({ success: false, rules: [], hours: [] }))
+            fetch(`/api/tiendas-comisiones?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({ success: false, rules: [], hours: [] })),
+            fetch(`/api/settings?key=o2_rules_v2_${activePeriodKey}`).then(res => res.json()).catch(() => ({ value: null }))
         ])
-        .then(([data, condData, extrasData, rulesData, tiendasData]) => {
+        .then(([data, condData, extrasData, rulesData, tiendasData, o2Data]) => {
             if (data.success && data.logs) {
                 setAllSales(data.logs);
             }
@@ -127,6 +130,16 @@ export function useComisionesData() {
                 setTiendaRules(tiendasData.rules || []);
                 setTiendaHours(tiendasData.hours || []);
             }
+            if (o2Data && o2Data.value) {
+                try {
+                    const parsed = JSON.parse(o2Data.value);
+                    setO2Rules(parsed.rules || []);
+                    setO2Hours(parsed.hours || []);
+                } catch(e) {}
+            } else {
+                setO2Rules([]);
+                setO2Hours([]);
+            }
             setLoading(false);
         })
         .catch(err => {
@@ -139,22 +152,42 @@ export function useComisionesData() {
 
     // Precalcular totales del equipo
     const teamGroupCounts: Record<string, number> = {};
+    const o2TeamGroupCounts: Record<string, number> = {};
+    
     tiendaRules.forEach(rule => { teamGroupCounts[rule.nombre] = 0; });
+    o2Rules.forEach(rule => { o2TeamGroupCounts[rule.nombre] = 0; });
 
     monthSales.forEach(s => {
         let cuotaValue = Number(s.cuota) || 0;
         if (isNaN(cuotaValue)) cuotaValue = 0;
         
-        tiendaRules.forEach(rule => {
-            if (matchTipoVenta(s, rule.productosCuentan)) {
-                const isPercentage = String(rule.importePrimerTramo || '').includes('%');
-                if (isPercentage) {
-                    teamGroupCounts[rule.nombre] += cuotaValue;
-                } else {
-                    teamGroupCounts[rule.nombre] += 1;
+        // Movistar
+        if (!String(s.vendedor).toLowerCase().includes('marta')) {
+            tiendaRules.forEach(rule => {
+                if (matchTipoVenta(s, rule.productosCuentan)) {
+                    const isPercentage = String(rule.importePrimerTramo || '').includes('%');
+                    if (isPercentage) {
+                        teamGroupCounts[rule.nombre] += cuotaValue;
+                    } else {
+                        teamGroupCounts[rule.nombre] += 1;
+                    }
                 }
-            }
-        });
+            });
+        }
+        
+        // O2
+        if (String(s.vendedor).toLowerCase().includes('marta')) {
+            o2Rules.forEach(rule => {
+                if (matchTipoVenta(s, rule.productosCuentan)) {
+                    const isPercentage = String(rule.importePrimerTramo || '').includes('%');
+                    if (isPercentage) {
+                        o2TeamGroupCounts[rule.nombre] += cuotaValue;
+                    } else {
+                        o2TeamGroupCounts[rule.nombre] += 1;
+                    }
+                }
+            });
+        }
     });
 
     const sellerStats = FIXED_SELLERS.map(name => {
@@ -185,10 +218,15 @@ export function useComisionesData() {
         const groupComisions: Record<string, number> = {};
 
         // INICIALIZAR OBJETIVOS Y CONTADORES BASADOS EN REGLAS DINAMICAS
-        const comercialHour = tiendaHours.find(h => String(h.comercial).toLowerCase() === String(name).toLowerCase());
+        const isO2 = String(name).toLowerCase().includes('marta');
+        const activeTiendaRules = isO2 ? o2Rules : tiendaRules;
+        const activeTiendaHours = isO2 ? o2Hours : tiendaHours;
+        
+        const activeTeamGroupCounts = isO2 ? o2TeamGroupCounts : teamGroupCounts;
+        const comercialHour = activeTiendaHours.find(h => String(h.comercial).toLowerCase() === String(name).toLowerCase());
         const horario = comercialHour ? Number(comercialHour.horario) : 0;
 
-        tiendaRules.forEach(rule => {
+        activeTiendaRules.forEach(rule => {
             const ruleName = rule.nombre;
             groupCounts[ruleName] = 0;
             groupPending[ruleName] = 0;
@@ -203,11 +241,7 @@ export function useComisionesData() {
                 groupObj2[ruleName] = rule.objSegundoTramo || 0;
             }
             
-            // Excluir temporalmente a Marta (Tienda O2)
-            if (String(name).toLowerCase().includes('marta')) {
-                groupObj1[ruleName] = 0;
-                groupObj2[ruleName] = 0;
-            }
+
         });
 
 
@@ -220,7 +254,7 @@ export function useComisionesData() {
             if (isNaN(cuotaValue)) cuotaValue = 0;
             
             // Un producto puede contar para multiples reglas si encaja en el Tipo de Venta
-            tiendaRules.forEach(rule => {
+            activeTiendaRules.forEach(rule => {
                 if (matchTipoVenta(s, rule.productosCuentan)) {
                     // Determinar si el tramo pide % o Euros (heuristic)
                     const isPercentage = String(rule.importePrimerTramo || '').includes('%');
@@ -245,7 +279,7 @@ export function useComisionesData() {
 
         const groupIsConsolidado: Record<string, boolean> = {};
 
-        tiendaRules.forEach(rule => {
+        activeTiendaRules.forEach(rule => {
             const ruleName = rule.nombre;
             const qtty = groupCounts[ruleName] || 0;
             const obj1 = groupObj1[ruleName] || 0;
@@ -312,7 +346,7 @@ export function useComisionesData() {
 
                 if (isTeamObj2) {
                     const globalObj2 = rule.objSegundoTramo || 0;
-                    const teamTotal = teamGroupCounts[ruleName] || 0;
+                    const teamTotal = activeTeamGroupCounts[ruleName] || 0;
                     if (teamTotal >= globalObj2 && globalObj2 > 0 && qttyTotal >= obj1 && obj1 > 0) {
                         activeImp = imp2;
                     } else if (qttyTotal >= obj1 && obj1 > 0) {
@@ -661,6 +695,7 @@ export function useComisionesData() {
         maxSalesSeller,
         monthSales,
         extraAssignments,
-        tiendaRules
+        tiendaRules,
+        o2Rules
     };
 }
