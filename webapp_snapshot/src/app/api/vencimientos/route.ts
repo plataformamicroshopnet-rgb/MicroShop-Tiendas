@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
-import prisma from '@/lib/prisma'
+import { PrismaClient } from '@prisma/client'
+
+const prisma = new PrismaClient()
 
 export async function GET() {
   try {
@@ -15,13 +17,12 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { action, items, item } = body
+    const { action, items, item, replace } = body
 
     if (action === 'bulk' && items && Array.isArray(items)) {
-      // Borrar todos los registros actuales para hacer un reemplazo completo, 
-      // o se podrian insertar nuevos. Normalmente en estas hojas pegan todo de nuevo.
-      // Por seguridad, si mandan bulk, reemplazamos todo.
-      await prisma.vencimiento.deleteMany({})
+      if (replace) {
+        await prisma.vencimiento.deleteMany({})
+      }
       
       const created = await prisma.vencimiento.createMany({
         data: items.map((i: any) => ({

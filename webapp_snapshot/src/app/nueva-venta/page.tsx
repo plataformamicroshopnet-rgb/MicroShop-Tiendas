@@ -9,7 +9,7 @@ import { useGuard } from '@/hooks/useGuard'
 import { usePeriod } from '@/components/PeriodProvider'
 
 export default function NuevaVentaPage() {
-  const { authorized } = useGuard('MODULE_TIENDAS', 'CREATE_SALES')
+  const { authorized } = useGuard('VIEW_NUEVA_VENTA', 'CREATE_SALES')
   const { activePeriodKey } = usePeriod()
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState('')

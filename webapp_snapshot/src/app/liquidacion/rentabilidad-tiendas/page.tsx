@@ -263,6 +263,9 @@ export default function RentabilidadTiendasPage() {
 
   return (
     <div style={{ maxWidth: 1400, margin: '0 auto', padding: 24 }}>
+            <button onClick={() => router.back()} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'transparent', border: 'none', color: 'var(--medium-gray)', cursor: 'pointer', marginBottom: 16, fontSize: 14, fontWeight: 600 }}>
+        <ArrowLeft size={16} /> Volver
+      </button>
       <PageHeader 
         title="Rentabilidad por Tiendas" 
         subtitle="Métricas globales de ventas y comisiones por sede."

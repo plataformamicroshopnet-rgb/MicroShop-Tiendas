@@ -180,7 +180,7 @@ function SectionTable({
 
 // ── Main page content ─────────────────────────────────────────────────
 function GrupoClienteContent() {
-  const { authorized } = useGuard('MODULE_TIENDAS')
+  const { authorized } = useGuard('VIEW_OPERACIONES_GRUPO')
   const { activePeriodKey, availablePeriods } = usePeriod()
   const [sales, setSales]           = useState<any[]>([])
   const [importesPyme, setImportesPyme] = useState<any[]>([])

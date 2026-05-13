@@ -5,12 +5,12 @@ import Link from 'next/link'
 import { Building2, List, MapPin, Settings2, ArrowUp, ArrowDown, Save, X } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
 import { useGuard } from '@/hooks/useGuard'
-import { canEdit } from '@/lib/permissions'
+import { canEdit, canView } from '@/lib/permissions'
 
 export default function BackOfficePage() {
   const { authorized, user } = useGuard('MODULE_BACK_OFFICE')
 
-  const hasEditAccess = canEdit(user, 'MODULE_TIENDAS')
+  const hasEditAccess = canView(user, 'CARD_NUEVA_VENTA') || canEdit(user, 'MODULE_TIENDAS')
 
   const [isEditMode, setIsEditMode] = useState(false)
   const [cardOrder, setCardOrder] = useState<string[]>([])

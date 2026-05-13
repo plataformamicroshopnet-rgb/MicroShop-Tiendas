@@ -1,8 +1,9 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { PrismaClient } from '@prisma/client'
 import { ROLES } from '@/lib/appConfig'
-import { can, canEdit } from '@/lib/permissions'
+import { can, canEdit, canView } from '@/lib/permissions'
 import { isVentaWithinDates } from '@/lib/salesUtils'
 import { runExtrasEngine } from '@/lib/extrasEngine'
 const prisma = new PrismaClient()
@@ -15,12 +16,25 @@ export async function GET(request: Request) {
     }
     const { user } = session
 
+    
+    const dbUser = await prisma.user.findUnique({
+      where: { username: session.user.username },
+      select: { role: true, permissions: true }
+    });
+    const safeUser = { ...session.user, role: dbUser?.role || session.user.role, permissions: dbUser?.permissions || session.user.permissions };
+      if (dbUser) {
+      session.user.role = dbUser.role;
+      session.user.permissions = dbUser.permissions;
+    }
+
     const { searchParams } = new URL(request.url)
     const periodKey = searchParams.get('periodKey')
 
-    const baseWhereClause: any = (user.role === ROLES.ADMIN || user.role === ROLES.JEFE_VENTAS || user.role === ROLES.BACK_OFFICE)
+    const hasBackofficePerms = canView(safeUser, 'MODULE_BACK_OFFICE');
+    console.log('SALES API: user.username:', user.username, 'hasBackofficePerms:', hasBackofficePerms, 'user.permissions:', user.permissions);
+    const baseWhereClause: any = (safeUser.role === ROLES.ADMIN || safeUser.role === ROLES.JEFE_VENTAS || safeUser.role === ROLES.BACK_OFFICE || hasBackofficePerms)
       ? {} 
-      : { vendedor: { equals: user.username || 'BLOCK_EMPTY_USER' } }
+      : { vendedor: { equals: safeUser.username || 'BLOCK_EMPTY_USER' } }
 
     let temporalWhere = {}
 
@@ -49,7 +63,7 @@ export async function GET(request: Request) {
     })
     
     // Fallback: Filtrado en memoria estricto sobre el nombre (para roles estrictamente comerciales sin normalizar)
-    if (user.role === ROLES.COMERCIAL || user.role.includes('COMERCIAL')) {
+    if ((user.role === ROLES.COMERCIAL || user.role.includes('COMERCIAL')) && !hasBackofficePerms) {
       const normName = (name: string) => name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
       if (user.username) {
         sales = sales.filter(s => normName(s.vendedor || '') === normName(user.username));

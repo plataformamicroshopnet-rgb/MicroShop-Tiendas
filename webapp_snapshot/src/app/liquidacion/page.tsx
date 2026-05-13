@@ -1189,12 +1189,7 @@ export default function LiquidacionesPage() {
                 icon: Briefcase,
                 href: '/liquidacion/rentabilidad-tiendas'
             },
-            {
-                title: 'Territorial Tiendas / O2',
-                description: 'Configuración y cálculo de tramos territoriales por tienda y O2 MovilFree.',
-                icon: Map,
-                href: '/liquidacion/territorial'
-            },
+            
             {
                 title: 'Rentabilidad Total de Tiendas Movistar/O2/Movilfree',
                 description: 'Módulo en construcción. Próximamente incluirá la estructura consolidada.',
@@ -1215,14 +1210,14 @@ export default function LiquidacionesPage() {
                         cursor: 'pointer', 
                         borderLeft: c.title === 'Agenda de Llamadas Cristina' ? '5px solid #5CB615' : 
                                     c.title === 'Operaciones Telefónica' || c.title === 'Operaciones por Grupo Cliente' ? '5px solid #b8860b' :
-                                    c.title === 'Rentabilidad por Tiendas' || c.title === 'Territorial Tiendas / O2' || c.title === 'Rentabilidad Total de Tiendas Movistar/O2/Movilfree' ? '5px solid #0ea5e9' : 
+                                    c.title === 'Rentabilidad por Tiendas' || c.title === 'Rentabilidad Total de Tiendas Movistar/O2/Movilfree' ? '5px solid #0ea5e9' : 
                                     '1px solid transparent' 
                     }}
                 >
                     <div className="card-icon-wrapper" style={
                         c.title === 'Agenda de Llamadas Cristina' ? { backgroundColor: 'rgba(92, 182, 21, 0.1)', color: '#5CB615' } : 
                         c.title === 'Operaciones Telefónica' || c.title === 'Operaciones por Grupo Cliente' ? { backgroundColor: 'rgba(184, 134, 11, 0.1)', color: '#b8860b' } :
-                        c.title === 'Rentabilidad por Tiendas' || c.title === 'Territorial Tiendas / O2' || c.title === 'Rentabilidad Total de Tiendas Movistar/O2/Movilfree' ? { backgroundColor: 'rgba(14, 165, 233, 0.1)', color: '#0ea5e9' } :
+                        c.title === 'Rentabilidad por Tiendas' || c.title === 'Rentabilidad Total de Tiendas Movistar/O2/Movilfree' ? { backgroundColor: 'rgba(14, 165, 233, 0.1)', color: '#0ea5e9' } :
                         { backgroundColor: 'rgba(37, 99, 235, 0.1)', color: '#2563eb' }
                     }>
                         <Icon size={24} strokeWidth={2.5} />
@@ -1234,7 +1229,7 @@ export default function LiquidacionesPage() {
         };
 
         const brownCards = menuCardsRaw.filter(c => c.title === 'Operaciones Telefónica' || c.title === 'Operaciones por Grupo Cliente');
-        const blueCards = menuCardsRaw.filter(c => c.title === 'Rentabilidad por Tiendas' || c.title === 'Territorial Tiendas / O2' || c.title === 'Rentabilidad Total de Tiendas Movistar/O2/Movilfree');
+        const blueCards = menuCardsRaw.filter(c => c.title === 'Rentabilidad por Tiendas' || c.title === 'Rentabilidad Total de Tiendas Movistar/O2/Movilfree');
         const greenCards = menuCardsRaw.filter(c => c.title === 'Agenda de Llamadas Cristina');
 
         return (

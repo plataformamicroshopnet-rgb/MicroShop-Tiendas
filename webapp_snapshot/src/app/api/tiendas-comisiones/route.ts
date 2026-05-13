@@ -1,5 +1,8 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
+import { getSession } from '@/lib/auth'
+import { ROLES, normalizeRole } from '@/lib/appConfig'
 
 const prisma = new PrismaClient()
 
@@ -17,12 +20,31 @@ export async function GET(request: Request) {
       orderBy: { createdAt: 'asc' }
     })
 
+    const session = await getSession();
+    let isComercial = false;
+    let username = '';
+
+    if (session && session.user && session.user.username) {
+      const dbUser = await prisma.user.findUnique({
+        where: { username: session.user.username },
+        select: { role: true, username: true }
+      });
+      if (dbUser) {
+        isComercial = normalizeRole(dbUser.role) === 'COMERCIAL';
+        username = dbUser.username;
+      }
+    }
+    
     const hours = await prisma.tiendaComercialHour.findMany({
       where: { periodKey },
       orderBy: { comercial: 'asc' }
     })
 
-    return NextResponse.json({ success: true, rules, hours })
+    const filteredHours = isComercial 
+      ? hours.filter(h => h.comercial.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === username.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()) 
+      : hours;
+
+    return NextResponse.json({ success: true, rules, hours: filteredHours })
   } catch (error) {
     console.error('Error GET tiendas comisiones:', error)
     return NextResponse.json({ success: false, error: 'Error al obtener datos' }, { status: 500 })

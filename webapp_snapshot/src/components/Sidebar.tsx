@@ -45,11 +45,11 @@ export default function Sidebar() {
   const navItems: NavItem[] = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard, permission: 'MODULE_TIENDAS' },
     { name: 'Tiendas Hub', href: '/tiendas', icon: Briefcase, permission: 'MODULE_TIENDAS' },
-    { name: 'Ventas MovilFree', href: '/movilfree', icon: Smartphone, permission: 'MODULE_ADMIN' },
+    { name: 'Ventas MovilFree', href: '/movilfree', icon: Smartphone, permission: 'MODULE_MOVILFREE' },
     { name: 'Jefe Tiendas', href: '/seguimiento-ventas', icon: LineChart, permission: 'MODULE_JEFE_TIENDAS' },
     { name: 'Back Office', href: '/back-office', icon: FolderOpen, permission: 'MODULE_BACK_OFFICE' },
     { name: 'Liquidaciones', href: '/liquidacion', icon: Euro, permission: 'MODULE_LIQUIDACION' },
-    { name: 'Cristina Admin', href: '/cristina-admin', icon: BookOpen, permission: 'MODULE_TIENDAS' },
+    { name: 'Cristina Admin', href: '/cristina-admin', icon: BookOpen, permission: 'MODULE_CRISTINA' },
     { name: 'Admin', href: '/admin', icon: Settings, permission: 'MODULE_ADMIN' },
   ]
 

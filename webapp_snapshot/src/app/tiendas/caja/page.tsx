@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Calculator, Plus, Trash2, CheckCircle2, CircleDashed, Clock, ChevronDown, X } from 'lucide-react'
 import { useGuard } from '@/hooks/useGuard'
+import { canView } from '@/lib/permissions'
 
 // Importamos el mapeo de tiendas para saber dónde cae el usuario actual
 import { TIENDAS_COMERCIALES } from '@/lib/constants'
@@ -36,7 +37,7 @@ const CONCEPTOS = [
 ];
 
 export default function CajaTiendasPage() {
-  const { authorized, user } = useGuard('MODULE_TIENDAS')
+  const { authorized, user } = useGuard('CARD_CAJA')
   const router = useRouter()
 
   const [entries, setEntries] = useState<CajaEntry[]>([])
@@ -45,13 +46,15 @@ export default function CajaTiendasPage() {
   // Mapeo de tienda
   const userTienda = useMemo(() => {
     if (!user) return null
-    if (user.role === 'ADMIN') return 'ADMIN'
+    if (user.role === 'ADMIN' || canView(user, 'HUB_CRISTINA')) return 'ADMIN'
     
     for (const [store, members] of Object.entries(TIENDAS_COMERCIALES)) {
       if (members.includes(user.username)) {
         return store === 'Auxiliadora 45' ? 'Auxiliadora' : store
       }
     }
+    
+    if (canView(user, 'CARD_CAJA') || canView(user, 'HUB_BACKOFFICE')) return 'ADMIN'
     return null
   }, [user])
 
@@ -193,7 +196,7 @@ export default function CajaTiendasPage() {
       <header style={{ background: '#ffffff', borderBottom: '1px solid rgba(226, 232, 240, 0.8)', padding: '24px 32px', position: 'sticky', top: 0, zIndex: 40, boxShadow: '0 4px 20px -10px rgba(15, 23, 42, 0.05)' }}>
         <div style={{ maxWidth: 1400, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <button onClick={() => router.push('/tiendas')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: '50%', background: '#f1f5f9', border: 'none', color: '#64748b', cursor: 'pointer', transition: 'all 0.2s' }}>
+            <button onClick={() => router.back()} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: '50%', background: '#f1f5f9', border: 'none', color: '#64748b', cursor: 'pointer', transition: 'all 0.2s' }}>
               <ArrowLeft size={20} />
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

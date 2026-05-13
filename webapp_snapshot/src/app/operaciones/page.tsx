@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { FilterX, Search, Save, X, Edit2, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { PageHeader } from '@/components/PageHeader'
-import { can, canEdit as canEditMacro } from '@/lib/permissions'
+import { can, canEdit as canEditMacro, canView } from '@/lib/permissions'
 import { renderDashboardData, calculateDynamicCommission, sanitizeSale, getCurrentMonthString, normalizeString, isVentaWithinDates } from '@/lib/salesUtils'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { useGuard } from '@/hooks/useGuard'
@@ -436,7 +436,7 @@ function OperationsContent() {
   if (loading && sales.length === 0) return <div style={{ padding: 20 }}>Cargando operaciones...</div>
 
   // Candado de Seguridad: Si es comercial, sobreescribe cualquier filtro de URL
-  const isComercial = user && normalizeRole(user.role) === 'COMERCIAL';
+  const isComercial = user && normalizeRole(user.role) === 'COMERCIAL' && !canView(user, 'MODULE_BACK_OFFICE');
   const forceVendorName = (isComercial && user.username) ? user.username : null;
   const activeVendorFilter = forceVendorName || vendorFilter;
 
@@ -963,7 +963,7 @@ function OperationsContent() {
 }
 
 export default function OperationsPage() {
-  const { authorized } = useGuard('MODULE_TIENDAS')
+  const { authorized } = useGuard('VIEW_OPERACIONES')
   return (
     <Suspense fallback={<div style={{ padding: 20 }}>Cargando operaciones...</div>}>
       <OperationsContent />

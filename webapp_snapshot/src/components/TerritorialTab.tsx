@@ -28,7 +28,7 @@ const TRAMOS_TRIM = [
 
 const TIENDAS_FISICAS = ["Auxiliadora 45", "Correhuela", "Villamayor", "Béjar"];
 
-export default function TerritorialPage() {
+export default function TerritorialTab() {
   const router = useRouter()
   const { activePeriodKey, availablePeriods, isLoadingPeriods } = usePeriod()
   
@@ -259,13 +259,8 @@ export default function TerritorialPage() {
   if (isLoadingPeriods || loading) return <div style={{ padding: 40, textAlign: 'center' }}>Cargando datos...</div>
 
   return (
-    <div style={{ maxWidth: 1400, margin: '0 auto', padding: 24 }}>
-      <PageHeader 
-        title="Territorial Tiendas y O2 MovilFree" 
-        subtitle="Configuración y cálculo automático de tramos y comisiones territoriales."
-        showBack={true}
-        backFallback="/liquidacion"
-      />
+    <div style={{ padding: 0 }}>
+      
 
       <div style={{ background: 'var(--bg-card)', padding: '16px 24px', borderRadius: 12, marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>

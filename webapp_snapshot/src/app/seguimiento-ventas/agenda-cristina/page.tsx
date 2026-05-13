@@ -34,7 +34,7 @@ const formatDisplayDate = (d: Date | undefined) => {
 }
 
 export default function AgendaTiendasPage() {
-    const { authorized, user } = useGuard('MODULE_JEFE_TIENDAS')
+    const { authorized, user } = useGuard('CARD_AGENDA_CRISTINA')
     
     const [currentWeekStart, setCurrentWeekStart] = useState<Date>(getStartOfWeek(new Date()))
     const [comerciales, setComerciales] = useState<any[]>([])

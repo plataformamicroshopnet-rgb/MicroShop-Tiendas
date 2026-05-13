@@ -2,12 +2,20 @@
 
 import React from 'react'
 import { useRouter } from 'next/navigation'
-import { Calendar, Package, Receipt } from 'lucide-react'
+import { Calendar, Package, Receipt, Calculator } from 'lucide-react'
 
 export default function CristinaAdminPage() {
   const router = useRouter()
 
   const cards = [
+      {
+        title: 'Caja',
+        description: 'Gestión de entradas, salidas y trazabilidad de efectivo entre tiendas y Central.',
+        icon: Calculator,
+        action: () => router.push('/tiendas/caja'),
+        bgIcon: 'linear-gradient(135deg, rgba(0, 173, 239, 0.15) 0%, rgba(0, 150, 200, 0.2) 100%)',
+        colorIcon: 'var(--mercedes-cyan)'
+      },
     {
       title: 'Agenda de Llamadas Cristina',
       description: 'Tracking diario visual de llamadas y métricas independientes.',

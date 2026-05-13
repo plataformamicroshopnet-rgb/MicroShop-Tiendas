@@ -87,7 +87,7 @@ export const matchTipoVenta = (sale: any, tipoVentaRaw: string) => {
 };
 
 
-export function useComisionesData() {
+export function useComisionesData(user?: any) {
     const { activePeriodKey } = usePeriod();
     const [loading, setLoading] = useState(true);
     const [allSales, setAllSales] = useState<any[]>([]);
@@ -673,22 +673,24 @@ export function useComisionesData() {
         }
     }, [loading, sellerStats]);
 
-    const teamTotalComisiones = sellerStats.reduce((acc, s) => acc + s.totalComision, 0);
-    const teamTotalSales = sellerStats.reduce((acc, s) => acc + s.totalSales, 0);
+    const isRestrictedComercial = user && typeof user.role === 'string' && user.role.toUpperCase().includes('COMERCIAL');
+    const displayedSellerStats = isRestrictedComercial ? sellerStats.filter(s => { const sName = s.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim(); const uName = (user?.username || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim(); return sName === uName; }) : sellerStats;
+    const teamTotalComisiones = displayedSellerStats.reduce((acc, s) => acc + s.totalComision, 0);
+    const teamTotalSales = displayedSellerStats.reduce((acc, s) => acc + s.totalSales, 0);
 
-    const orderedDesc = [...sellerStats].sort((a, b) => b.totalComision - a.totalComision);
+    const orderedDesc = [...displayedSellerStats].sort((a, b) => b.totalComision - a.totalComision);
     const top3 = orderedDesc.slice(0, 3);
     const maxComisionSeller = orderedDesc.length > 0 ? orderedDesc[0] : null;
 
-    const orderedBySales = [...sellerStats].sort((a, b) => b.totalSales - a.totalSales);
+    const orderedBySales = [...displayedSellerStats].sort((a, b) => b.totalSales - a.totalSales);
     const maxSalesSeller = orderedBySales.length > 0 ? orderedBySales[0] : null;
 
     return {
         loading,
         selectedSellerFilter,
         setSelectedSellerFilter,
-        sellerStats,
-        teamTotalComisiones,
+        sellerStats: displayedSellerStats,
+          teamTotalComisiones,
         teamTotalSales,
         top3,
         maxComisionSeller,

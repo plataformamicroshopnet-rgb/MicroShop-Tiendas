@@ -266,6 +266,8 @@ const FinancialSpeedometer = ({ currentAmount, sellerName }: { currentAmount: nu
 export default function ComisionesDashboardPage() {
     const router = useRouter()
     const { authorized, user } = useGuard('MODULE_COMISIONES')
+    
+
     const {
         loading,
         selectedSellerFilter,
@@ -279,7 +281,7 @@ export default function ComisionesDashboardPage() {
         monthSales,
         tiendaRules,
         o2Rules
-    } = useComisionesData()
+    } = useComisionesData(user)
 
     useEffect(() => {
         if (user && normalizeRole(user.role) === 'COMERCIAL' && user.username) {
