@@ -5,7 +5,7 @@ import TerritorialTab from '@/components/TerritorialTab'
 import { useEffect, useState, useRef } from 'react'
 import { Save, Search, Plus, Trash2, FileText, AlertCircle, Target, Euro, Box, ChevronLeft, Lock } from 'lucide-react'
 import Link from 'next/link'
-import ObjetivosTab from './ObjetivosTab'
+
 import ProductosComisionanTab from './ProductosComisionanTab'
 import { useGuard } from '@/hooks/useGuard'
 import { usePeriod } from '@/components/PeriodProvider'
@@ -103,7 +103,7 @@ export default function CatalogosPage() {
     "Fija y Móvil": [], "Ti": [], "Rent": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": [], "Prepago": [], "Varios": [], "Repos": [], "Resto BAF": []
   })
   const [activeTab, setActiveTab] = useState('Fija y Móvil')
-  const isProductTab = CATEGORIES.includes(activeTab) && activeTab !== 'Objetivos Tiendas' && activeTab !== 'Comisiones O2 y MovilFree' && activeTab !== 'Objetivos Captador' && activeTab !== 'Productos que Comisionan' && activeTab !== 'Comisiones O2 y MovilFree'
+  const isProductTab = CATEGORIES.includes(activeTab) && activeTab !== 'Productos que Comisionan' && activeTab !== 'Comisiones O2 y MovilFree' && activeTab !== 'Territorial Tiendas / O2'
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [search, setSearch] = useState('')
@@ -121,7 +121,7 @@ export default function CatalogosPage() {
         if (data.success) {
           const mapped: Record<string, ProductItem[]> = { "Fija y Móvil": [], "Ti": [], "Rent": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": [], "Prepago": [], "Varios": [], "Repos": [], "Resto BAF": [] }
           for (const [cat, items] of Object.entries(data.catalogs as Record<string, any[]>)) {
-             if (!mapped[cat]) mapped[cat] = [] && activeTab !== 'Territorial Tiendas / O2';
+             if (!mapped[cat]) mapped[cat] = [];
              mapped[cat] = [...mapped[cat], ...items.map((it: any) => ({
                  ...it,
                  id: it.id || String(Math.random()),
@@ -876,6 +876,45 @@ export default function CatalogosPage() {
         </div>
       </div>
 
+      {/* TABS */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, borderBottom: '1px solid var(--border-color)', paddingBottom: 16, flexWrap: 'wrap' }}>
+        {([
+          { cat: 'Ti', tip: 'Terminal de Instalación: dispositivos y servicios con contrato de 12 meses. El precio mensual se introduce y el sistema calcula automáticamente el importe total anual (×12).' },
+          { cat: 'Rent', tip: 'Terminal Móvil en Alquiler: dispositivos bajo contrato de 24 meses. Introduce la cuota total a 24 meses.' },
+          { cat: 'Seguro', tip: 'Catálogo de seguros para dispositivos. Introduce la categoría, cuota y comisión.' },
+          { cat: 'O2', tip: 'Catálogo de productos y tarifas de O2. Introduce la categoría, nombre y comisión.' },
+          { cat: 'miMovistar', tip: 'Catálogo de paquetes miMovistar. Configura categorías, tipos, productos multilínea y su estructura de comisiones por multiplicador.' },
+          { cat: 'Suscripciones TV', tip: 'Catálogo de suscripciones de televisión. Introduce la categoría, nombre, comisión y fechas.' },
+          { cat: 'Prepago', tip: 'Catálogo de productos prepago. Introduce la categoría, nombre de producto y comisión.' },
+          { cat: 'Varios', tip: 'Catálogo de productos varios (alarmas, migraciones, etc). Introduce categoría, nombre, cuota total y comisión.' },
+          { cat: 'Repos', tip: 'Catálogo de Reposiciones. Introduce categoría, nombre, cuota total, comisión y multiplicador.' },
+          { cat: 'Resto BAF', tip: 'Catálogo para Resto BAF. Estructura idéntica a miMovistar.' },
+
+          { cat: 'Productos que Comisionan', tip: 'Configura las reglas globales y objetivos que aplicarán a los comerciales de la tienda en este mes.' },
+          { cat: 'Comisiones O2 y MovilFree', tip: 'Configuración del motor matemático de comisiones y bonos específicos para O2 y MovilFree.' },
+          { cat: 'Territorial Tiendas / O2', tip: 'Configuración y cálculo automático de tramos y comisiones territoriales.' },
+        ] as const).map(({ cat, tip }) => (
+          <TooltipBox key={cat} title={cat} content={tip} position="bottom">
+            <button
+              onClick={() => { setActiveTab(cat); setSearch('') }}
+              style={{
+                padding: '10px 20px',
+                borderRadius: 8,
+                border: 'none',
+                cursor: 'pointer',
+                fontWeight: 600,
+                fontSize: 14,
+                backgroundColor: activeTab === cat ? (CATEGORIES.includes(cat) ? 'var(--mercedes-cyan)' : '#6366f1') : 'var(--active-bg)',
+                color: activeTab === cat ? '#FFF' : 'var(--light-text)',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              {cat === 'Ti' ? 'Contratos Móvil' : cat}
+            </button>
+          </TooltipBox>
+        ))}
+      </div>
+
       {isProductTab && (
         <>
           {/* BANNER DE CONTEXTO/TIEMPO */}
@@ -924,44 +963,7 @@ export default function CatalogosPage() {
              </div>
           )}
 
-          {/* TABS */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20, borderBottom: '1px solid var(--border-color)', paddingBottom: 16, flexWrap: 'wrap' }}>
-        {([
-          { cat: 'Ti', tip: 'Terminal de Instalación: dispositivos y servicios con contrato de 12 meses. El precio mensual se introduce y el sistema calcula automáticamente el importe total anual (×12).' },
-          { cat: 'Rent', tip: 'Terminal Móvil en Alquiler: dispositivos bajo contrato de 24 meses. Introduce la cuota total a 24 meses.' },
-          { cat: 'Seguro', tip: 'Catálogo de seguros para dispositivos. Introduce la categoría, cuota y comisión.' },
-          { cat: 'O2', tip: 'Catálogo de productos y tarifas de O2. Introduce la categoría, nombre y comisión.' },
-          { cat: 'miMovistar', tip: 'Catálogo de paquetes miMovistar. Configura categorías, tipos, productos multilínea y su estructura de comisiones por multiplicador.' },
-          { cat: 'Suscripciones TV', tip: 'Catálogo de suscripciones de televisión. Introduce la categoría, nombre, comisión y fechas.' },
-          { cat: 'Prepago', tip: 'Catálogo de productos prepago. Introduce la categoría, nombre de producto y comisión.' },
-          { cat: 'Varios', tip: 'Catálogo de productos varios (alarmas, migraciones, etc). Introduce categoría, nombre, cuota total y comisión.' },
-          { cat: 'Repos', tip: 'Catálogo de Reposiciones. Introduce categoría, nombre, cuota total, comisión y multiplicador.' },
-          { cat: 'Resto BAF', tip: 'Catálogo para Resto BAF. Estructura idéntica a miMovistar.' },
-          { cat: 'Objetivos Tiendas', tip: 'Define los objetivos cuantitativos del mes para las tiendas. Son la base del cálculo de cumplimiento y comisiones.' },
-          { cat: 'Productos que Comisionan', tip: 'Configura las reglas globales y objetivos que aplicarán a los comerciales de la tienda en este mes.' },
-          { cat: 'Comisiones O2 y MovilFree', tip: 'Configuración del motor matemático de comisiones y bonos específicos para O2 y MovilFree.' },
-          { cat: 'Territorial Tiendas / O2', tip: 'Configuración y cálculo automático de tramos y comisiones territoriales.' },
-        ] as const).map(({ cat, tip }) => (
-          <TooltipBox key={cat} title={cat} content={tip} position="bottom">
-            <button
-              onClick={() => { setActiveTab(cat); setSearch('') }}
-              style={{
-                padding: '10px 20px',
-                borderRadius: 8,
-                border: 'none',
-                cursor: 'pointer',
-                fontWeight: 600,
-                fontSize: 14,
-                backgroundColor: activeTab === cat ? (CATEGORIES.includes(cat) ? 'var(--mercedes-cyan)' : '#6366f1') : 'var(--active-bg)',
-                color: activeTab === cat ? '#FFF' : 'var(--light-text)',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              {cat === 'Ti' ? 'Contratos Móvil' : cat}
-            </button>
-          </TooltipBox>
-        ))}
-      </div>
+          
 
       {/* TOOLBAR */}
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 20, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -1654,7 +1656,7 @@ export default function CatalogosPage() {
       {!isProductTab && activeTab === 'Productos que Comisionan' && <ProductosComisionanTab />}
       {!isProductTab && activeTab === 'Comisiones O2 y MovilFree' && <ComisionesO2Tab />}
       {!isProductTab && activeTab === 'Territorial Tiendas / O2' && <TerritorialTab />}
-      {!isProductTab && activeTab !== 'Productos que Comisionan' && activeTab !== 'Comisiones O2 y MovilFree' && activeTab !== 'Territorial Tiendas / O2' && <ObjetivosTab activeSegment={activeTab === 'Objetivos Tiendas' ? 'Pyme' : 'Captador'} />}
+
     </div>
   )
 }

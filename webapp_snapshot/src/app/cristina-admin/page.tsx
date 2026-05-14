@@ -47,6 +47,14 @@ export default function CristinaAdminPage() {
       action: () => router.push('/cristina-admin/vencimientos'),
       bgIcon: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.2) 100%)',
       colorIcon: '#f59e0b'
+    },
+    {
+      title: 'Informes de IVA',
+      description: 'Historial y control de liquidaciones de IVA y cierres trimestrales.',
+      icon: Calculator,
+      action: () => router.push('/cristina-admin/iva'),
+      bgIcon: 'linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(147, 51, 234, 0.2) 100%)',
+      colorIcon: '#a855f7'
     }
   ]
 

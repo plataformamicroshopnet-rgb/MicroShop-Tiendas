@@ -1,16 +1,6 @@
-﻿const { PrismaClient } = require('@prisma/client')
-const prisma = new PrismaClient()
-
-async function main() {
-    // get all active O2 records
-    const records = await prisma.productCatalog.findMany({
-        where: { categoria: 'O2' }
-    });
-    
-    // Check if there are any products that might have been rejected
-    // For example, products with no subcategoria? No, they have 'Alta/Porta'
-    // Let's check what is in the Excel file by writing a dummy script that the AI can run later if the user provides the raw text
-    console.log("DB count: " + records.length);
-}
-
-main().catch(console.error).finally(() => prisma.$disconnect());
+﻿const Database = require('better-sqlite3');
+const path = require('path');
+const dbPath = path.resolve('microshop.db'); // Wait, check what db it uses
+const db = new Database('data/microshop.db'); // Wait, where is the db?
+const row = db.prepare("SELECT COUNT(*) as c FROM objetivos").get();
+console.log(row);

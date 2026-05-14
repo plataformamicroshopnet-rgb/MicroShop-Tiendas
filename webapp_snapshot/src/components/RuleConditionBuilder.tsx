@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { Plus, Trash2, Settings } from 'lucide-react'
 
-export type ConditionType = 'REQUIRE_GROUP_QTY' | 'REQUIRE_GROUP_PCT' | 'REQUIRE_TEAM_OBJ2'
+export type ConditionType = 'REQUIRE_GROUP_QTY' | 'REQUIRE_GROUP_PCT' | 'REQUIRE_TEAM_OBJ2' | 'ACCUMULATIVE_TRAMOS' | 'ACCUMULATIVE_FIXED_BASE'
 
 export interface RuleCondition {
   type: ConditionType
@@ -116,6 +116,8 @@ export default function RuleConditionBuilder({ value, onChange, disabled, availa
                     <option value="REQUIRE_GROUP_QTY">Requiere cantidad de:</option>
                     <option value="REQUIRE_GROUP_PCT">Requiere % objetivo de:</option>
                     <option value="REQUIRE_TEAM_OBJ2">El Tramo 2 es Colectivo (del Equipo)</option>
+                    <option value="ACCUMULATIVE_TRAMOS">Tramos Acumulativos (Sumar Ambos x Ud)</option>
+                    <option value="ACCUMULATIVE_FIXED_BASE">Tramos Acumulativos (Bono Fijo + Uds Extra)</option>
                   </select>
                   <button type="button" onClick={() => handleRemove(idx)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 2 }}>
                     <Trash2 size={14} />
@@ -123,7 +125,7 @@ export default function RuleConditionBuilder({ value, onChange, disabled, availa
                 </div>
 
 
-                {cond.type !== 'REQUIRE_TEAM_OBJ2' && (
+                {cond.type !== 'REQUIRE_TEAM_OBJ2' && cond.type !== 'ACCUMULATIVE_TRAMOS' && cond.type !== 'ACCUMULATIVE_FIXED_BASE' && (
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                     <select
                       value={cond.targetGroup}

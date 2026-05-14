@@ -1,26 +1,32 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, ShoppingCart, X, Users, ArrowLeftRight, RefreshCcw, Package, Edit, Save, Search, Edit2 } from 'lucide-react'
+import { Plus, Trash2, ShoppingCart, X, Users, ArrowLeftRight, RefreshCcw, Package, Edit, Save, Search, Edit2, Wrench, UploadCloud, Printer } from 'lucide-react'
 
 // --- Types ---
 type Product = { id: string; nombre: string; categoria: string; precio: number; coste: number; stock: number; createdAt: string; imei?: string }
 type Client = { id: string; nif: string; nombre: string; direccion?: string; poblacion?: string; provincia?: string; cp?: string; movil?: string; fijo?: string; email: string; totalComprado: number }
 type Sale = { id: string; numeroFactura?: number; vendedor: string; nifCliente: string; nombreCliente: string; listaProductos: string; importeTotal: number; estado: string; fechaVenta: string; motivoDevolucion: string }
+type Reparacion = { id?: string; numero: number; nombreApellidos: string; direccion?: string; dniNif?: string; telefono?: string; marca?: string; modelo?: string; imei?: string; fechaRecepcion?: string; observaciones?: string; motivo?: string; fechaEntrega?: string; garantia?: string; informe?: string; repara?: string; costePvd?: number; pvp?: number; createdAt?: string; }
+type BudgetLine = { id: string; desc: string; qty: number; price: number }
 
 export default function MovilFreeApp() {
-  const [activeTab, setActiveTab] = useState<'ventas'|'productos'|'clientes'|'devoluciones'>('ventas')
+  const [activeTab, setActiveTab] = useState<'ventas'|'productos'|'clientes'|'devoluciones'|'sat'>('ventas')
   
   // Data
   const [products, setProducts] = useState<Product[]>([])
   const [clients, setClients] = useState<Client[]>([])
   const [sales, setSales] = useState<Sale[]>([])
+  const [reparaciones, setReparaciones] = useState<Reparacion[]>([])
 
   // Load data
+  const loadReparaciones = () => fetch('/api/movilfree-reparaciones').then(r => r.json()).then(d => { if(Array.isArray(d)) setReparaciones(d); else console.error('API Error:', d) })
+
   useEffect(() => {
     fetch('/api/movilfree/products').then(r => r.json()).then(d => { if(Array.isArray(d)) setProducts(d); else console.error('API Error:', d) })
     fetch('/api/movilfree/clients').then(r => r.json()).then(d => { if(Array.isArray(d)) setClients(d); else console.error('API Error:', d) })
     fetch('/api/movilfree/sales').then(r => r.json()).then(d => { if(Array.isArray(d)) setSales(d); else console.error('API Error:', d) })
+    loadReparaciones()
   }, [activeTab])
 
   // Helpers
@@ -220,16 +226,132 @@ export default function MovilFreeApp() {
     }
   }
 
+  // SAT Logics
+  const [searchReparaciones, setSearchReparaciones] = useState('')
+  const [isImporting, setIsImporting] = useState(false)
+  const [pasteData, setPasteData] = useState('')
+
+  const handleBulkImport = async () => {
+    if (!pasteData) return alert('Pega los datos del Excel primero')
+    const rows = pasteData.split('\n').filter(r => r.trim())
+    const records = rows.map(r => {
+      const cols = r.split('\t')
+      return {
+        numero: parseInt(cols[0]) || 0,
+        nombreApellidos: cols[1] || '',
+        direccion: cols[2] || '',
+        dniNif: cols[3] || '',
+        telefono: cols[4] || '',
+        marca: cols[5] || '',
+        modelo: cols[6] || '',
+        imei: cols[7] || '',
+        fechaRecepcion: cols[8] || '',
+        observaciones: cols[9] || '',
+        motivo: cols[10] || '',
+        fechaEntrega: cols[11] || '',
+        garantia: cols[12] || '',
+        informe: cols[13] || '',
+        repara: cols[14] || '',
+        costePvd: cols[15] ? parseFloat(cols[15].replace(',','.')) : null,
+        pvp: cols[16] ? parseFloat(cols[16].replace(',','.')) : null,
+      }
+    })
+
+    try {
+      const res = await fetch('/api/movilfree-reparaciones', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bulk: true, reparaciones: records })
+      })
+      if (res.ok) {
+        alert('Importación completada!')
+        setPasteData('')
+        setIsImporting(false)
+        loadReparaciones()
+      } else {
+        const err = await res.json()
+        alert('Error en importación: ' + err.error)
+      }
+    } catch (e) {
+      alert('Error en red al importar')
+    }
+  }
+
+  const handleDeleteReparacion = async (id: string) => {
+    if (!confirm('Borrar reparación?')) return
+    const res = await fetch(`/api/movilfree-reparaciones?id=${id}`, { method: 'DELETE' })
+    if (res.ok) loadReparaciones()
+  }
+
+  const [editingSatId, setEditingSatId] = useState<string | null>(null)
+  const [editSatData, setEditSatData] = useState<any>(null)
+
+  const handleSaveEditSat = async () => {
+    if(!editSatData) return;
+    try {
+      const res = await fetch(`/api/movilfree-reparaciones`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editSatData) })
+      if(res.ok) {
+        loadReparaciones()
+        setEditingSatId(null)
+        setEditSatData(null)
+      } else {
+        alert('Error al guardar')
+      }
+    } catch(e:any) { alert(e.message) }
+  }
+
+  const handleCreateBlankSat = async () => {
+    try {
+      const highestNum = reparaciones.reduce((max, r) => Math.max(max, r.numero || 0), 0)
+      const res = await fetch('/api/movilfree-reparaciones', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ numero: highestNum + 1, nombreApellidos: 'Nuevo Registro', motivo: '' }) })
+      if(res.ok) {
+        const created = await res.json()
+        setReparaciones([created, ...reparaciones])
+        setEditingSatId(created.id)
+        setEditSatData(created)
+      }
+    } catch(e) { alert('Error al crear') }
+  }
+
+  const [printModalSat, setPrintModalSat] = useState<Reparacion | null>(null)
+  const [satBudgetLines, setSatBudgetLines] = useState<BudgetLine[]>([])
+  const [satDeliveryDate, setSatDeliveryDate] = useState('')
+
+  const handlePrintSat = (r: Reparacion) => {
+    setPrintModalSat(r)
+    if (r.pvp) {
+      setSatBudgetLines([
+        { id: '1', desc: 'Cambio de piezas', qty: 1, price: Math.max(0, r.pvp - 24) },
+        { id: '2', desc: 'Mano de obra', qty: 1, price: 24 }
+      ])
+    } else {
+      setSatBudgetLines([
+        { id: '1', desc: 'Cambio de piezas', qty: 1, price: 0 },
+        { id: '2', desc: 'Mano de obra', qty: 1, price: 0 }
+      ])
+    }
+    
+    // Predeterminamos fecha de entrega: lo que tenga, o a 30 dias vista
+    if (r.fechaEntrega) {
+      setSatDeliveryDate(r.fechaEntrega)
+    } else {
+      const future = new Date()
+      future.setDate(future.getDate() + 30)
+      setSatDeliveryDate(future.toLocaleDateString('es-ES'))
+    }
+  }
+
   // UI Theme
   const fuchsia = '#E91E97'
   const lightPink = '#FFF0F9'
 
   return (
-    <div style={{ minHeight: '100vh', background: lightPink, padding: 32, fontFamily: 'sans-serif' }}>
+    <div className="print-wrapper" style={{ minHeight: '100vh', background: lightPink, padding: 32, fontFamily: 'sans-serif' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         
-                {/* HEADER */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 32, background: 'white', padding: 24, borderRadius: 16, boxShadow: '0 4px 20px rgba(233,30,151,0.08)' }}>
+        <div className="no-print">
+          {/* HEADER */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 32, background: 'white', padding: 24, borderRadius: 16, boxShadow: '0 4px 20px rgba(233,30,151,0.08)' }}>
           <div style={{ width: 48, height: 48, background: '#E91E97', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
             <ShoppingCart size={28} />
           </div>
@@ -244,34 +366,40 @@ export default function MovilFreeApp() {
 
         {/* TABS & SEARCH */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
-          <div style={{ display: 'flex', gap: 16 }}>
-          <button onClick={() => setActiveTab('ventas')} style={{ padding: '12px 24px', borderRadius: 12, border: 'none', background: activeTab === 'ventas' ? '#E91E97' : 'white', color: activeTab === 'ventas' ? 'white' : '#666', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: activeTab === 'ventas' ? '0 4px 12px rgba(233,30,151,0.2)' : 'none' }}>
+          <div style={{ display: 'flex', gap: 12 }}>
+          <button onClick={() => setActiveTab('ventas')} style={{ height: 44, padding: '0 16px', borderRadius: 12, border: 'none', background: activeTab === 'ventas' ? '#E91E97' : 'white', color: activeTab === 'ventas' ? 'white' : '#666', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: activeTab === 'ventas' ? '0 4px 12px rgba(233,30,151,0.2)' : 'none' }}>
             <ShoppingCart size={18} /> Punto de Venta
           </button>
-          <button onClick={() => setActiveTab('productos')} style={{ padding: '12px 24px', borderRadius: 12, border: 'none', background: activeTab === 'productos' ? '#E91E97' : 'white', color: activeTab === 'productos' ? 'white' : '#666', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: activeTab === 'productos' ? '0 4px 12px rgba(233,30,151,0.2)' : 'none' }}>
+          <button onClick={() => setActiveTab('productos')} style={{ height: 44, padding: '0 16px', borderRadius: 12, border: 'none', background: activeTab === 'productos' ? '#E91E97' : 'white', color: activeTab === 'productos' ? 'white' : '#666', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: activeTab === 'productos' ? '0 4px 12px rgba(233,30,151,0.2)' : 'none' }}>
             <Package size={18} /> Inventario
           </button>
-          <button onClick={() => setActiveTab('clientes')} style={{ padding: '12px 24px', borderRadius: 12, border: 'none', background: activeTab === 'clientes' ? '#E91E97' : 'white', color: activeTab === 'clientes' ? 'white' : '#666', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: activeTab === 'clientes' ? '0 4px 12px rgba(233,30,151,0.2)' : 'none' }}>
+          <button onClick={() => setActiveTab('clientes')} style={{ height: 44, padding: '0 16px', borderRadius: 12, border: 'none', background: activeTab === 'clientes' ? '#E91E97' : 'white', color: activeTab === 'clientes' ? 'white' : '#666', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: activeTab === 'clientes' ? '0 4px 12px rgba(233,30,151,0.2)' : 'none' }}>
             <Users size={18} /> Clientes
           </button>
-          <button onClick={() => setActiveTab('devoluciones')} style={{ padding: '12px 24px', borderRadius: 12, border: 'none', background: activeTab === 'devoluciones' ? '#E91E97' : 'white', color: activeTab === 'devoluciones' ? 'white' : '#666', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: activeTab === 'devoluciones' ? '0 4px 12px rgba(233,30,151,0.2)' : 'none' }}>
+          <button onClick={() => setActiveTab('devoluciones')} style={{ height: 44, padding: '0 16px', borderRadius: 12, border: 'none', background: activeTab === 'devoluciones' ? '#E91E97' : 'white', color: activeTab === 'devoluciones' ? 'white' : '#666', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: activeTab === 'devoluciones' ? '0 4px 12px rgba(233,30,151,0.2)' : 'none' }}>
             <RefreshCcw size={18} /> Histórico & Devoluciones
+          </button>
+          <button onClick={() => setActiveTab('sat')} style={{ height: 44, padding: '0 16px', borderRadius: 12, border: 'none', background: activeTab === 'sat' ? '#E91E97' : 'white', color: activeTab === 'sat' ? 'white' : '#666', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: activeTab === 'sat' ? '0 4px 12px rgba(233,30,151,0.2)' : 'none' }}>
+            <Wrench size={18} /> SAT
           </button>
           </div>
 
-          <div style={{ position: 'relative', width: '450px' }}>
+          <div style={{ position: 'relative', width: '320px' }}>
             <Search size={18} style={{ position: 'absolute', left: 14, top: 13, color: '#0284c7' }} />
             {activeTab === 'ventas' && (
-              <input placeholder="Buscar producto en Punto de Venta..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} style={{ width: '100%', padding: '12px 16px 12px 44px', borderRadius: 12, border: '1px solid #bae6fd', background: '#f0f9ff', color: '#0369a1', fontSize: 14 }} />
+              <input placeholder="Buscar producto en Punto de Venta..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} style={{ width: '100%', height: 44, padding: '0 16px 0 44px', borderRadius: 12, border: '1px solid #bae6fd', background: '#f0f9ff', color: '#0369a1', fontSize: 14, boxSizing: 'border-box' }} />
             )}
             {activeTab === 'productos' && (
-              <input placeholder="Buscar producto en Inventario..." value={searchInvProducts} onChange={e=>setSearchInvProducts(e.target.value)} style={{ width: '100%', padding: '12px 16px 12px 44px', borderRadius: 12, border: '1px solid #bae6fd', background: '#f0f9ff', color: '#0369a1', fontSize: 14 }} />
+              <input placeholder="Buscar producto en Inventario..." value={searchInvProducts} onChange={e=>setSearchInvProducts(e.target.value)} style={{ width: '100%', height: 44, padding: '0 16px 0 44px', borderRadius: 12, border: '1px solid #bae6fd', background: '#f0f9ff', color: '#0369a1', fontSize: 14, boxSizing: 'border-box' }} />
             )}
             {activeTab === 'clientes' && (
-              <input placeholder="Buscar cliente por NIF o Nombre..." value={searchClients} onChange={e=>setSearchClients(e.target.value)} style={{ width: '100%', padding: '12px 16px 12px 44px', borderRadius: 12, border: '1px solid #bae6fd', background: '#f0f9ff', color: '#0369a1', fontSize: 14 }} />
+              <input placeholder="Buscar cliente por NIF o Nombre..." value={searchClients} onChange={e=>setSearchClients(e.target.value)} style={{ width: '100%', height: 44, padding: '0 16px 0 44px', borderRadius: 12, border: '1px solid #bae6fd', background: '#f0f9ff', color: '#0369a1', fontSize: 14, boxSizing: 'border-box' }} />
             )}
             {activeTab === 'devoluciones' && (
-              <input placeholder="Buscar venta (NIF, Factura, Vendedor, Estado)..." value={searchSales} onChange={e=>setSearchSales(e.target.value)} style={{ width: '100%', padding: '12px 16px 12px 44px', borderRadius: 12, border: '1px solid #bae6fd', background: '#f0f9ff', color: '#0369a1', fontSize: 14 }} />
+              <input placeholder="Buscar venta (NIF, Factura, Vendedor, Estado)..." value={searchSales} onChange={e=>setSearchSales(e.target.value)} style={{ width: '100%', height: 44, padding: '0 16px 0 44px', borderRadius: 12, border: '1px solid #bae6fd', background: '#f0f9ff', color: '#0369a1', fontSize: 14, boxSizing: 'border-box' }} />
+            )}
+            {activeTab === 'sat' && (
+              <input placeholder="Buscar reparación..." value={searchReparaciones} onChange={e=>setSearchReparaciones(e.target.value)} style={{ width: '100%', height: 44, padding: '0 16px 0 44px', borderRadius: 12, border: '1px solid #bae6fd', background: '#f0f9ff', color: '#0369a1', fontSize: 14, boxSizing: 'border-box' }} />
             )}
           </div>
         </div>
@@ -305,7 +433,8 @@ export default function MovilFreeApp() {
                       <option value="Terminal">Terminal</option>
                       <option value="Accesorio">Accesorio</option>
                       <option value="Servicio">Servicio</option>
-                      <option value="Reparación">Reparación</option>
+                      <option value="SAT">SAT</option>
+                      <option value="Paquetería">Paquetería</option>
                     </select>
                   </div>
                 </div>
@@ -397,9 +526,18 @@ export default function MovilFreeApp() {
                   {cart.length === 0 && <div style={{ color: '#aaa', textAlign: 'center', marginTop: 60 }}>Carrito vacío</div>}
                   {cart.map((c, i) => (
                     <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, borderBottom: '1px dashed #eee', paddingBottom: 8 }}>
-                      <div>
-                        <div style={{ fontWeight: 'bold', fontSize: 14 }}>{c.product.nombre}</div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                      <div style={{ flex: 1, paddingRight: 12 }}>
+                        {c.product.categoria === 'Paquetería' ? (
+                          <input 
+                            value={c.product.nombre} 
+                            onChange={(e) => setCart(cart.map(x => x.product.id === c.product.id ? { ...x, product: { ...x.product, nombre: e.target.value } } : x))}
+                            style={{ fontWeight: 'bold', fontSize: 14, border: '1px solid #ddd', borderRadius: 4, padding: '2px 6px', width: '100%', marginBottom: 4 }} 
+                            placeholder="Ej: SEUR"
+                          />
+                        ) : (
+                          <div style={{ fontWeight: 'bold', fontSize: 14 }}>{c.product.nombre}</div>
+                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
                           <button onClick={() => {
                             if (c.cantidad <= 1) setCart(cart.filter(x => x.product.id !== c.product.id))
                             else setCart(cart.map(x => x.product.id === c.product.id ? { ...x, cantidad: x.cantidad - 1 } : x))
@@ -426,10 +564,23 @@ export default function MovilFreeApp() {
                             }
                           }} style={{ width: 24, height: 24, borderRadius: 12, border: 'none', background: fuchsia, color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
                           
-                          <span style={{ fontSize: 12, color: '#888', marginLeft: 4 }}>x {formatMoney(c.product.precio * 1.21)}</span>
+                          {c.product.categoria === 'Paquetería' ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 8 }}>
+                              <span style={{ fontSize: 12, color: '#888' }}>Ganancia sin IVA:</span>
+                              <input 
+                                type="number" 
+                                value={c.product.precio || ''} 
+                                onChange={(e) => setCart(cart.map(x => x.product.id === c.product.id ? { ...x, product: { ...x.product, precio: Number(e.target.value) } } : x))}
+                                style={{ width: 60, padding: '2px 4px', borderRadius: 4, border: '1px solid #E91E97', fontSize: 12, outline: 'none' }}
+                                placeholder="0.00"
+                              />
+                            </div>
+                          ) : (
+                            <span style={{ fontSize: 12, color: '#888', marginLeft: 4 }}>x {formatMoney(c.product.precio * 1.21)}</span>
+                          )}
                         </div>
                       </div>
-                      <div style={{ fontWeight: 'bold', color: fuchsia }}>{formatMoney(c.product.precio * 1.21 * c.cantidad)}</div>
+                      <div style={{ fontWeight: 'bold', color: fuchsia, alignSelf: 'center' }}>{formatMoney(c.product.precio * 1.21 * c.cantidad)}</div>
                     </div>
                   ))}
                 </div>
@@ -463,7 +614,8 @@ export default function MovilFreeApp() {
                     <option>Terminal</option>
                     <option>Accesorio</option>
                     <option>Servicio</option>
-                    <option>Reparación</option>
+                    <option>SAT</option>
+                    <option>Paquetería</option>
                   </select>
                 </div>
                 <div>
@@ -537,7 +689,7 @@ export default function MovilFreeApp() {
                           <td style={{ padding: 10 }}><input value={editProdData?.nombre || ''} onChange={e => setEditProdData({...editProdData, nombre: e.target.value})} style={{ width: '100%', padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none' }} /></td>
                           <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}>
                             <select value={editProdData?.categoria || ''} onChange={e => setEditProdData({...editProdData, categoria: e.target.value})} style={{ width: '100%', padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none' }}>
-                              <option>Terminal</option><option>Accesorio</option><option>Servicio</option><option>Reparación</option>
+                              <option>Terminal</option><option>Accesorio</option><option>Servicio</option><option>SAT</option><option>Paquetería</option>
                             </select>
                           </td>
                           <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}><input type="number" value={editProdData?.coste || 0} onChange={e => setEditProdData({...editProdData, coste: Number(e.target.value)})} style={{ width: 70, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center' }} /></td>
@@ -773,6 +925,132 @@ export default function MovilFreeApp() {
             </div>
           )}
 
+          {/* TAB SAT */}
+          {activeTab === 'sat' && (
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <h2 style={{ color: '#333', margin: 0, fontSize: 20 }}>SAT / Reparaciones</h2>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <button onClick={handleCreateBlankSat} style={{ padding: '8px 16px', background: '#3b82f6', color: 'white', borderRadius: 8, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 'bold' }}>
+                    <Plus size={16} /> Añadir Fila
+                  </button>
+                  <button onClick={() => setIsImporting(!isImporting)} style={{ padding: '8px 16px', background: '#22c55e', color: 'white', borderRadius: 8, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 'bold' }}>
+                    <UploadCloud size={16} /> Importar Excel
+                  </button>
+                </div>
+              </div>
+
+              {isImporting && (
+                <div style={{ background: '#f0fdf4', border: '1px solid #86efac', padding: 16, borderRadius: 8, marginBottom: 20 }}>
+                  <p style={{ margin: '0 0 8px 0', fontSize: 14, color: '#166534', fontWeight: 'bold' }}>Pega aquí directamente las filas copiadas de tu Excel</p>
+                  <p style={{ margin: '0 0 12px 0', fontSize: 12, color: '#15803d' }}>El orden de las columnas debe ser: Número, Nombre y Apellidos, Dirección, DNI / NIF, Teléfono, Marca, Modelo, IMEI, Fecha recepción, Observaciones, Motivo, Fecha entrega, Garantía, Informe, Repara, Coste PVD, PVP</p>
+                  <textarea 
+                    value={pasteData}
+                    onChange={(e) => setPasteData(e.target.value)}
+                    style={{ width: '100%', height: 120, padding: 8, borderRadius: 6, border: '1px solid #bbf7d0', marginBottom: 12, fontSize: 12 }}
+                    placeholder="Pega las filas aquí..."
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                    <button onClick={() => setIsImporting(false)} style={{ padding: '6px 12px', background: '#fff', border: '1px solid #ccc', borderRadius: 6, cursor: 'pointer' }}>Cancelar</button>
+                    <button onClick={handleBulkImport} style={{ padding: '6px 12px', background: '#16a34a', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 'bold' }}>Guardar Todo</button>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, background: 'white' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid #eee' }}>
+                      <th style={{ padding: 12, textAlign: 'left', color: '#888' }}>Nº</th>
+                      <th style={{ padding: 12, textAlign: 'left', color: '#888', whiteSpace: 'nowrap' }}>Cliente</th>
+                      <th style={{ padding: 12, textAlign: 'left', color: '#888' }}>Dirección</th>
+                      <th style={{ padding: 12, textAlign: 'left', color: '#888', whiteSpace: 'nowrap' }}>DNI / NIF</th>
+                      <th style={{ padding: 12, textAlign: 'left', color: '#888' }}>Teléfono</th>
+                      <th style={{ padding: 12, textAlign: 'left', color: '#888' }}>Marca</th>
+                      <th style={{ padding: 12, textAlign: 'left', color: '#888' }}>Modelo</th>
+                      <th style={{ padding: 12, textAlign: 'left', color: '#888' }}>IMEI</th>
+                      <th style={{ padding: 12, textAlign: 'left', color: '#888', whiteSpace: 'nowrap' }}>Fecha Rec.</th>
+                      <th style={{ padding: 12, textAlign: 'left', color: '#888' }}>Observaciones</th>
+                      <th style={{ padding: 12, textAlign: 'left', color: '#888' }}>Motivo</th>
+                      <th style={{ padding: 12, textAlign: 'left', color: '#888', whiteSpace: 'nowrap' }}>Fecha Entrega</th>
+                      <th style={{ padding: 12, textAlign: 'left', color: '#888' }}>Garantía</th>
+                      <th style={{ padding: 12, textAlign: 'left', color: '#888' }}>Informe</th>
+                      <th style={{ padding: 12, textAlign: 'left', color: '#888' }}>Repara</th>
+                      <th style={{ padding: 12, textAlign: 'right', color: '#888', whiteSpace: 'nowrap' }}>Coste PVD</th>
+                      <th style={{ padding: 12, textAlign: 'right', color: '#888' }}>PVP</th>
+                      <th style={{ padding: 12, textAlign: 'center', color: '#888' }}>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reparaciones
+                      .filter(r => !searchReparaciones || r.nombreApellidos.toLowerCase().includes(searchReparaciones.toLowerCase()) || (r.imei && r.imei.includes(searchReparaciones)) || (r.modelo && r.modelo.toLowerCase().includes(searchReparaciones.toLowerCase())))
+                      .map((r) => (
+                      <tr key={r.id} style={{ borderBottom: '1px solid #eee', background: editingSatId === r.id ? '#fdf2f8' : 'transparent' }}>
+                        {editingSatId === r.id ? (
+                          <>
+                            <td style={{ padding: '6px 4px' }}><input type="number" value={editSatData?.numero || ''} onChange={e => setEditSatData({...editSatData, numero: Number(e.target.value)})} style={{ width: '40px', padding: '4px', border: '1px solid #E91E97', borderRadius: 4, outline: 'none' }} /></td>
+                            <td style={{ padding: '6px 4px' }}><input value={editSatData?.nombreApellidos || ''} onChange={e => setEditSatData({...editSatData, nombreApellidos: e.target.value})} style={{ width: '120px', padding: '4px', border: '1px solid #E91E97', borderRadius: 4, outline: 'none' }} /></td>
+                            <td style={{ padding: '6px 4px' }}><input value={editSatData?.direccion || ''} onChange={e => setEditSatData({...editSatData, direccion: e.target.value})} style={{ width: '100px', padding: '4px', border: '1px solid #E91E97', borderRadius: 4, outline: 'none' }} /></td>
+                            <td style={{ padding: '6px 4px' }}><input value={editSatData?.dniNif || ''} onChange={e => setEditSatData({...editSatData, dniNif: e.target.value})} style={{ width: '80px', padding: '4px', border: '1px solid #E91E97', borderRadius: 4, outline: 'none' }} /></td>
+                            <td style={{ padding: '6px 4px' }}><input value={editSatData?.telefono || ''} onChange={e => setEditSatData({...editSatData, telefono: e.target.value})} style={{ width: '80px', padding: '4px', border: '1px solid #E91E97', borderRadius: 4, outline: 'none' }} /></td>
+                            <td style={{ padding: '6px 4px' }}><input value={editSatData?.marca || ''} onChange={e => setEditSatData({...editSatData, marca: e.target.value})} style={{ width: '70px', padding: '4px', border: '1px solid #E91E97', borderRadius: 4, outline: 'none' }} /></td>
+                            <td style={{ padding: '6px 4px' }}><input value={editSatData?.modelo || ''} onChange={e => setEditSatData({...editSatData, modelo: e.target.value})} style={{ width: '70px', padding: '4px', border: '1px solid #E91E97', borderRadius: 4, outline: 'none' }} /></td>
+                            <td style={{ padding: '6px 4px' }}><input value={editSatData?.imei || ''} onChange={e => setEditSatData({...editSatData, imei: e.target.value})} style={{ width: '90px', padding: '4px', border: '1px solid #E91E97', borderRadius: 4, outline: 'none' }} /></td>
+                            <td style={{ padding: '6px 4px' }}><input type="date" value={editSatData?.fechaRecepcion || ''} onChange={e => setEditSatData({...editSatData, fechaRecepcion: e.target.value})} style={{ width: '100px', padding: '4px', border: '1px solid #E91E97', borderRadius: 4, outline: 'none', fontSize: 11 }} /></td>
+                            <td style={{ padding: '6px 4px' }}><input value={editSatData?.observaciones || ''} onChange={e => setEditSatData({...editSatData, observaciones: e.target.value})} style={{ width: '100px', padding: '4px', border: '1px solid #E91E97', borderRadius: 4, outline: 'none' }} /></td>
+                            <td style={{ padding: '6px 4px' }}><input value={editSatData?.motivo || ''} onChange={e => setEditSatData({...editSatData, motivo: e.target.value})} style={{ width: '100px', padding: '4px', border: '1px solid #E91E97', borderRadius: 4, outline: 'none' }} /></td>
+                            <td style={{ padding: '6px 4px' }}><input type="date" value={editSatData?.fechaEntrega || ''} onChange={e => setEditSatData({...editSatData, fechaEntrega: e.target.value})} style={{ width: '100px', padding: '4px', border: '1px solid #E91E97', borderRadius: 4, outline: 'none', fontSize: 11 }} /></td>
+                            <td style={{ padding: '6px 4px' }}><input value={editSatData?.garantia || ''} onChange={e => setEditSatData({...editSatData, garantia: e.target.value})} style={{ width: '60px', padding: '4px', border: '1px solid #E91E97', borderRadius: 4, outline: 'none' }} /></td>
+                            <td style={{ padding: '6px 4px' }}><input value={editSatData?.informe || ''} onChange={e => setEditSatData({...editSatData, informe: e.target.value})} style={{ width: '100px', padding: '4px', border: '1px solid #E91E97', borderRadius: 4, outline: 'none' }} /></td>
+                            <td style={{ padding: '6px 4px' }}><input value={editSatData?.repara || ''} onChange={e => setEditSatData({...editSatData, repara: e.target.value})} style={{ width: '60px', padding: '4px', border: '1px solid #E91E97', borderRadius: 4, outline: 'none' }} /></td>
+                            <td style={{ padding: '6px 4px' }}><input type="number" step="0.01" value={editSatData?.costePvd ?? ''} onChange={e => setEditSatData({...editSatData, costePvd: e.target.value ? Number(e.target.value) : null})} style={{ width: '50px', padding: '4px', border: '1px solid #E91E97', borderRadius: 4, outline: 'none' }} /></td>
+                            <td style={{ padding: '6px 4px' }}><input type="number" step="0.01" value={editSatData?.pvp ?? ''} onChange={e => setEditSatData({...editSatData, pvp: e.target.value ? Number(e.target.value) : null})} style={{ width: '50px', padding: '4px', border: '1px solid #E91E97', borderRadius: 4, outline: 'none' }} /></td>
+                            <td style={{ padding: '6px 4px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                              <button onClick={handleSaveEditSat} style={{ background: '#4CAF50', color: 'white', border: 'none', padding: 6, borderRadius: 6, cursor: 'pointer', marginRight: 4 }} title="Guardar"><Save size={14} /></button>
+                              <button onClick={() => { setEditingSatId(null); setEditSatData(null); }} style={{ background: '#f43f5e', color: 'white', border: 'none', padding: 6, borderRadius: 6, cursor: 'pointer' }} title="Cancelar"><X size={14} /></button>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                        <td onClick={() => handlePrintSat(r)} style={{ padding: 12, fontWeight: 'bold', cursor: 'pointer', color: '#0284c7' }} title="Imprimir SAT">{r.numero}</td>
+                        <td onClick={() => handlePrintSat(r)} style={{ padding: 12, fontWeight: 'bold', color: '#E91E97', whiteSpace: 'nowrap', cursor: 'pointer', textDecoration: 'underline' }} title="Imprimir SAT">{r.nombreApellidos}</td>
+                        <td style={{ padding: 12, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.direccion}>{r.direccion}</td>
+                        <td style={{ padding: 12, whiteSpace: 'nowrap' }}>{r.dniNif}</td>
+                        <td style={{ padding: 12, whiteSpace: 'nowrap' }}>{r.telefono}</td>
+                        <td style={{ padding: 12 }}>{r.marca}</td>
+                        <td style={{ padding: 12 }}>{r.modelo}</td>
+                        <td style={{ padding: 12, whiteSpace: 'nowrap' }}>{r.imei}</td>
+                        <td style={{ padding: 12, whiteSpace: 'nowrap' }}>{r.fechaRecepcion}</td>
+                        <td style={{ padding: 12, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.observaciones}>{r.observaciones}</td>
+                        <td style={{ padding: 12, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.motivo}>{r.motivo}</td>
+                        <td style={{ padding: 12, whiteSpace: 'nowrap' }}>{r.fechaEntrega}</td>
+                        <td style={{ padding: 12 }}>{r.garantia}</td>
+                        <td style={{ padding: 12, maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.informe}>{r.informe}</td>
+                        <td style={{ padding: 12 }}>{r.repara}</td>
+                        <td style={{ padding: 12, textAlign: 'right', whiteSpace: 'nowrap' }}>{r.costePvd !== null ? `${r.costePvd}€` : '-'}</td>
+                        <td style={{ padding: 12, textAlign: 'right', fontWeight: 'bold' }}>{r.pvp !== null ? `${r.pvp}€` : '-'}</td>
+                        <td style={{ padding: 12, textAlign: 'center', whiteSpace: 'nowrap' }}>
+                          <button onClick={() => { setEditingSatId(r.id || null); setEditSatData({...r}); }} style={{ background: 'white', color: '#0ea5e9', border: '1px solid #e0f2fe', padding: 6, borderRadius: 6, cursor: 'pointer', marginRight: 4 }} title="Editar"><Edit2 size={16} /></button>
+                          <button onClick={() => handlePrintSat(r)} style={{ background: 'white', border: '1px solid #f1f5f9', cursor: 'pointer', color: '#0284c7', marginRight: 4, padding: 6, borderRadius: 6 }} title="Imprimir Ticket">
+                            <Printer size={16} />
+                          </button>
+                          <button onClick={() => handleDeleteReparacion(r.id!)} style={{ background: 'white', border: '1px solid #ffe4e6', cursor: 'pointer', color: '#ef4444', padding: 6, borderRadius: 6 }} title="Borrar">
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                          </>
+                        )}
+                      </tr>
+                    ))}
+                    {reparaciones.length === 0 && (
+                      <tr><td colSpan={18} style={{ textAlign: 'center', padding: 40, color: '#aaa' }}>No hay reparaciones registradas</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
         </div>
 
         {/* RETURN MODAL */}
@@ -814,6 +1092,229 @@ export default function MovilFreeApp() {
             </div>
           </div>
         )}
+
+        {/* SAT PRINT MODAL */}
+        {printModalSat && (
+          <div className="no-print" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, overflowY: 'auto', padding: 20 }}>
+            <div style={{ background: '#f8fafc', padding: 24, borderRadius: 16, width: '100%', maxWidth: 700, maxHeight: '90vh', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                <h2 style={{ margin: 0, color: '#333', fontSize: 20 }}>Ajustar Presupuesto a Imprimir</h2>
+                <button onClick={() => setPrintModalSat(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={24} color="#666"/></button>
+              </div>
+
+              <div style={{ background: 'white', padding: 16, borderRadius: 8, border: '1px solid #e2e8f0', marginBottom: 16 }}>
+                <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', fontSize: 12, color: '#64748b', marginBottom: 4 }}>Motivo / Fallo</label>
+                    <input value={printModalSat.motivo || ''} onChange={(e) => setPrintModalSat({...printModalSat, motivo: e.target.value})} style={{ width: '100%', padding: 8, border: '1px solid #cbd5e1', borderRadius: 6 }} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', fontSize: 12, color: '#64748b', marginBottom: 4 }}>Fecha Prevista de Entrega</label>
+                    <input value={satDeliveryDate} onChange={(e) => setSatDeliveryDate(e.target.value)} style={{ width: '100%', padding: 8, border: '1px solid #cbd5e1', borderRadius: 6 }} />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 24, marginBottom: 12, borderBottom: '2px solid #f1f5f9', paddingBottom: 8 }}>
+                  <h3 style={{ margin: 0, fontSize: 14, color: '#334155' }}>Líneas del Presupuesto</h3>
+                  <button onClick={() => setSatBudgetLines([...satBudgetLines, { id: Math.random().toString(), desc: '', qty: 1, price: 0 }])} style={{ padding: '4px 12px', background: '#e0f2fe', color: '#0284c7', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 'bold', cursor: 'pointer' }}>+ Añadir Fila</button>
+                </div>
+
+                {satBudgetLines.map((line, idx) => (
+                  <div key={line.id} style={{ display: 'flex', gap: 12, marginBottom: 8, alignItems: 'center' }}>
+                    <div style={{ flex: 3 }}>
+                      <input placeholder="Descripción..." value={line.desc} onChange={(e) => { const n = [...satBudgetLines]; n[idx].desc = e.target.value; setSatBudgetLines(n) }} style={{ width: '100%', padding: 6, border: '1px solid #cbd5e1', borderRadius: 4 }} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <input type="number" placeholder="Cant." value={line.qty} onChange={(e) => { const n = [...satBudgetLines]; n[idx].qty = Number(e.target.value); setSatBudgetLines(n) }} style={{ width: '100%', padding: 6, border: '1px solid #cbd5e1', borderRadius: 4, textAlign: 'center' }} />
+                    </div>
+                    <div style={{ flex: 1, position: 'relative' }}>
+                      <input type="number" placeholder="Precio" value={line.price} onChange={(e) => { const n = [...satBudgetLines]; n[idx].price = Number(e.target.value); setSatBudgetLines(n) }} style={{ width: '100%', padding: 6, border: '1px solid #cbd5e1', borderRadius: 4, textAlign: 'right', paddingRight: 24 }} />
+                      <span style={{ position: 'absolute', right: 8, top: 7, color: '#94a3b8', fontSize: 13 }}>€</span>
+                    </div>
+                    <button onClick={() => { const n = [...satBudgetLines]; n.splice(idx, 1); setSatBudgetLines(n) }} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 4 }}><Trash2 size={16} /></button>
+                  </div>
+                ))}
+
+                <div style={{ textAlign: 'right', marginTop: 16, fontSize: 18, fontWeight: 'bold', color: '#E91E97' }}>
+                  Total (IVA incl.): {satBudgetLines.reduce((acc, l) => acc + (l.price * l.qty), 0).toFixed(2)}€
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                <button onClick={() => setPrintModalSat(null)} style={{ padding: '12px 24px', borderRadius: 8, border: '1px solid #cbd5e1', background: 'white', color: '#64748b', cursor: 'pointer', fontWeight: 'bold' }}>Cancelar</button>
+                <button onClick={() => window.print()} style={{ padding: '12px 24px', borderRadius: 8, border: 'none', background: '#E91E97', color: 'white', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Printer size={18} /> Imprimir Hoja SAT
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        </div>
+
+      {/* ELEMENTOS SOLO PARA IMPRIMIR */}
+      <style dangerouslySetInnerHTML={{__html: `
+        .print-sat-container { display: none; max-width: 800px; margin: 0 auto; color: #2d3748; font-family: 'Inter', 'Segoe UI', sans-serif; background: #fff; }
+        
+        @media print {
+          .no-print { display: none !important; }
+          .print-wrapper { background: white !important; padding: 0 !important; }
+          .print-sat-container { display: flex !important; flex-direction: column; position: absolute; left: 0; top: 0; width: 100%; min-height: 297mm; box-sizing: border-box; padding: 40px 50px !important; }
+          @page { margin: 0; size: A4 portrait; }
+        }
+        
+        /* Modern Header Grid */
+        .print-sat-container .invoice-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; border-bottom: 2px solid #f0f0f0; padding-bottom: 20px; }
+        .print-sat-container .company-info { color: #718096; font-size: 13px; line-height: 1.6; }
+        .print-sat-container .company-info strong { color: #2d3748; font-weight: 600; }
+        .print-sat-container .invoice-title-block { text-align: right; }
+        .print-sat-container .invoice-title-block h1 { margin: 0 0 8px 0; color: #E91E97; font-size: 28px; font-weight: 800; letter-spacing: -1px; text-transform: uppercase; }
+        .print-sat-container .invoice-meta { display: grid; grid-template-columns: auto auto; gap: 6px 20px; text-align: right; font-size: 13.5px; color: #4a5568; }
+        .print-sat-container .invoice-meta strong { color: #2d3748; }
+
+        /* Client Block */
+        .print-sat-container .client-block { background: #f8fafc; border-radius: 12px; padding: 20px 24px; margin-bottom: 30px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; gap: 20px; }
+        .print-sat-container .client-block h3 { margin: 0 0 10px 0; font-size: 12.5px; text-transform: uppercase; letter-spacing: 1px; color: #E91E97; font-weight: 800; }
+        .print-sat-container .client-details { font-size: 13.5px; line-height: 1.7; color: #2d3748; }
+        .print-sat-container .client-details strong { font-weight: 600; color: #718096; display: inline-block; width: 110px; }
+
+        /* Modern Table */
+        .print-sat-container .modern-table { width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 30px; }
+        .print-sat-container .modern-table th { background: #fff5f9; color: #E91E97; font-weight: 600; text-transform: uppercase; font-size: 11.5px; padding: 12px 14px; text-align: left; letter-spacing: 0.5px; border-bottom: 2px solid #fdd8e7; }
+        .print-sat-container .modern-table th.text-right { text-align: right; }
+        .print-sat-container .modern-table td { padding: 14px 14px; border-bottom: 1px solid #edf2f7; font-size: 13.5px; color: #4a5568; }
+        .print-sat-container .modern-table td.text-right { text-align: right; }
+        .print-sat-container .modern-table tr:last-child td { border-bottom: none; }
+        .print-sat-container .modern-table tbody tr:nth-child(even) { background: #fafafa; }
+
+        /* Spacer to push footer down */
+        .print-sat-container .content-spacer { flex: 1; }
+
+        /* Totals Block */
+        .print-sat-container .totals-wrapper { display: flex; justify-content: flex-end; margin-bottom: 30px; }
+        .print-sat-container .totals-block { width: 320px; background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; }
+        .print-sat-container .totals-row { display: flex; justify-content: space-between; padding: 10px 18px; font-size: 13.5px; color: #4a5568; border-bottom: 1px solid #edf2f7; }
+        .print-sat-container .totals-row.grand-total { background: #E91E97; color: white; border-bottom: none; font-size: 17px; font-weight: 800; padding: 14px 18px; }
+
+        /* Signatures */
+        .print-sat-container .signatures { display: flex; justify-content: space-between; margin-top: 30px; margin-bottom: 40px; }
+        .print-sat-container .sig-box { width: 30%; text-align: center; border-top: 2px solid #cbd5e1; padding-top: 8px; font-size: 11.5px; font-weight: 600; color: #4a5568; }
+
+        /* Legal Footer */
+        .print-sat-container .legal-footer { border-top: 1px solid #e2e8f0; padding-top: 16px; font-size: 9.5px; color: #a0aec0; text-align: justify; line-height: 1.45; margin-bottom: 20px; }
+        .print-sat-container .legal-footer strong { color: #718096; display: block; text-align: center; margin-top: 14px; font-size: 10.5px; }
+      `}} />
+
+      {/* DOCUMENTO SAT (MODO IMPRESIÓN) */}
+      {printModalSat && (
+        <div className="print-sat-container">
+          
+          {/* HEADER SECTION */}
+          <div className="invoice-header">
+            <div>
+              <img src="/images/media__1778608332264.png" alt="Movilfree" style={{ height: '70px', marginBottom: '16px' }} />
+              <div className="company-info">
+                <strong>Micro-Infor Salamanca, S.L.</strong><br/>
+                C.I.F.: B37290293<br/>
+                C/ Alarcón, 2 Bajo<br/>
+                37007 - Salamanca<br/>
+                TLF: 923 214 407
+              </div>
+            </div>
+            <div className="invoice-title-block">
+              <h1>SAT / REPARACIÓN</h1>
+              <div className="invoice-meta">
+                <span>Número:</span>
+                <strong>#{printModalSat.numero}</strong>
+                <span>Fecha:</span>
+                <strong>{new Date().toLocaleDateString('es-ES')}</strong>
+                <span>Validez:</span>
+                <strong>30 días desde recepción</strong>
+              </div>
+            </div>
+          </div>
+
+          {/* CLIENT & DIAGNOSTIC SECTION */}
+          <div className="client-block">
+            <div style={{ flex: 1 }}>
+              <h3>Información del Cliente</h3>
+              <div className="client-details">
+                <div style={{ fontSize: '18px', fontWeight: '800', color: '#E91E97', marginBottom: '8px' }}>{printModalSat.nombreApellidos}</div>
+                <div><strong>Teléfono:</strong> {printModalSat.telefono || '---'}</div>
+                <div><strong>DNI/NIF:</strong> {printModalSat.dniNif || '---'}</div>
+                <div><strong>Domicilio:</strong> {printModalSat.direccion || '---'}</div>
+              </div>
+            </div>
+            <div style={{ flex: 1 }}>
+              <h3>Diagnóstico del Dispositivo</h3>
+              <div className="client-details">
+                <div><strong>Marca/Modelo:</strong> {printModalSat.marca} {printModalSat.modelo}</div>
+                <div><strong>IMEI:</strong> {printModalSat.imei || '---'}</div>
+                <div><strong>Fallo/Motivo:</strong> {printModalSat.motivo || '---'}</div>
+                <div><strong>Fecha Entrega:</strong> {satDeliveryDate}</div>
+              </div>
+              <div className="client-details" style={{ marginTop: '8px', padding: '8px', background: '#fff', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '12px' }}>
+                <strong style={{ width: 'auto', display: 'block', marginBottom: '4px' }}>Informe / Observaciones:</strong>
+                {printModalSat.informe || printModalSat.observaciones || 'Sin observaciones previas.'}
+              </div>
+            </div>
+          </div>
+
+          {/* BUDGET TABLE */}
+          <table className="modern-table">
+            <thead>
+              <tr>
+                <th>Descripción</th>
+                <th className="text-right" style={{ width: '120px' }}>Precio ud.</th>
+                <th className="text-right" style={{ width: '80px' }}>Cant.</th>
+                <th className="text-right" style={{ width: '120px' }}>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {satBudgetLines.map((line, idx) => (
+                <tr key={idx}>
+                  <td>{line.desc}</td>
+                  <td className="text-right">{line.price.toFixed(2)} €</td>
+                  <td className="text-right">{line.qty}</td>
+                  <td className="text-right" style={{ fontWeight: 'bold' }}>{(line.price * line.qty).toFixed(2)} €</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div className="content-spacer"></div>
+
+          {/* TOTALS SECTION */}
+          <div className="totals-wrapper">
+            <div className="totals-block">
+              <div className="totals-row grand-total">
+                <span>TOTAL (IVA INCL.)</span>
+                <span>{satBudgetLines.reduce((acc, l) => acc + (l.price * l.qty), 0).toFixed(2)} €</span>
+              </div>
+              <div style={{ padding: '12px 20px', fontSize: '11px', color: '#718096', textAlign: 'center', backgroundColor: '#f8fafc' }}>
+                El cliente acepta el presupuesto final en las condiciones descritas.
+              </div>
+            </div>
+          </div>
+
+          {/* SIGNATURES */}
+          <div className="signatures">
+            <div className="sig-box">El Cliente</div>
+            <div className="sig-box">¿En garantía?</div>
+            <div className="sig-box">Responsable del SAT</div>
+          </div>
+
+          {/* FOOTER SECTION */}
+          <div className="legal-footer">
+            La garantía en caso de cambio de placa principal o terminal nuevo, continua la misma según fecha de compra. No nos hacemos responsables de la pérdida de datos, el cliente debe hacer una copia de sus datos. No nos hacemos responsables de los fallos ocultos o que dejen de funcionar componentes que funcionan total o parcialmente, partes que ya están dañadas o rotas, pudiendo aumentar el daño o rotura al montar o desmontar.
+            <br/><br/>
+            1.- Los datos de carácter personal serán tratados por MICRO INFOR SALAMANCA S.L. con la finalidad de gestionar la relación contractual derivada de la reparación. El plazo de conservación será de 8 años.<br/>
+            2.- Para el ejercicio de los derechos de acceso, rectificación, supresión y portabilidad el interesado podrá dirigir escrito a MICRO INFOR SALAMANCA S.L. C/ Alarcón 2, 37007 Salamanca.<br/>
+            3.- La garantía recae sobre el producto que consta en esta hoja. Será de 3 meses sobre pieza reparada.
+            <strong>** CONSERVE ESTE RESGUARDO PARA RECOGER SU DISPOSITIVO **</strong>
+          </div>
+        </div>
+      )}
+
 
         {/* PRINT MODAL */}
         {printModalSale && (

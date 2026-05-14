@@ -619,63 +619,6 @@ export default function LiquidacionesPage() {
 
     // --- Componentes Render ---
 
-    const renderObjetivosTab = () => {
-        const pymeMonthObj = objetivos.Pyme?.[currentObjMonth] || {}
-        const captadorMonthObj = objetivos.Captador?.[currentObjMonth] || {}
-
-        return (
-            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                <div style={{ padding: '24px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                        <h3 style={{ margin: 0 }}>Fijar Objetivos Mensuales</h3>
-                        <p style={{ margin: 0, marginTop: 4, color: 'var(--medium-gray)', fontSize: 13 }}>Mes: {activePeriodObj?.name || 'Cargando...'}</p>
-                    </div>
-                    <button onClick={saveObjetivos} disabled={savingObj} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <Save size={18} /> {savingObj ? 'Guardando...' : 'Guardar Objetivos'}
-                    </button>
-                </div>
-                <div style={{ overflowX: 'auto' }}>
-                    <table style={{ minWidth: 600, width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                        <thead>
-                            <tr style={{ backgroundColor: 'var(--active-bg)', borderBottom: '2px solid var(--border-color)' }}>
-                                <th style={{ padding: '12px 24px', textAlign: 'left', color: 'var(--medium-gray)', width: '40%' }}>PRODUCTO / OBJETIVO</th>
-                                <th style={{ padding: '12px 24px', textAlign: 'center', color: 'var(--mercedes-cyan)', borderLeft: '1px solid var(--border-color)', backgroundColor: 'rgba(0,173,239,0.05)' }}>PLUS {currentObjMonth}</th>
-                                <th style={{ padding: '12px 24px', textAlign: 'center', color: 'var(--bg-card)', borderLeft: '1px solid var(--border-color)', backgroundColor: 'rgba(255,255,255,0.02)' }}>BÁSICO {currentObjMonth}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {OBJECTIVE_KEYS.map((key, i) => (
-                                <tr key={i} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                                    <td style={{ padding: '12px 24px', fontWeight: 600 }}>{key}</td>
-                                    <td style={{ padding: '12px 24px', textAlign: 'center', borderLeft: '1px solid var(--border-color)', backgroundColor: 'rgba(0,173,239,0.02)' }}>
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            className="form-input"
-                                            style={{ width: 100, textAlign: 'center', fontWeight: 'bold' }}
-                                            value={pymeMonthObj[key] !== undefined ? pymeMonthObj[key] : ''}
-                                            onChange={e => handleObjectiveChange('Pyme', key, e.target.value)}
-                                        />
-                                    </td>
-                                    <td style={{ padding: '12px 24px', textAlign: 'center', borderLeft: '1px solid var(--border-color)' }}>
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            className="form-input"
-                                            style={{ width: 100, textAlign: 'center', fontWeight: 'bold' }}
-                                            value={captadorMonthObj[key] !== undefined ? captadorMonthObj[key] : ''}
-                                            onChange={e => handleObjectiveChange('Captador', key, e.target.value)}
-                                        />
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        )
-    }
-
     const renderDashboardBlock = (profile: 'Pyme' | 'Captador', calcData: any) => {
         const isPyme = profile === 'Pyme'
         const title = isPyme ? 'VENTAS vs IMPORTES PLUS' : 'VENTAS vs IMPORTES BÁSICO'
@@ -1916,7 +1859,6 @@ export default function LiquidacionesPage() {
             {currentView === 'basico' && renderPymeView()}
             {currentView === 'operaciones' && renderOperacionesView()}
             {currentView === 'cruce' && renderCruceView()}
-            {currentView === 'objetivos' && renderObjetivosTab()}
             {currentView === 'auditoria' && renderAuditoria()}
             {currentView === 'repesca' && <RepescaTrimestral user={user} activeYear={activePeriodObj?.year || 2026} />}
 

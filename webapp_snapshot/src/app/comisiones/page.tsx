@@ -280,7 +280,8 @@ export default function ComisionesDashboardPage() {
         maxSalesSeller,
         monthSales,
         tiendaRules,
-        o2Rules
+        o2Rules,
+        territorialO2Rules
     } = useComisionesData(user)
 
     useEffect(() => {
@@ -560,7 +561,8 @@ export default function ComisionesDashboardPage() {
                                                 }
 
                                                 return (
-                                                    <tr key={gName} style={{ backgroundColor: rowBg, borderBottom: '1px solid #e2e8f0', transition: 'background 0.2s', color: '#334155' }}>
+                                                    <React.Fragment key={gName}>
+                                                    <tr style={{ backgroundColor: rowBg, borderBottom: '1px solid #e2e8f0', transition: 'background 0.2s', color: '#334155' }}>
                                                         <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
                                                             {gName}
                                                         </td>
@@ -599,13 +601,103 @@ export default function ComisionesDashboardPage() {
                                                             {comisionCalculada.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
                                                         </td>
                                                     </tr>
+                                                    {idx === activeRulesForSeller.length - 1 && String(s.name).toLowerCase().includes('marta') && territorialO2Rules && territorialO2Rules.length > 0 && territorialO2Rules.map((rule: any, rIdx: number) => {
+                                                        const vkMatches = s.rawExtras ? s.rawExtras.filter((vk: any) => vk.ruleId === `TERRITORIAL_${rule.id}` || vk.triggerKey?.startsWith(`TERRITORIAL_O2_${rule.id}`)) : [];
+                                                        if (vkMatches.length === 0) return null;
+                                                        
+                                                        const vk = vkMatches[0];
+                                                        const match = vk.triggerSummary ? vk.triggerSummary.match(/\((\d+)/) : null;
+                                                        const totalSales = match ? parseInt(match[1], 10) : 0;
+                                                        
+                                                        const tm = rule.tramosMes || {};
+                                                        const tt = rule.tramosTrim || {};
+                                                        
+                                                        const checkAchievedMes = (min: number, max: number) => totalSales >= min && totalSales <= max;
+                                                        const checkAchievedTrim = (min: number, max: number) => totalSales >= min && totalSales <= max;
+                                                        
+                                                        const TRAMOS_MES = [
+                                                            { key: '4_10', label: 'Mes de 4 a 10', min: 4, max: 10 },
+                                                            { key: '11_14', label: 'Mes de 11 a 14', min: 11, max: 14 },
+                                                            { key: '15_20', label: 'Mes de 15 a 20', min: 15, max: 20 },
+                                                            { key: '21_30', label: 'Mes de 21 a 30', min: 21, max: 30 },
+                                                            { key: '31_40', label: 'Mes de 31 a 40', min: 31, max: 40 },
+                                                            { key: '41_plus', label: 'Mes de >=41', min: 41, max: 99999 }
+                                                        ];
+                                                        const TRAMOS_TRIM = [
+                                                            { key: '5_9', label: 'Trim de 5 a 9', min: 5, max: 9 },
+                                                            { key: '10_plus', label: 'Trim >=10', min: 10, max: 99999 }
+                                                        ];
+
+                                                        const renderCell = (val: string, isAchieved: boolean) => {
+                                                            if (!val) val = '-';
+                                                            return (
+                                                                <div style={{
+                                                                    padding: '4px 8px',
+                                                                    borderRadius: '4px',
+                                                                    backgroundColor: isAchieved ? '#dcfce7' : '#f8fafc',
+                                                                    border: `1px solid ${isAchieved ? '#22c55e' : '#e2e8f0'}`,
+                                                                    color: isAchieved ? '#166534' : '#334155',
+                                                                    fontWeight: isAchieved ? 800 : 500,
+                                                                    display: 'inline-block',
+                                                                    minWidth: '50px'
+                                                                }}>
+                                                                    {val}
+                                                                </div>
+                                                            );
+                                                        };
+
+                                                        return (
+                                                            <tr key={`terr-${rIdx}`} style={{ backgroundColor: '#ffffff' }}>
+                                                                <td colSpan={10} style={{ padding: '0 0 16px 0' }}>
+                                                                    <div style={{ margin: '0', border: '1px solid #38bdf8', borderRadius: '0' }}>
+                                                                        <div style={{ backgroundColor: '#38bdf8', color: 'white', padding: '8px 16px', fontWeight: 800, fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                                                            TERRITORIAL O2 MOVILFREE
+                                                                        </div>
+                                                                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                                                            <thead>
+                                                                                <tr style={{ backgroundColor: '#0284c7', color: 'white', fontSize: '12px', fontWeight: 700 }}>
+                                                                                    {TRAMOS_MES.map(t => <th key={t.key} style={{ padding: '10px 4px', textAlign: 'center', width: '9%' }}>{t.label}</th>)}
+                                                                                    {TRAMOS_TRIM.map(t => <th key={t.key} style={{ padding: '10px 4px', textAlign: 'center', width: '9%' }}>{t.label}</th>)}
+                                                                                    <th style={{ padding: '10px 4px', textAlign: 'center', width: '9%' }}>Conect.</th>
+                                                                                    <th style={{ padding: '10px 4px', textAlign: 'center', width: '19%' }}>VENTAS TOTAL O2</th>
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody>
+                                                                                <tr style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: '#ffffff' }}>
+                                                                                    {TRAMOS_MES.map(t => (
+                                                                                        <td key={t.key} style={{ padding: '12px 4px', textAlign: 'center', fontSize: '14px' }}>
+                                                                                            {renderCell(tm[t.key], checkAchievedMes(t.min, t.max))}
+                                                                                        </td>
+                                                                                    ))}
+                                                                                    {TRAMOS_TRIM.map(t => (
+                                                                                        <td key={t.key} style={{ padding: '12px 4px', textAlign: 'center', fontSize: '14px' }}>
+                                                                                            {renderCell(tt[t.key], checkAchievedTrim(t.min, t.max))}
+                                                                                        </td>
+                                                                                    ))}
+                                                                                    <td style={{ padding: '12px 4px', textAlign: 'center', fontSize: '14px' }}>
+                                                                                        {renderCell(rule.conectividad, totalSales > 0 && !!rule.conectividad)}
+                                                                                    </td>
+                                                                                    <td style={{ padding: '12px 4px', textAlign: 'center', fontSize: '16px', fontWeight: 800, color: '#0284c7' }}>
+                                                                                        <span style={{ borderBottom: '2px solid #0284c7', paddingBottom: '2px' }}>{totalSales}</span>
+                                                                                    </td>
+                                                                                </tr>
+                                                                            </tbody>
+                                                                        </table>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                    </React.Fragment>
                                                 )
                                             }) : <tr><td colSpan={10} style={{padding: 20, textAlign: 'center', color: '#64748b'}}>No hay reglas de comisión configuradas para este mes.</td></tr>
                                             })()}
-                                            {s.extraGroups && s.extraGroups.length > 0 && s.extraGroups.map((eg: any, idx: number) => (
+                                            {s.extraGroups && s.extraGroups.length > 0 && s.extraGroups.filter((eg: any) => !String(eg.name).includes('TERRITORIAL O2 MOVILFREE')).map((eg: any, idx: number) => {
+                                                const safeName = eg.name || 'Bono Extra';
+                                                return (
                                                 <tr key={`extra-${idx}`} style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: '#ecfdf5', transition: 'background 0.2s', color: '#065f46' }}>
                                                     <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                        <Trophy size={14} color="#10b981" /> {eg.name}
+                                                        <Trophy size={14} color="#10b981" /> {safeName}
                                                     </td>
                                                     <td style={{ padding: '10px 8px', textAlign: 'center', fontSize: 14, fontWeight: 800, color: '#10b981' }}>
                                                         {eg.count}
@@ -617,7 +709,7 @@ export default function ComisionesDashboardPage() {
                                                         {Math.round(eg.totalAmount).toLocaleString('es-ES')} €
                                                     </td>
                                                 </tr>
-                                            ))}
+                                            )})}
                                         </tbody>
                                     </table>
                                     </div>

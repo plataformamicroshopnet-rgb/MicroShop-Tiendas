@@ -24,7 +24,7 @@ export async function POST(request: Request) {
             if (!existing) {
                 await prisma.extraAssignment.create({
                     data: {
-                        ruleId: act.ruleId,
+                        ruleId: act.ruleId?.startsWith('TERRITORIAL_') ? null : act.ruleId,
                         periodId: act.periodId,
                         sourceType: 'AUTOMATIC',
                         seller: act.seller,

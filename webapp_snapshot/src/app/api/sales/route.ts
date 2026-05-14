@@ -82,6 +82,7 @@ export async function GET(request: Request) {
 
       return {
         id: sale.id, // Now a UUID
+        periodId: sale.periodId,
         sheet: sale.sheet,
         timestamp,
         email: user.username + '@microshop.com',

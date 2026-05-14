@@ -35,7 +35,7 @@ interface Gasto {
   importe_total: number
 }
 
-export default function GastosPage() {
+export default function IVAPage() {
   const [activeYear, setActiveYear] = useState(new Date().getFullYear())
   const [activeView, setActiveView] = useState<'matriz' | 'comparativa'>('matriz')
   const [gastos, setGastos] = useState<Gasto[]>([])
@@ -59,18 +59,12 @@ export default function GastosPage() {
   const [historico, setHistorico] = useState<Gasto[]>([])
   const [loadingHistorico, setLoadingHistorico] = useState(false)
 
-  // State for Expanded Columns
-  const [expandedMonths, setExpandedMonths] = useState<number[]>([])
 
-  const toggleMonth = (monthId: number) => {
-    setExpandedMonths(prev => 
-      prev.includes(monthId) ? prev.filter(m => m !== monthId) : [...prev, monthId]
-    )
-  }
+
 
   // State for Add Row & Edit
   const [showAddRow, setShowAddRow] = useState(false)
-  const [newRowGrupo, setNewRowGrupo] = useState('Gastos Fijos')
+  const [newRowGrupo, setNewRowGrupo] = useState('IVA')
   const [newRowConcepto, setNewRowConcepto] = useState('')
   
   const [editingConcepto, setEditingConcepto] = useState<{ grupo: string, oldConcepto: string } | null>(null)
@@ -128,7 +122,7 @@ export default function GastosPage() {
   const fetchHistoricoTotal = async () => {
     setLoadingHistorico(true)
     try {
-      const res = await fetch('/api/gastos', { cache: 'no-store' })
+      const res = await fetch('/api/gastos?grupo=IVA', { cache: 'no-store' })
       const data = await res.json()
       if (data.success) {
         setHistorico(data.data)
@@ -141,7 +135,10 @@ export default function GastosPage() {
   const fetchGastos = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/gastos?year=${activeYear}`)
+      const res = await fetch(`/api/gastos?year=${activeYear}`);
+      const dataFiltered = (await res.json()).data?.filter((g: any) => g.grupo === 'IVA') || [];
+      setGastos(dataFiltered);
+      return;
       const data = await res.json()
       if (data.success) {
         setGastos(data.data)
@@ -327,6 +324,8 @@ export default function GastosPage() {
 
   // AGRUPACIÓN PARA COMPARATIVA HISTÓRICA
   const historicoAños = useMemo(() => {
+    console.log('DEBUG: historico length:', historico.length, 'selected:', selectedConceptos);
+
     if (selectedConceptos.length === 0) return []
     const filteredHistorico = historico.filter(h => selectedConceptos.includes(h.concepto))
     
@@ -358,14 +357,14 @@ export default function GastosPage() {
           <button 
             onClick={() => setShowAddRow(true)}
             className="btn"
-            style={{ padding: '8px 16px', background: '#00C853', color: '#fff', borderRadius: 8, fontWeight: 700, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+            style={{ padding: '8px 16px', background: '#00C853', color: '#fff', borderRadius: 8, fontWeight: 700, border: 'none', cursor: 'default', display: 'flex', alignItems: 'center', gap: 8 }}
           >
             <Plus size={16} /> Añadir Fila
           </button>
           <button 
             onClick={() => setShowPasteModal(true)}
             className="btn"
-            style={{ padding: '8px 16px', background: 'var(--mercedes-cyan)', color: '#000', borderRadius: 8, fontWeight: 700, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+            style={{ padding: '8px 16px', background: 'var(--mercedes-cyan)', color: '#000', borderRadius: 8, fontWeight: 700, border: 'none', cursor: 'default', display: 'flex', alignItems: 'center', gap: 8 }}
           >
             <Download size={16} /> Importar Excel
           </button>
@@ -378,22 +377,16 @@ export default function GastosPage() {
             <tr style={{ background: 'var(--active-bg)', borderBottom: '2px solid var(--border-color)' }}>
               <th style={{ padding: '12px 16px', textAlign: 'left', position: 'sticky', left: 0, background: 'var(--active-bg)', zIndex: 10 }}>Concepto / Partida</th>
               {MESES.map(m => {
-                const isExpanded = expandedMonths.includes(m.id)
+                
                 return (
                   <React.Fragment key={m.id}>
-                    {isExpanded && (
-                      <>
-                        <th style={{ padding: '12px 8px', textAlign: 'right', color: 'var(--medium-gray)', fontSize: 11, background: 'rgba(0,173,239,0.05)' }}>Comerciales</th>
-                        <th style={{ padding: '12px 8px', textAlign: 'right', color: 'var(--medium-gray)', fontSize: 11, background: 'rgba(0,173,239,0.05)' }}>Tiendas</th>
-                        <th style={{ padding: '12px 8px', textAlign: 'right', color: 'var(--medium-gray)', fontSize: 11, background: 'rgba(0,173,239,0.05)' }}>Movilfree</th>
-                      </>
-                    )}
+                    
                     <th 
-                      style={{ padding: '12px 4px', textAlign: 'center', color: 'var(--mercedes-cyan)', cursor: 'pointer', userSelect: 'none', minWidth: 50, background: isExpanded ? 'rgba(0,173,239,0.08)' : 'rgba(0,173,239,0.03)' }}
-                      onClick={() => toggleMonth(m.id)}
-                      title="Haz clic para expandir o contraer sub-columnas"
+                      style={{ padding: '12px 4px', textAlign: 'center', color: 'var(--mercedes-cyan)', cursor: 'default', userSelect: 'none', minWidth: 50, background: 'rgba(0,173,239,0.03)' }}
+                      
+                      
                     >
-                      {isExpanded ? 'Total' : m.nombre} <span style={{ fontSize: 10, opacity: 0.6 }}>{isExpanded ? '➖' : '➕'}</span>
+                      {m.nombre}
                     </th>
                   </React.Fragment>
                 )
@@ -435,7 +428,7 @@ export default function GastosPage() {
                       )}
                     </td>
                     {MESES.map((m, index) => {
-                      const isExpanded = expandedMonths.includes(m.id)
+                      
                       const valC = concepto.meses.c[index]
                       const valR = concepto.meses.r[index]
                       const valDif = concepto.meses.dif[index]
@@ -443,55 +436,13 @@ export default function GastosPage() {
 
                       return (
                         <React.Fragment key={m.id}>
-                          {isExpanded && (
-                            <>
-                              <td style={{ padding: '4px 8px', textAlign: 'right', background: 'rgba(0,173,239,0.02)' }}>
-                                <input 
-                                  type="text" 
-                                  defaultValue={valC === 0 ? '' : valC}
-                                  placeholder="-"
-                                  style={{ width: '100%', textAlign: 'right', background: 'transparent', border: '1px solid transparent', borderRadius: 4, padding: '4px', color: valC === 0 ? 'var(--medium-gray)' : 'var(--light-text)', fontSize: 12 }}
-                                  onFocus={e => e.target.style.border = '1px solid var(--mercedes-cyan)'}
-                                  onBlur={e => {
-                                    e.target.style.border = '1px solid transparent'
-                                    if (e.target.value !== String(valC)) handleUpdateCell(grupo.grupo, concepto.concepto, m.id, 'importe_c', e.target.value)
-                                  }}
-                                />
-                              </td>
-                              <td style={{ padding: '4px 8px', textAlign: 'right', background: 'rgba(0,173,239,0.02)' }}>
-                                <input 
-                                  type="text" 
-                                  defaultValue={valR === 0 ? '' : valR}
-                                  placeholder="-"
-                                  style={{ width: '100%', textAlign: 'right', background: 'transparent', border: '1px solid transparent', borderRadius: 4, padding: '4px', color: valR === 0 ? 'var(--medium-gray)' : 'var(--light-text)', fontSize: 12 }}
-                                  onFocus={e => e.target.style.border = '1px solid var(--mercedes-cyan)'}
-                                  onBlur={e => {
-                                    e.target.style.border = '1px solid transparent'
-                                    if (e.target.value !== String(valR)) handleUpdateCell(grupo.grupo, concepto.concepto, m.id, 'importe_r', e.target.value)
-                                  }}
-                                />
-                              </td>
-                              <td style={{ padding: '4px 8px', textAlign: 'right', background: 'rgba(0,173,239,0.02)' }}>
-                                <input 
-                                  type="text" 
-                                  defaultValue={valDif === 0 ? '' : valDif}
-                                  placeholder="-"
-                                  style={{ width: '100%', textAlign: 'right', background: 'transparent', border: '1px solid transparent', borderRadius: 4, padding: '4px', color: valDif === 0 ? 'var(--medium-gray)' : 'var(--light-text)', fontSize: 12 }}
-                                  onFocus={e => e.target.style.border = '1px solid var(--mercedes-cyan)'}
-                                  onBlur={e => {
-                                    e.target.style.border = '1px solid transparent'
-                                    if (e.target.value !== String(valDif)) handleUpdateCell(grupo.grupo, concepto.concepto, m.id, 'importe_dif', e.target.value)
-                                  }}
-                                />
-                              </td>
-                            </>
-                          )}
-                          <td style={{ padding: '4px 4px', textAlign: 'right', background: isExpanded ? 'rgba(0,173,239,0.05)' : 'rgba(0,173,239,0.02)' }}>
+                          
+                          <td style={{ padding: '4px 4px', textAlign: 'right', background: 'rgba(0,173,239,0.02)' }}>
                             <input 
                               type="text" 
                               defaultValue={valTotal === 0 ? '' : valTotal}
                               placeholder="-"
-                              style={{ width: '100%', textAlign: 'center', background: 'transparent', border: '1px solid transparent', borderRadius: 4, padding: '4px', color: valTotal === 0 ? 'var(--medium-gray)' : 'var(--text-main)', fontSize: 12, fontWeight: isExpanded ? 600 : 400 }}
+                              style={{ width: '100%', textAlign: 'center', background: 'transparent', border: '1px solid transparent', borderRadius: 4, padding: '4px', color: valTotal === 0 ? 'var(--medium-gray)' : 'var(--text-main)', fontSize: 12, fontWeight: 600 }}
                               onFocus={e => e.target.style.border = '1px solid var(--mercedes-cyan)'}
                               onBlur={e => {
                                 e.target.style.border = '1px solid transparent'
@@ -508,14 +459,14 @@ export default function GastosPage() {
                     <td style={{ padding: '8px 12px', textAlign: 'center', display: 'flex', justifyContent: 'center', gap: 12, alignItems: 'center', height: '100%' }}>
                       <button 
                         onClick={() => { setEditingConcepto({ grupo: grupo.grupo, oldConcepto: concepto.concepto }); setNewConceptoName(concepto.concepto); }}
-                        style={{ background: 'transparent', border: 'none', color: 'var(--mercedes-cyan)', cursor: 'pointer', padding: 0 }}
+                        style={{ background: 'transparent', border: 'none', color: 'var(--mercedes-cyan)', cursor: 'default', padding: 0 }}
                         title="Editar Nombre"
                       >
                         <Edit2 size={15} />
                       </button>
                       <button 
                         onClick={() => handleDeleteConcepto(grupo.grupo, concepto.concepto)}
-                        style={{ background: 'transparent', border: 'none', color: '#ff4d4f', cursor: 'pointer', padding: 0 }}
+                        style={{ background: 'transparent', border: 'none', color: '#ff4d4f', cursor: 'default', padding: 0 }}
                         title="Eliminar Partida"
                       >
                         <Trash2 size={15} />
@@ -530,7 +481,7 @@ export default function GastosPage() {
                     Total {grupo.grupo}
                   </td>
                   {MESES.map((m, i) => {
-                    const isExpanded = expandedMonths.includes(m.id)
+                    
                     const totalC = grupo.conceptos.reduce((acc, c) => acc + c.meses.c[i], 0)
                     const totalR = grupo.conceptos.reduce((acc, c) => acc + c.meses.r[i], 0)
                     const totalDif = grupo.conceptos.reduce((acc, c) => acc + c.meses.dif[i], 0)
@@ -538,14 +489,8 @@ export default function GastosPage() {
 
                     return (
                       <React.Fragment key={m.id}>
-                        {isExpanded && (
-                          <>
-                            <td style={{ padding: '10px 8px', textAlign: 'right', fontSize: 12, color: 'var(--medium-gray)', background: 'rgba(0,173,239,0.02)' }}>{formatEuro(totalC)}</td>
-                            <td style={{ padding: '10px 8px', textAlign: 'right', fontSize: 12, color: 'var(--medium-gray)', background: 'rgba(0,173,239,0.02)' }}>{formatEuro(totalR)}</td>
-                            <td style={{ padding: '10px 8px', textAlign: 'right', fontSize: 12, color: 'var(--medium-gray)', background: 'rgba(0,173,239,0.02)' }}>{formatEuro(totalDif)}</td>
-                          </>
-                        )}
-                        <td style={{ padding: '10px 4px', textAlign: 'center', fontWeight: 600, color: 'var(--medium-gray)', background: isExpanded ? 'rgba(0,173,239,0.05)' : 'rgba(0,173,239,0.02)' }}>
+                        
+                        <td style={{ padding: '10px 4px', textAlign: 'center', fontWeight: 600, color: 'var(--medium-gray)', background: 'rgba(0,173,239,0.02)' }}>
                           {formatEuro(totalMes)}
                         </td>
                       </React.Fragment>
@@ -556,6 +501,30 @@ export default function GastosPage() {
                   </td>
                   <td></td>
                 </tr>
+
+                {/* Total Trimestre */}
+                <tr style={{ background: 'rgba(255,255,255,0.04)', borderBottom: '2px solid var(--border-color)' }}>
+                  <td style={{ padding: '10px 16px', fontWeight: 800, color: 'var(--mercedes-cyan)', position: 'sticky', left: 0, background: 'rgba(255,255,255,0.04)' }}>
+                    Total Trimestre
+                  </td>
+                  {MESES.map((m, i) => {
+                    const isEndOfQuarter = (i + 1) % 3 === 0;
+                    let trimTotal = 0;
+                    if (isEndOfQuarter) {
+                      trimTotal = grupo.conceptos.reduce((acc, c) => acc + c.meses.total[i] + c.meses.total[i-1] + c.meses.total[i-2], 0);
+                    }
+                    return (
+                      <td key={m.id} style={{ padding: '10px 4px', textAlign: 'center', fontWeight: isEndOfQuarter ? 800 : 400, color: isEndOfQuarter ? 'var(--mercedes-cyan)' : 'transparent', background: 'rgba(0,173,239,0.03)' }}>
+                        {isEndOfQuarter ? new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(trimTotal) : ''}
+                      </td>
+                    )
+                  })}
+                  <td style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 800, color: 'var(--mercedes-cyan)' }}>
+                    {new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(grupo.conceptos.reduce((acc, c) => acc + c.totalAnual, 0))}
+                  </td>
+                  <td></td>
+                </tr>
+
               </React.Fragment>
             ))}
           </tbody>
@@ -595,7 +564,6 @@ export default function GastosPage() {
         <div style={{ padding: 40, textAlign: 'center', color: 'var(--mercedes-cyan)' }}>Cargando histórico...</div>
       ) : selectedConceptos.length > 0 && historicoAños.length > 0 ? (
         <div style={{ background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border-color)', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
-
           <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border-color)', background: 'var(--active-bg)' }}>
             <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
               <TrendingUp size={20} color="var(--mercedes-cyan)" /> 
@@ -629,6 +597,7 @@ export default function GastosPage() {
               </BarChart>
             </ResponsiveContainer>
           </div>
+
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 600 }}>
               <thead>
@@ -698,7 +667,7 @@ export default function GastosPage() {
       </Link>
       
       <PageHeader 
-        title="Informes de Gastos" 
+        title="Informes de IVA" 
         subtitle="Control integral de partidas, ingresos y contención de gastos con comparativa histórica interanual."
       />
 
@@ -723,13 +692,13 @@ export default function GastosPage() {
         <div style={{ display: 'flex', gap: 8, background: 'var(--bg-card)', padding: 6, borderRadius: 12, border: '1px solid var(--border-color)' }}>
           <button 
             onClick={() => setActiveView('matriz')}
-            style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: activeView === 'matriz' ? 'var(--mercedes-cyan)' : 'transparent', color: activeView === 'matriz' ? '#000' : 'var(--light-text)', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, transition: 'all 0.2s' }}
+            style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: activeView === 'matriz' ? 'var(--mercedes-cyan)' : 'transparent', color: activeView === 'matriz' ? '#000' : 'var(--light-text)', fontWeight: 700, cursor: 'default', display: 'flex', alignItems: 'center', gap: 8, transition: 'all 0.2s' }}
           >
             <TableIcon size={16} /> Matriz Anual
           </button>
           <button 
             onClick={() => setActiveView('comparativa')}
-            style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: activeView === 'comparativa' ? 'var(--mercedes-cyan)' : 'transparent', color: activeView === 'comparativa' ? '#000' : 'var(--light-text)', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, transition: 'all 0.2s' }}
+            style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: activeView === 'comparativa' ? 'var(--mercedes-cyan)' : 'transparent', color: activeView === 'comparativa' ? '#000' : 'var(--light-text)', fontWeight: 700, cursor: 'default', display: 'flex', alignItems: 'center', gap: 8, transition: 'all 0.2s' }}
           >
             <BarChart2 size={16} /> Comparativa Histórica
           </button>
@@ -764,7 +733,7 @@ export default function GastosPage() {
           <div style={{ width: 400, padding: 32, position: 'relative', background: 'var(--bg-card)', borderRadius: 20, boxShadow: '0 20px 50px rgba(0,0,0,0.5)', border: '1px solid var(--border-color)' }}>
             <button
               onClick={() => { setShowAddRow(false); setNewRowConcepto(''); }}
-              style={{ position: 'absolute', top: 24, right: 24, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--medium-gray)' }}
+              style={{ position: 'absolute', top: 24, right: 24, background: 'transparent', border: 'none', cursor: 'default', color: 'var(--medium-gray)' }}
             >
               <X size={24} />
             </button>
@@ -801,14 +770,14 @@ export default function GastosPage() {
               <button 
                 onClick={() => setShowAddRow(false)}
                 className="btn"
-                style={{ padding: '10px 20px', background: 'transparent', color: 'var(--light-text)', borderRadius: 8, fontWeight: 600, border: '1px solid var(--border-color)', cursor: 'pointer' }}
+                style={{ padding: '10px 20px', background: 'transparent', color: 'var(--light-text)', borderRadius: 8, fontWeight: 600, border: '1px solid var(--border-color)', cursor: 'default' }}
               >
                 Cancelar
               </button>
               <button 
                 onClick={handleAddRow}
                 className="btn"
-                style={{ padding: '10px 20px', background: '#00C853', color: '#fff', borderRadius: 8, fontWeight: 700, border: 'none', cursor: 'pointer' }}
+                style={{ padding: '10px 20px', background: '#00C853', color: '#fff', borderRadius: 8, fontWeight: 700, border: 'none', cursor: 'default' }}
               >
                 Añadir
               </button>
@@ -823,7 +792,7 @@ export default function GastosPage() {
           <div style={{ width: 700, padding: 32, position: 'relative', background: 'var(--bg-card)', borderRadius: 20, boxShadow: '0 20px 50px rgba(0,0,0,0.5)', border: '1px solid var(--border-color)' }}>
             <button
               onClick={() => { setShowPasteModal(false); setPasteText(''); }}
-              style={{ position: 'absolute', top: 24, right: 24, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--medium-gray)' }}
+              style={{ position: 'absolute', top: 24, right: 24, background: 'transparent', border: 'none', cursor: 'default', color: 'var(--medium-gray)' }}
             >
               <X size={24} />
             </button>
@@ -880,12 +849,12 @@ export default function GastosPage() {
               </div>
 
               <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 4 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, fontWeight: 600, color: 'var(--mercedes-cyan)', cursor: 'pointer' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, fontWeight: 600, color: 'var(--mercedes-cyan)', cursor: 'default' }}>
                   <input 
                     type="checkbox" 
                     checked={includesConcept} 
                     onChange={e => setIncludesConcept(e.target.checked)} 
-                    style={{ cursor: 'pointer' }}
+                    style={{ cursor: 'default' }}
                   />
                   He copiado el NOMBRE de la partida junto a los números
                 </label>
@@ -918,13 +887,13 @@ export default function GastosPage() {
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
               <button
-                style={{ padding: '10px 20px', borderRadius: 8, background: 'transparent', border: '1px solid var(--border-strong)', color: 'var(--light-text)', cursor: 'pointer', fontWeight: 600 }}
+                style={{ padding: '10px 20px', borderRadius: 8, background: 'transparent', border: '1px solid var(--border-strong)', color: 'var(--light-text)', cursor: 'default', fontWeight: 600 }}
                 onClick={() => { setShowPasteModal(false); setPasteText('') }}
               >
                 Cancelar
               </button>
               <button
-                style={{ padding: '10px 20px', borderRadius: 8, background: 'var(--mercedes-cyan)', color: '#000', border: 'none', cursor: 'pointer', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}
+                style={{ padding: '10px 20px', borderRadius: 8, background: 'var(--mercedes-cyan)', color: '#000', border: 'none', cursor: 'default', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}
                 onClick={processPaste}
                 disabled={pasting}
               >

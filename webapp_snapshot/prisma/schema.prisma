@@ -555,3 +555,42 @@ model Vencimiento {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
+
+model GastoMensual {
+  id        String   @id @default(uuid())
+  year      Int
+  month     Int
+  grupo     String
+  concepto  String
+  importe_c Float    @default(0)
+  importe_r Float    @default(0)
+  importe_dif Float  @default(0)
+  importe_total Float @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([year, month, grupo, concepto])
+}
+
+model MovilFreeReparacion {
+  id              String   @id @default(cuid())
+  numero          Int
+  nombreApellidos String
+  direccion       String?
+  dniNif          String?
+  telefono        String?
+  marca           String?
+  modelo          String?
+  imei            String?
+  fechaRecepcion  String?
+  observaciones   String?
+  motivo          String?
+  fechaEntrega    String?
+  garantia        String?
+  informe         String?
+  repara          String?
+  costePvd        Float?
+  pvp             Float?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}

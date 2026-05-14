@@ -98,6 +98,7 @@ export function useComisionesData(user?: any) {
     const [tiendaHours, setTiendaHours] = useState<any[]>([]);
     const [o2Rules, setO2Rules] = useState<any[]>([]);
     const [o2Hours, setO2Hours] = useState<any[]>([]);
+    const [territorialO2Rules, setTerritorialO2Rules] = useState<any[]>([]);
     
     const [selectedSellerFilter, setSelectedSellerFilter] = useState<string | null>(null);
 
@@ -110,9 +111,10 @@ export function useComisionesData(user?: any) {
             fetch(`/api/extras/assignments?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({ data: [] })),
             fetch('/api/extras/rules').then(res => res.json()).catch(() => ({ rules: [] })),
             fetch(`/api/tiendas-comisiones?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({ success: false, rules: [], hours: [] })),
-            fetch(`/api/settings?key=o2_rules_v2_${activePeriodKey}`).then(res => res.json()).catch(() => ({ value: null }))
+            fetch(`/api/settings?key=o2_rules_v2_${activePeriodKey}`).then(res => res.json()).catch(() => ({ value: null })),
+            fetch(`/api/territorial?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({ success: false, tiendas: [], o2: [] }))
         ])
-        .then(([data, condData, extrasData, rulesData, tiendasData, o2Data]) => {
+        .then(([data, condData, extrasData, rulesData, tiendasData, o2Data, territorialData]) => {
             if (data.success && data.logs) {
                 setAllSales(data.logs);
             }
@@ -139,6 +141,9 @@ export function useComisionesData(user?: any) {
             } else {
                 setO2Rules([]);
                 setO2Hours([]);
+            }
+            if (territorialData && territorialData.success) {
+                setTerritorialO2Rules(territorialData.o2 || []);
             }
             setLoading(false);
         })
@@ -200,6 +205,12 @@ export function useComisionesData(user?: any) {
         const sExtras = extraAssignments.filter(ea => {
             const v = String(ea.seller || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
             const tgt = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+            
+            // Excluir el extra manual para Marta según lo solicitado
+            const isMarta = tgt.includes('marta');
+            const isManualExtra = String(ea.customerName || '').toLowerCase().includes('manual') || ea.sourceType === 'MANUAL';
+            if (isMarta && isManualExtra) return false;
+
             return v === tgt && ea.status !== 'CANCELLED';
         });
         
@@ -309,6 +320,8 @@ export function useComisionesData(user?: any) {
                 let activeImp = imp1;
                 let isConsolidado = (obj1 === 0 && obj2 === 0) || (qttyTotal >= obj1 && obj1 > 0);
                 let isTeamObj2 = false;
+                let isAccumulative = false;
+                let isAccumulativeFixed = false;
 
                 // Evaluar reglas dinámicas del Constructor Visual
                 if (rule.condicionantes && rule.condicionantes.startsWith('[')) {
@@ -318,6 +331,10 @@ export function useComisionesData(user?: any) {
                             for (const cond of conds) {
                                 if (cond.type === 'REQUIRE_TEAM_OBJ2') {
                                     isTeamObj2 = true;
+                                } else if (cond.type === 'ACCUMULATIVE_TRAMOS') {
+                                    isAccumulative = true;
+                                } else if (cond.type === 'ACCUMULATIVE_FIXED_BASE') {
+                                    isAccumulativeFixed = true;
                                 } else if (cond.type === 'REQUIRE_GROUP_QTY') {
                                     const targetQtty = groupCounts[cond.targetGroup] || 0;
                                     if (targetQtty < cond.value) {
@@ -361,9 +378,35 @@ export function useComisionesData(user?: any) {
                 }
 
                 if (isPercentage) {
-                    comTotal = qttyTotal * (activeImp / 100);
+                    if (isAccumulativeFixed) {
+                        if (qttyTotal >= obj1 && obj1 > 0) {
+                            const extraQty = Math.max(0, qttyTotal - (obj2 > 0 ? obj2 - 1 : obj1));
+                            comTotal = imp1 + (extraQty * (imp2 / 100));
+                        } else {
+                            comTotal = 0;
+                        }
+                    } else if (isAccumulative && qttyTotal >= obj2 && obj2 > 0) {
+                        const baseQty = obj2 - 1;
+                        const extraQty = qttyTotal - baseQty;
+                        comTotal = (baseQty * (imp1 / 100)) + (extraQty * (imp2 / 100));
+                    } else {
+                        comTotal = qttyTotal * (activeImp / 100);
+                    }
                 } else {
-                    comTotal = qttyTotal * activeImp;
+                    if (isAccumulativeFixed) {
+                        if (qttyTotal >= obj1 && obj1 > 0) {
+                            const extraQty = Math.max(0, qttyTotal - (obj2 > 0 ? obj2 - 1 : obj1));
+                            comTotal = imp1 + (extraQty * imp2);
+                        } else {
+                            comTotal = 0;
+                        }
+                    } else if (isAccumulative && qttyTotal >= obj2 && obj2 > 0) {
+                        const baseQty = obj2 - 1;
+                        const extraQty = qttyTotal - baseQty;
+                        comTotal = (baseQty * imp1) + (extraQty * imp2);
+                    } else {
+                        comTotal = qttyTotal * activeImp;
+                    }
                 }
 
                 if (isConsolidado) {
@@ -603,6 +646,83 @@ export function useComisionesData(user?: any) {
             });
         }
         
+        // --- AUTO-PILOTO TERRITORIAL O2 MOVILFREE (SOLO MARTA) ---
+        if (isO2 && territorialO2Rules && territorialO2Rules.length > 0) {
+            const TRAMOS_MES = [
+              { key: '4_10', label: 'Mes de 4 a 10', min: 4, max: 10 },
+              { key: '11_14', label: 'Mes de 11 a 14', min: 11, max: 14 },
+              { key: '15_20', label: 'Mes de 15 a 20', min: 15, max: 20 },
+              { key: '21_30', label: 'Mes de 21 a 30', min: 21, max: 30 },
+              { key: '31_40', label: 'Mes de 31 a 40', min: 31, max: 40 },
+              { key: '41_plus', label: 'Mes de >=41', min: 41, max: 99999 }
+            ];
+            const TRAMOS_TRIM = [
+              { key: '5_9', label: 'Trim de 5 a 9', min: 5, max: 9 },
+              { key: '10_plus', label: 'Trim >=10', min: 10, max: 99999 }
+            ];
+            const parseNumberLocal = (val: string) => {
+                let s = String(val || '0').replace(/[^0-9.,\-]/g, '').trim();
+                s = s.replace(/\./g, '').replace(',', '.');
+                return parseFloat(s) || 0;
+            };
+
+            territorialO2Rules.forEach(rule => {
+                const filtered = sSales.filter(s => {
+                    const isPendingOrAnnulled = String(s.anulado || '').toLowerCase() === 'sí' || String(s.anulado || '').toLowerCase() === 'si' || String(s.pendiente || '').toLowerCase() === 'anulado';
+                    if (isPendingOrAnnulled) return false;
+                    return matchTipoVenta(s, rule.tipoVenta);
+                });
+                
+                const isMoneyType = String(rule.tipoVenta).toLowerCase().includes('dispositivos') || String(rule.tipoVenta).toLowerCase().includes('importe');
+                const totalSalesForRule = isMoneyType ? filtered.reduce((acc, s) => acc + (parseFloat(s.importe || s.cuota || '0') || 0), 0) : filtered.length;
+
+                let bonus = 0;
+                
+                // Evaluar tramos mes
+                const tm = rule.tramosMes || {};
+                const achievedMes = TRAMOS_MES.find(t => totalSalesForRule >= t.min && totalSalesForRule <= t.max);
+                if (achievedMes && tm[achievedMes.key]) {
+                    bonus += parseNumberLocal(tm[achievedMes.key]);
+                }
+                
+                // Evaluar tramos trim
+                const tt = rule.tramosTrim || {};
+                const achievedTrim = TRAMOS_TRIM.find(t => totalSalesForRule >= t.min && totalSalesForRule <= t.max);
+                if (achievedTrim && tt[achievedTrim.key]) {
+                    bonus += parseNumberLocal(tt[achievedTrim.key]);
+                }
+                
+                // Evaluar conectividad
+                if (totalSalesForRule > 0 && rule.conectividad) {
+                   bonus += parseNumberLocal(rule.conectividad || '0');
+                }
+
+                // Mostrar siempre para que la comercial pueda ver su objetivo territorial aunque lleve 0 ventas
+                const activePeriodId = monthSales.length > 0 ? monthSales[0].periodId : null;
+                if (!activePeriodId) return;
+                
+                const triggerKey = `TERRITORIAL_O2_${rule.id}_${activePeriodId}`;
+                const alreadyExists = extraAssignments.some(ea => ea.triggerKey === triggerKey);
+                
+                if (!alreadyExists) {
+                    virtualKpiExtras.push({
+                        ruleId: `TERRITORIAL_${rule.id}`,
+                        periodId: activePeriodId,
+                        seller: name,
+                        sourceType: 'AUTOMATIC',
+                        customerName: 'Bono Territorial O2',
+                        customerNif: 'TERRITORIAL',
+                        triggerKey: triggerKey,
+                        triggerSummary: `Territorial O2: ${rule.nombre} (${totalSalesForRule} ${isMoneyType ? '€' : 'ventas'})`,
+                        telecomRewardAmount: bonus,
+                        sellerRewardAmount: bonus,
+                        status: 'LIQUIDATED',
+                        rule: { name: `TERRITORIAL O2 MOVILFREE - ${rule.nombre}` }
+                    });
+                }
+            });
+        }
+        
         let totalExtras = sExtras.reduce((acc, curr) => {
             if (curr.status === 'CANCELLED') return acc;
             return acc + (curr.sellerRewardAmount || 0);
@@ -698,6 +818,7 @@ export function useComisionesData(user?: any) {
         monthSales,
         extraAssignments,
         tiendaRules,
-        o2Rules
+        o2Rules,
+        territorialO2Rules
     };
 }
