@@ -292,7 +292,16 @@ export default function TorneosVentasPage() {
                           onChange={(e) => handleTrofeoChange('col1', row.pos, e.target.value)}
                         />
                       </td>
-                      <td>{row.name}</td>
+                      <td style={{ textAlign: 'center' }}>
+                        <div style={{ width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', border: '2px solid rgba(0,0,0,0.05)', display: 'inline-block', verticalAlign: 'middle', margin: 'auto' }} title={row.name}>
+                            <img 
+                                src={`/${row.name}.${['Vanesa', 'Lara', 'Nuria'].includes(row.name) ? 'jpeg' : 'jpg'}`} 
+                                alt={row.name} 
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            />
+                        </div>
+                      </td>
                       <td>{row.label}</td>
                     </tr>
                   ))}
@@ -324,7 +333,16 @@ export default function TorneosVentasPage() {
                           onChange={(e) => handleTrofeoChange('col2', row.pos, e.target.value)}
                         />
                       </td>
-                      <td>{row.name}</td>
+                      <td style={{ textAlign: 'center' }}>
+                        <div style={{ width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', border: '2px solid rgba(0,0,0,0.05)', display: 'inline-block', verticalAlign: 'middle', margin: 'auto' }} title={row.name}>
+                            <img 
+                                src={`/${row.name}.${['Vanesa', 'Lara', 'Nuria'].includes(row.name) ? 'jpeg' : 'jpg'}`} 
+                                alt={row.name} 
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            />
+                        </div>
+                      </td>
                       <td>{row.label}</td>
                     </tr>
                   ))}
@@ -356,7 +374,16 @@ export default function TorneosVentasPage() {
                           onChange={(e) => handleTrofeoChange('col3', row.pos, e.target.value)}
                         />
                       </td>
-                      <td>{row.name}</td>
+                      <td style={{ textAlign: 'center' }}>
+                        <div style={{ width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', border: '2px solid rgba(0,0,0,0.05)', display: 'inline-block', verticalAlign: 'middle', margin: 'auto' }} title={row.name}>
+                            <img 
+                                src={`/${row.name}.${['Vanesa', 'Lara', 'Nuria'].includes(row.name) ? 'jpeg' : 'jpg'}`} 
+                                alt={row.name} 
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            />
+                        </div>
+                      </td>
                       <td>{row.label}</td>
                     </tr>
                   ))}

@@ -115,7 +115,7 @@ export default function DashboardPage() {
             }}>
               {/* REEMPLAZA EL 'src' CON LA RUTA DE TU FOTO (ej. '/fotos/carlos.jpg') */}
               <img 
-                src="https://i.pravatar.cc/150?img=11" 
+                src="/Carlos.jpg" 
                 alt="Carlos" 
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
               />

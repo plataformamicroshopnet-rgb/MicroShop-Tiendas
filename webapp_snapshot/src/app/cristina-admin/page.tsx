@@ -128,6 +128,7 @@ export default function CristinaAdminPage() {
                       <Calendar size={22} />
                   </div> 
                   Hub de Cristina
+                  <img src="/CristinaAdmin.jpg" alt="Cristina" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', border: '2px solid #10b981', boxShadow: '0 4px 8px rgba(0,0,0,0.1)' }} />
               </h1>
               <p className="ds-subtitle" style={{ margin: 0, color: 'var(--text-muted)', fontWeight: 500, maxWidth: 650 }}>
                   Panel centralizado de herramientas de administración y control operativo.

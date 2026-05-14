@@ -182,7 +182,7 @@ export default function SeguimientoVentasPage() {
       `}} />
 
         <PageHeader 
-          title={<><LineChart color="#2563eb" size={28} /> Seguimiento Ventas</>}
+          title={<span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><LineChart color="#2563eb" size={28} /> Seguimiento Ventas <img src="/Salva.jpg" alt="Salva" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', border: '2px solid #2563eb', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }} /></span>}
           subtitle="Monitorización y analítica de los productos vendidos."
           showBack={true}
           helpContent={
