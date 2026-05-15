@@ -243,42 +243,40 @@ export default function VencimientosPage() {
   const barColors = ['#2563EB', '#DC2626', '#F59E0B', '#16A34A', '#9333EA', '#0EA5E9', '#E11D48', '#65A30D', '#DC2626', '#1E3A8A', '#7C3AED', '#0D9488']
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto', background: '#F8FAFC', minHeight: '100vh', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div style={{ padding: 20, maxWidth: '1400px', margin: '0 auto', background: 'var(--bg-app)', minHeight: '100vh', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
 
       {/* HEADER */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <div>
-          <button onClick={() => router.push('/cristina-admin')} style={{ display: 'flex', alignItems: 'center', gap: '8px', border: 'none', background: 'transparent', color: '#64748B', cursor: 'pointer', marginBottom: '12px', padding: 0, fontWeight: 600 }}>
-            <ArrowLeft size={18} /> Volver al Hub
-          </button>
-          <h1 style={{ margin: '0', fontSize: '28px', color: '#1E293B', fontWeight: '800', letterSpacing: '-0.5px' }}>
-            Vencimientos Facturas
-          </h1>
-        </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button
-            onClick={() => setShowChart(!showChart)}
-            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', background: showChart ? '#EFF6FF' : '#FFF', border: showChart ? '1px solid #3B82F6' : '1px solid #CBD5E1', borderRadius: '8px', color: showChart ? '#1D4ED8' : '#475569', fontWeight: 600, cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
-          >
-            <BarChart2 size={18} /> {showChart ? 'Ocultar Gráfico' : 'Ver Gráfico Anual'}
-          </button>
-          <button
-            onClick={() => setShowBulk(!showBulk)}
-            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', background: '#FFF', border: '1px solid #CBD5E1', borderRadius: '8px', color: '#475569', fontWeight: 600, cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
-          >
-            <Upload size={18} /> Importar Excel
-          </button>
-          <button
-            onClick={() => {
-              setEditingId('NEW')
-              setEditForm({ pagado: false })
-            }}
-            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', background: '#10B981', border: 'none', borderRadius: '8px', color: '#FFF', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)' }}
-          >
-            Añadir Fila
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Vencimientos Facturas"
+        showBack={true}
+        backFallback="/cristina-admin"
+        showPeriodSelector={false}
+        headerActions={
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button
+              onClick={() => setShowChart(!showChart)}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', background: showChart ? '#EFF6FF' : '#FFF', border: showChart ? '1px solid #3B82F6' : '1px solid #CBD5E1', borderRadius: '8px', color: showChart ? '#1D4ED8' : '#475569', fontWeight: 600, cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
+            >
+              <BarChart2 size={18} /> {showChart ? 'Ocultar Gráfico' : 'Ver Gráfico Anual'}
+            </button>
+            <button
+              onClick={() => setShowBulk(!showBulk)}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', background: '#FFF', border: '1px solid #CBD5E1', borderRadius: '8px', color: '#475569', fontWeight: 600, cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
+            >
+              <Upload size={18} /> Importar Excel
+            </button>
+            <button
+              onClick={() => {
+                setEditingId('NEW')
+                setEditForm({ pagado: false })
+              }}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', background: '#10B981', border: 'none', borderRadius: '8px', color: '#FFF', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)' }}
+            >
+              Añadir Fila
+            </button>
+          </div>
+        }
+      />
 
       {showBulk && (
         <div style={{ marginBottom: '24px', padding: '20px', background: '#FFF', borderRadius: '12px', border: '1px dashed #94A3B8', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>

@@ -266,14 +266,12 @@ export default function StockPage() {
   const formatEuro = (val: number) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(val)
 
   return (
-    <div className="layout-content">
-      <Link href="/cristina-admin" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#64748B', textDecoration: 'none', marginBottom: '16px', fontSize: '14px', fontWeight: 500 }}>
-        <ArrowLeft size={16} /> Volver al Hub
-      </Link>
-      
+    <div style={{ padding: 20, minHeight: '100vh', background: 'var(--bg-app)' }}>
       <PageHeader 
         title="Control de Stock" 
         subtitle="Gestión del inventario de terminales y accesorios por tienda."
+        showBack={true}
+        backFallback="/cristina-admin"
       />
 
       <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', overflowX: 'auto', paddingBottom: '8px', flexWrap: 'nowrap' }}>
