@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { Receipt, ArrowLeft, Download, Plus, Save, TrendingUp, X, Filter, BarChart2, Table as TableIcon, Edit2, Trash2 } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
 import Link from 'next/link'
-import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid, LabelList } from 'recharts'
 
 const MESES = [
   { id: 1, nombre: 'Ene' },
@@ -58,6 +58,7 @@ export default function GastosPage() {
   const [availableConceptos, setAvailableConceptos] = useState<string[]>([])
   const [historico, setHistorico] = useState<Gasto[]>([])
   const [loadingHistorico, setLoadingHistorico] = useState(false)
+  const [chartViewMode, setChartViewMode] = useState<'mensual' | 'acumulado' | 'anual'>('mensual')
 
   // State for Expanded Columns
   const [expandedMonths, setExpandedMonths] = useState<number[]>([])
@@ -131,9 +132,10 @@ export default function GastosPage() {
       const res = await fetch('/api/gastos', { cache: 'no-store' })
       const data = await res.json()
       if (data.success) {
-        setHistorico(data.data)
-        const allConcepts = Array.from(new Set((data.data as any[]).map(g => g.concepto))).sort()
-        setAvailableConceptos(allConcepts)
+        const filteredData = data.data.filter((g: any) => g.grupo !== 'IVA')
+        setHistorico(filteredData)
+        const allConcepts = Array.from(new Set(filteredData.map((g: any) => g.concepto))).sort()
+        setAvailableConceptos(allConcepts as string[])
       }
     } catch (e) { console.error(e) } finally { setLoadingHistorico(false) }
   }
@@ -144,7 +146,7 @@ export default function GastosPage() {
       const res = await fetch(`/api/gastos?year=${activeYear}`)
       const data = await res.json()
       if (data.success) {
-        setGastos(data.data)
+        setGastos(data.data.filter((g: any) => g.grupo !== 'IVA'))
       }
     } catch (e) {
       console.error(e)
@@ -336,10 +338,14 @@ export default function GastosPage() {
     
     const tabla = años.map(year => {
       const meses = new Array(12).fill(0)
+      let fijos = 0
+      let variables = 0
       filteredHistorico.filter(h => h.year === year).forEach(h => {
         meses[h.month - 1] += h.importe_total
+        if (h.grupo === 'Gastos Fijos') fijos += h.importe_total
+        if (h.grupo === 'Gastos Variables') variables += h.importe_total
       })
-      return { year, meses, total: meses.reduce((a,b) => a+b, 0) }
+      return { year, meses, total: meses.reduce((a,b) => a+b, 0), fijos, variables }
     })
     return tabla
   }, [historico, selectedConceptos])
@@ -596,41 +602,88 @@ export default function GastosPage() {
       ) : selectedConceptos.length > 0 && historicoAños.length > 0 ? (
         <div style={{ background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border-color)', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
 
-          <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border-color)', background: 'var(--active-bg)' }}>
+          <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border-color)', background: 'var(--active-bg)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
             <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
               <TrendingUp size={20} color="var(--mercedes-cyan)" /> 
               Análisis Interanual: <span style={{ color: 'var(--mercedes-cyan)' }}>{selectedConceptos.length === availableConceptos.length ? 'Todas las Partidas' : `${selectedConceptos.length} partida(s) seleccionada(s)`}</span>
             </h3>
+
+            <div style={{ display: 'flex', gap: 4, background: 'var(--bg-card)', padding: 4, borderRadius: 8, border: '1px solid var(--border-color)' }}>
+              <button 
+                onClick={() => setChartViewMode('mensual')}
+                style={{ padding: '6px 12px', fontSize: 12, borderRadius: 6, border: 'none', background: chartViewMode === 'mensual' ? 'var(--mercedes-cyan)' : 'transparent', color: chartViewMode === 'mensual' ? '#000' : 'var(--light-text)', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
+              >Mensual</button>
+              <button 
+                onClick={() => setChartViewMode('acumulado')}
+                style={{ padding: '6px 12px', fontSize: 12, borderRadius: 6, border: 'none', background: chartViewMode === 'acumulado' ? 'var(--mercedes-cyan)' : 'transparent', color: chartViewMode === 'acumulado' ? '#000' : 'var(--light-text)', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
+              >Acumulado YTD</button>
+              <button 
+                onClick={() => setChartViewMode('anual')}
+                style={{ padding: '6px 12px', fontSize: 12, borderRadius: 6, border: 'none', background: chartViewMode === 'anual' ? 'var(--mercedes-cyan)' : 'transparent', color: chartViewMode === 'anual' ? '#000' : 'var(--light-text)', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
+              >Total Anual</button>
+            </div>
           </div>
           
           {/* Gráfica Recharts */}
           <div style={{ height: 320, padding: '24px 32px 12px 12px', borderBottom: '1px solid var(--border-color)' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={MESES.map((m, i) => {
-                const rowObj: any = { name: m.nombre };
-                [...historicoAños].sort((a,b) => a.year - b.year).forEach(row => {
-                  rowObj[row.year] = row.meses[i];
-                });
-                return rowObj;
-              })}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: 'var(--medium-gray)', fontSize: 12, fontWeight: 600}} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: 'var(--medium-gray)', fontSize: 12}} tickFormatter={(val) => `€${(val/1000).toFixed(0)}k`} dx={-10} />
-                <RechartsTooltip 
-                  cursor={{fill: 'rgba(0,173,239,0.05)'}} 
-                  contentStyle={{background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, fontSize: 13, fontWeight: 600, color: 'var(--light-text)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}} 
-                  formatter={(val: any, name: any) => [new Intl.NumberFormat('es-ES', {style: 'currency', currency: 'EUR'}).format(val), `Año ${name}`]} 
-                  labelStyle={{color: 'var(--medium-gray)', marginBottom: 4}}
-                />
-                {[...historicoAños].sort((a,b) => a.year - b.year).map((row, index) => {
-                  const colors = ['#00adef', '#ff4d4f', '#52c41a', '#faad14', '#722ed1', '#eb2f96'];
-                  return <Bar key={row.year} dataKey={row.year} fill={colors[index % colors.length]} radius={[4, 4, 0, 0]} barSize={20} />;
-                })}
-              </BarChart>
+              {chartViewMode === 'anual' ? (
+                <BarChart data={[...historicoAños].sort((a,b) => a.year - b.year).map(row => ({ name: String(row.year), "Gastos Fijos": row.fijos, "Gastos Variables": row.variables, Total: row.total }))} margin={{ top: 30, right: 10, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: 'var(--medium-gray)', fontSize: 12, fontWeight: 600}} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: 'var(--medium-gray)', fontSize: 12}} tickFormatter={(val) => `€${(val/1000).toFixed(0)}k`} dx={-10} />
+                  <RechartsTooltip 
+                    cursor={{fill: 'rgba(0,173,239,0.05)'}} 
+                    contentStyle={{background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, fontSize: 13, fontWeight: 600, color: 'var(--light-text)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}} 
+                    formatter={(val: any, name: any) => [new Intl.NumberFormat('es-ES', {style: 'currency', currency: 'EUR'}).format(val), name]} 
+                    labelStyle={{color: 'var(--medium-gray)', marginBottom: 4}}
+                  />
+                  <Bar dataKey="Gastos Fijos" stackId="a" fill="#00adef" barSize={40} />
+                  <Bar dataKey="Gastos Variables" stackId="a" fill="#faad14" radius={[4, 4, 0, 0]} barSize={40}>
+                    <LabelList 
+                      dataKey="Total" 
+                      position="top" 
+                      fill="var(--light-text)"
+                      fontSize={13}
+                      fontWeight={700}
+                      formatter={(val: number) => Math.round(val).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") + " €"} 
+                    />
+                  </Bar>
+                </BarChart>
+              ) : (
+                <BarChart data={MESES.map((m, i) => {
+                  const rowObj: any = { name: m.nombre };
+                  [...historicoAños].sort((a,b) => a.year - b.year).forEach(row => {
+                    if (chartViewMode === 'acumulado') {
+                      let accum = 0;
+                      for(let j = 0; j <= i; j++) accum += row.meses[j];
+                      rowObj[row.year] = accum;
+                    } else {
+                      rowObj[row.year] = row.meses[i];
+                    }
+                  });
+                  return rowObj;
+                })}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: 'var(--medium-gray)', fontSize: 12, fontWeight: 600}} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: 'var(--medium-gray)', fontSize: 12}} tickFormatter={(val) => `€${(val/1000).toFixed(0)}k`} dx={-10} />
+                  <RechartsTooltip 
+                    cursor={{fill: 'rgba(0,173,239,0.05)'}} 
+                    contentStyle={{background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, fontSize: 13, fontWeight: 600, color: 'var(--light-text)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}} 
+                    formatter={(val: any, name: any) => [new Intl.NumberFormat('es-ES', {style: 'currency', currency: 'EUR'}).format(val), `Año ${name}`]} 
+                    labelStyle={{color: 'var(--medium-gray)', marginBottom: 4}}
+                  />
+                  {[...historicoAños].sort((a,b) => a.year - b.year).map((row, index) => {
+                    const colors = ['#00adef', '#ff4d4f', '#52c41a', '#faad14', '#722ed1', '#eb2f96'];
+                    return <Bar key={row.year} dataKey={row.year} fill={colors[index % colors.length]} radius={[4, 4, 0, 0]} barSize={20} />;
+                  })}
+                </BarChart>
+              )}
             </ResponsiveContainer>
           </div>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 600 }}>
+          {chartViewMode !== 'anual' && (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 600 }}>
               <thead>
                 <tr style={{ background: 'rgba(0,173,239,0.05)', borderBottom: '2px solid var(--border-color)' }}>
                   <th style={{ padding: '14px 20px', textAlign: 'left', fontWeight: 800, width: 120 }}>MES</th>
@@ -642,11 +695,15 @@ export default function GastosPage() {
                 </tr>
               </thead>
               <tbody>
-                {MESES.map((m, monthIndex) => (
+                {chartViewMode !== 'anual' && MESES.map((m, monthIndex) => (
                   <tr key={m.id} style={{ borderBottom: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.01)', transition: 'background 0.2s' }}>
                     <td style={{ padding: '12px 20px', fontWeight: 600, color: 'var(--medium-gray)' }}>{m.nombre}</td>
                     {historicoAños.map((row) => {
-                      const val = row.meses[monthIndex];
+                      let val = row.meses[monthIndex];
+                      if (chartViewMode === 'acumulado') {
+                        val = 0;
+                        for(let j = 0; j <= monthIndex; j++) val += row.meses[j];
+                      }
                       return (
                         <td key={row.year} style={{ padding: '12px 20px', textAlign: 'right', color: val > 0 ? 'var(--light-text)' : 'var(--medium-gray)' }}>
                           {formatEuro(val)}
@@ -667,6 +724,7 @@ export default function GastosPage() {
               </tbody>
             </table>
           </div>
+          )}
         </div>
       ) : selectedConceptos.length > 0 ? (
          <div style={{ padding: 40, textAlign: 'center', color: 'var(--medium-gray)' }}>No hay datos históricos para esta partida.</div>
@@ -675,7 +733,7 @@ export default function GastosPage() {
   )
 
   return (
-    <div style={{ padding: '24px 32px', minHeight: '100vh', background: 'var(--bg-app)' }}>
+    <div style={{ padding: 20, minHeight: '100vh', background: 'var(--bg-app)' }}>
       <style>{`
         .table-row-hover:hover {
           background: rgba(0,173,239,0.03) !important;
@@ -692,14 +750,12 @@ export default function GastosPage() {
           border-color: var(--mercedes-cyan);
         }
       `}</style>
-
-      <Link href="/cristina-admin" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: 'var(--medium-gray)', textDecoration: 'none', marginBottom: '16px', fontSize: '14px', fontWeight: 600, transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color='var(--mercedes-cyan)'} onMouseOut={e => e.currentTarget.style.color='var(--medium-gray)'}>
-        <ArrowLeft size={16} /> Volver al Hub
-      </Link>
       
       <PageHeader 
         title="Informes de Gastos" 
         subtitle="Control integral de partidas, ingresos y contención de gastos con comparativa histórica interanual."
+        showBack={true}
+        backFallback="/cristina-admin"
       />
 
       {/* DASHBOARD METRICS REMOVED AS REQUESTED */}

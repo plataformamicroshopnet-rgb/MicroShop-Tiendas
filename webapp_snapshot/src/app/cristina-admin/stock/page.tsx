@@ -613,63 +613,63 @@ export default function StockPage() {
                         
                         return (
                           <tr key={item.id} style={{ borderBottom: '1px solid #E2E8F0', background: isEditing ? '#F8FAFC' : '#FFF' }}>
-                            <td style={{ padding: '12px 16px', fontWeight: 500, color: '#1E293B' }}>
+                            <td style={{ padding: '4px 8px', fontWeight: 500, color: '#1E293B', fontSize: '12px' }}>
                                 {isEditing ? (
-                                    <input type="text" value={editForm.producto || ''} onChange={e => setEditForm({...editForm, producto: e.target.value})} style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #CBD5E1' }} />
+                                    <input type="text" value={editForm.producto || ''} onChange={e => setEditForm({...editForm, producto: e.target.value})} style={{ width: '100%', padding: '4px', borderRadius: '4px', border: '1px solid #CBD5E1', fontSize: '12px' }} />
                                 ) : item.producto}
                             </td>
-                            <td style={{ padding: '12px 16px', textAlign: 'right', color: '#64748B' }}>
+                            <td style={{ padding: '4px 8px', textAlign: 'right', color: '#64748B', fontSize: '12px' }}>
                                 {isEditing ? (
-                                    <input type="number" step="0.01" value={editForm.pvd || 0} onChange={e => setEditForm({...editForm, pvd: parseFloat(e.target.value)||0})} style={{ width: '80px', padding: '6px', borderRadius: '4px', border: '1px solid #CBD5E1', textAlign: 'right' }} />
+                                    <input type="number" step="0.01" value={editForm.pvd || 0} onChange={e => setEditForm({...editForm, pvd: parseFloat(e.target.value)||0})} style={{ width: '70px', padding: '4px', borderRadius: '4px', border: '1px solid #CBD5E1', textAlign: 'right', fontSize: '12px' }} />
                                 ) : `${item.pvd.toFixed(2)} €`}
                             </td>
-                            <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                            <td style={{ padding: '4px 8px', textAlign: 'center', fontSize: '12px' }}>
                                 {isEditing ? (
-                                    <input type="number" value={editForm.udsCorrehuela || 0} onChange={e => setEditForm({...editForm, udsCorrehuela: parseInt(e.target.value)||0})} style={{ width: '50px', padding: '6px', borderRadius: '4px', border: '1px solid #CBD5E1', textAlign: 'center' }} />
+                                    <input type="number" value={editForm.udsCorrehuela || 0} onChange={e => setEditForm({...editForm, udsCorrehuela: parseInt(e.target.value)||0})} style={{ width: '50px', padding: '4px', borderRadius: '4px', border: '1px solid #CBD5E1', textAlign: 'center', fontSize: '12px' }} />
                                 ) : (
-                                  <span style={{ display: 'inline-block', width: '30px', padding: '4px', background: item.udsCorrehuela > 0 ? '#FEF08A' : 'transparent', borderRadius: '4px', fontWeight: item.udsCorrehuela > 0 ? 'bold' : 'normal' }}>
+                                  <span style={{ display: 'inline-block', width: '30px', padding: '2px', background: item.udsCorrehuela > 0 ? '#FEF08A' : 'transparent', borderRadius: '4px', fontWeight: item.udsCorrehuela > 0 ? 'bold' : 'normal', color: item.udsCorrehuela > 0 ? '#1E293B' : '#94A3B8' }}>
                                     {item.udsCorrehuela || '-'}
                                   </span>
                                 )}
                             </td>
-                            <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                            <td style={{ padding: '4px 8px', textAlign: 'center', fontSize: '12px' }}>
                                 {isEditing ? (
-                                    <input type="number" value={editForm.udsAuxiliadora || 0} onChange={e => setEditForm({...editForm, udsAuxiliadora: parseInt(e.target.value)||0})} style={{ width: '50px', padding: '6px', borderRadius: '4px', border: '1px solid #CBD5E1', textAlign: 'center' }} />
+                                    <input type="number" value={editForm.udsAuxiliadora || 0} onChange={e => setEditForm({...editForm, udsAuxiliadora: parseInt(e.target.value)||0})} style={{ width: '50px', padding: '4px', borderRadius: '4px', border: '1px solid #CBD5E1', textAlign: 'center', fontSize: '12px' }} />
                                 ) : (
-                                  <span style={{ display: 'inline-block', width: '30px', padding: '4px', background: item.udsAuxiliadora > 0 ? '#FEF08A' : 'transparent', borderRadius: '4px', fontWeight: item.udsAuxiliadora > 0 ? 'bold' : 'normal' }}>
+                                  <span style={{ display: 'inline-block', width: '30px', padding: '2px', background: item.udsAuxiliadora > 0 ? '#FEF08A' : 'transparent', borderRadius: '4px', fontWeight: item.udsAuxiliadora > 0 ? 'bold' : 'normal', color: item.udsAuxiliadora > 0 ? '#1E293B' : '#94A3B8' }}>
                                     {item.udsAuxiliadora || '-'}
                                   </span>
                                 )}
                             </td>
-                            <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                            <td style={{ padding: '4px 8px', textAlign: 'center', fontSize: '12px' }}>
                                 {isEditing ? (
-                                    <input type="number" value={editForm.udsBejar || 0} onChange={e => setEditForm({...editForm, udsBejar: parseInt(e.target.value)||0})} style={{ width: '50px', padding: '6px', borderRadius: '4px', border: '1px solid #CBD5E1', textAlign: 'center' }} />
+                                    <input type="number" value={editForm.udsBejar || 0} onChange={e => setEditForm({...editForm, udsBejar: parseInt(e.target.value)||0})} style={{ width: '50px', padding: '4px', borderRadius: '4px', border: '1px solid #CBD5E1', textAlign: 'center', fontSize: '12px' }} />
                                 ) : (
-                                  <span style={{ display: 'inline-block', width: '30px', padding: '4px', background: item.udsBejar > 0 ? '#FEF08A' : 'transparent', borderRadius: '4px', fontWeight: item.udsBejar > 0 ? 'bold' : 'normal' }}>
+                                  <span style={{ display: 'inline-block', width: '30px', padding: '2px', background: item.udsBejar > 0 ? '#FEF08A' : 'transparent', borderRadius: '4px', fontWeight: item.udsBejar > 0 ? 'bold' : 'normal', color: item.udsBejar > 0 ? '#1E293B' : '#94A3B8' }}>
                                     {item.udsBejar || '-'}
                                   </span>
                                 )}
                             </td>
-                            <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                            <td style={{ padding: '4px 8px', textAlign: 'center', fontSize: '12px' }}>
                                 {isEditing ? (
-                                    <input type="number" value={editForm.udsVillamayor || 0} onChange={e => setEditForm({...editForm, udsVillamayor: parseInt(e.target.value)||0})} style={{ width: '50px', padding: '6px', borderRadius: '4px', border: '1px solid #CBD5E1', textAlign: 'center' }} />
+                                    <input type="number" value={editForm.udsVillamayor || 0} onChange={e => setEditForm({...editForm, udsVillamayor: parseInt(e.target.value)||0})} style={{ width: '50px', padding: '4px', borderRadius: '4px', border: '1px solid #CBD5E1', textAlign: 'center', fontSize: '12px' }} />
                                 ) : (
-                                  <span style={{ display: 'inline-block', width: '30px', padding: '4px', background: item.udsVillamayor > 0 ? '#FEF08A' : 'transparent', borderRadius: '4px', fontWeight: item.udsVillamayor > 0 ? 'bold' : 'normal' }}>
+                                  <span style={{ display: 'inline-block', width: '30px', padding: '2px', background: item.udsVillamayor > 0 ? '#FEF08A' : 'transparent', borderRadius: '4px', fontWeight: item.udsVillamayor > 0 ? 'bold' : 'normal', color: item.udsVillamayor > 0 ? '#1E293B' : '#94A3B8' }}>
                                     {item.udsVillamayor || '-'}
                                   </span>
                                 )}
                             </td>
-                            <td style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 'bold', color: '#0EA5E9', borderLeft: '1px solid #E2E8F0' }}>
+                            <td style={{ padding: '4px 8px', textAlign: 'center', fontWeight: 'bold', color: '#0EA5E9', borderLeft: '1px solid #E2E8F0', fontSize: '12px' }}>
                               {totalUds > 0 ? totalUds : '-'}
                             </td>
-                            <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 'bold', color: '#10B981', background: '#F0FDF4' }}>
+                            <td style={{ padding: '4px 8px', textAlign: 'right', fontWeight: 'bold', color: '#10B981', background: '#F0FDF4', fontSize: '12px' }}>
                               {valorTotal > 0 ? valorTotal.toFixed(2) + ' €' : '-'}
                             </td>
-                            <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                            <td style={{ padding: '4px 8px', textAlign: 'center' }}>
                                 {isEditing ? (
                                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                                        <button onClick={handleSaveRow} style={{ background: '#10b981', border: 'none', borderRadius: '4px', padding: '6px', color: '#fff', cursor: 'pointer' }} title="Guardar"><Save size={16}/></button>
-                                        <button onClick={handleCancel} style={{ background: '#94A3B8', border: 'none', borderRadius: '4px', padding: '6px', color: '#fff', cursor: 'pointer' }} title="Cancelar"><X size={16}/></button>
+                                        <button onClick={handleSaveRow} style={{ background: '#10b981', border: 'none', borderRadius: '4px', padding: '4px 6px', color: '#fff', cursor: 'pointer' }} title="Guardar"><Save size={16}/></button>
+                                        <button onClick={handleCancel} style={{ background: '#94A3B8', border: 'none', borderRadius: '4px', padding: '4px 6px', color: '#fff', cursor: 'pointer' }} title="Cancelar"><X size={16}/></button>
                                     </div>
                                 ) : (
                                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
