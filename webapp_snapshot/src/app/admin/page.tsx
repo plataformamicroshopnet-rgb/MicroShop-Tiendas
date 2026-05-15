@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { Shield, Moon, Sun, Users, Database, CalendarCheck, FileEdit, Info, Briefcase, BookOpen, CalendarDays, Smartphone, Menu, Cloud, Settings, Settings2, ArrowUp, ArrowDown, Save, X, Activity } from 'lucide-react'
+import { Shield, Moon, Sun, Users, Database, CalendarCheck, FileEdit, Info, Briefcase, BookOpen, CalendarDays, Smartphone, Menu, Cloud, Settings, Settings2, ArrowUp, ArrowDown, Save, X, Activity, TrendingUp } from 'lucide-react'
 import { useTheme } from '@/components/ThemeProvider'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -70,6 +70,14 @@ export default function AdminDashboardPage() {
       action: () => router.push('/admin/cloud-backup'),
       color: 'rgba(37, 99, 235, 0.1)',
       textColor: '#2563eb'
+    },
+    {
+      title: 'Ganancias MicroShop',
+      description: 'Dashboard Financiero Macro e Histórico (2011 - 2026).',
+      icon: TrendingUp,
+      action: () => router.push('/admin/ganancias'),
+      color: 'rgba(14, 165, 233, 0.1)',
+      textColor: '#0ea5e9'
     },
     {
       title: 'Trazabilidad y Accesos',

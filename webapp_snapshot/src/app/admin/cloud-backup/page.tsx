@@ -10,7 +10,7 @@ export default function CloudBackupPage() {
   const [backingUp, setBackingUp] = useState(false)
   
   // Estados Fase Restauración
-  const [downloadingDrive, setDownloadingDrive] = useState(false)
+  const [downloadingFTP, setDownloadingFTP] = useState(false)
   const [backupReady, setBackupReady] = useState(false)
   const [readyStats, setReadyStats] = useState<any>(null)
   const [confirmText, setConfirmText] = useState('')
@@ -29,7 +29,7 @@ export default function CloudBackupPage() {
       if (data.success) {
         setBackups(data.files)
       } else {
-        console.error("Error cargando listado Drive:", data.error)
+        console.error("Error cargando listado FTP:", data.error)
       }
     } catch (err) {
       console.error(err)
@@ -59,7 +59,7 @@ export default function CloudBackupPage() {
   const handlePrepareRestore = async (fileId: string) => {
     if (!confirm('¿Seguro que quieres descargar y poner en cuarentena esta copia del QNAP? Se machacará cualquier otra copia en cuarentena.')) return
     
-    setDownloadingDrive(true)
+    setDownloadingFTP(true)
     setBackupReady(false)
     
     try {
@@ -79,7 +79,7 @@ export default function CloudBackupPage() {
     } catch (err) {
       alert('Error crítico de red contactando al servidor.')
     } finally {
-      setDownloadingDrive(false)
+      setDownloadingFTP(false)
     }
   }
 
@@ -121,8 +121,8 @@ export default function CloudBackupPage() {
         backFallback="/admin"
         helpContent={
           <div>
-            <h4 style={{ margin: '0 0 12px 0', color: 'var(--mercedes-cyan)', fontSize: 15 }}>Manual: Google Drive Backups</h4>
-            <p style={{ margin: 0, lineHeight: 1.5 }}>Sincronización segura en la nube corporativa. Vincula el ERP con la carpeta compartida de Google Drive de la empresa para subir las copias de seguridad de forma deslocalizada. Si alguna vez hay un desastre informático, este módulo garantiza que los datos financieros están a salvo.</p>
+            <h4 style={{ margin: '0 0 12px 0', color: 'var(--mercedes-cyan)', fontSize: 15 }}>Manual: QNAP FTP Backups</h4>
+            <p style={{ margin: 0, lineHeight: 1.5 }}>Sincronización segura en tu servidor NAS QNAP. Vincula el programa con tu servidor FTP para subir las copias de seguridad de forma automatizada y deslocalizada de la red principal. Si alguna vez hay un desastre informático, este módulo garantiza que la base de datos está a salvo.</p>
           </div>
         }
       />
@@ -188,7 +188,7 @@ export default function CloudBackupPage() {
                 Las copias se generan automáticamente cada madrugada y se retienen 14 días.
                 </p>
              </div>
-             <button onClick={handleManualBackup} disabled={backingUp || downloadingDrive} style={{ padding: '10px 20px', background: '#111827', color: '#ffffff', border: 'none', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: 8, fontSize: '13px', fontWeight: 600, transition: 'all 0.2s ease', cursor: (backingUp || downloadingDrive) ? 'wait' : 'pointer' }}>
+             <button onClick={handleManualBackup} disabled={backingUp || downloadingFTP} style={{ padding: '10px 20px', background: '#111827', color: '#ffffff', border: 'none', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: 8, fontSize: '13px', fontWeight: 600, transition: 'all 0.2s ease', cursor: (backingUp || downloadingFTP) ? 'wait' : 'pointer' }}>
                 <CloudUpload size={16} /> 
                 {backingUp ? 'Subiendo a Nube...' : 'Lanzar Copia Manual Ahora'}
              </button>
@@ -235,7 +235,7 @@ export default function CloudBackupPage() {
                            <td style={{ padding: '16px', textAlign: 'right' }}>
                              <button 
                                onClick={() => handlePrepareRestore(file.id)}
-                               disabled={downloadingDrive || backingUp}
+                               disabled={downloadingFTP || backingUp}
                                style={{ padding: '8px 16px', background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: '8px', fontWeight: 600, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s' }}
                              >
                                 <HardDriveDownload size={14} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />

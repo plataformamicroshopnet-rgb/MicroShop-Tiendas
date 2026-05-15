@@ -594,3 +594,35 @@ model MovilFreeReparacion {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
+
+model MacroFinanceRecord {
+  id                         String   @id @default(cuid())
+  year                       Int
+  month                      Int
+  
+  // Totales Generales
+  totalCobradoIva            Float    @default(0)
+  totalCobradoSinIva         Float    @default(0)
+
+  // Tiendas
+  cajaTiendas                Float    @default(0)
+  comisionesTiendasLocales   Float    @default(0)
+  prvTiendas                 Float    @default(0)
+  gastosTiendas              Float    @default(0)
+  comisionesTiendas          Float    @default(0)
+
+  // FFVV
+  cajaFfvv                   Float    @default(0)
+  produccionPlus             Float    @default(0)
+  produccionBasico           Float    @default(0)
+  prvFfvv                    Float    @default(0)
+  gastosFfvv                 Float    @default(0)
+
+  // Comerciales para calcular la media
+  numComercialesFfvv         Float    @default(0)
+
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+
+  @@unique([year, month])
+}

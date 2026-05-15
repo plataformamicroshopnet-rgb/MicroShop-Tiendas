@@ -587,7 +587,7 @@ export default function IVAPage() {
                 <RechartsTooltip 
                   cursor={{fill: 'rgba(0,173,239,0.05)'}} 
                   contentStyle={{background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, fontSize: 13, fontWeight: 600, color: 'var(--light-text)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}} 
-                  formatter={(val: number, name: string) => [new Intl.NumberFormat('es-ES', {style: 'currency', currency: 'EUR'}).format(val), `Año ${name}`]} 
+                  formatter={(val: any, name: any) => [new Intl.NumberFormat('es-ES', {style: 'currency', currency: 'EUR'}).format(val), `Trimestre ${name}`]} 
                   labelStyle={{color: 'var(--medium-gray)', marginBottom: 4}}
                 />
                 {[...historicoAños].sort((a,b) => a.year - b.year).map((row, index) => {
