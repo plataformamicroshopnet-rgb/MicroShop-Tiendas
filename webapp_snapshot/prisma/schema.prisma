@@ -626,3 +626,64 @@ model MacroFinanceRecord {
 
   @@unique([year, month])
 }
+
+model PatrimonioRecord {
+  id String @id @default(cuid())
+  year Int @unique
+  
+  // Pasivos
+  lineaCredito Float @default(0)
+  cuentaCorriente Float @default(0)
+  icoUnicaja1 Float @default(0)
+  depositoIberabal Float @default(0)
+  icoUnicaja2 Float @default(0)
+  impuestosHacienda Float @default(0)
+  aplazamientoHacienda Float @default(0)
+  prestamoPadres Float @default(0)
+  pagoMultaHacienda Float @default(0)
+  despidos Float @default(0)
+  inversionOficinas Float @default(0)
+  creditoTitoVergara Float @default(0)
+  creditoMicroInfor Float @default(0)
+  creditoEmpresaPiso Float @default(0)
+  
+  // Deudas adicionales
+  deudaZeleris Float @default(0)
+  deudaMovistar Float @default(0)
+
+  // Activos / Patrimonio
+  stockMovistar Float @default(0)
+  stockMovilfree Float @default(0)
+  valorEmpresa Float @default(0)
+  planPensiones Float @default(0)
+  cuentasYCaja Float @default(0)
+  prestamosEmpresa Float @default(0)
+  prestamosHipotecaCampoamor Float @default(0)
+  pisosCampoamorRecreo Float @default(0)
+  pisosPrincipeVergara Float @default(0)
+  valorCoche Float @default(0)
+
+  // Liquidez �ngel Luis (Fase 2)
+  liqSantander                 Float @default(0) // Banco Santander Cuenta Personal
+  liqUnicaja                   Float @default(0) // Unicaja Cuenta Personal
+  liqCajaMetalico              Float @default(0) // Caja Met�lico
+  liqRentaCampoamor            Float @default(0) // Renta Piso Avenida de Campoamor
+  liqRentaRecreo               Float @default(0) // Renta Piso Calle Recreo
+  liqRentaVillaviciosa         Float @default(0) // Renta Piso Calle Villaviciosa
+  // planPensiones is shared with Retrospectiva
+  liqPrestamoEmpresaPiso       Float @default(0) // Prestamo mio a la Empresa del Piso
+  liqPrestamoEmpresa           Float @default(0) // Prestamo mio a la Empresa
+  liqPrestamoEmpresaImpuestos  Float @default(0) // Prestamo mio a la Empresa Impuestos
+  liqPrestamoEmpresaFinMes     Float @default(0) // Prestamo mio a la Empresa Fin de Mes
+  liqInteresesPrestamo         Float @default(0) // Intereses Prestamo a la Empresa
+  liqSueldos                   Float @default(0) // Sueldos
+  liqPisoCampoamor             Float @default(0) // Piso Avenida de Campoamor N�30, 4�C
+  liqPisoRecreo                Float @default(0) // Piso Calle Recreo N�13, 2�
+  liqPisoVillaviciosa          Float @default(0) // Piso Calle Villaviciosa N�28-32, 2A
+  liqHipotecaCampoamor1        Float @default(0) // Unicaja Hipoteca Campoamor (1)
+  liqHipotecaCampoamor2        Float @default(0) // Unicaja Hipoteca Campoamor (2)
+  liqHacienda                  Float @default(0) // Hacienda
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

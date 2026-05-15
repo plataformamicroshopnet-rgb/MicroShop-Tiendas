@@ -411,7 +411,7 @@ export default function GastosPage() {
               <React.Fragment key={grupo.grupo}>
                 {/* Cabecera Grupo */}
                 <tr style={{ background: 'rgba(0,173,239,0.05)', borderTop: '2px solid var(--border-color)', borderBottom: '1px solid var(--border-color)' }}>
-                  <td colSpan={15} style={{ padding: '10px 16px', fontWeight: 800, color: 'var(--mercedes-cyan)', position: 'sticky', left: 0 }}>
+                  <td colSpan={15} style={{ padding: '6px 16px', fontWeight: 800, color: 'var(--mercedes-cyan)', position: 'sticky', left: 0 }}>
                     {grupo.grupo.toUpperCase()}
                   </td>
                 </tr>
@@ -419,7 +419,7 @@ export default function GastosPage() {
                 {/* Filas de Conceptos */}
                 {grupo.conceptos.map(concepto => (
                   <tr key={concepto.concepto} style={{ borderBottom: '1px solid var(--border-color)', transition: 'background 0.2s' }} className="table-row-hover">
-                    <td style={{ padding: '8px 16px', fontWeight: 600, color: 'var(--light-text)', position: 'sticky', left: 0, background: 'var(--bg-card)' }}>
+                    <td style={{ padding: '4px 16px', fontWeight: 600, color: 'var(--light-text)', position: 'sticky', left: 0, background: 'var(--bg-card)' }}>
                       {editingConcepto?.grupo === grupo.grupo && editingConcepto?.oldConcepto === concepto.concepto ? (
                         <input 
                           type="text"
@@ -445,12 +445,12 @@ export default function GastosPage() {
                         <React.Fragment key={m.id}>
                           {isExpanded && (
                             <>
-                              <td style={{ padding: '4px 8px', textAlign: 'right', background: 'rgba(0,173,239,0.02)' }}>
+                              <td style={{ padding: '2px 8px', textAlign: 'right', background: 'rgba(0,173,239,0.02)' }}>
                                 <input 
                                   type="text" 
                                   defaultValue={valC === 0 ? '' : valC}
                                   placeholder="-"
-                                  style={{ width: '100%', textAlign: 'right', background: 'transparent', border: '1px solid transparent', borderRadius: 4, padding: '4px', color: valC === 0 ? 'var(--medium-gray)' : 'var(--light-text)', fontSize: 12 }}
+                                  style={{ width: '100%', textAlign: 'right', background: 'transparent', border: '1px solid transparent', borderRadius: 4, padding: '2px', color: valC === 0 ? 'var(--medium-gray)' : 'var(--light-text)', fontSize: 12 }}
                                   onFocus={e => e.target.style.border = '1px solid var(--mercedes-cyan)'}
                                   onBlur={e => {
                                     e.target.style.border = '1px solid transparent'
@@ -458,12 +458,12 @@ export default function GastosPage() {
                                   }}
                                 />
                               </td>
-                              <td style={{ padding: '4px 8px', textAlign: 'right', background: 'rgba(0,173,239,0.02)' }}>
+                              <td style={{ padding: '2px 8px', textAlign: 'right', background: 'rgba(0,173,239,0.02)' }}>
                                 <input 
                                   type="text" 
                                   defaultValue={valR === 0 ? '' : valR}
                                   placeholder="-"
-                                  style={{ width: '100%', textAlign: 'right', background: 'transparent', border: '1px solid transparent', borderRadius: 4, padding: '4px', color: valR === 0 ? 'var(--medium-gray)' : 'var(--light-text)', fontSize: 12 }}
+                                  style={{ width: '100%', textAlign: 'right', background: 'transparent', border: '1px solid transparent', borderRadius: 4, padding: '2px', color: valR === 0 ? 'var(--medium-gray)' : 'var(--light-text)', fontSize: 12 }}
                                   onFocus={e => e.target.style.border = '1px solid var(--mercedes-cyan)'}
                                   onBlur={e => {
                                     e.target.style.border = '1px solid transparent'
@@ -471,12 +471,12 @@ export default function GastosPage() {
                                   }}
                                 />
                               </td>
-                              <td style={{ padding: '4px 8px', textAlign: 'right', background: 'rgba(0,173,239,0.02)' }}>
+                              <td style={{ padding: '2px 8px', textAlign: 'right', background: 'rgba(0,173,239,0.02)' }}>
                                 <input 
                                   type="text" 
                                   defaultValue={valDif === 0 ? '' : valDif}
                                   placeholder="-"
-                                  style={{ width: '100%', textAlign: 'right', background: 'transparent', border: '1px solid transparent', borderRadius: 4, padding: '4px', color: valDif === 0 ? 'var(--medium-gray)' : 'var(--light-text)', fontSize: 12 }}
+                                  style={{ width: '100%', textAlign: 'right', background: 'transparent', border: '1px solid transparent', borderRadius: 4, padding: '2px', color: valDif === 0 ? 'var(--medium-gray)' : 'var(--light-text)', fontSize: 12 }}
                                   onFocus={e => e.target.style.border = '1px solid var(--mercedes-cyan)'}
                                   onBlur={e => {
                                     e.target.style.border = '1px solid transparent'
@@ -486,12 +486,12 @@ export default function GastosPage() {
                               </td>
                             </>
                           )}
-                          <td style={{ padding: '4px 4px', textAlign: 'right', background: isExpanded ? 'rgba(0,173,239,0.05)' : 'rgba(0,173,239,0.02)' }}>
+                          <td style={{ padding: '2px 4px', textAlign: 'right', background: isExpanded ? 'rgba(0,173,239,0.05)' : 'rgba(0,173,239,0.02)' }}>
                             <input 
                               type="text" 
                               defaultValue={valTotal === 0 ? '' : valTotal}
                               placeholder="-"
-                              style={{ width: '100%', textAlign: 'center', background: 'transparent', border: '1px solid transparent', borderRadius: 4, padding: '4px', color: valTotal === 0 ? 'var(--medium-gray)' : 'var(--text-main)', fontSize: 12, fontWeight: isExpanded ? 600 : 400 }}
+                              style={{ width: '100%', textAlign: 'center', background: 'transparent', border: '1px solid transparent', borderRadius: 4, padding: '2px', color: valTotal === 0 ? 'var(--medium-gray)' : 'var(--text-main)', fontSize: 12, fontWeight: isExpanded ? 600 : 400 }}
                               onFocus={e => e.target.style.border = '1px solid var(--mercedes-cyan)'}
                               onBlur={e => {
                                 e.target.style.border = '1px solid transparent'
@@ -502,10 +502,10 @@ export default function GastosPage() {
                         </React.Fragment>
                       )
                     })}
-                    <td style={{ padding: '8px 16px', textAlign: 'right', fontWeight: 800, color: 'var(--text-main)' }}>
+                    <td style={{ padding: '4px 16px', textAlign: 'right', fontWeight: 800, color: 'var(--text-main)' }}>
                       {formatEuro(concepto.totalAnual)}
                     </td>
-                    <td style={{ padding: '8px 12px', textAlign: 'center', display: 'flex', justifyContent: 'center', gap: 12, alignItems: 'center', height: '100%' }}>
+                    <td style={{ padding: '4px 12px', textAlign: 'center', display: 'flex', justifyContent: 'center', gap: 12, alignItems: 'center', height: '100%' }}>
                       <button 
                         onClick={() => { setEditingConcepto({ grupo: grupo.grupo, oldConcepto: concepto.concepto }); setNewConceptoName(concepto.concepto); }}
                         style={{ background: 'transparent', border: 'none', color: 'var(--mercedes-cyan)', cursor: 'pointer', padding: 0 }}
@@ -526,8 +526,8 @@ export default function GastosPage() {
                 
                 {/* Subtotal Grupo */}
                 <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-color)' }}>
-                  <td style={{ padding: '10px 16px', fontWeight: 700, color: 'var(--medium-gray)', position: 'sticky', left: 0, background: 'rgba(255,255,255,0.02)' }}>
-                    Total {grupo.grupo}
+                  <td style={{ padding: '6px 16px', fontWeight: 700, color: 'var(--medium-gray)', position: 'sticky', left: 0, background: 'rgba(255,255,255,0.02)' }}>
+                    {['Gastos Fijos', 'Gastos Variables'].includes(grupo.grupo) ? 'Totales' : `Total ${grupo.grupo}`}
                   </td>
                   {MESES.map((m, i) => {
                     const isExpanded = expandedMonths.includes(m.id)
@@ -540,18 +540,18 @@ export default function GastosPage() {
                       <React.Fragment key={m.id}>
                         {isExpanded && (
                           <>
-                            <td style={{ padding: '10px 8px', textAlign: 'right', fontSize: 12, color: 'var(--medium-gray)', background: 'rgba(0,173,239,0.02)' }}>{formatEuro(totalC)}</td>
-                            <td style={{ padding: '10px 8px', textAlign: 'right', fontSize: 12, color: 'var(--medium-gray)', background: 'rgba(0,173,239,0.02)' }}>{formatEuro(totalR)}</td>
-                            <td style={{ padding: '10px 8px', textAlign: 'right', fontSize: 12, color: 'var(--medium-gray)', background: 'rgba(0,173,239,0.02)' }}>{formatEuro(totalDif)}</td>
+                            <td style={{ padding: '6px 8px', textAlign: 'right', fontSize: 12, color: 'var(--medium-gray)', background: 'rgba(0,173,239,0.02)' }}>{formatEuro(totalC)}</td>
+                            <td style={{ padding: '6px 8px', textAlign: 'right', fontSize: 12, color: 'var(--medium-gray)', background: 'rgba(0,173,239,0.02)' }}>{formatEuro(totalR)}</td>
+                            <td style={{ padding: '6px 8px', textAlign: 'right', fontSize: 12, color: 'var(--medium-gray)', background: 'rgba(0,173,239,0.02)' }}>{formatEuro(totalDif)}</td>
                           </>
                         )}
-                        <td style={{ padding: '10px 4px', textAlign: 'center', fontWeight: 600, color: 'var(--medium-gray)', background: isExpanded ? 'rgba(0,173,239,0.05)' : 'rgba(0,173,239,0.02)' }}>
+                        <td style={{ padding: '6px 4px', textAlign: 'center', fontWeight: 600, color: 'var(--medium-gray)', background: isExpanded ? 'rgba(0,173,239,0.05)' : 'rgba(0,173,239,0.02)' }}>
                           {formatEuro(totalMes)}
                         </td>
                       </React.Fragment>
                     )
                   })}
-                  <td style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 800, color: 'var(--mercedes-cyan)' }}>
+                  <td style={{ padding: '6px 16px', textAlign: 'right', fontWeight: 800, color: 'var(--mercedes-cyan)' }}>
                     {formatEuro(grupo.conceptos.reduce((acc, c) => acc + c.totalAnual, 0))}
                   </td>
                   <td></td>
@@ -702,21 +702,7 @@ export default function GastosPage() {
         subtitle="Control integral de partidas, ingresos y contención de gastos con comparativa histórica interanual."
       />
 
-      {/* DASHBOARD METRICS */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 16, marginBottom: 24 }}>
-        <div style={{ background: 'var(--bg-card)', padding: '20px 24px', borderRadius: 16, border: '1px solid var(--border-color)', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
-          <p style={{ margin: '0 0 4px 0', fontSize: 12, color: 'var(--medium-gray)', fontWeight: 600, textTransform: 'uppercase' }}>Gastos Totales ({activeYear})</p>
-          <h2 style={{ margin: 0, fontSize: 28, color: 'var(--brand-danger)' }}>{formatEuro(totalesAnuales.gastos)}</h2>
-        </div>
-        <div style={{ background: 'var(--bg-card)', padding: '20px 24px', borderRadius: 16, border: '1px solid var(--border-color)', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
-          <p style={{ margin: '0 0 4px 0', fontSize: 12, color: 'var(--medium-gray)', fontWeight: 600, textTransform: 'uppercase' }}>Ingresos Registrados ({activeYear})</p>
-          <h2 style={{ margin: 0, fontSize: 28, color: '#10b981' }}>{formatEuro(totalesAnuales.ingresos)}</h2>
-        </div>
-        <div style={{ background: 'var(--bg-card)', padding: '20px 24px', borderRadius: 16, border: '1px solid var(--border-color)', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
-          <p style={{ margin: '0 0 4px 0', fontSize: 12, color: 'var(--medium-gray)', fontWeight: 600, textTransform: 'uppercase' }}>Resultado Operativo</p>
-          <h2 style={{ margin: 0, fontSize: 28, color: totalesAnuales.beneficio >= 0 ? '#10b981' : 'var(--brand-danger)' }}>{formatEuro(totalesAnuales.beneficio)}</h2>
-        </div>
-      </div>
+      {/* DASHBOARD METRICS REMOVED AS REQUESTED */}
 
       {/* NAVIGATION TABS & YEAR SELECTOR */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
