@@ -684,3 +684,27 @@ model PatrimonioRecord {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model ComisionFFVVTienda {
+  id           String      @id @default(uuid())
+  periodKey    String
+  tipo         String      // "FFVV" o "TIENDA"
+  nombre       String
+  importe      Float?      @default(0)
+  aceleradores Float?      @default(0)
+  descuentos   Float?      @default(0)
+  dietas       Float?      @default(0)
+  km           Float?      @default(0)
+  gasolina     Float?      @default(0)
+  incentivos   Float?      @default(0)
+  o2Varios     Float?      @default(0)
+  total        Float?      @default(0)
+  
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model ComisionMetadata {
+  periodKey String @id
+  titulo    String?
+}

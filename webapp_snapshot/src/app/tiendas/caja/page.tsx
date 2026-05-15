@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Calculator, Plus, Trash2, CheckCircle2, CircleDashed, Clock, ChevronDown, X } from 'lucide-react'
+import { ArrowLeft, Calculator, Plus, Trash2, CheckCircle2, CircleDashed, Clock, ChevronDown, X, Printer } from 'lucide-react'
 import { useGuard } from '@/hooks/useGuard'
 import { canView } from '@/lib/permissions'
 
 // Importamos el mapeo de tiendas para saber dónde cae el usuario actual
-import { TIENDAS_COMERCIALES } from '@/lib/constants'
+import { TIENDAS_COMERCIALES, VENDEDORES } from '@/lib/constants'
 
 type CajaEntry = {
   id: string
@@ -105,6 +105,53 @@ export default function CajaTiendasPage() {
     detalle: ''
   })
 
+  // --- Modal Imprimir ---
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false)
+  const [printData, setPrintData] = useState({
+    fecha: new Date().toISOString().split('T')[0],
+    vendedor: '',
+    receptor: '',
+    concepto: '',
+    importe: ''
+  })
+  
+  const handlePrint = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsPrintModalOpen(false);
+    
+    const printElement = document.getElementById('print-receipt-container');
+    if (!printElement) return;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+       alert('Por favor, permite las ventanas emergentes (pop-ups) para imprimir el justificante.');
+       return;
+    }
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Justificante de Salida - MicroShop</title>
+          <style>
+            body { font-family: sans-serif; padding: 0; margin: 0; background: white; color: black; }
+            * { box-sizing: border-box; }
+            @page { size: A4; margin: 0; }
+          </style>
+        </head>
+        <body>
+          ${printElement.innerHTML}
+          <script>
+            setTimeout(() => {
+              window.print();
+              window.close();
+            }, 300);
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  }
+
   const handleAddEntry = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newEntry.importe || isNaN(Number(newEntry.importe))) return
@@ -191,6 +238,7 @@ export default function CajaTiendasPage() {
   if (!authorized || !userTienda) return null
 
   return (
+    <>
     <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', paddingBottom: 60 }}>
       {/* Header Premium */}
       <header style={{ background: '#ffffff', borderBottom: '1px solid rgba(226, 232, 240, 0.8)', padding: '24px 32px', position: 'sticky', top: 0, zIndex: 40, boxShadow: '0 4px 20px -10px rgba(15, 23, 42, 0.05)' }}>
@@ -219,6 +267,9 @@ export default function CajaTiendasPage() {
                 Saldo {activeTab}: {currentSaldo.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
              </div>
              
+             <button onClick={() => setIsPrintModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 20px', height: 44, borderRadius: 12, background: '#ffffff', border: '1px solid #e2e8f0', color: '#334155', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(15, 23, 42, 0.05)' }}>
+                <Printer size={18} /> Imprimir Salida
+             </button>
              <button onClick={() => setIsModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 20px', height: 44, borderRadius: 12, background: '#00adef', border: 'none', color: '#fff', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 10px rgba(0, 173, 239, 0.3)', transition: 'all 0.2s' }}>
                 <Plus size={18} /> Añadir Movimiento
              </button>
@@ -435,5 +486,222 @@ export default function CajaTiendasPage() {
       )}
 
     </div>
+
+    {/* Modal Imprimir Justificante */}
+    {isPrintModalOpen && (
+      <div className="no-print" style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15, 23, 42, 0.4)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)' }}>
+         <div style={{ background: '#ffffff', borderRadius: 24, width: '100%', maxWidth: 460, padding: '36px 40px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(226, 232, 240, 0.8)', position: 'relative' }}>
+            
+            <button onClick={() => setIsPrintModalOpen(false)} style={{ position: 'absolute', top: 24, right: 24, background: '#f1f5f9', border: 'none', color: '#64748b', cursor: 'pointer', width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.background = '#e2e8f0'; e.currentTarget.style.color = '#0f172a'; }} onMouseLeave={e => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = '#64748b'; }}>
+              <X size={20} />
+            </button>
+
+            <div style={{ marginBottom: 28, display: 'flex', alignItems: 'center', gap: 12 }}>
+               <div style={{ background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.05) 0%, rgba(15, 23, 42, 0.1) 100%)', color: '#334155', padding: 12, borderRadius: 14 }}>
+                  <Printer size={24} strokeWidth={2.5} />
+               </div>
+               <div>
+                  <h2 style={{ margin: 0, fontSize: 24, fontWeight: 900, color: '#0f172a', letterSpacing: '-0.5px' }}>Imprimir Justificante</h2>
+                  <p style={{ margin: 0, color: '#64748b', fontSize: 14, fontWeight: 500 }}>Genera un documento PDF/Papel de salida</p>
+               </div>
+            </div>
+
+            <form onSubmit={handlePrint} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+               
+               <div style={{ display: 'flex', gap: 16 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#475569', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      Fecha
+                    </label>
+                    <input className="premium-input" type="date" required value={printData.fecha} onChange={e => setPrintData({...printData, fecha: e.target.value})} style={{ width: '100%', height: 44, borderRadius: 12, padding: '0 16px', fontSize: 15, fontWeight: 600, fontFamily: 'inherit' }} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#475569', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      Tienda
+                    </label>
+                    <input className="premium-input" type="text" readOnly value={activeTab} style={{ width: '100%', height: 44, borderRadius: 12, padding: '0 16px', fontSize: 15, fontWeight: 600, background: '#f1f5f9', color: '#64748b', cursor: 'not-allowed' }} />
+                  </div>
+               </div>
+
+               <div style={{ display: 'flex', gap: 16 }}>
+                  <div style={{ flex: 1 }}>
+                     <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#475569', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                       Persona que entrega
+                     </label>
+                     <div style={{ position: 'relative' }}>
+                       <select className="premium-input" required value={printData.vendedor} onChange={e => setPrintData({...printData, vendedor: e.target.value})} style={{ width: '100%', height: 44, borderRadius: 12, padding: '0 16px', fontSize: 15, appearance: 'none', cursor: 'pointer', fontWeight: 600 }}>
+                         <option value="" disabled>Selecciona...</option>
+                         {VENDEDORES.map(v => <option key={v} value={v}>{v}</option>)}
+                       </select>
+                       <ChevronDown size={18} style={{ position: 'absolute', right: 16, top: 13, color: '#64748b', pointerEvents: 'none' }} />
+                     </div>
+                  </div>
+               </div>
+
+               <div>
+                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#475569', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                   A quién se lo dan
+                 </label>
+                 <input className="premium-input" type="text" required value={printData.receptor} onChange={e => setPrintData({...printData, receptor: e.target.value})} placeholder="Nombre del receptor" style={{ width: '100%', height: 44, borderRadius: 12, padding: '0 16px', fontSize: 15, fontWeight: 500 }} />
+               </div>
+
+               <div>
+                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#475569', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                   Concepto
+                 </label>
+                 <input className="premium-input" type="text" required value={printData.concepto} onChange={e => setPrintData({...printData, concepto: e.target.value})} placeholder="Motivo de la salida..." style={{ width: '100%', height: 44, borderRadius: 12, padding: '0 16px', fontSize: 15, fontWeight: 500 }} />
+               </div>
+
+               <div>
+                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#475569', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                   Importe (€)
+                 </label>
+                 <input className="premium-input" type="number" step="0.01" required value={printData.importe} onChange={e => setPrintData({...printData, importe: e.target.value})} placeholder="0.00" style={{ width: '100%', height: 44, borderRadius: 12, padding: '0 16px', fontSize: 18, fontWeight: 800 }} />
+               </div>
+
+               <button className="premium-btn" type="submit" style={{ marginTop: 12, height: 52, borderRadius: 14, background: '#1e293b', color: '#fff', border: 'none', fontWeight: 800, fontSize: 16, cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 14px rgba(15, 23, 42, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, letterSpacing: '0.5px' }}>
+                 GENERAR E IMPRIMIR <Printer size={18} />
+               </button>
+
+            </form>
+         </div>
+      </div>
+    )}
+
+    {/* CONTENEDOR DE IMPRESIÓN (OCULTO EN PANTALLA) */}
+    {/* CONTENEDOR DE IMPRESIÓN (OCULTO EN PANTALLA) */}
+    <div id="print-receipt-container" style={{ display: 'none', fontFamily: 'sans-serif', color: '#000', backgroundColor: '#fff' }}>
+       
+       {/* COPIA TIENDA */}
+       <div style={{ padding: '30px 40px', height: '48vh', boxSizing: 'border-box', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: 30, left: 40, background: '#f1f5f9', padding: '4px 12px', borderRadius: '4px', fontSize: '11px', fontWeight: 800, color: '#475569', letterSpacing: '0.5px' }}>
+             COPIA PARA TIENDA
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #00adef', paddingBottom: '16px', marginBottom: '24px', paddingTop: '20px' }}>
+             <div>
+               <h1 style={{ margin: 0, color: '#00adef', fontSize: '28px', fontWeight: 900, letterSpacing: '-1px' }}>MicroShop</h1>
+               <p style={{ margin: 0, fontSize: '11px', color: '#666', marginTop: '2px' }}>Telecomunicaciones y Tecnología</p>
+             </div>
+             <div style={{ textAlign: 'right' }}>
+               <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#333' }}>JUSTIFICANTE DE SALIDA</h2>
+               <p style={{ margin: 0, fontSize: '13px', color: '#666', marginTop: '2px' }}>{new Date(printData.fecha).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+             </div>
+          </div>
+
+          <div style={{ backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '24px' }}>
+             <div style={{ display: 'flex', marginBottom: '16px' }}>
+                <div style={{ flex: 1 }}>
+                   <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Tienda / Origen</p>
+                   <p style={{ margin: '4px 0 0 0', fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>{activeTab}</p>
+                </div>
+                <div style={{ flex: 1 }}>
+                   <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Comercial (Entregado por)</p>
+                   <p style={{ margin: '4px 0 0 0', fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>{printData.vendedor || '-'}</p>
+                </div>
+             </div>
+             <div style={{ display: 'flex' }}>
+                <div style={{ flex: 1 }}>
+                   <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Receptor (Entregado a)</p>
+                   <p style={{ margin: '4px 0 0 0', fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>{printData.receptor || '-'}</p>
+                </div>
+                <div style={{ flex: 1 }}>
+                   <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Importe Total</p>
+                   <p style={{ margin: '4px 0 0 0', fontSize: '20px', fontWeight: 900, color: '#ef4444' }}>
+                      {Number(printData.importe || 0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                   </p>
+                </div>
+             </div>
+          </div>
+
+          <div style={{ marginBottom: '40px' }}>
+             <p style={{ margin: 0, fontSize: '12px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '6px' }}>Concepto / Motivo de la salida</p>
+             <div style={{ border: '1px solid #e2e8f0', padding: '12px', borderRadius: '8px', minHeight: '60px', fontSize: '14px', color: '#333' }}>
+                {printData.concepto || '-'}
+             </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 40px' }}>
+             <div style={{ textAlign: 'center', width: '220px' }}>
+                <div style={{ borderBottom: '1px solid #000', height: '50px', marginBottom: '10px' }}></div>
+                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700 }}>Firma Comercial</p>
+                <p style={{ margin: 0, fontSize: '11px', color: '#666' }}>{printData.vendedor}</p>
+             </div>
+             <div style={{ textAlign: 'center', width: '220px' }}>
+                <div style={{ borderBottom: '1px solid #000', height: '50px', marginBottom: '10px' }}></div>
+                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700 }}>Firma Receptor</p>
+                <p style={{ margin: 0, fontSize: '11px', color: '#666' }}>{printData.receptor}</p>
+             </div>
+          </div>
+       </div>
+
+       {/* LÍNEA DE CORTE */}
+       <div style={{ borderTop: '2px dashed #cbd5e1', width: '100%', position: 'relative' }}>
+          <div style={{ position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)', background: '#fff', padding: '0 10px', color: '#94a3b8', fontSize: '12px' }}>✂️ LÍNEA DE CORTE ✂️</div>
+       </div>
+
+       {/* COPIA RECEPTOR */}
+       <div style={{ padding: '30px 40px', height: '48vh', boxSizing: 'border-box', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: 30, left: 40, background: '#f1f5f9', padding: '4px 12px', borderRadius: '4px', fontSize: '11px', fontWeight: 800, color: '#475569', letterSpacing: '0.5px' }}>
+             COPIA PARA RECEPTOR
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #00adef', paddingBottom: '16px', marginBottom: '24px', paddingTop: '20px' }}>
+             <div>
+               <h1 style={{ margin: 0, color: '#00adef', fontSize: '28px', fontWeight: 900, letterSpacing: '-1px' }}>MicroShop</h1>
+               <p style={{ margin: 0, fontSize: '11px', color: '#666', marginTop: '2px' }}>Telecomunicaciones y Tecnología</p>
+             </div>
+             <div style={{ textAlign: 'right' }}>
+               <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#333' }}>JUSTIFICANTE DE SALIDA</h2>
+               <p style={{ margin: 0, fontSize: '13px', color: '#666', marginTop: '2px' }}>{new Date(printData.fecha).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+             </div>
+          </div>
+
+          <div style={{ backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '24px' }}>
+             <div style={{ display: 'flex', marginBottom: '16px' }}>
+                <div style={{ flex: 1 }}>
+                   <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Tienda / Origen</p>
+                   <p style={{ margin: '4px 0 0 0', fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>{activeTab}</p>
+                </div>
+                <div style={{ flex: 1 }}>
+                   <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Comercial (Entregado por)</p>
+                   <p style={{ margin: '4px 0 0 0', fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>{printData.vendedor || '-'}</p>
+                </div>
+             </div>
+             <div style={{ display: 'flex' }}>
+                <div style={{ flex: 1 }}>
+                   <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Receptor (Entregado a)</p>
+                   <p style={{ margin: '4px 0 0 0', fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>{printData.receptor || '-'}</p>
+                </div>
+                <div style={{ flex: 1 }}>
+                   <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Importe Total</p>
+                   <p style={{ margin: '4px 0 0 0', fontSize: '20px', fontWeight: 900, color: '#ef4444' }}>
+                      {Number(printData.importe || 0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                   </p>
+                </div>
+             </div>
+          </div>
+
+          <div style={{ marginBottom: '40px' }}>
+             <p style={{ margin: 0, fontSize: '12px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '6px' }}>Concepto / Motivo de la salida</p>
+             <div style={{ border: '1px solid #e2e8f0', padding: '12px', borderRadius: '8px', minHeight: '60px', fontSize: '14px', color: '#333' }}>
+                {printData.concepto || '-'}
+             </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 40px' }}>
+             <div style={{ textAlign: 'center', width: '220px' }}>
+                <div style={{ borderBottom: '1px solid #000', height: '50px', marginBottom: '10px' }}></div>
+                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700 }}>Firma Comercial</p>
+                <p style={{ margin: 0, fontSize: '11px', color: '#666' }}>{printData.vendedor}</p>
+             </div>
+             <div style={{ textAlign: 'center', width: '220px' }}>
+                <div style={{ borderBottom: '1px solid #000', height: '50px', marginBottom: '10px' }}></div>
+                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700 }}>Firma Receptor</p>
+                <p style={{ margin: 0, fontSize: '11px', color: '#666' }}>{printData.receptor}</p>
+             </div>
+          </div>
+       </div>
+
+    </div>
+    </>
   )
 }

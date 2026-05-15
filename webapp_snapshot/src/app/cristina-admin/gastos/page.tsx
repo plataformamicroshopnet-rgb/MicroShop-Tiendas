@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
-import { Receipt, ArrowLeft, Download, Plus, Save, TrendingUp, X, Filter, BarChart2, Table as TableIcon, Edit2, Trash2 } from 'lucide-react'
+import { Receipt, ArrowLeft, Download, Plus, Save, TrendingUp, X, Filter, BarChart2, Table as TableIcon, Edit2, Trash2, Copy } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
 import Link from 'next/link'
 import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid, LabelList } from 'recharts'
@@ -150,6 +150,59 @@ export default function GastosPage() {
       }
     } catch (e) {
       console.error(e)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCloneYear = async () => {
+    if (!window.confirm(`¿Seguro que quieres clonar las partidas del año ${activeYear - 1} al año ${activeYear}? Esto copiará toda la estructura con los importes a 0.`)) return
+    
+    setLoading(true)
+    try {
+      const resPrev = await fetch(`/api/gastos?year=${activeYear - 1}`)
+      const dataPrev = await resPrev.json()
+      
+      if (!dataPrev.success || !dataPrev.data || dataPrev.data.length === 0) {
+        alert(`No hay datos en el año ${activeYear - 1} para clonar.`)
+        setLoading(false)
+        return
+      }
+
+      const recordsToClone = dataPrev.data.filter((g: any) => g.grupo !== 'IVA')
+
+      if (recordsToClone.length === 0) {
+        alert(`No hay gastos en el año ${activeYear - 1} para clonar.`)
+        setLoading(false)
+        return
+      }
+
+      const items = recordsToClone.map((g: any) => ({
+        year: activeYear,
+        month: g.month,
+        grupo: g.grupo,
+        concepto: g.concepto,
+        importe_c: 0,
+        importe_r: 0,
+        importe_dif: 0,
+        importe_total: 0
+      }))
+
+      const res = await fetch('/api/gastos', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items })
+      })
+      
+      const data = await res.json()
+      if (data.success) {
+        fetchGastos()
+      } else {
+        alert('Error al clonar: ' + data.error)
+      }
+    } catch (e) {
+      console.error(e)
+      alert('Error al clonar.')
     } finally {
       setLoading(false)
     }
@@ -646,7 +699,7 @@ export default function GastosPage() {
                       fill="var(--light-text)"
                       fontSize={13}
                       fontWeight={700}
-                      formatter={(val: number) => Math.round(val).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") + " €"} 
+                      formatter={(val: any) => Math.round(Number(val)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") + " €"} 
                     />
                   </Bar>
                 </BarChart>
@@ -695,7 +748,7 @@ export default function GastosPage() {
                 </tr>
               </thead>
               <tbody>
-                {chartViewMode !== 'anual' && MESES.map((m, monthIndex) => (
+                {MESES.map((m, monthIndex) => (
                   <tr key={m.id} style={{ borderBottom: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.01)', transition: 'background 0.2s' }}>
                     <td style={{ padding: '12px 20px', fontWeight: 600, color: 'var(--medium-gray)' }}>{m.nombre}</td>
                     {historicoAños.map((row) => {
@@ -790,6 +843,14 @@ export default function GastosPage() {
               return <option key={y} value={y}>{y}</option>
             })}
           </select>
+          <button 
+            onClick={handleCloneYear}
+            disabled={loading}
+            style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid var(--mercedes-cyan)', background: 'rgba(0,173,239,0.1)', color: 'var(--mercedes-cyan)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, fontSize: 13, opacity: loading ? 0.5 : 1 }}
+            title="Clonar datos del año anterior"
+          >
+            <Copy size={16} /> Clonar Año Anterior
+          </button>
         </div>
       </div>
 

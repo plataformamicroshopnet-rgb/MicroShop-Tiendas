@@ -646,7 +646,7 @@ export default function PrestamosPage() {
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
                                     <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
                                     <YAxis tickFormatter={formatCompactCurrency} axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} width={80} />
-                                    <RechartsTooltip formatter={(val: number) => formatCurrency(val)} labelStyle={{color: '#1e293b', fontWeight: 600}} />
+                                    <RechartsTooltip formatter={(val: any) => formatCurrency(Number(val))} labelStyle={{color: '#1e293b', fontWeight: 600}} />
                                     <Area type="monotone" dataKey="patrimonioTotal" name="Patrimonio Total" stroke="#4f46e5" strokeWidth={3} fillOpacity={1} fill="url(#colorPatrimonio)" />
                                 </AreaChart>
                             </ResponsiveContainer>
@@ -662,7 +662,7 @@ export default function PrestamosPage() {
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
                                         <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 11}} />
                                         <YAxis tickFormatter={formatCompactCurrency} axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 11}} width={70} />
-                                        <RechartsTooltip formatter={(val: number) => formatCurrency(val)} />
+                                        <RechartsTooltip formatter={(val: any) => formatCurrency(Number(val))} />
                                         <Legend />
                                         <Line type="monotone" dataKey="aFavor" name="A Favor (Positivo)" stroke="#0ea5e9" strokeWidth={3} dot={{r: 4, strokeWidth: 2}} activeDot={{r: 6}} />
                                         <Line type="monotone" dataKey="totalCreditos" name="Créditos (Negativo)" stroke="#ef4444" strokeWidth={3} dot={{r: 4, strokeWidth: 2}} activeDot={{r: 6}} />
@@ -679,7 +679,7 @@ export default function PrestamosPage() {
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
                                         <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 11}} />
                                         <YAxis tickFormatter={formatCompactCurrency} axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 11}} width={70} />
-                                        <RechartsTooltip formatter={(val: number) => formatCurrency(val)} cursor={{fill: 'rgba(132, 204, 22, 0.1)'}} />
+                                        <RechartsTooltip formatter={(val: any) => formatCurrency(Number(val))} cursor={{fill: 'rgba(132, 204, 22, 0.1)'}} />
                                         <Bar dataKey="valorEmpresa" name="Valor Empresa" fill="#84cc16" radius={[4, 4, 0, 0]} />
                                     </BarChart>
                                 </ResponsiveContainer>

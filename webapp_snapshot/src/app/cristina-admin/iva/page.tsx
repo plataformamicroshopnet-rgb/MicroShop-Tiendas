@@ -1,10 +1,10 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
-import { Receipt, ArrowLeft, Download, Plus, Save, TrendingUp, X, Filter, BarChart2, Table as TableIcon, Edit2, Trash2 } from 'lucide-react'
+import { Receipt, ArrowLeft, Download, Plus, Save, TrendingUp, X, Filter, BarChart2, Table as TableIcon, Edit2, Trash2, Copy } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
 import Link from 'next/link'
-import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid, LabelList } from 'recharts'
 
 const MESES = [
   { id: 1, nombre: 'Ene' },
@@ -40,6 +40,7 @@ export default function IVAPage() {
   const [activeView, setActiveView] = useState<'matriz' | 'comparativa'>('matriz')
   const [gastos, setGastos] = useState<Gasto[]>([])
   const [loading, setLoading] = useState(true)
+  const [chartViewMode, setChartViewMode] = useState<'mensual' | 'acumulado' | 'anual'>('mensual')
   
   // State for Paste Modal
   const [showPasteModal, setShowPasteModal] = useState(false)
@@ -138,13 +139,61 @@ export default function IVAPage() {
       const res = await fetch(`/api/gastos?year=${activeYear}`);
       const dataFiltered = (await res.json()).data?.filter((g: any) => g.grupo === 'IVA') || [];
       setGastos(dataFiltered);
-      return;
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCloneYear = async () => {
+    if (!window.confirm(`¿Seguro que quieres clonar las partidas de IVA del año ${activeYear - 1} al año ${activeYear}? Esto copiará toda la estructura con los importes a 0.`)) return
+    
+    setLoading(true)
+    try {
+      const resPrev = await fetch(`/api/gastos?year=${activeYear - 1}`)
+      const dataPrev = await resPrev.json()
+      
+      if (!dataPrev.success || !dataPrev.data || dataPrev.data.length === 0) {
+        alert(`No hay datos en el año ${activeYear - 1} para clonar.`)
+        setLoading(false)
+        return
+      }
+
+      const recordsToClone = dataPrev.data.filter((g: any) => g.grupo === 'IVA')
+
+      if (recordsToClone.length === 0) {
+        alert(`No hay registros de IVA en el año ${activeYear - 1} para clonar.`)
+        setLoading(false)
+        return
+      }
+
+      const items = recordsToClone.map((g: any) => ({
+        year: activeYear,
+        month: g.month,
+        grupo: g.grupo,
+        concepto: g.concepto,
+        importe_c: 0,
+        importe_r: 0,
+        importe_dif: 0,
+        importe_total: 0
+      }))
+
+      const res = await fetch('/api/gastos', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items })
+      })
+      
       const data = await res.json()
       if (data.success) {
-        setGastos(data.data)
+        fetchGastos()
+      } else {
+        alert('Error al clonar: ' + data.error)
       }
     } catch (e) {
       console.error(e)
+      alert('Error al clonar.')
     } finally {
       setLoading(false)
     }
@@ -564,58 +613,110 @@ export default function IVAPage() {
         <div style={{ padding: 40, textAlign: 'center', color: 'var(--mercedes-cyan)' }}>Cargando histórico...</div>
       ) : selectedConceptos.length > 0 && historicoAños.length > 0 ? (
         <div style={{ background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border-color)', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
-          <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border-color)', background: 'var(--active-bg)' }}>
+          <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border-color)', background: 'var(--active-bg)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
             <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
               <TrendingUp size={20} color="var(--mercedes-cyan)" /> 
               Análisis Interanual: <span style={{ color: 'var(--mercedes-cyan)' }}>{selectedConceptos.length === availableConceptos.length ? 'Todas las Partidas' : `${selectedConceptos.length} partida(s) seleccionada(s)`}</span>
             </h3>
+            
+            <div style={{ display: 'flex', gap: 4, background: 'var(--bg-card)', padding: 4, borderRadius: 8, border: '1px solid var(--border-color)' }}>
+              <button 
+                onClick={() => setChartViewMode('mensual')}
+                style={{ padding: '6px 12px', fontSize: 12, borderRadius: 6, border: 'none', background: chartViewMode === 'mensual' ? 'var(--mercedes-cyan)' : 'transparent', color: chartViewMode === 'mensual' ? '#000' : 'var(--light-text)', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
+              >Mensual</button>
+              <button 
+                onClick={() => setChartViewMode('acumulado')}
+                style={{ padding: '6px 12px', fontSize: 12, borderRadius: 6, border: 'none', background: chartViewMode === 'acumulado' ? 'var(--mercedes-cyan)' : 'transparent', color: chartViewMode === 'acumulado' ? '#000' : 'var(--light-text)', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
+              >Acumulado YTD</button>
+              <button 
+                onClick={() => setChartViewMode('anual')}
+                style={{ padding: '6px 12px', fontSize: 12, borderRadius: 6, border: 'none', background: chartViewMode === 'anual' ? 'var(--mercedes-cyan)' : 'transparent', color: chartViewMode === 'anual' ? '#000' : 'var(--light-text)', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
+              >Total Anual</button>
+            </div>
           </div>
           
           {/* Gráfica Recharts */}
           <div style={{ height: 320, padding: '24px 32px 12px 12px', borderBottom: '1px solid var(--border-color)' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={MESES.map((m, i) => {
-                const rowObj: any = { name: m.nombre };
-                [...historicoAños].sort((a,b) => a.year - b.year).forEach(row => {
-                  rowObj[row.year] = row.meses[i];
-                });
-                return rowObj;
-              })}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: 'var(--medium-gray)', fontSize: 12, fontWeight: 600}} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: 'var(--medium-gray)', fontSize: 12}} tickFormatter={(val) => `€${(val/1000).toFixed(0)}k`} dx={-10} />
-                <RechartsTooltip 
-                  cursor={{fill: 'rgba(0,173,239,0.05)'}} 
-                  contentStyle={{background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, fontSize: 13, fontWeight: 600, color: 'var(--light-text)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}} 
-                  formatter={(val: any, name: any) => [new Intl.NumberFormat('es-ES', {style: 'currency', currency: 'EUR'}).format(val), `Trimestre ${name}`]} 
-                  labelStyle={{color: 'var(--medium-gray)', marginBottom: 4}}
-                />
-                {[...historicoAños].sort((a,b) => a.year - b.year).map((row, index) => {
-                  const colors = ['#00adef', '#ff4d4f', '#52c41a', '#faad14', '#722ed1', '#eb2f96'];
-                  return <Bar key={row.year} dataKey={row.year} fill={colors[index % colors.length]} radius={[4, 4, 0, 0]} barSize={20} />;
-                })}
-              </BarChart>
+              {chartViewMode === 'anual' ? (
+                <BarChart data={[...historicoAños].sort((a,b) => a.year - b.year).map(row => ({ name: String(row.year), Total: row.total }))} margin={{ top: 30, right: 10, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: 'var(--medium-gray)', fontSize: 12, fontWeight: 600}} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: 'var(--medium-gray)', fontSize: 12}} tickFormatter={(val) => `€${(val/1000).toFixed(0)}k`} dx={-10} />
+                  <RechartsTooltip 
+                    cursor={{fill: 'rgba(0,173,239,0.05)'}} 
+                    contentStyle={{background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, fontSize: 13, fontWeight: 600, color: 'var(--light-text)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}} 
+                    formatter={(val: any, name: any) => [new Intl.NumberFormat('es-ES', {style: 'currency', currency: 'EUR'}).format(val), name]} 
+                    labelStyle={{color: 'var(--medium-gray)', marginBottom: 4}}
+                  />
+                  <Bar dataKey="Total" fill="#00adef" radius={[4, 4, 0, 0]} barSize={40}>
+                    <LabelList 
+                      dataKey="Total" 
+                      position="top" 
+                      fill="var(--light-text)"
+                      fontSize={13}
+                      fontWeight={700}
+                      formatter={(val: any) => Math.round(Number(val)).toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, ".") + " €"} 
+                    />
+                  </Bar>
+                </BarChart>
+              ) : (
+                <BarChart data={MESES.map((m, i) => {
+                  const rowObj: any = { name: m.nombre };
+                  [...historicoAños].sort((a,b) => a.year - b.year).forEach(row => {
+                    if (chartViewMode === 'acumulado') {
+                      let accum = 0;
+                      for(let j = 0; j <= i; j++) accum += row.meses[j];
+                      rowObj[row.year] = accum;
+                    } else {
+                      rowObj[row.year] = row.meses[i];
+                    }
+                  });
+                  return rowObj;
+                })}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: 'var(--medium-gray)', fontSize: 12, fontWeight: 600}} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: 'var(--medium-gray)', fontSize: 12}} tickFormatter={(val) => `€${(val/1000).toFixed(0)}k`} dx={-10} />
+                  <RechartsTooltip 
+                    cursor={{fill: 'rgba(0,173,239,0.05)'}} 
+                    contentStyle={{background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, fontSize: 13, fontWeight: 600, color: 'var(--light-text)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}} 
+                    formatter={(val: any, name: any) => [new Intl.NumberFormat('es-ES', {style: 'currency', currency: 'EUR'}).format(val), `Año ${name}`]} 
+                    labelStyle={{color: 'var(--medium-gray)', marginBottom: 4}}
+                  />
+                  {[...historicoAños].sort((a,b) => a.year - b.year).map((row, index) => {
+                    const colors = ['#00adef', '#ff4d4f', '#52c41a', '#faad14', '#722ed1', '#eb2f96', '#13c2c2', '#eb2f96'];
+                    return <Bar key={row.year} dataKey={row.year} fill={colors[index % colors.length]} radius={[4, 4, 0, 0]} barSize={20}>
+                      <LabelList dataKey={row.year} position="top" fontSize={10} formatter={(v: any) => Number(v) > 0 ? (Number(v)/1000).toFixed(1) + 'k' : ''} />
+                    </Bar>;
+                  })}
+                </BarChart>
+              )}
             </ResponsiveContainer>
           </div>
 
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 600 }}>
-              <thead>
-                <tr style={{ background: 'rgba(0,173,239,0.05)', borderBottom: '2px solid var(--border-color)' }}>
-                  <th style={{ padding: '14px 20px', textAlign: 'left', fontWeight: 800, width: 120 }}>MES</th>
-                  {historicoAños.map(row => (
-                    <th key={row.year} style={{ padding: '14px 20px', textAlign: 'right', fontWeight: 800, color: row.year === activeYear ? 'var(--light-text)' : 'var(--medium-gray)', fontSize: 14 }}>
-                      {row.year}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
+          {chartViewMode !== 'anual' && (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 600 }}>
+                <thead>
+                  <tr style={{ background: 'rgba(0,173,239,0.05)', borderBottom: '2px solid var(--border-color)' }}>
+                    <th style={{ padding: '14px 20px', textAlign: 'left', fontWeight: 800, width: 120 }}>MES</th>
+                    {historicoAños.map(row => (
+                      <th key={row.year} style={{ padding: '14px 20px', textAlign: 'right', fontWeight: 800, color: row.year === activeYear ? 'var(--light-text)' : 'var(--medium-gray)', fontSize: 14 }}>
+                        {row.year}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
                 {MESES.map((m, monthIndex) => (
                   <tr key={m.id} style={{ borderBottom: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.01)', transition: 'background 0.2s' }}>
                     <td style={{ padding: '12px 20px', fontWeight: 600, color: 'var(--medium-gray)' }}>{m.nombre}</td>
                     {historicoAños.map((row) => {
-                      const val = row.meses[monthIndex];
+                      let val = row.meses[monthIndex];
+                      if (chartViewMode === 'acumulado') {
+                        val = 0;
+                        for(let j = 0; j <= monthIndex; j++) val += row.meses[j];
+                      }
                       return (
                         <td key={row.year} style={{ padding: '12px 20px', textAlign: 'right', color: val > 0 ? 'var(--light-text)' : 'var(--medium-gray)' }}>
                           {formatEuro(val)}
@@ -633,9 +734,10 @@ export default function IVAPage() {
                     </td>
                   ))}
                 </tr>
-              </tbody>
-            </table>
-          </div>
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       ) : selectedConceptos.length > 0 ? (
          <div style={{ padding: 40, textAlign: 'center', color: 'var(--medium-gray)' }}>No hay datos históricos para esta partida.</div>
@@ -715,6 +817,14 @@ export default function IVAPage() {
               return <option key={y} value={y}>{y}</option>
             })}
           </select>
+          <button 
+            onClick={handleCloneYear}
+            disabled={loading}
+            style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid var(--mercedes-cyan)', background: 'rgba(0,173,239,0.1)', color: 'var(--mercedes-cyan)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, fontSize: 13, opacity: loading ? 0.5 : 1 }}
+            title="Clonar datos de IVA del año anterior"
+          >
+            <Copy size={16} /> Clonar Año Anterior
+          </button>
         </div>
       </div>
 
