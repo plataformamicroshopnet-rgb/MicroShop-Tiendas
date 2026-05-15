@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { Save, RefreshCw, Trash2, Edit2, Search, X, CheckCircle, Circle, ArrowLeft, Upload, BarChart2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { PageHeader } from '@/components/PageHeader'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts'
 
 const formatEuro = (amount: number) => {
