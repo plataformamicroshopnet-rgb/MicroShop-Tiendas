@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { Shield, Moon, Sun, Users, Database, CalendarCheck, FileEdit, Info, Briefcase, BookOpen, CalendarDays, Smartphone, Menu, Cloud, Settings, Settings2, ArrowUp, ArrowDown, Save, X, Activity, TrendingUp, Landmark } from 'lucide-react'
+import { Shield, Moon, Sun, Users, Database, CalendarCheck, FileEdit, Info, Briefcase, BookOpen, CalendarDays, Smartphone, Menu, Cloud, Settings, Settings2, ArrowUp, ArrowDown, Save, X, Activity, TrendingUp, Landmark, Calculator } from 'lucide-react'
 import { useTheme } from '@/components/ThemeProvider'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -104,6 +104,15 @@ export default function AdminDashboardPage() {
       color: 'rgba(175, 82, 222, 0.1)',
       textColor: '#AF52DE',
       permission: 'MANAGE_CATALOG'
+    },
+    {
+      title: 'Control de Caja',
+      description: 'Gestión de entradas, salidas y trazabilidad de efectivo.',
+      icon: Calculator,
+      action: () => router.push('/tiendas/caja'),
+      color: 'rgba(0, 173, 239, 0.1)',
+      textColor: 'var(--mercedes-cyan)',
+      permission: 'CARD_CAJA'
     }
   ]
 

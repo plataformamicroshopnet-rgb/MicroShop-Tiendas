@@ -48,16 +48,16 @@ model User {
 }
 
 model ProductCatalog {
-  id           String      @id @default(uuid())
-  categoria    String
-  producto     String
-  mensual      String
-  anual        String
-  validFrom    String?
-  validTo      String?
-  periodId     String?
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  id               String      @id @default(uuid())
+  categoria        String
+  producto         String
+  mensual          String
+  anual            String
+  validFrom        String?
+  validTo          String?
+  periodId         String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
   fabricante       String?
   gama             String?
   subcategoria     String?
@@ -204,7 +204,6 @@ model AgendaCristinaEntry {
   @@unique([codigoComercial, fecha])
   @@index([fecha])
 }
-
 
 model Magazine {
   id          String         @id @default(cuid())
@@ -435,7 +434,7 @@ model LiquidacionTelef {
 }
 
 model TiendaCommissionRule {
-  id                  String      @id @default(uuid())
+  id                  String   @id @default(uuid())
   periodKey           String
   nombre              String
   productosCuentan    String?
@@ -445,47 +444,46 @@ model TiendaCommissionRule {
   importeSegundoTramo String?
   condicionantes      String?
   totalHoras          Float?
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   @@index([periodKey])
 }
 
 model TiendaComercialHour {
-  id                  String      @id @default(uuid())
-  periodKey           String
-  comercial           String
-  horario             Float
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
+  id        String   @id @default(uuid())
+  periodKey String
+  comercial String
+  horario   Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([periodKey])
 }
 
 model CajaEntry {
-  id                 String      @id @default(uuid())
-  tienda             String      // 'Auxiliadora', 'Villamayor', 'BÃ©jar', 'Correhuela', 'MovilFree', 'Central'
-  fecha              String      // Formato YYYY-MM-DD
+  id                 String   @id @default(uuid())
+  tienda             String // 'Auxiliadora', 'Villamayor', 'BÃ©jar', 'Correhuela', 'MovilFree', 'Central'
+  fecha              String // Formato YYYY-MM-DD
   concepto           String
   detalle            String
   importe            Float
-  createdAt          DateTime    @default(now())
-  updatedAt          DateTime    @updatedAt
-  vendedor           String?     // Usuario que lo registrÃ³
-  estadoTrazabilidad String?     // 'ROJO', 'NARANJA', 'VERDE', null
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  vendedor           String? // Usuario que lo registrÃ³
+  estadoTrazabilidad String? // 'ROJO', 'NARANJA', 'VERDE', null
 }
 
-
 model MovilFreeProduct {
-  id          String   @id @default(cuid())
-  nombre      String
-  categoria   String   @default("Varios")
-  precio      Float
-  coste       Float    @default(0)
-  stock       Int      @default(0)
-  imei        String?  // Opcional, 15 digitos
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  nombre    String
+  categoria String   @default("Varios")
+  precio    Float
+  coste     Float    @default(0)
+  stock     Int      @default(0)
+  imei      String? // Opcional, 15 digitos
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model MovilFreeClient {
@@ -510,7 +508,7 @@ model MovilFreeSale {
   vendedor         String?
   nifCliente       String?
   nombreCliente    String?
-  listaProductos   String   // JSON stringified array of { id, nombre, cantidad, precio, subtotal, cantidadDevuelta }
+  listaProductos   String // JSON stringified array of { id, nombre, cantidad, precio, subtotal, cantidadDevuelta }
   importeTotal     Float
   estado           String   @default("COMPLETADA") // "COMPLETADA", "DEVUELTA", "DEVOLUCION_PARCIAL"
   motivoDevolucion String?
@@ -519,21 +517,20 @@ model MovilFreeSale {
   updatedAt        DateTime @updatedAt
 }
 
-
 model StockItem {
-  id              String   @id @default(cuid())
-  tabCategory     String   // 'Exclusivos', 'Rent', 'Dispositivos OJO', 'Accesorios', 'Demos'
-  producto        String
-  pvd             Float    @default(0)
-  pvp             Float    @default(0)
-  udsCorrehuela   Int      @default(0)
-  udsAuxiliadora  Int      @default(0)
-  udsBejar        Int      @default(0)
-  udsVillamayor   Int      @default(0)
-  udsMovilfree    Int      @default(0)
-  observaciones   String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String   @id @default(cuid())
+  tabCategory    String // 'Exclusivos', 'Rent', 'Dispositivos OJO', 'Accesorios', 'Demos'
+  producto       String
+  pvd            Float    @default(0)
+  pvp            Float    @default(0)
+  udsCorrehuela  Int      @default(0)
+  udsAuxiliadora Int      @default(0)
+  udsBejar       Int      @default(0)
+  udsVillamayor  Int      @default(0)
+  udsMovilfree   Int      @default(0)
+  observaciones  String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@index([tabCategory])
 }
@@ -557,17 +554,17 @@ model Vencimiento {
 }
 
 model GastoMensual {
-  id        String   @id @default(uuid())
-  year      Int
-  month     Int
-  grupo     String
-  concepto  String
-  importe_c Float    @default(0)
-  importe_r Float    @default(0)
-  importe_dif Float  @default(0)
-  importe_total Float @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String   @id @default(uuid())
+  year          Int
+  month         Int
+  grupo         String
+  concepto      String
+  importe_c     Float    @default(0)
+  importe_r     Float    @default(0)
+  importe_dif   Float    @default(0)
+  importe_total Float    @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@unique([year, month, grupo, concepto])
 }
@@ -596,93 +593,93 @@ model MovilFreeReparacion {
 }
 
 model MacroFinanceRecord {
-  id                         String   @id @default(cuid())
-  year                       Int
-  month                      Int
-  
+  id    String @id @default(cuid())
+  year  Int
+  month Int
+
   // Totales Generales
-  totalCobradoIva            Float    @default(0)
-  totalCobradoSinIva         Float    @default(0)
+  totalCobradoIva    Float @default(0)
+  totalCobradoSinIva Float @default(0)
 
   // Tiendas
-  cajaTiendas                Float    @default(0)
-  comisionesTiendasLocales   Float    @default(0)
-  prvTiendas                 Float    @default(0)
-  gastosTiendas              Float    @default(0)
-  comisionesTiendas          Float    @default(0)
+  cajaTiendas              Float @default(0)
+  comisionesTiendasLocales Float @default(0)
+  prvTiendas               Float @default(0)
+  gastosTiendas            Float @default(0)
+  comisionesTiendas        Float @default(0)
 
   // FFVV
-  cajaFfvv                   Float    @default(0)
-  produccionPlus             Float    @default(0)
-  produccionBasico           Float    @default(0)
-  prvFfvv                    Float    @default(0)
-  gastosFfvv                 Float    @default(0)
+  cajaFfvv         Float @default(0)
+  produccionPlus   Float @default(0)
+  produccionBasico Float @default(0)
+  prvFfvv          Float @default(0)
+  gastosFfvv       Float @default(0)
 
   // Comerciales para calcular la media
-  numComercialesFfvv         Float    @default(0)
+  numComercialesFfvv Float @default(0)
 
-  createdAt                  DateTime @default(now())
-  updatedAt                  DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([year, month])
 }
 
 model PatrimonioRecord {
-  id String @id @default(cuid())
-  year Int @unique
-  
+  id   String @id @default(cuid())
+  year Int    @unique
+
   // Pasivos
-  lineaCredito Float @default(0)
-  cuentaCorriente Float @default(0)
-  icoUnicaja1 Float @default(0)
-  depositoIberabal Float @default(0)
-  icoUnicaja2 Float @default(0)
-  impuestosHacienda Float @default(0)
+  lineaCredito         Float @default(0)
+  cuentaCorriente      Float @default(0)
+  icoUnicaja1          Float @default(0)
+  depositoIberabal     Float @default(0)
+  icoUnicaja2          Float @default(0)
+  impuestosHacienda    Float @default(0)
   aplazamientoHacienda Float @default(0)
-  prestamoPadres Float @default(0)
-  pagoMultaHacienda Float @default(0)
-  despidos Float @default(0)
-  inversionOficinas Float @default(0)
-  creditoTitoVergara Float @default(0)
-  creditoMicroInfor Float @default(0)
-  creditoEmpresaPiso Float @default(0)
-  
+  prestamoPadres       Float @default(0)
+  pagoMultaHacienda    Float @default(0)
+  despidos             Float @default(0)
+  inversionOficinas    Float @default(0)
+  creditoTitoVergara   Float @default(0)
+  creditoMicroInfor    Float @default(0)
+  creditoEmpresaPiso   Float @default(0)
+
   // Deudas adicionales
-  deudaZeleris Float @default(0)
+  deudaZeleris  Float @default(0)
   deudaMovistar Float @default(0)
 
   // Activos / Patrimonio
-  stockMovistar Float @default(0)
-  stockMovilfree Float @default(0)
-  valorEmpresa Float @default(0)
-  planPensiones Float @default(0)
-  cuentasYCaja Float @default(0)
-  prestamosEmpresa Float @default(0)
+  stockMovistar              Float @default(0)
+  stockMovilfree             Float @default(0)
+  valorEmpresa               Float @default(0)
+  planPensiones              Float @default(0)
+  cuentasYCaja               Float @default(0)
+  prestamosEmpresa           Float @default(0)
   prestamosHipotecaCampoamor Float @default(0)
-  pisosCampoamorRecreo Float @default(0)
-  pisosPrincipeVergara Float @default(0)
-  valorCoche Float @default(0)
+  pisosCampoamorRecreo       Float @default(0)
+  pisosPrincipeVergara       Float @default(0)
+  valorCoche                 Float @default(0)
 
   // Liquidez �ngel Luis (Fase 2)
-  liqSantander                 Float @default(0) // Banco Santander Cuenta Personal
-  liqUnicaja                   Float @default(0) // Unicaja Cuenta Personal
-  liqCajaMetalico              Float @default(0) // Caja Met�lico
-  liqRentaCampoamor            Float @default(0) // Renta Piso Avenida de Campoamor
-  liqRentaRecreo               Float @default(0) // Renta Piso Calle Recreo
-  liqRentaVillaviciosa         Float @default(0) // Renta Piso Calle Villaviciosa
+  liqSantander                Float @default(0) // Banco Santander Cuenta Personal
+  liqUnicaja                  Float @default(0) // Unicaja Cuenta Personal
+  liqCajaMetalico             Float @default(0) // Caja Met�lico
+  liqRentaCampoamor           Float @default(0) // Renta Piso Avenida de Campoamor
+  liqRentaRecreo              Float @default(0) // Renta Piso Calle Recreo
+  liqRentaVillaviciosa        Float @default(0) // Renta Piso Calle Villaviciosa
   // planPensiones is shared with Retrospectiva
-  liqPrestamoEmpresaPiso       Float @default(0) // Prestamo mio a la Empresa del Piso
-  liqPrestamoEmpresa           Float @default(0) // Prestamo mio a la Empresa
-  liqPrestamoEmpresaImpuestos  Float @default(0) // Prestamo mio a la Empresa Impuestos
-  liqPrestamoEmpresaFinMes     Float @default(0) // Prestamo mio a la Empresa Fin de Mes
-  liqInteresesPrestamo         Float @default(0) // Intereses Prestamo a la Empresa
-  liqSueldos                   Float @default(0) // Sueldos
-  liqPisoCampoamor             Float @default(0) // Piso Avenida de Campoamor N�30, 4�C
-  liqPisoRecreo                Float @default(0) // Piso Calle Recreo N�13, 2�
-  liqPisoVillaviciosa          Float @default(0) // Piso Calle Villaviciosa N�28-32, 2A
-  liqHipotecaCampoamor1        Float @default(0) // Unicaja Hipoteca Campoamor (1)
-  liqHipotecaCampoamor2        Float @default(0) // Unicaja Hipoteca Campoamor (2)
-  liqHacienda                  Float @default(0) // Hacienda
+  liqPrestamoEmpresaPiso      Float @default(0) // Prestamo mio a la Empresa del Piso
+  liqPrestamoEmpresa          Float @default(0) // Prestamo mio a la Empresa
+  liqPrestamoEmpresaImpuestos Float @default(0) // Prestamo mio a la Empresa Impuestos
+  liqPrestamoEmpresaFinMes    Float @default(0) // Prestamo mio a la Empresa Fin de Mes
+  liqInteresesPrestamo        Float @default(0) // Intereses Prestamo a la Empresa
+  liqSueldos                  Float @default(0) // Sueldos
+  liqPisoCampoamor            Float @default(0) // Piso Avenida de Campoamor N�30, 4�C
+  liqPisoRecreo               Float @default(0) // Piso Calle Recreo N�13, 2�
+  liqPisoVillaviciosa         Float @default(0) // Piso Calle Villaviciosa N�28-32, 2A
+  liqHipotecaCampoamor1       Float @default(0) // Unicaja Hipoteca Campoamor (1)
+  liqHipotecaCampoamor2       Float @default(0) // Unicaja Hipoteca Campoamor (2)
+  liqHacienda                 Float @default(0) // Hacienda
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

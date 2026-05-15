@@ -658,8 +658,9 @@ export default function ComisionesDashboardPage() {
                                                             <tr key={`terr-${rIdx}`} style={{ backgroundColor: '#ffffff' }}>
                                                                 <td colSpan={10} style={{ padding: '0 0 16px 0' }}>
                                                                     <div style={{ margin: '0', border: '1px solid #38bdf8', borderRadius: '0' }}>
-                                                                        <div style={{ backgroundColor: '#38bdf8', color: 'white', padding: '8px 16px', fontWeight: 800, fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                                                            TERRITORIAL O2 MOVILFREE
+                                                                        <div style={{ backgroundColor: '#38bdf8', color: 'white', padding: '8px 16px', fontWeight: 800, fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                            <span>TERRITORIAL O2 MOVILFREE</span>
+                                                                            <span style={{ fontSize: '11px', fontWeight: 700, backgroundColor: 'rgba(255,255,255,0.2)', padding: '2px 8px', borderRadius: '12px', textTransform: 'none', letterSpacing: '0' }}>A nivel informativo</span>
                                                                         </div>
                                                                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                                                             <thead>

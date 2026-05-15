@@ -208,10 +208,27 @@ export function useComisionesData(user?: any) {
             
             // Excluir el extra manual para Marta según lo solicitado
             const isMarta = tgt.includes('marta');
-            const isManualExtra = String(ea.customerName || '').toLowerCase().includes('manual') || ea.sourceType === 'MANUAL';
+            const isTerritorial = String(ea.customerNif) === 'TERRITORIAL' || String(ea.customerName).includes('Territorial') || String(ea.triggerKey).includes('TERRITORIAL');
+            
+            const ruleName = String(ea.rule?.name || 'Extra Manual').toLowerCase();
+            const isManualExtra = !isTerritorial && (
+                                  String(ea.customerName || '').toLowerCase().includes('manual') || 
+                                  ea.sourceType === 'MANUAL' || 
+                                  ruleName.includes('extra manual'));
+                                  
             if (isMarta && isManualExtra) return false;
 
             return v === tgt && ea.status !== 'CANCELLED';
+        }).map(ea => {
+            const tgt = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+            const isMarta = tgt.includes('marta');
+            const isTerritorial = String(ea.customerNif) === 'TERRITORIAL' || String(ea.customerName).includes('Territorial') || String(ea.triggerKey).includes('TERRITORIAL');
+            
+            // Si es un bono territorial para Marta, forzamos que no sume importe (informativo)
+            if (isMarta && isTerritorial) {
+                return { ...ea, sellerRewardAmount: 0 };
+            }
+            return ea;
         });
         
         const pendientes = sSales.filter(s => {
@@ -715,7 +732,7 @@ export function useComisionesData(user?: any) {
                         triggerKey: triggerKey,
                         triggerSummary: `Territorial O2: ${rule.nombre} (${totalSalesForRule} ${isMoneyType ? '€' : 'ventas'})`,
                         telecomRewardAmount: bonus,
-                        sellerRewardAmount: bonus,
+                        sellerRewardAmount: 0,
                         status: 'LIQUIDATED',
                         rule: { name: `TERRITORIAL O2 MOVILFREE - ${rule.nombre}` }
                     });

@@ -644,7 +644,7 @@ export default function IVAPage() {
   )
 
   return (
-    <div style={{ padding: '24px 32px', minHeight: '100vh', background: 'var(--bg-app)' }}>
+    <div style={{ padding: 20, minHeight: '100vh', background: 'var(--bg-app)' }}>
       <style>{`
         .table-row-hover:hover {
           background: rgba(0,173,239,0.03) !important;
@@ -661,13 +661,11 @@ export default function IVAPage() {
           border-color: var(--mercedes-cyan);
         }
       `}</style>
-
-      <Link href="/cristina-admin" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: 'var(--medium-gray)', textDecoration: 'none', marginBottom: '16px', fontSize: '14px', fontWeight: 600, transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color='var(--mercedes-cyan)'} onMouseOut={e => e.currentTarget.style.color='var(--medium-gray)'}>
-        <ArrowLeft size={16} /> Volver al Hub
-      </Link>
       
       <PageHeader 
         title="Informes de IVA" 
+        showBack={true}
+        backFallback="/cristina-admin"
         subtitle="Control integral de partidas, ingresos y contención de gastos con comparativa histórica interanual."
       />
 
