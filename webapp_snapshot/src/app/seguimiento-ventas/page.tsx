@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
-import { Package, LineChart, ChevronLeft, Calendar, Globe, Calculator, Building2, Target, Briefcase, Settings2, ArrowUp, ArrowDown, Save, X, Trophy } from 'lucide-react'
+import { Package, LineChart, ChevronLeft, Calendar, Globe, Calculator, Building2, Target, Briefcase, Settings2, ArrowUp, ArrowDown, Save, X, Trophy, TrendingUp } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useGuard } from '@/hooks/useGuard'
 import { PageHeader } from '@/components/PageHeader'
@@ -76,6 +76,22 @@ export default function SeguimientoVentasPage() {
       action: () => router.push('/seguimiento-ventas/combos'),
       color: 'rgba(30,58,95,0.08)',
       textColor: '#1e3a5f'
+    },
+    {
+      title: 'MOD (Media Operaciones Diaria)',
+      description: 'Comparativa de operaciones, importe medio y rentabilidad diaria.',
+      icon: TrendingUp,
+      action: () => router.push('/seguimiento-ventas/mod'),
+      color: 'rgba(34, 197, 94, 0.1)',
+      textColor: '#22c55e'
+    },
+    {
+      title: 'Seguimiento de Tramitación',
+      description: 'Monitorización y analítica de los productos vendidos y pendientes agrupados por tienda física.',
+      icon: Building2,
+      action: () => router.push('/seguimiento-ventas/tramitacion'),
+      color: 'rgba(236, 72, 153, 0.1)',
+      textColor: '#ec4899'
     }
   ]
 

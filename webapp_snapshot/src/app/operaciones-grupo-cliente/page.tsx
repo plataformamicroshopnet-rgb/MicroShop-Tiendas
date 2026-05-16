@@ -105,10 +105,11 @@ function calcNifTramo(subtotal: number, units: number, info: TramoInfo): number 
 
 // ── Section table ─────────────────────────────────────────────────────
 function SectionTable({
-  label, badge, badgeColor, groups, tabColor
+  label, badge, badgeColor, groups, tabColor, calcCommission
 }: {
   label: string; badge: string; badgeColor: string
   groups: NifGroup[]; tabColor: string;
+  calcCommission?: (sale: any) => number;
 }) {
   if (groups.length === 0) return null
 
@@ -129,7 +130,10 @@ function SectionTable({
           <span style={{ fontSize: 12, color: 'var(--medium-gray)' }}>{groups.length} clientes · {totalUnits} uds.</span>
         </div>
         <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
-          <span style={{ fontSize: 13, color: 'var(--medium-gray)' }}>Total: <strong style={{ color: 'var(--light-text)' }}>{fmt(sectionTotal)}</strong></span>
+          <span style={{ fontSize: 13, color: 'var(--medium-gray)' }}>Importe: <strong style={{ color: 'var(--light-text)' }}>{fmt(sectionTotal)}</strong></span>
+          {calcCommission && (
+            <span style={{ fontSize: 13, color: 'var(--medium-gray)' }}>Comisión: <strong style={{ color: 'var(--light-text)' }}>{fmt(groups.reduce((acc, g) => acc + g.sales.reduce((sum, s) => sum + calcCommission(s), 0), 0))}</strong></span>
+          )}
         </div>
       </div>
 
@@ -138,7 +142,7 @@ function SectionTable({
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 800 }}>
           <thead>
             <tr style={{ background: 'var(--active-bg)' }}>
-              {['Cliente (NIF)', 'Nombre del Cliente', 'Fecha Tram.', 'Teléfono', 'Código', 'Comercial', 'Productos', 'Uds.', 'Total'].map((h, i) => (
+              {['Cliente (NIF)', 'Nombre del Cliente', 'Fecha Tram.', 'Teléfono', 'Código', 'Comercial', 'Productos', 'Uds.', 'Importe', 'Comisión'].map((h, i) => (
                 <th key={i} style={{
                   padding: '10px 14px', textAlign: i >= 7 ? 'right' : 'left',
                   whiteSpace: 'nowrap', color: 'var(--medium-gray)', fontWeight: 600, fontSize: 11,
@@ -164,7 +168,8 @@ function SectionTable({
                     <td style={{ padding: '12px 14px', textAlign: 'right' }}>
                       <span style={{ background: `${tabColor}22`, color: tabColor, borderRadius: 20, padding: '3px 11px', fontWeight: 800, fontSize: 13 }}>1</span>
                     </td>
-                    <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: 'var(--light-text)', fontSize: 13, whiteSpace: 'nowrap' }}>{fmt(Number(sale.cuota ?? 0))}</td>
+                    <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 600, color: 'var(--medium-gray)', fontSize: 13, whiteSpace: 'nowrap' }}>{fmt(Number(sale.cuota ?? 0))}</td>
+                    <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: 'var(--light-text)', fontSize: 13, whiteSpace: 'nowrap' }}>{calcCommission ? fmt(calcCommission(sale)) : '—'}</td>
                   </tr>
                 )
               })
@@ -333,7 +338,8 @@ function GrupoClienteContent() {
                     { label: 'CÓDIGO',           right: false },
                     { label: 'COMERCIAL',        right: false },
                     { label: 'CONCEPTO / REGLA', right: false },
-                    { label: 'TOTAL',            right: true  },
+                    { label: 'IMPORTE',          right: true  },
+                    { label: 'COMISIÓN',         right: true  },
                     
                   ].map(h => (
                     <th key={h.label} style={{ padding: '10px 14px', textAlign: h.right ? 'right' : 'left', color: 'var(--medium-gray)', fontWeight: 700, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, background: 'var(--active-bg)' }}>{h.label}</th>
@@ -800,8 +806,8 @@ function GrupoClienteContent() {
           })()}
 
           {/* ── Sections ── */}
-          <SectionTable label="Código Plus" badge="PLUS" badgeColor="#00ADEF" groups={plusGroups} tabColor={tab.color} />
-          <SectionTable label="Código Básico" badge="BÁSICO" badgeColor="#F59E0B" groups={basicoGroups} tabColor={tab.color} />
+          <SectionTable label="Código Plus" badge="PLUS" badgeColor="#00ADEF" groups={plusGroups} tabColor={tab.color} calcCommission={s => calculateDynamicCommission(s, plusDash?.rows || [])} />
+          <SectionTable label="Código Básico" badge="BÁSICO" badgeColor="#F59E0B" groups={basicoGroups} tabColor={tab.color} calcCommission={s => calculateDynamicCommission(s, basicoDash?.rows || [])} />
           <SectionTable label="Otros Códigos" badge="OTROS" badgeColor="#6B7280" groups={otrosGroups} tabColor={tab.color} />
 
           {/* ── Grand total ── */}

@@ -56,14 +56,6 @@ export default function AdminDashboardPage() {
       textColor: 'var(--mercedes-cyan)'
     },
     {
-      title: 'Copias de Seguridad',
-      description: 'Descargar o restaurar la base de datos Excel.',
-      icon: Database,
-      action: () => router.push('/admin/backup'),
-      color: 'rgba(52, 199, 89, 0.1)',
-      textColor: '#34C759'
-    },
-    {
       title: 'Google Drive Backups',
       description: 'Copias de seguridad autónomas en la nube.',
       icon: Cloud,
@@ -165,15 +157,15 @@ export default function AdminDashboardPage() {
       <style dangerouslySetInnerHTML={{__html: `
         .premium-card {
             background-color: var(--bg-card);
-            border-radius: 16px;
-            padding: 20px;
+            border-radius: 12px;
+            padding: 16px;
             cursor: pointer;
             transition: all 0.2s ease;
             border: 1px solid var(--border-strong);
             box-shadow: 0 2px 8px rgba(0,0,0,0.04);
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 12px;
         }
         .premium-card:hover {
             transform: translateY(-3px);
@@ -181,25 +173,25 @@ export default function AdminDashboardPage() {
             border-color: #3b82f6;
         }
         .card-icon-wrapper {
-            width: 42px;
-            height: 42px;
-            border-radius: 12px;
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
         }
         .card-title {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 600;
             color: var(--text-main);
-            margin: 0 0 6px 0;
+            margin: 0 0 4px 0;
             line-height: 1.25;
             letter-spacing: -0.3px;
         }
         .card-desc {
-            font-size: 14px;
+            font-size: 13px;
             color: var(--text-muted);
-            line-height: 1.45;
+            line-height: 1.4;
             margin: 0;
         }
 
@@ -331,8 +323,8 @@ export default function AdminDashboardPage() {
 
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
-        gap: '24px',
+        gridTemplateColumns: 'repeat(4, 1fr)',
+        gap: '16px',
         marginTop: '16px'
       }}>
         {sortedCards.map((c: any, i) => {

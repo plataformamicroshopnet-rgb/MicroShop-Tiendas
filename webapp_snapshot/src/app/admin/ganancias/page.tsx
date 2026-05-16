@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { PageHeader } from '@/components/PageHeader'
-import { TrendingUp, Users, Calendar, Save, RefreshCw } from 'lucide-react'
+import { TrendingUp, Users, Calendar, Save, RefreshCw, BarChart2 } from 'lucide-react'
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 
 // Utilidad para formatear moneda
 const formatCurrency = (value: number) => {
@@ -43,6 +44,8 @@ export default function GananciasPage() {
   const [loading, setLoading] = useState(true);
   const [savingField, setSavingField] = useState<string | null>(null);
   const [editingCell, setEditingCell] = useState<string | null>(null);
+  const [showChart, setShowChart] = useState(false);
+  const [compareYears, setCompareYears] = useState<number[]>([new Date().getFullYear(), new Date().getFullYear() - 1]);
   
   // Datos crudos del servidor
   const [records, setRecords] = useState<any[]>([]);
@@ -185,7 +188,13 @@ export default function GananciasPage() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Calendar size={20} color="#6b7280" />
+            <button 
+                onClick={() => setShowChart(!showChart)}
+                style={{ padding: '8px 16px', borderRadius: 8, fontWeight: 600, border: 'none', cursor: 'pointer', transition: '0.2s', background: showChart ? 'var(--mercedes-cyan)' : '#f3f4f6', color: showChart ? '#fff' : '#4b5563', display: 'flex', alignItems: 'center', gap: 8 }}
+            >
+                <BarChart2 size={20} /> {showChart ? 'Ocultar Gráficas' : 'Ver Gráficas'}
+            </button>
+            <Calendar size={20} color="#6b7280" style={{ marginLeft: 8 }} />
             <select 
                 value={selectedYear} 
                 onChange={(e) => setSelectedYear(Number(e.target.value))}
@@ -204,6 +213,22 @@ export default function GananciasPage() {
       ) : activeTab === 'balance' ? (
         /* PESTAÑA 1: BALANCE ANUAL (ESTILO EXCEL) */
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            {showChart && (
+                <div style={{ background: '#fff', padding: 24, borderRadius: 12, boxShadow: '0 4px 15px rgba(0,0,0,0.05)', border: '1px solid #e5e7eb', height: 400 }}>
+                    <h3 style={{ marginTop: 0, marginBottom: 20, color: '#111827' }}>Evolución de Ganancias Reales ({selectedYear})</h3>
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={computedRecords.map(m => ({ name: MONTHS[m.month - 1].slice(0,3), Tiendas: m.realGananciasTiendas, FFVV: m.realGananciasFfvv }))} margin={{ top: 10, right: 10, left: 20, bottom: 20 }}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 12}} dy={10} />
+                            <YAxis axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 12}} tickFormatter={(value) => `${(value/1000).toFixed(0)}k`} />
+                            <Tooltip formatter={(value: any) => formatCurrency(Number(value))} cursor={{fill: '#f3f4f6'}} contentStyle={{borderRadius: 8, border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)'}} />
+                            <Legend wrapperStyle={{paddingTop: 20}} />
+                            <Bar dataKey="Tiendas" fill="#84cc16" radius={[4, 4, 0, 0]} maxBarSize={50} />
+                            <Bar dataKey="FFVV" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={50} />
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
+            )}
             {/* TABLA PRINCIPAL: MESES */}
             <div style={{ overflowX: 'auto', background: '#fff', borderRadius: 12, boxShadow: '0 4px 15px rgba(0,0,0,0.05)', border: '1px solid #e5e7eb' }}>
                 <table style={{ minWidth: '100%', borderCollapse: 'collapse', fontSize: 10.5, whiteSpace: 'nowrap' }}>
@@ -379,54 +404,116 @@ export default function GananciasPage() {
       ) : (
         /* PESTAÑA 2: MEDIA POR COMERCIAL */
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-             {[2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018].map(year => {
-                 const yearRecords = allYearsRecords.filter(r => r.year === year);
-                 if (yearRecords.length === 0) return null;
+            <div style={{ background: '#fff', padding: 20, borderRadius: 12, boxShadow: '0 2px 10px rgba(0,0,0,0.05)', border: '1px solid #e5e7eb' }}>
+                <h3 style={{ margin: '0 0 16px 0', fontSize: 15, color: '#4b5563' }}>Selecciona los años a comparar:</h3>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {[2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018].map(y => {
+                        const isSelected = compareYears.includes(y);
+                        return (
+                            <button 
+                                key={y}
+                                onClick={() => {
+                                    if (isSelected && compareYears.length === 1) return; // Obligar a tener al menos 1
+                                    setCompareYears(prev => isSelected ? prev.filter(p => p !== y) : [...prev, y].sort((a,b) => b - a));
+                                }}
+                                style={{ 
+                                    padding: '6px 16px', borderRadius: 20, border: isSelected ? 'none' : '1px solid #d1d5db', 
+                                    background: isSelected ? '#0ea5e9' : '#fff', color: isSelected ? '#fff' : '#4b5563', 
+                                    cursor: 'pointer', fontSize: 14, fontWeight: 600, transition: 'all 0.2s' 
+                                }}
+                            >
+                                {y}
+                            </button>
+                        )
+                    })}
+                </div>
+            </div>
 
-                 // Asegurar 12 meses
-                 const fullYearData = Array.from({length: 12}, (_, i) => {
+            {showChart && (
+                <div style={{ background: '#fff', padding: 24, borderRadius: 12, boxShadow: '0 4px 15px rgba(0,0,0,0.05)', border: '1px solid #e5e7eb', height: 400 }}>
+                    <h3 style={{ marginTop: 0, marginBottom: 20, color: '#111827' }}>Comparativa Mensual de Ingreso Medio por Comercial</h3>
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChart 
+                            data={MONTHS.map((m, i) => {
+                                const row: any = { name: m.slice(0,3) };
+                                compareYears.forEach(year => {
+                                    const yearRecords = allYearsRecords.filter(r => r.year === year);
+                                    const monthData = yearRecords.find((d: any) => d.month === i + 1);
+                                    const computed = getCalculatedMonth(monthData || { month: i + 1, year });
+                                    const num = Number(computed.numComercialesFfvv) || 1;
+                                    row[year] = (Number(computed.totalIngresosFfvv) || 0) / num;
+                                });
+                                return row;
+                            })} 
+                            margin={{ top: 10, right: 10, left: 20, bottom: 20 }}
+                        >
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 12}} dy={10} />
+                            <YAxis axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 12}} tickFormatter={(value) => `${(value/1000).toFixed(1)}k`} />
+                            <Tooltip formatter={(value: any) => formatCurrency(Number(value))} contentStyle={{borderRadius: 8, border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)'}} />
+                            <Legend wrapperStyle={{paddingTop: 20}} />
+                            {compareYears.map((year, idx) => {
+                                const colors = ['#eab308', '#3b82f6', '#ef4444', '#10b981', '#8b5cf6', '#f97316'];
+                                const color = colors[idx % colors.length];
+                                return (
+                                    <Line 
+                                        key={year} type="monotone" name={`Media ${year}`} dataKey={year} 
+                                        stroke={color} strokeWidth={3} 
+                                        dot={{r: 5, fill: color, strokeWidth: 2, stroke: '#fff'}} activeDot={{r: 7}} 
+                                    />
+                                );
+                            })}
+                        </LineChart>
+                    </ResponsiveContainer>
+                </div>
+            )}
+            
+            {compareYears.map(year => {
+                const yearRecords = allYearsRecords.filter(r => r.year === year);
+                const fullYearData = Array.from({length: 12}, (_, i) => {
                     const monthData = yearRecords.find((d: any) => d.month === i + 1);
-                    return monthData || { month: i + 1, year };
-                 });
+                    return getCalculatedMonth(monthData || { month: i + 1, year });
+                });
 
-                 const totalPrv = fullYearData.reduce((acc, curr) => acc + (Number(curr.prvFfvv) || 0), 0);
-                 const avgNumComerciales = fullYearData.reduce((acc, curr) => acc + (Number(curr.numComercialesFfvv) || 0), 0) / 12;
-                 const avgPrvDividido = fullYearData.reduce((acc, curr) => {
-                     const num = Number(curr.numComercialesFfvv) || 1; // evitar division por 0
-                     return acc + ((Number(curr.prvFfvv) || 0) / num);
-                 }, 0) / 12;
+                const totalIngresos = fullYearData.reduce((acc, curr) => acc + (Number(curr.totalIngresosFfvv) || 0), 0);
+                const avgNumComerciales = fullYearData.reduce((acc, curr) => acc + (Number(curr.numComercialesFfvv) || 0), 0) / 12;
+                const avgIngresosDividido = fullYearData.reduce((acc, curr) => {
+                    const num = Number(curr.numComercialesFfvv) || 1;
+                    return acc + ((Number(curr.totalIngresosFfvv) || 0) / num);
+                }, 0) / 12;
 
-                 return (
-                     <div key={year} style={{ background: '#fff', borderRadius: 12, overflow: 'hidden', border: '1px solid #e5e7eb', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-                         <div style={{ background: '#fef08a', padding: '8px 16px', textAlign: 'center', fontWeight: 800, fontSize: 16 }}>{year}</div>
-                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, whiteSpace: 'nowrap' }}>
-                             <tbody>
-                                 <tr style={{ background: '#fef9c3', borderBottom: '1px solid #fde047' }}>
-                                     <td style={{ padding: '12px', fontWeight: 700, width: 200, borderRight: '1px solid #fde047' }}>PRV FFVV</td>
-                                     {fullYearData.map((d, i) => (
-                                         <td key={i} style={{ padding: '12px', textAlign: 'right', fontWeight: 600 }}>{formatCurrency(Number(d.prvFfvv) || 0)}</td>
-                                     ))}
-                                     <td style={{ padding: '12px', textAlign: 'right', fontWeight: 600, background: '#fff' }}>{formatCurrency(totalPrv / 12)} (Media)</td>
-                                 </tr>
-                                 <tr>
-                                     <td style={{ padding: '12px', fontWeight: 700, borderRight: '1px solid #e5e7eb' }}>Dividido de {avgNumComerciales.toFixed(1)} FFVV</td>
-                                     {fullYearData.map((d, i) => {
-                                         const num = Number(d.numComercialesFfvv) || 1;
-                                         const val = (Number(d.prvFfvv) || 0) / num;
-                                         return <td key={i} style={{ padding: '12px', textAlign: 'right', fontWeight: 700 }}>{formatCurrency(val)}</td>
-                                     })}
-                                     <td style={{ padding: '12px', textAlign: 'right', fontWeight: 700, background: '#f8fafc' }}>{formatCurrency(avgPrvDividido)} (Media)</td>
-                                 </tr>
-                             </tbody>
-                         </table>
-                     </div>
-                 )
-             })}
-             {allYearsRecords.length === 0 && (
-                 <div style={{ padding: 40, textAlign: 'center', color: '#6b7280', background: '#fff', borderRadius: 12 }}>
-                     No hay datos históricos cargados para generar la comparativa de comerciales.
-                 </div>
-             )}
+                return (
+                    <div key={year} style={{ background: '#fff', borderRadius: 12, overflow: 'hidden', border: '1px solid #e5e7eb', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+                        <div style={{ background: '#fef08a', padding: '8px 16px', textAlign: 'center', fontWeight: 800, fontSize: 16 }}>{year}</div>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, whiteSpace: 'nowrap' }}>
+                            <tbody>
+                                <tr style={{ background: '#fef9c3', borderBottom: '1px solid #fde047' }}>
+                                    <td style={{ padding: '12px', fontWeight: 700, width: 200, borderRight: '1px solid #fde047' }}>Total Ingresos FFVV</td>
+                                    {fullYearData.map((d, i) => (
+                                        <td key={i} style={{ padding: '12px', textAlign: 'right', fontWeight: 600 }}>{formatCurrency(Number(d.totalIngresosFfvv) || 0)}</td>
+                                    ))}
+                                    <td style={{ padding: '12px', textAlign: 'right', fontWeight: 600, background: '#fff' }}>
+                                        {formatCurrency(totalIngresos / 12)} (Media)
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style={{ padding: '12px', fontWeight: 700, borderRight: '1px solid #e5e7eb' }}>
+                                        Dividido de {avgNumComerciales.toFixed(1)} FFVV
+                                    </td>
+                                    {fullYearData.map((d, i) => {
+                                        const num = Number(d.numComercialesFfvv) || 1;
+                                        const val = (Number(d.totalIngresosFfvv) || 0) / num;
+                                        return <td key={i} style={{ padding: '12px', textAlign: 'right', fontWeight: 700 }}>{formatCurrency(val)}</td>
+                                    })}
+                                    <td style={{ padding: '12px', textAlign: 'right', fontWeight: 700, background: '#f8fafc' }}>
+                                        {formatCurrency(avgIngresosDividido)} (Media)
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                );
+            })}
         </div>
       )}
 

@@ -450,6 +450,28 @@ model TiendaCommissionRule {
   @@index([periodKey])
 }
 
+model TiendaStoreObjective {
+  id              String   @id @default(uuid())
+  periodKey       String
+  storeName       String
+  bafConvMS       Float?
+  bafNoFusionO2   Float?
+  restoBaf        Float?
+  tvFutbol        Float?
+  alarmas         Float?
+  dispSegEuros    Float?
+  dispUnidades    Float?
+  seguros         Float?
+  movil           Float?
+  repos           Float?
+  fttr            Float?
+  bafNoTrasl      Float?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([periodKey, storeName])
+}
+
 model TiendaComercialHour {
   id        String   @id @default(uuid())
   periodKey String

@@ -7,7 +7,7 @@ import { useGuard } from '@/hooks/useGuard'
 import { PeriodSelector } from '@/components/PeriodSelector'
 
 export default function TiendasHubPage() {
-  const { authorized } = useGuard('MODULE_TIENDAS')
+  const { authorized, user } = useGuard('MODULE_TIENDAS')
   const router = useRouter()
 
   const [isEditMode, setIsEditMode] = useState(false)
@@ -188,6 +188,14 @@ export default function TiendasHubPage() {
                       <Briefcase size={22} />
                   </div> 
                   Hub Comercial Tiendas
+                  {user && user.username && (
+                      <img 
+                          src={`/${user.username.charAt(0).toUpperCase() + user.username.slice(1)}.jpg`} 
+                          alt={user.username} 
+                          onError={(e) => { e.currentTarget.style.display = 'none' }}
+                          style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--mercedes-cyan)', boxShadow: '0 4px 10px rgba(0,0,0,0.1)', marginLeft: 8 }} 
+                      />
+                  )}
               </h1>
               <p className="ds-subtitle" style={{ margin: 0, color: 'var(--text-muted)', fontWeight: 500, maxWidth: 650 }}>
                   Tablero de control federado. Gestiona el tracking de Fuerza de Ventas, monitoriza comisiones e implementa subsidios.
