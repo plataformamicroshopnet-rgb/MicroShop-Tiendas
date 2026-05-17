@@ -12,7 +12,7 @@ if (volumePath) {
         fs.mkdirSync(volumePath, { recursive: true });
     }
 
-    if (!fs.existsSync(dbDest)) {
+    if (!fs.existsSync(dbDest) || process.env.FORCE_DB_RESET === 'true') {
         console.log(`[Boot] Copiando base de datos inicial desde origen ${dbSource} al volumen persistente ${dbDest}...`);
         try {
             fs.copyFileSync(dbSource, dbDest);
