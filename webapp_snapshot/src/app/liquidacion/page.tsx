@@ -1127,12 +1127,7 @@ export default function LiquidacionesPage() {
                 icon: Users,
                 href: '/operaciones-grupo-cliente'
             },
-            {
-                title: 'Agenda de Llamadas Cristina',
-                description: 'Tracking diario visual de llamadas y métricas independientes.',
-                icon: Calendar,
-                href: '/seguimiento-ventas/agenda-cristina'
-            },
+
             {
                 title: 'Rentabilidad por Tiendas',
                 description: 'Visión agrupada de personal, ventas y rentabilidad segmentada por tienda.',
