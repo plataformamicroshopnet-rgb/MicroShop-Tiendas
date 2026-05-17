@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Smartphone, Building2, Settings, Archive, List, Briefcase, LineChart, FolderOpen, Euro } from 'lucide-react'
+import { LayoutDashboard, Smartphone, Building2, Settings, Archive, List, Briefcase, LineChart, FolderOpen, Euro, BookOpen } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import './BottomNav.css'
 import { can } from '@/lib/permissions'
@@ -40,9 +40,11 @@ export default function BottomNav() {
   const navItems: NavItem[] = [
     { name: 'Inicio', href: '/', icon: LayoutDashboard, permission: 'MODULE_TIENDAS', matchPaths: ['/'] },
     { name: 'Tiendas Hub', href: '/tiendas', icon: Briefcase, permission: 'MODULE_TIENDAS', matchPaths: ['/tiendas'] },
+    { name: 'MovilFree', href: '/movilfree', icon: Smartphone, permission: 'MODULE_MOVILFREE', matchPaths: ['/movilfree'] },
     { name: 'Jefe Tiendas', href: '/seguimiento-ventas', icon: LineChart, permission: 'MODULE_JEFE_TIENDAS', matchPaths: ['/seguimiento-ventas'] },
     { name: 'Back Office', href: '/back-office', icon: FolderOpen, permission: 'MODULE_BACK_OFFICE', matchPaths: ['/back-office'] },
     { name: 'Liquidaciones', href: '/liquidacion', icon: Euro, permission: 'MODULE_LIQUIDACION', matchPaths: ['/liquidacion'] },
+    { name: 'Cristina Admin', href: '/cristina-admin', icon: BookOpen, permission: 'MODULE_CRISTINA', matchPaths: ['/cristina-admin'] },
     { name: 'Admin', href: '/admin', icon: Settings, permission: 'MODULE_ADMIN', matchPaths: ['/admin'] },
   ]
 
