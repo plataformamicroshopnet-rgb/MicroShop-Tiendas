@@ -48,8 +48,8 @@ export async function POST(request: Request) {
     // Subida FTP
     const fileId = await uploadToFTP(filename, zipBuffer)
 
-    // Limpieza (Rutina Mantenimiento a 14 días)
-    const deletedCount = await cleanupOldBackups(14).catch(e => {
+    // Limpieza (Rutina Mantenimiento a 30 días)
+    const deletedCount = await cleanupOldBackups(30).catch(e => {
         console.error("No se pudieron limpiar las copias antiguas FTP:", e)
         return 0
     });
