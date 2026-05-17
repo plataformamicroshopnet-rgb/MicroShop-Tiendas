@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "rm -rf .next && DATABASE_URL=file:./prisma/database.sqlite next build",
+    "build": "DATABASE_URL=file:./prisma/database.sqlite next build",
     "start": "node scripts/start-prod.js",
     "postinstall": "prisma generate",
     "lint": "next lint"
