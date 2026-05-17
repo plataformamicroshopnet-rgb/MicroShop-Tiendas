@@ -26,6 +26,15 @@ Las copias se hacen solas todas las noches gracias a **Cron-Job.org** y se enví
 - Si quieres hacer una copia a mano antes de hacer un cambio importante: Ve a **Admin > Base de Datos** y dale al botón de Backup FTP.
 - Si por algún motivo catastrófico necesitas volver al pasado: Desde esa misma pantalla puedes darle a **Restaurar Backup FTP**, elegir el ZIP del día anterior de la lista, y la web retrocederá en el tiempo a ese momento exacto.
 
+### ⚠️ Solución a Errores de Conexión FTP (EHOSTUNREACH)
+Si el backup falla con el error `EHOSTUNREACH [Tu IP Pública]:21` o similar, significa que el router no está reenviando el puerto al NAS, generalmente porque el router le ha asignado una nueva IP local al QNAP (ej. pasando de `.62` a `.86`).
+
+**Pasos para solucionarlo:**
+1. **Buscar el QNAP en la red local:** Abre una consola (CMD) en Windows y ejecuta `arp -a`. Esto listará todas las IPs locales conectadas y sus Direcciones MAC (su identificador físico).
+2. **Identificar la IP del NAS:** Usa PowerShell para "tocar la puerta" del puerto 21 (FTP) en las IPs sospechosas: `Test-NetConnection -ComputerName 192.168.1.X -Port 21`. La IP que devuelva `TcpTestSucceeded : True` es la nueva ubicación de tu NAS.
+3. **Fijar la IP (Static DHCP):** Anota la MAC (ej. `24-5e-be-00-27-89`) asociada a esa IP en el paso 1, entra al router (normalmente `192.168.1.1`) y asocia la IP a esa MAC fija en la sección **Static DHCP**.
+4. **Verificar Port Forwarding y Railway:** Comprueba que en tu router el **Port Forwarding** (apertura de puertos) del puerto 21 dirija a la IP correcta del QNAP. Finalmente, asegúrate de que en Railway (pestaña Variables) tienes el dominio correcto (`movistar.mycloudnas.com` o tu IP pública) y `QNAP_FTP_PORT` en 21.
+
 ## 5. Infraestructura Nube (Railway)
 La web vive en **Railway** (`microshop-tiendas-production.up.railway.app`).
 - El volumen de datos está montado en `/data` de forma persistente.
