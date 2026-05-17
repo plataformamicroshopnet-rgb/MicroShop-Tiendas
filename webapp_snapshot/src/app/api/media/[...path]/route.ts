@@ -23,7 +23,11 @@ export async function GET(
             return new NextResponse('Invalid path', { status: 400 })
         }
 
-        const absolutePath = path.join(process.cwd(), 'public', 'revistas_uploads', filePath)
+        const uploadDir = process.env.SQLITE_VOLUME_PATH 
+            ? path.join(process.env.SQLITE_VOLUME_PATH, 'revistas_uploads')
+            : path.join(process.cwd(), 'public', 'revistas_uploads');
+
+        const absolutePath = path.join(uploadDir, filePath)
         const fileBuffer = await readFile(absolutePath)
         
         const ext = path.extname(absolutePath).toLowerCase()

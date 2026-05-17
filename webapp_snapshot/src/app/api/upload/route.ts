@@ -20,7 +20,9 @@ export async function POST(request: Request) {
 
         const buffer = Buffer.from(await file.arrayBuffer())
         const filename =  Date.now() + '_' + file.name.replaceAll(' ', '_')
-        const uploadDir = path.join(process.cwd(), 'public', 'revistas_uploads')
+        const uploadDir = process.env.SQLITE_VOLUME_PATH 
+            ? path.join(process.env.SQLITE_VOLUME_PATH, 'revistas_uploads')
+            : path.join(process.cwd(), 'public', 'revistas_uploads')
         
         await mkdir(uploadDir, { recursive: true })
         await writeFile(path.join(uploadDir, filename), buffer)

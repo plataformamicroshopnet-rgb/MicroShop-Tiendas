@@ -680,18 +680,18 @@ export default function TramitacionPage() {
                                         <td style={{ backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', padding: '8px 4px', textAlign: 'center', fontWeight: 700, borderRight: '2px solid var(--border-color)' }}>{r.altasTotales}</td>
 
                                         {/* BAF */}
-                                        <EditableObjectiveCell storeName={r.store} field="bafNoTrasl" value={r.bafNoTrasl_obj} periodKey={activePeriodKey} rowData={r} style={{ backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)' }} />
+                                        <EditableObjectiveCell storeName={r.store} field="bafNoTrasl" value={r.bafNoTrasl_obj} periodKey={activePeriodKey} rowData={r} />
                                         <td style={{ backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', padding: '8px 4px', textAlign: 'center', fontWeight: 600 }}>{formatNum(r.bafNoTrasl_vent)}</td>
                                         <td style={{ backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', padding: '8px 4px', textAlign: 'center', color: '#ec4899', fontWeight: 600 }}>{formatNum(r.bafNoTrasl_tram)}</td>
                                         <td style={{ backgroundColor: '#e5e7eb', borderBottom: '1px solid var(--border-color)', padding: '8px 4px', textAlign: 'center', color: '#374151' }}>{formatNum(r.bafNoTrasl_proj)}</td>
-                                        <CellProjPct obj={r.bafNoTrasl_obj} proj={r.bafNoTrasl_proj} style={{ backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)' }} />
+                                        <CellProjPct obj={r.bafNoTrasl_obj} proj={r.bafNoTrasl_proj} />
 
                                         {/* BAF Conv MS */}
-                                        <EditableObjectiveCell storeName={r.store} field="bafConvMS" value={r.bafConvMS_obj} periodKey={activePeriodKey} rowData={r} style={{ backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)' }} />
+                                        <EditableObjectiveCell storeName={r.store} field="bafConvMS" value={r.bafConvMS_obj} periodKey={activePeriodKey} rowData={r} />
                                         <td style={{ backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', padding: '8px 4px', textAlign: 'center', fontWeight: 600 }}>{formatNum(r.bafConvMS_vent)}</td>
                                         <td style={{ backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', padding: '8px 4px', textAlign: 'center', color: '#ec4899', fontWeight: 600 }}>{formatNum(r.bafConvMS_tram)}</td>
                                         <td style={{ backgroundColor: '#e5e7eb', borderBottom: '1px solid var(--border-color)', padding: '8px 4px', textAlign: 'center', color: '#374151' }}>{formatNum(r.bafConvMS_proj)}</td>
-                                        <CellProjPct obj={r.bafConvMS_obj} proj={r.bafConvMS_proj} style={{ backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)' }} />
+                                        <CellProjPct obj={r.bafConvMS_obj} proj={r.bafConvMS_proj} />
                                     </tr>
                                 ))}
                                 <tr>
