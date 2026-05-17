@@ -816,6 +816,7 @@ export default function MovilFreeApp() {
                 </tbody>
               </table>
             </div>
+          </div>
           )}
 
           {/* TAB: DEVOLUCIONES E HISTORICO */}

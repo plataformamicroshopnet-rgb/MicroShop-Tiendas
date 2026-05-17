@@ -222,9 +222,9 @@ export default function DireccionTiendasPage() {
               )}
               
               <div 
-                  className={\`hub-card hub-card-main \${isEditMode ? 'wiggle-mode' : ''}\`} 
+                  className={`hub-card hub-card-main ${isEditMode ? 'wiggle-mode' : ''}`} 
                   onClick={isEditMode ? undefined : c.action} 
-                  style={{ cursor: isEditMode ? 'default' : 'pointer', borderLeft: \`6px solid \${iconColor}\` }}
+                  style={{ cursor: isEditMode ? 'default' : 'pointer', borderLeft: `6px solid ${iconColor}` }}
               >
                 <div style={{ 
                     background: c.color || 'rgba(59, 130, 246, 0.1)', 
