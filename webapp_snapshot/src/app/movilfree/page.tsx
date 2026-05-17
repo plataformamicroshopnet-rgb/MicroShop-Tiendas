@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, Trash2, ShoppingCart, X, Users, ArrowLeftRight, RefreshCcw, Package, Edit, Save, Search, Edit2, Wrench, UploadCloud, Printer } from 'lucide-react'
+import './MovilFree.css'
 
 // --- Types ---
 type Product = { id: string; nombre: string; categoria: string; precio: number; coste: number; stock: number; createdAt: string; imei?: string }
@@ -346,12 +347,12 @@ export default function MovilFreeApp() {
   const lightPink = '#FFF0F9'
 
   return (
-    <div className="print-wrapper" style={{ minHeight: '100vh', background: lightPink, padding: 32, fontFamily: 'sans-serif' }}>
+    <div className="print-wrapper mf-main-wrapper">
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         
         <div className="no-print">
           {/* HEADER */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 32, background: 'white', padding: 24, borderRadius: 16, boxShadow: '0 4px 20px rgba(233,30,151,0.08)' }}>
+          <div className="mf-header">
           <div style={{ width: 48, height: 48, background: '#E91E97', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
             <ShoppingCart size={28} />
           </div>
@@ -365,8 +366,8 @@ export default function MovilFreeApp() {
         </div>
 
         {/* TABS & SEARCH */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
-          <div style={{ display: 'flex', gap: 12 }}>
+        <div className="mf-tabs-bar">
+          <div className="mf-tabs-buttons">
           <button onClick={() => setActiveTab('ventas')} style={{ height: 44, padding: '0 16px', borderRadius: 12, border: 'none', background: activeTab === 'ventas' ? '#E91E97' : 'white', color: activeTab === 'ventas' ? 'white' : '#666', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: activeTab === 'ventas' ? '0 4px 12px rgba(233,30,151,0.2)' : 'none' }}>
             <ShoppingCart size={18} /> Punto de Venta
           </button>
@@ -384,7 +385,7 @@ export default function MovilFreeApp() {
           </button>
           </div>
 
-          <div style={{ position: 'relative', width: '320px' }}>
+          <div className="mf-search-container">
             <Search size={18} style={{ position: 'absolute', left: 14, top: 13, color: '#0284c7' }} />
             {activeTab === 'ventas' && (
               <input placeholder="Buscar producto en Punto de Venta..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} style={{ width: '100%', height: 44, padding: '0 16px 0 44px', borderRadius: 12, border: '1px solid #bae6fd', background: '#f0f9ff', color: '#0369a1', fontSize: 14, boxSizing: 'border-box' }} />
@@ -405,11 +406,11 @@ export default function MovilFreeApp() {
         </div>
 
         {/* CONTENIDO TABS */}
-        <div style={{ background: 'white', padding: 32, borderRadius: 16, boxShadow: '0 8px 30px rgba(0,0,0,0.04)' }}>
+        <div className="mf-content-box">
           
           {/* TAB: VENTAS */}
           {activeTab === 'ventas' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 24 }}>
+            <div className="mf-pos-grid">
               <div style={{ background: '#f8f9fa', padding: 24, borderRadius: 16 }}>
                 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -603,7 +604,7 @@ export default function MovilFreeApp() {
           {activeTab === 'productos' && (
             <div>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr 1fr 1fr 1.2fr auto', gap: 12, marginBottom: 24, background: '#f8f9fa', padding: 16, borderRadius: 12, alignItems: 'end' }}>
+              <div className="mf-form-grid-productos">
                 <div>
                   <label style={{fontSize: 12, fontWeight: 'bold', color: '#666'}}>Producto</label>
                   <input placeholder="Nombre" value={newProd.nombre} onChange={e=>setNewProd({...newProd, nombre: e.target.value})} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ddd', marginTop: 4 }} />
@@ -634,7 +635,7 @@ export default function MovilFreeApp() {
                   <label style={{fontSize: 12, fontWeight: 'bold', color: '#666'}}>Stock</label>
                   <input type="number" placeholder="Uds." value={newProd.stock || ''} onChange={e=>setNewProd({...newProd, stock: Number(e.target.value)})} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ddd', marginTop: 4 }} />
                 </div>
-                <div style={{ display: 'flex', gap: 10 }}>
+                <div className="mf-action-buttons">
                   <button onClick={handleCreateProduct} style={{ background: fuchsia, color: 'white', border: 'none', padding: '12px 20px', borderRadius: 6, fontWeight: 'bold', cursor: 'pointer', height: 40, whiteSpace: 'nowrap' }}>Añadir</button>
                   <button onClick={() => setShowPasteModal(true)} style={{ background: '#4CAF50', color: 'white', border: 'none', padding: '12px 20px', borderRadius: 6, fontWeight: 'bold', cursor: 'pointer', height: 40, whiteSpace: 'nowrap' }}>Excel 📋</button>
                 </div>
@@ -665,7 +666,8 @@ export default function MovilFreeApp() {
               )}
 
 
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 14 }}>
+              <div className="mf-table-wrapper">
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 14, minWidth: 900 }}>
                 <thead>
                   
                   <tr style={{ background: lightPink, color: fuchsia }}>
@@ -735,13 +737,14 @@ export default function MovilFreeApp() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
 
           {/* TAB: CLIENTES */}
           {activeTab === 'clientes' && (
             <div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24, background: '#f8f9fa', padding: 16, borderRadius: 12, alignItems: 'end' }}>
+              <div className="mf-form-grid-clientes">
                 <div>
                   <label style={{fontSize: 12, fontWeight: 'bold', color: '#666'}}>DNI/CIF</label>
                   <input placeholder="12345678Z" value={newClient.nif} maxLength={9} onChange={e=>setNewClient({...newClient, nif: e.target.value})} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ddd', marginTop: 4 }} />
@@ -782,7 +785,8 @@ export default function MovilFreeApp() {
               </div>
 
                             <h3 style={{ margin: 0, color: '#333', marginBottom: 16 }}>Listado de Clientes</h3>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
+              <div className="mf-table-wrapper">
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13, minWidth: 700 }}>
                 <thead>
                   <tr style={{ background: '#FFF0F9', color: '#E91E97' }}>
                     <th style={{ padding: 12, borderRadius: '8px 0 0 8px' }}>NIF</th>
@@ -860,7 +864,8 @@ export default function MovilFreeApp() {
                 </div>
               </div>
 
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 14 }}>
+              <div className="mf-table-wrapper">
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 14, minWidth: 800 }}>
                 <thead>
                   <tr style={{ background: lightPink, color: fuchsia }}>
                     <th style={{ padding: 12, borderRadius: '8px 0 0 8px' }}>Fecha</th>
@@ -922,6 +927,7 @@ export default function MovilFreeApp() {
                   {sales.length === 0 && <tr><td colSpan={6} style={{ padding: 24, textAlign: 'center', color: '#888' }}>No hay ventas registradas</td></tr>}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
 
@@ -957,8 +963,8 @@ export default function MovilFreeApp() {
                 </div>
               )}
 
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, background: 'white' }}>
+              <div className="mf-table-wrapper">
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, background: 'white', minWidth: 1200 }}>
                   <thead>
                     <tr style={{ borderBottom: '2px solid #eee' }}>
                       <th style={{ padding: 12, textAlign: 'left', color: '#888' }}>Nº</th>
