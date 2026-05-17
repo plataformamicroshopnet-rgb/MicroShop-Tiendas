@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo, Suspense } from 'react'
 import { PageHeader } from '@/components/PageHeader'
 import { usePeriod } from '@/components/PeriodProvider'
 import { useGuard } from '@/hooks/useGuard'
-import { renderDashboardData, calculateDynamicCommission } from '@/lib/salesUtils'
+import { renderDashboardData, calculateDynamicCommission, isVentaWithinDates, normalizeString } from '@/lib/salesUtils'
 import * as XLSX from 'xlsx'
 
 // ── Tabs ────────────────────────────────────────────────────────────
@@ -105,15 +105,19 @@ function calcNifTramo(subtotal: number, units: number, info: TramoInfo): number 
 
 // ── Section table ─────────────────────────────────────────────────────
 function SectionTable({
-  label, badge, badgeColor, groups, tabColor, calcCommission
+  label, badge, badgeColor, groups, tabColor, isRent, calcCommission, importeLabel = 'Importe', calcImporte
 }: {
   label: string; badge: string; badgeColor: string
   groups: NifGroup[]; tabColor: string;
+  isRent?: boolean;
   calcCommission?: (sale: any) => number;
+  importeLabel?: string;
+  calcImporte?: (sale: any) => number;
 }) {
   if (groups.length === 0) return null
 
-  const sectionTotal = groups.reduce((s, g) => s + g.subtotal, 0)
+  const getSaleImporte = (sale: any) => calcImporte ? calcImporte(sale) : Number(sale.cuota ?? 0)
+  const sectionTotal = groups.reduce((s, g) => s + g.sales.reduce((sum, sale) => sum + getSaleImporte(sale), 0), 0)
   const totalUnits   = groups.reduce((s, g) => s + g.sales.length, 0)
 
   return (
@@ -130,9 +134,15 @@ function SectionTable({
           <span style={{ fontSize: 12, color: 'var(--medium-gray)' }}>{groups.length} clientes · {totalUnits} uds.</span>
         </div>
         <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
-          <span style={{ fontSize: 13, color: 'var(--medium-gray)' }}>Importe: <strong style={{ color: 'var(--light-text)' }}>{fmt(sectionTotal)}</strong></span>
-          {calcCommission && (
-            <span style={{ fontSize: 13, color: 'var(--medium-gray)' }}>Comisión: <strong style={{ color: 'var(--light-text)' }}>{fmt(groups.reduce((acc, g) => acc + g.sales.reduce((sum, s) => sum + calcCommission(s), 0), 0))}</strong></span>
+          {isRent ? (
+            <>
+              <span style={{ fontSize: 13, color: 'var(--medium-gray)' }}>{importeLabel}: <strong style={{ color: 'var(--light-text)' }}>{fmt(sectionTotal)}</strong></span>
+              {calcCommission && (
+                <span style={{ fontSize: 13, color: 'var(--medium-gray)' }}>Comisión: <strong style={{ color: 'var(--light-text)' }}>{fmt(groups.reduce((acc, g) => acc + g.sales.reduce((sum, s) => sum + calcCommission(s), 0), 0))}</strong></span>
+              )}
+            </>
+          ) : (
+            <span style={{ fontSize: 13, color: 'var(--medium-gray)' }}>Comisión: <strong style={{ color: 'var(--light-text)' }}>{fmt(sectionTotal)}</strong></span>
           )}
         </div>
       </div>
@@ -142,7 +152,7 @@ function SectionTable({
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 800 }}>
           <thead>
             <tr style={{ background: 'var(--active-bg)' }}>
-              {['Cliente (NIF)', 'Nombre del Cliente', 'Fecha Tram.', 'Teléfono', 'Código', 'Comercial', 'Productos', 'Uds.', 'Importe', 'Comisión'].map((h, i) => (
+              {['Cliente (NIF)', 'Nombre del Cliente', 'Fecha Tram.', 'Teléfono', 'Código', 'Comercial', 'Productos', 'Uds.', importeLabel, 'Comisión'].map((h, i) => (
                 <th key={i} style={{
                   padding: '10px 14px', textAlign: i >= 7 ? 'right' : 'left',
                   whiteSpace: 'nowrap', color: 'var(--medium-gray)', fontWeight: 600, fontSize: 11,
@@ -156,6 +166,7 @@ function SectionTable({
               return group.sales.map((sale: any, si: number) => {
                 const rowBg = si % 2 === 0 ? 'transparent' : `${badgeColor}08`
                 const isLast = si === group.sales.length - 1
+                const saleImporte = calcImporte ? calcImporte(sale) : Number(sale.cuota ?? 0)
                 return (
                   <tr key={`${gi}-${si}`} style={{ background: rowBg, borderBottom: isLast ? `2px solid ${badgeColor}30` : `1px dashed var(--border-color)`, verticalAlign: 'middle' }}>
                     <td style={{ padding: '12px 14px', color: 'var(--medium-gray)', fontSize: 12, whiteSpace: 'nowrap', borderRight: '1px solid var(--border-color)' }}>{group.nif}</td>
@@ -168,8 +179,10 @@ function SectionTable({
                     <td style={{ padding: '12px 14px', textAlign: 'right' }}>
                       <span style={{ background: `${tabColor}22`, color: tabColor, borderRadius: 20, padding: '3px 11px', fontWeight: 800, fontSize: 13 }}>1</span>
                     </td>
-                    <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 600, color: 'var(--medium-gray)', fontSize: 13, whiteSpace: 'nowrap' }}>{fmt(Number(sale.cuota ?? 0))}</td>
-                    <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: 'var(--light-text)', fontSize: 13, whiteSpace: 'nowrap' }}>{calcCommission ? fmt(calcCommission(sale)) : '—'}</td>
+                    <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 600, color: 'var(--medium-gray)', fontSize: 13, whiteSpace: 'nowrap' }}>{isRent ? fmt(saleImporte) : '—'}</td>
+                    <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: 'var(--light-text)', fontSize: 13, whiteSpace: 'nowrap' }}>
+                      {isRent && calcCommission ? fmt(calcCommission(sale)) : (!isRent ? fmt(Number(sale.cuota ?? 0)) : '—')}
+                    </td>
                   </tr>
                 )
               })
@@ -195,6 +208,7 @@ function GrupoClienteContent() {
   const [loading, setLoading]       = useState(true)
   const [activeTab, setActiveTab]   = useState('fd')
   const [extraAssignments, setExtraAssignments] = useState<any[]>([])
+  const [catalogs, setCatalogs] = useState<any>({})
 
   const activePeriodObj = availablePeriods?.find((p: any) => p.period_key === activePeriodKey)
 
@@ -207,7 +221,8 @@ function GrupoClienteContent() {
       fetch(`/api/importes-plus?periodKey=${activePeriodKey}&strictPeriod=1`).then(r => r.json()).catch(() => ({})),
       fetch(`/api/objetivos?periodKey=${activePeriodKey}&strictPeriod=1`).then(r => r.json()).catch(() => ({})),
       fetch(`/api/extras/assignments?periodKey=${activePeriodKey}`).then(r => r.json()).catch(() => ({})),
-    ]).then(([sData, pymeData, plusData, objData, extrasData]) => {
+      fetch(`/api/catalogs?periodKey=${activePeriodKey}`).then(r => r.json()).catch(() => ({})),
+    ]).then(([sData, pymeData, plusData, objData, extrasData, catData]) => {
       if (sData?.success) {
         setSales((sData.logs || []).filter((s: any) => s.anulado !== 'Si' && s.pendiente !== 'Anulado'))
       }
@@ -221,6 +236,11 @@ function GrupoClienteContent() {
         setExtraAssignments(extrasData.assignments.filter((ea: any) => ea.status !== 'CANCELLED'))
       } else {
         setExtraAssignments([])
+      }
+      if (catData?.success && catData.catalogs) {
+        setCatalogs(catData.catalogs)
+      } else {
+        setCatalogs({})
       }
     }).finally(() => setLoading(false))
   }, [activePeriodKey])
@@ -247,6 +267,54 @@ function GrupoClienteContent() {
 
   // ALL channel sales (not tab-filtered) — same as Liquidaciones uses for pje calculation
   const allPlusSales   = useMemo(() => sales.filter(s => isPlus(s.codigo)),   [sales])
+
+  const getRentCommission = (sale: any) => {
+    const list = catalogs['Rent'] || [];
+    const matchingProducts = list.filter((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
+    
+    let found = matchingProducts[0];
+    
+    // If there are multiple versions of the same product, apply validity window filtering
+    if (matchingProducts.length > 1) {
+        const correctlyDated = matchingProducts.find((c: any) => isVentaWithinDates(sale.fecha, c.validFrom, c.validTo));
+        if (correctlyDated) {
+            found = correctlyDated;
+        } else {
+            found = matchingProducts[matchingProducts.length - 1]; // Fallback to the latest one
+        }
+    }
+    
+    if (found) {
+        const isConCoste = sale.rentConCoste && (sale.rentConCoste.toLowerCase() === 'sí' || sale.rentConCoste.toLowerCase() === 'si');
+        if (isConCoste) {
+            return Number(String(found.comisionConCoste || 0).replace(',','.'));
+        } else {
+            return Number(String(found.comision || 0).replace(',','.'));
+        }
+    }
+    return 0;
+  }
+
+  const getSeguroImporte = (sale: any) => {
+    const list = catalogs['Seguro'] || [];
+    const matchingProducts = list.filter((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
+    
+    let found = matchingProducts[0];
+    if (matchingProducts.length > 1) {
+        const correctlyDated = matchingProducts.find((c: any) => isVentaWithinDates(sale.fecha, c.validFrom, c.validTo));
+        if (correctlyDated) {
+            found = correctlyDated;
+        } else {
+            found = matchingProducts[matchingProducts.length - 1];
+        }
+    }
+    
+    if (found) {
+        return Number(String(found.anual || 0).replace(',','.'));
+    }
+    return Number(sale.cuota || 0); // Fallback
+  }
+
   const allBasicoSales = useMemo(() => sales.filter(s => isBasico(s.codigo)), [sales])
 
   const plusDash  = useMemo(() => {
@@ -278,6 +346,12 @@ function GrupoClienteContent() {
   const basicoTramoProyectado = basicoDash ? basicoDash.totalImporteProyectado : 0
   const grandTramo          = plusTramoAmt + basicoTramoAmt
   const uniqueNifs          = new Set(tabSales.map(s => (s.nif || 'SIN NIF').toUpperCase())).size
+
+  // Total comisiones (dinámico según pestaña)
+  const grandComisionesTotal = tabSales.reduce((acc, sale) => {
+    if (tab.id === 'rent') return acc + getRentCommission(sale);
+    return acc + Number(sale.cuota || 0);
+  }, 0)
 
   // ── Resolve extra channel code ──────────────────────────────────────
   const resolveExtraCode = (ea: any): string => {
@@ -679,8 +753,8 @@ function GrupoClienteContent() {
               <span style={{ fontSize: 12, color: 'var(--medium-gray)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Clientes únicos</span>
             </div>
             <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 10, padding: '10px 18px', display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 22, fontWeight: 900, color: 'var(--light-text)' }}>{fmt(grandTotal)}</span>
-              <span style={{ fontSize: 12, color: 'var(--medium-gray)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Gran Total</span>
+              <span style={{ fontSize: 22, fontWeight: 900, color: 'var(--light-text)' }}>{fmt(grandComisionesTotal)}</span>
+              <span style={{ fontSize: 12, color: 'var(--medium-gray)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Comisiones</span>
             </div>
             {grandTramo > 0 && (
               <div style={{ background: 'var(--bg-card)', border: `1px solid ${tab.color}40`, borderRadius: 10, padding: '10px 18px', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -806,19 +880,49 @@ function GrupoClienteContent() {
           })()}
 
           {/* ── Sections ── */}
-          <SectionTable label="Código Plus" badge="PLUS" badgeColor="#00ADEF" groups={plusGroups} tabColor={tab.color} calcCommission={s => calculateDynamicCommission(s, plusDash?.rows || [])} />
-          <SectionTable label="Código Básico" badge="BÁSICO" badgeColor="#F59E0B" groups={basicoGroups} tabColor={tab.color} calcCommission={s => calculateDynamicCommission(s, basicoDash?.rows || [])} />
-          <SectionTable label="Otros Códigos" badge="OTROS" badgeColor="#6B7280" groups={otrosGroups} tabColor={tab.color} />
+          <SectionTable 
+            label="Código Plus" 
+            badge="PLUS" 
+            badgeColor="#00ADEF" 
+            groups={plusGroups} 
+            tabColor={tab.color} 
+            isRent={tab.id === 'rent' || tab.id === 'seguro'} 
+            calcCommission={tab.id === 'rent' ? getRentCommission : (tab.id === 'seguro' ? (s) => Number(s.cuota || 0) : undefined)}
+            importeLabel={tab.id === 'seguro' ? 'Cuota Total (€)' : 'Importe'}
+            calcImporte={tab.id === 'seguro' ? getSeguroImporte : undefined}
+          />
+          <SectionTable 
+            label="Código Básico" 
+            badge="BÁSICO" 
+            badgeColor="#F59E0B" 
+            groups={basicoGroups} 
+            tabColor={tab.color} 
+            isRent={tab.id === 'rent' || tab.id === 'seguro'} 
+            calcCommission={tab.id === 'rent' ? getRentCommission : (tab.id === 'seguro' ? (s) => Number(s.cuota || 0) : undefined)}
+            importeLabel={tab.id === 'seguro' ? 'Cuota Total (€)' : 'Importe'}
+            calcImporte={tab.id === 'seguro' ? getSeguroImporte : undefined}
+          />
+          <SectionTable 
+            label="Otros Códigos" 
+            badge="OTROS" 
+            badgeColor="#6B7280" 
+            groups={otrosGroups} 
+            tabColor={tab.color} 
+            isRent={tab.id === 'rent' || tab.id === 'seguro'} 
+            calcCommission={tab.id === 'rent' ? getRentCommission : (tab.id === 'seguro' ? (s) => Number(s.cuota || 0) : undefined)}
+            importeLabel={tab.id === 'seguro' ? 'Cuota Total (€)' : 'Importe'}
+            calcImporte={tab.id === 'seguro' ? getSeguroImporte : undefined}
+          />
 
           {/* ── Grand total ── */}
           <div style={{ marginTop: 8, padding: '18px 28px', background: `${tab.color}15`, border: `2px solid ${tab.color}40`, borderRadius: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <div style={{ fontSize: 13, color: 'var(--medium-gray)', marginBottom: 2 }}>{tab.emoji} {tab.label} — GRAN TOTAL</div>
+              <div style={{ fontSize: 13, color: 'var(--medium-gray)', marginBottom: 2 }}>{tab.emoji} {tab.label} — COMISIONES</div>
               <div style={{ fontSize: 12, color: 'var(--medium-gray)' }}>{tabSales.length} operaciones · {uniqueNifs} clientes</div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 13, color: 'var(--medium-gray)', marginBottom: 2 }}>Importe total</div>
-              <div style={{ fontSize: 26, fontWeight: 900, color: tab.color }}>{fmt(grandTotal)}</div>
+              <div style={{ fontSize: 13, color: 'var(--medium-gray)', marginBottom: 2 }}>Total comisiones</div>
+              <div style={{ fontSize: 26, fontWeight: 900, color: tab.color }}>{fmt(grandComisionesTotal)}</div>
               {grandTramo > 0 && <div style={{ fontSize: 13, color: tab.color, fontWeight: 700 }}>Tramo total: {fmt(grandTramo)}</div>}
             </div>
           </div>

@@ -96,7 +96,7 @@ export function ComisionesV3({ activePeriodKey, canModify }: { activePeriodKey: 
                 const total = (row.importe || 0) + (row.o2Varios || 0) - (row.descuentos || 0);
                 arr[index].total = total;
             } else if (row.tipo === 'LOGISTICA') {
-                const total = (row.importe || 0) + (row.gasolina || 0) + (row.dietas || 0) + (row.km || 0) + (row.incentivos || 0);
+                const total = (row.importe || 0) + (row.gasolina || 0) + (row.dietas || 0) + (row.incentivos || 0);
                 arr[index].total = total;
             }
 
@@ -356,7 +356,7 @@ export function ComisionesV3({ activePeriodKey, canModify }: { activePeriodKey: 
                                 <thead>
                                     <tr style={{ background: '#0066cc', color: 'white' }}>
                                         <th style={{ padding: '2px 6px', textAlign: 'left', fontWeight: 600, textTransform: 'uppercase' }}>Logística</th>
-                                        <th style={{ padding: '2px 6px', textAlign: 'center', fontWeight: 600, textTransform: 'uppercase' }}>Importe</th>
+                                        <th style={{ padding: '2px 6px', textAlign: 'center', fontWeight: 600, textTransform: 'uppercase' }}>Comisiones</th>
                                         <th style={{ padding: '2px 6px', textAlign: 'center', fontWeight: 600, textTransform: 'uppercase' }}>Gasolina</th>
                                         <th style={{ padding: '2px 6px', textAlign: 'center', fontWeight: 600, textTransform: 'uppercase' }}>Dietas</th>
                                         <th style={{ padding: '2px 6px', textAlign: 'center', fontWeight: 600, textTransform: 'uppercase' }}>KM</th>
@@ -395,7 +395,10 @@ export function ComisionesV3({ activePeriodKey, canModify }: { activePeriodKey: 
                     </div>
 
                     <div className="card" style={{ padding: '8px 20px', background: '#5CB85C', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <h2 style={{ margin: 0, fontSize: 18 }}>Total General</h2>
+                        <div>
+                            <h2 style={{ margin: 0, fontSize: 18 }}>Total General</h2>
+                            <span style={{ fontSize: 13, opacity: 0.9 }}>TOTAL FFVV + TOTAL TIENDAS + TOTAL LOGÍSTICA</span>
+                        </div>
                         <h2 style={{ margin: 0, fontSize: 24, color: '#ffffff', fontWeight: 800 }}>{formatEuro(totalFFVV + totalTiendas + totalLogistica)}</h2>
                     </div>
                 </div>

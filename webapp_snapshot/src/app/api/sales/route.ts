@@ -30,9 +30,17 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const periodKey = searchParams.get('periodKey')
 
-    const hasBackofficePerms = canView(safeUser, 'MODULE_BACK_OFFICE');
-    console.log('SALES API: user.username:', user.username, 'hasBackofficePerms:', hasBackofficePerms, 'user.permissions:', user.permissions);
-    const baseWhereClause: any = (safeUser.role === ROLES.ADMIN || safeUser.role === ROLES.JEFE_VENTAS || safeUser.role === ROLES.BACK_OFFICE || hasBackofficePerms)
+    const hasJefeTiendas = canView(safeUser, 'MODULE_JEFE_TIENDAS');
+    const hasLiquidaciones = canView(safeUser, 'MODULE_LIQUIDACION');
+    const hasCristina = canView(safeUser, 'MODULE_CRISTINA');
+    
+    const canSeeAllSales = safeUser.role === ROLES.ADMIN || 
+                           safeUser.role === ROLES.JEFE_VENTAS || 
+                           hasJefeTiendas || 
+                           hasLiquidaciones || 
+                           hasCristina;
+
+    const baseWhereClause: any = canSeeAllSales
       ? {} 
       : { vendedor: { equals: safeUser.username || 'BLOCK_EMPTY_USER' } }
 
@@ -62,8 +70,8 @@ export async function GET(request: Request) {
       orderBy: { createdAt: 'desc' },
     })
     
-    // Fallback: Filtrado en memoria estricto sobre el nombre (para roles estrictamente comerciales sin normalizar)
-    if ((user.role === ROLES.COMERCIAL || user.role.includes('COMERCIAL')) && !hasBackofficePerms) {
+    // Fallback: Filtrado en memoria estricto sobre el nombre (por si acaso el query no filtró bien)
+    if (!canSeeAllSales) {
       const normName = (name: string) => name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
       if (user.username) {
         sales = sales.filter(s => normName(s.vendedor || '') === normName(user.username));
