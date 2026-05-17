@@ -53,14 +53,7 @@ export default function DireccionTiendasPage() {
       color: 'rgba(236, 72, 153, 0.1)',
       textColor: '#ec4899'
     },
-    {
-      title: 'Pegar Objetivos',
-      description: 'May 2026',
-      icon: ClipboardPaste,
-      action: () => router.push('/seguimiento-ventas/tramitacion'), // Apunta a tramitación ya que allí está el botón
-      color: 'rgba(245, 158, 11, 0.1)',
-      textColor: '#f59e0b'
-    },
+
     {
       title: 'Rentabilidad por Tiendas',
       description: 'Visión agrupada de personal, ventas y rentabilidad segmentada por tienda.',
