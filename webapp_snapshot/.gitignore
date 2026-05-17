@@ -40,7 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 !prisma/database.sqlite
-prisma/database.sqlite
 prisma/temp_restore*
 scripts/*
 !scripts/start-prod.js
