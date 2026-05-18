@@ -330,6 +330,8 @@ export default function GastosPage() {
     const agrupado: Record<string, Record<string, { c: number[], r: number[], dif: number[], total: number[] }>> = {}
     
     gastos.forEach(g => {
+      if (g.grupo === 'MERCADERIAS') return // Aislar mercaderías
+      
       if (!agrupado[g.grupo]) agrupado[g.grupo] = {}
       if (!agrupado[g.grupo][g.concepto]) {
         agrupado[g.grupo][g.concepto] = {
@@ -363,6 +365,43 @@ export default function GastosPage() {
         totalAnual: mesesObj.total.reduce((a, b) => a + b, 0)
       })).sort((a, b) => a.concepto.localeCompare(b.concepto))
     }))
+  }, [gastos])
+
+  // CÁLCULO DE FILAS DE MERCADERÍAS
+  const mercaderiasData = useMemo(() => {
+    const compras = new Array(12).fill(0)
+    const ventas = new Array(12).fill(0)
+    const fijos = new Array(12).fill(0)
+    const variables = new Array(12).fill(0)
+
+    gastos.forEach(g => {
+      if (g.grupo === 'Gastos Fijos') fijos[g.month - 1] += g.importe_total
+      if (g.grupo === 'Gastos Variables') variables[g.month - 1] += g.importe_total
+      if (g.grupo === 'MERCADERIAS') {
+        if (g.concepto === 'Compras Mercaderias') compras[g.month - 1] += g.importe_total
+        if (g.concepto === 'Ventas Mercaderias') ventas[g.month - 1] += g.importe_total
+      }
+    })
+
+    const gastosGeneral = new Array(12).fill(0)
+    const beneficio = new Array(12).fill(0)
+    for (let i = 0; i < 12; i++) {
+      gastosGeneral[i] = fijos[i] + variables[i] + compras[i]
+      beneficio[i] = ventas[i] - gastosGeneral[i]
+    }
+
+    return {
+      compras,
+      gastosGeneral,
+      ventas,
+      beneficio,
+      anual: {
+        compras: compras.reduce((a,b)=>a+b, 0),
+        gastosGeneral: gastosGeneral.reduce((a,b)=>a+b, 0),
+        ventas: ventas.reduce((a,b)=>a+b, 0),
+        beneficio: beneficio.reduce((a,b)=>a+b, 0)
+      }
+    }
   }, [gastos])
 
   // TOTALES DEL AÑO
@@ -618,6 +657,94 @@ export default function GastosPage() {
               </React.Fragment>
             ))}
           </tbody>
+          <tfoot>
+            {/* FILAS DE MERCADERÍAS (Añadidas a petición) */}
+            <tr style={{ background: 'var(--bg-card)', borderTop: '2px solid var(--border-color)', borderBottom: '1px solid var(--border-color)' }}>
+              <td style={{ padding: '6px 16px', fontWeight: 600, color: 'var(--light-text)', position: 'sticky', left: 0, background: 'var(--bg-card)' }}>Compras Mercaderias</td>
+              {MESES.map((m, i) => {
+                const isExpanded = expandedMonths.includes(m.id)
+                const val = mercaderiasData.compras[i]
+                return (
+                  <React.Fragment key={m.id}>
+                    {isExpanded && <><td /><td /><td /></>}
+                    <td style={{ padding: '2px 4px', textAlign: 'right', background: isExpanded ? 'rgba(0,173,239,0.05)' : 'rgba(0,173,239,0.02)' }}>
+                      <input 
+                        type="text" 
+                        defaultValue={val === 0 ? '' : val}
+                        placeholder="-"
+                        style={{ width: '100%', textAlign: 'center', background: 'transparent', border: '1px solid transparent', borderRadius: 4, padding: '2px', color: val === 0 ? 'var(--medium-gray)' : 'var(--text-main)', fontSize: 12, fontWeight: isExpanded ? 600 : 400 }}
+                        onFocus={e => e.target.style.border = '1px solid var(--mercedes-cyan)'}
+                        onBlur={e => {
+                          e.target.style.border = '1px solid transparent'
+                          if (e.target.value !== String(val)) handleUpdateCell('MERCADERIAS', 'Compras Mercaderias', m.id, 'importe_total', e.target.value)
+                        }}
+                      />
+                    </td>
+                  </React.Fragment>
+                )
+              })}
+              <td style={{ padding: '6px 16px', textAlign: 'right', fontWeight: 800, color: 'var(--text-main)' }}>{formatEuro(mercaderiasData.anual.compras)}</td>
+              <td></td>
+            </tr>
+
+            <tr style={{ background: '#f4cccc', borderBottom: '1px solid var(--border-color)' }}>
+              <td style={{ padding: '6px 16px', fontWeight: 700, color: '#000', position: 'sticky', left: 0, background: '#f4cccc' }}>Total gastos General</td>
+              {MESES.map((m, i) => {
+                const isExpanded = expandedMonths.includes(m.id)
+                return (
+                  <React.Fragment key={m.id}>
+                    {isExpanded && <><td /><td /><td /></>}
+                    <td style={{ padding: '6px 4px', textAlign: 'center', fontWeight: 700, color: '#000' }}>{formatEuro(mercaderiasData.gastosGeneral[i])}</td>
+                  </React.Fragment>
+                )
+              })}
+              <td style={{ padding: '6px 16px', textAlign: 'right', fontWeight: 800, color: '#000' }}>{formatEuro(mercaderiasData.anual.gastosGeneral)}</td>
+              <td></td>
+            </tr>
+
+            <tr style={{ background: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)' }}>
+              <td style={{ padding: '6px 16px', fontWeight: 600, color: 'var(--light-text)', position: 'sticky', left: 0, background: 'var(--bg-card)' }}>Ventas Mercaderias</td>
+              {MESES.map((m, i) => {
+                const isExpanded = expandedMonths.includes(m.id)
+                const val = mercaderiasData.ventas[i]
+                return (
+                  <React.Fragment key={m.id}>
+                    {isExpanded && <><td /><td /><td /></>}
+                    <td style={{ padding: '2px 4px', textAlign: 'right', background: isExpanded ? 'rgba(0,173,239,0.05)' : 'rgba(0,173,239,0.02)' }}>
+                      <input 
+                        type="text" 
+                        defaultValue={val === 0 ? '' : val}
+                        placeholder="-"
+                        style={{ width: '100%', textAlign: 'center', background: 'transparent', border: '1px solid transparent', borderRadius: 4, padding: '2px', color: val === 0 ? 'var(--medium-gray)' : 'var(--text-main)', fontSize: 12, fontWeight: isExpanded ? 600 : 400 }}
+                        onFocus={e => e.target.style.border = '1px solid var(--mercedes-cyan)'}
+                        onBlur={e => {
+                          e.target.style.border = '1px solid transparent'
+                          if (e.target.value !== String(val)) handleUpdateCell('MERCADERIAS', 'Ventas Mercaderias', m.id, 'importe_total', e.target.value)
+                        }}
+                      />
+                    </td>
+                  </React.Fragment>
+                )
+              })}
+              <td style={{ padding: '6px 16px', textAlign: 'right', fontWeight: 800, color: 'var(--text-main)' }}>{formatEuro(mercaderiasData.anual.ventas)}</td>
+              <td></td>
+            </tr>
+
+            <tr style={{ background: '#1c3d7a', borderBottom: '1px solid var(--border-color)' }}>
+              <td style={{ padding: '6px 16px', fontWeight: 800, color: '#fff', position: 'sticky', left: 0, background: '#1c3d7a' }}>Beneficio o Perdida</td>
+              {MESES.map((m, i) => {
+                const isExpanded = expandedMonths.includes(m.id)
+                return (
+                  <React.Fragment key={m.id}>
+                    {isExpanded && <><td /><td /><td /></>}
+                    <td style={{ padding: '6px 4px', textAlign: 'center', fontWeight: 800, color: '#fff' }}>{formatEuro(mercaderiasData.beneficio[i])}</td>
+                  </React.Fragment>
+                )
+              })}
+              <td style={{ padding: '6px 16px', textAlign: 'right', fontWeight: 800, color: '#fff' }}>{formatEuro(mercaderiasData.anual.beneficio)}</td>
+              <td></td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     </div>
@@ -813,45 +940,72 @@ export default function GastosPage() {
 
       {/* DASHBOARD METRICS REMOVED AS REQUESTED */}
 
-      {/* NAVIGATION TABS & YEAR SELECTOR */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
-        <div style={{ display: 'flex', gap: 8, background: 'var(--bg-card)', padding: 6, borderRadius: 12, border: '1px solid var(--border-color)' }}>
-          <button 
-            onClick={() => setActiveView('matriz')}
-            style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: activeView === 'matriz' ? 'var(--mercedes-cyan)' : 'transparent', color: activeView === 'matriz' ? '#000' : 'var(--light-text)', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, transition: 'all 0.2s' }}
-          >
-            <TableIcon size={16} /> Matriz Anual
-          </button>
-          <button 
-            onClick={() => setActiveView('comparativa')}
-            style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: activeView === 'comparativa' ? 'var(--mercedes-cyan)' : 'transparent', color: activeView === 'comparativa' ? '#000' : 'var(--light-text)', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, transition: 'all 0.2s' }}
-          >
-            <BarChart2 size={16} /> Comparativa Histórica
-          </button>
+      {/* NAVIGATION TABS & YEAR SELECTOR & SUMMARY WIDGET */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', gap: 8, background: 'var(--bg-card)', padding: 6, borderRadius: 12, border: '1px solid var(--border-color)', width: 'fit-content' }}>
+            <button 
+              onClick={() => setActiveView('matriz')}
+              style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: activeView === 'matriz' ? 'var(--mercedes-cyan)' : 'transparent', color: activeView === 'matriz' ? '#000' : 'var(--light-text)', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, transition: 'all 0.2s' }}
+            >
+              <TableIcon size={16} /> Matriz Anual
+            </button>
+            <button 
+              onClick={() => setActiveView('comparativa')}
+              style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: activeView === 'comparativa' ? 'var(--mercedes-cyan)' : 'transparent', color: activeView === 'comparativa' ? '#000' : 'var(--light-text)', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, transition: 'all 0.2s' }}
+            >
+              <BarChart2 size={16} /> Comparativa Histórica
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--bg-card)', padding: '6px 12px', borderRadius: 12, border: '1px solid var(--border-color)', width: 'fit-content' }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--medium-gray)' }}>Año:</span>
+            <select 
+              className="form-select"
+              value={activeYear} 
+              onChange={e => setActiveYear(parseInt(e.target.value))}
+              style={{ fontWeight: 800, fontSize: 15, padding: '4px 8px', background: 'var(--active-bg)' }}
+            >
+              {Array.from({ length: 16 }).map((_, i) => {
+                const y = 2030 - i
+                return <option key={y} value={y}>{y}</option>
+              })}
+            </select>
+            <button 
+              onClick={handleCloneYear}
+              disabled={loading}
+              style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid var(--mercedes-cyan)', background: 'rgba(0,173,239,0.1)', color: 'var(--mercedes-cyan)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, fontSize: 13, opacity: loading ? 0.5 : 1 }}
+              title="Clonar datos del año anterior"
+            >
+              <Copy size={16} /> Clonar Año Anterior
+            </button>
+          </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--bg-card)', padding: '6px 12px', borderRadius: 12, border: '1px solid var(--border-color)' }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--medium-gray)' }}>Año:</span>
-          <select 
-            className="form-select"
-            value={activeYear} 
-            onChange={e => setActiveYear(parseInt(e.target.value))}
-            style={{ fontWeight: 800, fontSize: 15, padding: '4px 8px', background: 'var(--active-bg)' }}
-          >
-            {Array.from({ length: 16 }).map((_, i) => {
-              const y = 2030 - i
-              return <option key={y} value={y}>{y}</option>
-            })}
-          </select>
-          <button 
-            onClick={handleCloneYear}
-            disabled={loading}
-            style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid var(--mercedes-cyan)', background: 'rgba(0,173,239,0.1)', color: 'var(--mercedes-cyan)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, fontSize: 13, opacity: loading ? 0.5 : 1 }}
-            title="Clonar datos del año anterior"
-          >
-            <Copy size={16} /> Clonar Año Anterior
-          </button>
-        </div>
+        {activeView === 'matriz' && (
+          <div style={{ background: 'var(--bg-card)', borderRadius: 12, border: '1px solid var(--border-color)', padding: '0', minWidth: 320, boxShadow: '0 4px 12px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+            <table style={{ width: '100%', fontSize: 14, borderCollapse: 'collapse' }}>
+              <tbody>
+                <tr style={{ background: 'var(--bg-card)' }}>
+                  <td style={{ padding: '8px 12px', color: 'var(--light-text)', fontWeight: 600, borderBottom: '1px solid var(--border-color)' }}>Compras Mercaderias</td>
+                  <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, color: 'var(--text-main)', borderBottom: '1px solid var(--border-color)' }}>{formatEuro(mercaderiasData.anual.compras)}</td>
+                </tr>
+                <tr style={{ background: '#f4cccc' }}>
+                  <td style={{ padding: '8px 12px', color: '#000', fontWeight: 700, borderBottom: '1px solid var(--border-color)' }}>Total gastos General</td>
+                  <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, color: '#000', borderBottom: '1px solid var(--border-color)' }}>{formatEuro(mercaderiasData.anual.gastosGeneral)}</td>
+                </tr>
+                <tr style={{ background: 'var(--bg-card)' }}>
+                  <td style={{ padding: '8px 12px', color: 'var(--light-text)', fontWeight: 600, borderBottom: '1px solid var(--border-color)' }}>Ventas Mercaderias</td>
+                  <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, color: 'var(--text-main)', borderBottom: '1px solid var(--border-color)' }}>{formatEuro(mercaderiasData.anual.ventas)}</td>
+                </tr>
+                <tr style={{ background: '#1c3d7a' }}>
+                  <td style={{ padding: '10px 12px', color: '#fff', fontWeight: 800 }}>Beneficio o Perdida</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 800, color: '#fff' }}>{formatEuro(mercaderiasData.anual.beneficio)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {loading ? (
