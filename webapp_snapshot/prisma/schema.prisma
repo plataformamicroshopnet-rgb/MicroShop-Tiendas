@@ -451,23 +451,23 @@ model TiendaCommissionRule {
 }
 
 model TiendaStoreObjective {
-  id              String   @id @default(uuid())
-  periodKey       String
-  storeName       String
-  bafConvMS       Float?
-  bafNoFusionO2   Float?
-  restoBaf        Float?
-  tvFutbol        Float?
-  alarmas         Float?
-  dispSegEuros    Float?
-  dispUnidades    Float?
-  seguros         Float?
-  movil           Float?
-  repos           Float?
-  fttr            Float?
-  bafNoTrasl      Float?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id            String   @id @default(uuid())
+  periodKey     String
+  storeName     String
+  bafConvMS     Float?
+  bafNoFusionO2 Float?
+  restoBaf      Float?
+  tvFutbol      Float?
+  alarmas       Float?
+  dispSegEuros  Float?
+  dispUnidades  Float?
+  seguros       Float?
+  movil         Float?
+  repos         Float?
+  fttr          Float?
+  bafNoTrasl    Float?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@unique([periodKey, storeName])
 }
@@ -708,25 +708,25 @@ model PatrimonioRecord {
 }
 
 model ComisionFFVVTienda {
-  id           String      @id @default(uuid())
+  id           String @id @default(uuid())
   periodKey    String
-  tipo         String      // "FFVV" o "TIENDA"
+  tipo         String // "FFVV" o "TIENDA"
   nombre       String
-  importe      Float?      @default(0)
-  aceleradores Float?      @default(0)
-  descuentos   Float?      @default(0)
-  dietas       Float?      @default(0)
-  km           Float?      @default(0)
-  gasolina     Float?      @default(0)
-  incentivos   Float?      @default(0)
-  o2Varios     Float?      @default(0)
-  total        Float?      @default(0)
-  
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  importe      Float? @default(0)
+  aceleradores Float? @default(0)
+  descuentos   Float? @default(0)
+  dietas       Float? @default(0)
+  km           Float? @default(0)
+  gasolina     Float? @default(0)
+  incentivos   Float? @default(0)
+  o2Varios     Float? @default(0)
+  total        Float? @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model ComisionMetadata {
-  periodKey String @id
+  periodKey String  @id
   titulo    String?
 }
