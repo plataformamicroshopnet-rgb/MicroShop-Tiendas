@@ -277,7 +277,7 @@ export default function AgendaTiendasPage() {
                 }
             })
 
-            const comercialHeader = `${c.name}\n${c.codigoComercial || ''} • ${c.team}\nTotal Acumulado: V: ${weekVts}  📞: ${weekVis}  💻: ${weekTms}  📺: ${weekDms}`
+            const comercialHeader = `${c.name}\n${c.codigoComercial || ''} • ${c.team}\nTotal Acumulado: Vts: ${weekVts} | Lla: ${weekVis} | MLP: ${weekTms} | Dms: ${weekDms}`
             
             const r = sheet.addRow([comercialHeader, ...dayCells])
             r.height = 70
@@ -315,7 +315,8 @@ export default function AgendaTiendasPage() {
         const daysToRender = weekDays.filter(d => selectedMailDays.includes(formatDate(d)));
         if (daysToRender.length === 0) return alert('Selecciona al menos un día.');
         
-        const html = renderAgendaTableHTML(daysToRender);
+        // Se envuelve en HTML y se añade meta charset utf-8 para prevenir caracteres raros en Outlook
+        const html = `<html><head><meta charset="utf-8"></head><body>${renderAgendaTableHTML(daysToRender)}</body></html>`;
         
         try {
             const blobHtml = new Blob([html], { type: 'text/html' });

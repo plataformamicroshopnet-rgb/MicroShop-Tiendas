@@ -38,7 +38,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         const session = await getSession()
-        if (!session || (session.user.role !== 'JEFE DE VENTAS' && session.user.role !== 'ROOT' && session.user.role !== 'ADMIN' && session.user.role !== 'BACK OFFICE')) {
+        const { can } = await import('@/lib/permissions')
+        
+        if (!session || (!can(session.user, 'CARD_AGENDA_CRISTINA') && !can(session.user, 'MODULE_BACK_OFFICE') && session.user.role !== 'ROOT')) {
             return NextResponse.json({ error: 'No autorizado para editar la Agenda' }, { status: 403 })
         }
 
