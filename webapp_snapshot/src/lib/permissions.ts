@@ -56,6 +56,7 @@ export function can(user: any, permission: string): boolean {
     : getDefaultPermissions(user.role);
     
   // Traductores de acciones heredadas
+  if (permission === 'VIEW_DASHBOARD') return true;
   if (permission === 'CREATE_SALES') return activePerms.includes('CARD_NUEVA_VENTA');
   if (permission === 'EDIT_SALES' || permission === 'CANCEL_SALES') return activePerms.includes('CARD_REGISTRO_OPERACIONES');
   if (permission === 'MANAGE_CATALOG') return activePerms.includes('CARD_CATALOGOS');
