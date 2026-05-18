@@ -148,8 +148,9 @@ export default function VencimientosPage() {
 
     for (const line of lines) {
       const cols = line.split('\t').map(c => c.trim())
-      if (cols.length < 5) continue // Relaxed from 12 to 5 to handle empty trailing columns
-      if (cols[0].toUpperCase() === 'PROVEEDORES') continue // skip header
+      if (cols.length < 2) continue // A valid row should at least have a few tabs
+      if (!cols[0] && !cols[1]) continue // skip completely empty rows
+      if (cols[0]?.toUpperCase() === 'PROVEEDORES') continue // skip header
 
       const cleanNum = (str: string) => {
         if (!str) return 0
@@ -335,20 +336,6 @@ export default function VencimientosPage() {
             placeholder="Pega aquí las filas de Excel..."
             style={{ width: '100%', height: '150px', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0', fontFamily: 'monospace', fontSize: '12px', marginBottom: '16px' }}
           />
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', padding: '12px', background: replaceData ? '#FEF2F2' : '#F0FDF4', borderRadius: '8px', border: replaceData ? '1px solid #FECACA' : '1px solid #BBF7D0' }}>
-            <input
-              type="checkbox"
-              id="replaceData"
-              checked={replaceData}
-              onChange={(e) => setReplaceData(e.target.checked)}
-              style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-            />
-            <label htmlFor="replaceData" style={{ fontSize: '14px', color: replaceData ? '#DC2626' : '#16A34A', fontWeight: 600, cursor: 'pointer' }}>
-              {replaceData
-                ? '⚠️ CUIDADO: Borrar todo el historial actual y reemplazarlo por estos datos.'
-                : '✅ Seguro: Añadir estos datos al historial existente (ideal para importar años anteriores).'}
-            </label>
-          </div>
           <button
             onClick={handleBulkImport}
             disabled={saving}

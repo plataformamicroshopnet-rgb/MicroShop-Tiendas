@@ -1,13 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
-async function main() {
-  const records = await prisma.gastoMensual.findMany({ select: { year: true, concepto: true, grupo: true } });
-  console.log('Total records:', records.length);
-  const years = new Set(records.map(r => r.year));
-  console.log('Years in DB:', Array.from(years));
-  const ivaYears = new Set(records.filter(r => r.grupo === 'IVA').map(r => r.year));
-  console.log('IVA Years:', Array.from(ivaYears));
-  const gastosYears = new Set(records.filter(r => r.grupo !== 'IVA').map(r => r.year));
-  console.log('Gastos Years:', Array.from(gastosYears));
-}
-main().finally(() => prisma.$disconnect());
+const sqlite3 = require('sqlite3');
+const db = new sqlite3.Database('prisma/database.sqlite');
+db.all("SELECT year, month, concepto, importe_total FROM gastos_historico WHERE year = 2018 AND grupo = 'MERCADERIAS';", (err, rows) => {
+  console.log(rows);
+});

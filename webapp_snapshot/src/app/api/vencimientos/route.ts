@@ -20,8 +20,16 @@ export async function POST(req: Request) {
     const { action, items, item, replace } = body
 
     if (action === 'bulk' && items && Array.isArray(items)) {
-      if (replace) {
-        await prisma.vencimiento.deleteMany({})
+      // Eliminar registros existentes con el mismo proveedor y nº factura para evitar duplicados
+      const conditions = items.filter((i: any) => i.nFactura && i.proveedor).map((i: any) => ({
+        proveedor: i.proveedor,
+        nFactura: i.nFactura
+      }))
+      
+      if (conditions.length > 0) {
+        await prisma.vencimiento.deleteMany({
+          where: { OR: conditions }
+        })
       }
       
       const created = await prisma.vencimiento.createMany({
