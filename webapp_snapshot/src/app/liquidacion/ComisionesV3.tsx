@@ -96,7 +96,7 @@ export function ComisionesV3({ activePeriodKey, canModify }: { activePeriodKey: 
                 const total = (row.importe || 0) + (row.o2Varios || 0) - (row.descuentos || 0);
                 arr[index].total = total;
             } else if (row.tipo === 'LOGISTICA') {
-                const total = (row.importe || 0) + (row.gasolina || 0) + (row.dietas || 0) + (row.incentivos || 0);
+                const total = (row.importe || 0) + (row.gasolina || 0);
                 arr[index].total = total;
             }
 
