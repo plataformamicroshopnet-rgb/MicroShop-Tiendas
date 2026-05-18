@@ -43,7 +43,7 @@ export default function Sidebar() {
   }
 
   const navItems: NavItem[] = [
-    { name: 'Dashboard', href: '/', icon: LayoutDashboard, permission: 'MODULE_TIENDAS' },
+    { name: 'Dashboard', href: '/', icon: LayoutDashboard, permission: 'VIEW_DASHBOARD' },
     { name: 'Tiendas Hub', href: '/tiendas', icon: Briefcase, permission: 'MODULE_TIENDAS' },
     { name: 'Ventas MovilFree', href: '/movilfree', icon: Smartphone, permission: 'MODULE_MOVILFREE' },
     { name: 'Dirección Tiendas', href: '/direccion-tiendas', icon: Building2, permission: 'MODULE_DIRECCION' },

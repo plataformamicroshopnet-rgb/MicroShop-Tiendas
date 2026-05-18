@@ -92,6 +92,7 @@ export function canView(user: any, moduleName: string): boolean {
     : getDefaultPermissions(user.role);
 
   // Mapeos temporales de retrocompatibilidad
+  if (moduleName === 'VIEW_DASHBOARD') return true;
   if (moduleName === 'MODULE_TIENDAS') return activePerms.includes('HUB_TIENDAS');
   if (moduleName === 'MODULE_MOVILFREE') return activePerms.includes('HUB_MOVILFREE');
   if (moduleName === 'MODULE_JEFE_TIENDAS') return activePerms.includes('HUB_SEGUIMIENTO');
