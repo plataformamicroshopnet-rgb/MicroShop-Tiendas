@@ -639,15 +639,9 @@ export default function NuevaVentaPage() {
 
                       <div style={{ height: 1, backgroundColor: '#E0E0E0', margin: '8px 0' }}></div>
                       
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                        <div>
-                          <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>Teléfono (Nº Fijo / Móvil)</label>
-                          <input type="text" className="form-input" maxLength={9} value={prod.telf} onChange={e => handleProductChange(index, 'telf', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
-                        </div>
-                        <div>
-                          <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>Nº Cliente (Opcional)</label>
-                          <input type="text" className="form-input" value={prod.noCliente} onChange={e => handleProductChange(index, 'noCliente', e.target.value)} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
-                        </div>
+                      <div>
+                        <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>Teléfono (Nº Fijo / Móvil)</label>
+                        <input type="text" className="form-input" maxLength={9} value={prod.telf} onChange={e => handleProductChange(index, 'telf', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
                       </div>
                     </div>
 
