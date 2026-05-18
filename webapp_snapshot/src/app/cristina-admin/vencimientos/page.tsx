@@ -153,9 +153,20 @@ export default function VencimientosPage() {
 
       const cleanNum = (str: string) => {
         if (!str) return 0
-        let s = str.replace(/[€]/g, '').trim()
-        if (s.includes(',')) {
-          s = s.replace(/\./g, '')
+        let s = str.toString().replace(/[€\s]/g, '').trim()
+        const lastComma = s.lastIndexOf(',')
+        const lastDot = s.lastIndexOf('.')
+        
+        if (lastComma > -1 && lastDot > -1) {
+          if (lastComma > lastDot) {
+            // Formato español: 1.234,56
+            s = s.replace(/\./g, '').replace(/,/g, '.')
+          } else {
+            // Formato US: 1,234.56
+            s = s.replace(/,/g, '')
+          }
+        } else if (lastComma > -1) {
+          // Solo coma: 1234,56
           s = s.replace(/,/g, '.')
         }
         return parseFloatSafe(s)
