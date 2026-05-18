@@ -135,7 +135,7 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const session = await getSession()
-    if (!session || !canEdit(session.user, 'MODULE_TIENDAS')) {
+    if (!session || !(canEdit(session.user, 'MODULE_TIENDAS') || can(session.user, 'EDIT_SALES') || can(session.user, 'MODULE_CRISTINA') || can(session.user, 'MODULE_BACK_OFFICE'))) {
        return NextResponse.json({ success: false, error: 'No autorizado / Solo Lectura' }, { status: 403 })
     }
     const { id, updates } = await request.json()
@@ -251,7 +251,7 @@ export async function PATCH(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const session = await getSession()
-    if (!session || !(canEdit(session.user, 'MODULE_TIENDAS') || can(session.user, 'CANCEL_SALES'))) {
+    if (!session || !(canEdit(session.user, 'MODULE_TIENDAS') || can(session.user, 'CANCEL_SALES') || can(session.user, 'MODULE_CRISTINA') || can(session.user, 'MODULE_BACK_OFFICE'))) {
        return NextResponse.json({ success: false, error: 'No autorizado / Solo Lectura' }, { status: 403 })
     }
     const { searchParams } = new URL(request.url)

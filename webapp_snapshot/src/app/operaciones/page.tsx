@@ -341,8 +341,8 @@ function OperationsContent() {
   const vendorFilter = searchParams.get('vendedor')
   const grupoFilter = searchParams.get('grupo')
 
-  const canEdit = canEditMacro(user, 'MODULE_TIENDAS');
-  const canCancel = canEditMacro(user, 'MODULE_TIENDAS') || can(user, 'CANCEL_SALES');
+  const canEdit = canEditMacro(user, 'MODULE_TIENDAS') || can(user, 'EDIT_SALES') || can(user, 'MODULE_CRISTINA') || can(user, 'MODULE_BACK_OFFICE');
+  const canCancel = canEditMacro(user, 'MODULE_TIENDAS') || can(user, 'CANCEL_SALES') || can(user, 'MODULE_CRISTINA') || can(user, 'MODULE_BACK_OFFICE');
 
   const fetchSales = () => {
     if (!activePeriodKey) return;

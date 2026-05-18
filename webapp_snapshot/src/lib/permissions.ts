@@ -26,6 +26,14 @@ export function getDefaultPermissions(role: string): string[] {
         'HUB_TIENDAS', 'CARD_VENTAS_TIENDAS',
         'PRINT', 'EXPORT_EXCEL'
       ]
+    case 'GESTORA':
+      return [
+        'HUB_LIQUIDACIONES', 'CARD_RENTABILIDAD_TIENDAS',
+        'HUB_CRISTINA', 'CARD_AGENDA_CRISTINA', 'CARD_CONTROL_STOCK', 'CARD_INFORMES_GASTOS', 'CARD_CONTROL_VENCIMIENTOS',
+        'HUB_MOVILFREE', 'CARD_TPV_MOVILFREE',
+        'HUB_BACKOFFICE', 'CARD_NUEVA_VENTA', 'CARD_REGISTRO_OPERACIONES', 'CARD_OPERACIONES_PENDIENTES',
+        'PRINT', 'EXPORT_EXCEL'
+      ]
     case 'COMERCIAL':
     default:
       return [
