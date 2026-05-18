@@ -105,9 +105,9 @@ export default function VencimientosPage() {
     const tarjetas = parseFloatSafe(newForm.tarjetas)
     const accesorios = parseFloatSafe(newForm.accesorios)
     const moviles = parseFloatSafe(newForm.moviles)
-    const iva = parseFloatSafe(newForm.iva)
+    // El cliente pide que Factura no sume IVA, igual que en su Excel original
     
-    newForm.totalFactura = (tarjetas + accesorios + moviles + iva).toFixed(2)
+    newForm.totalFactura = (tarjetas + accesorios + moviles).toFixed(2)
     
     setEditForm(newForm)
   }
