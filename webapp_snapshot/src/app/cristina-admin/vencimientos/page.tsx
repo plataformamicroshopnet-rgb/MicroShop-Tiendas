@@ -102,12 +102,11 @@ export default function VencimientosPage() {
       newForm.iva = (v * 0.21).toFixed(2)
     }
     
-    const recargo = parseFloatSafe(newForm.recargo)
     const tarjetas = parseFloatSafe(newForm.tarjetas)
     const accesorios = parseFloatSafe(newForm.accesorios)
     const moviles = parseFloatSafe(newForm.moviles)
     
-    newForm.totalFactura = (recargo + tarjetas + accesorios + moviles).toFixed(2)
+    newForm.totalFactura = (tarjetas + accesorios + moviles).toFixed(2)
     
     setEditForm(newForm)
   }
@@ -426,10 +425,6 @@ export default function VencimientosPage() {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '24px', background: '#F8FAFC', padding: '12px 24px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>RECARGO</div>
-              <div style={{ fontWeight: 'bold', color: '#334155' }}>{formatEuro(monthTotals.recargo)}</div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>TARJETAS</div>
               <div style={{ fontWeight: 'bold', color: '#334155' }}>{formatEuro(monthTotals.tarjetas)}</div>
             </div>
@@ -465,7 +460,6 @@ export default function VencimientosPage() {
                   <th style={{ padding: '10px 12px', fontSize: '12px', color: '#475569', fontWeight: 700 }}>Nº FACTURA</th>
                   <th style={{ padding: '10px 12px', fontSize: '12px', color: '#475569', fontWeight: 700 }}>VENCIMIENTO</th>
                   <th style={{ padding: '10px 12px', fontSize: '12px', color: '#475569', fontWeight: 700, textAlign: 'center' }}>PAGADO</th>
-                  <th style={{ padding: '10px 12px', fontSize: '12px', color: '#475569', fontWeight: 700, textAlign: 'right' }}>Recargo</th>
                   <th style={{ padding: '10px 12px', fontSize: '12px', color: '#475569', fontWeight: 700, textAlign: 'right' }}>Tarjetas</th>
                   <th style={{ padding: '10px 12px', fontSize: '12px', color: '#475569', fontWeight: 700, textAlign: 'right' }}>Accesorios</th>
                   <th style={{ padding: '10px 12px', fontSize: '12px', color: '#475569', fontWeight: 700, textAlign: 'right' }}>Móviles</th>
@@ -487,7 +481,6 @@ export default function VencimientosPage() {
                         {editForm.pagado ? 'SÍ' : 'NO'}
                       </button>
                     </td>
-                    <td style={{ padding: '4px 8px' }}><input type="number" step="0.01" value={editForm.recargo || ''} onChange={e => handleNumericChange('recargo', e.target.value)} style={{ width: '60px', padding: '6px', border: '1px solid #10B981', borderRadius: 4, fontSize: 12, textAlign: 'right' }} /></td>
                     <td style={{ padding: '4px 8px' }}><input type="number" step="0.01" value={editForm.tarjetas || ''} onChange={e => handleNumericChange('tarjetas', e.target.value)} style={{ width: '60px', padding: '6px', border: '1px solid #10B981', borderRadius: 4, fontSize: 12, textAlign: 'right' }} /></td>
                     <td style={{ padding: '4px 8px' }}><input type="number" step="0.01" value={editForm.accesorios || ''} onChange={e => handleNumericChange('accesorios', e.target.value)} style={{ width: '60px', padding: '6px', border: '1px solid #10B981', borderRadius: 4, fontSize: 12, textAlign: 'right' }} /></td>
                     <td style={{ padding: '4px 8px' }}><input type="number" step="0.01" value={editForm.moviles || ''} onChange={e => handleNumericChange('moviles', e.target.value)} style={{ width: '60px', padding: '6px', border: '1px solid #10B981', borderRadius: 4, fontSize: 12, textAlign: 'right' }} /></td>
@@ -537,9 +530,6 @@ export default function VencimientosPage() {
                               {item.pagado ? 'SÍ' : 'NO'}
                             </button>
                           )}
-                        </td>
-                        <td style={{ padding: '6px 12px', fontSize: '12px', textAlign: 'right', color: '#64748B', whiteSpace: 'nowrap' }}>
-                          {isEditing ? <input type="number" step="0.01" value={editForm.recargo || ''} onChange={e => handleNumericChange('recargo', e.target.value)} style={{ width: '60px', padding: '4px', fontSize: 12, textAlign: 'right' }} /> : formatEuro(item.recargo)}
                         </td>
                         <td style={{ padding: '6px 12px', fontSize: '12px', textAlign: 'right', color: '#64748B', whiteSpace: 'nowrap' }}>
                           {isEditing ? <input type="number" step="0.01" value={editForm.tarjetas || ''} onChange={e => handleNumericChange('tarjetas', e.target.value)} style={{ width: '60px', padding: '4px', fontSize: 12, textAlign: 'right' }} /> : formatEuro(item.tarjetas)}
