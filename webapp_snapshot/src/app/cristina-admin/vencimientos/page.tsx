@@ -94,6 +94,24 @@ export default function VencimientosPage() {
     setEditForm({})
   }
 
+  const handleNumericChange = (field: string, value: string) => {
+    let newForm = { ...editForm, [field]: value }
+    
+    if (field === 'moviles') {
+      const v = parseFloatSafe(value)
+      newForm.iva = (v * 0.21).toFixed(2)
+    }
+    
+    const recargo = parseFloatSafe(newForm.recargo)
+    const tarjetas = parseFloatSafe(newForm.tarjetas)
+    const accesorios = parseFloatSafe(newForm.accesorios)
+    const moviles = parseFloatSafe(newForm.moviles)
+    
+    newForm.totalFactura = (recargo + tarjetas + accesorios + moviles).toFixed(2)
+    
+    setEditForm(newForm)
+  }
+
   const handleSaveRow = async () => {
     const isNew = editingId === 'NEW'
     const method = isNew ? 'POST' : 'PUT'
@@ -469,12 +487,12 @@ export default function VencimientosPage() {
                         {editForm.pagado ? 'SÍ' : 'NO'}
                       </button>
                     </td>
-                    <td style={{ padding: '4px 8px' }}><input type="number" step="0.01" value={editForm.recargo || ''} onChange={e => setEditForm({ ...editForm, recargo: e.target.value })} style={{ width: '60px', padding: '6px', border: '1px solid #10B981', borderRadius: 4, fontSize: 12, textAlign: 'right' }} /></td>
-                    <td style={{ padding: '4px 8px' }}><input type="number" step="0.01" value={editForm.tarjetas || ''} onChange={e => setEditForm({ ...editForm, tarjetas: e.target.value })} style={{ width: '60px', padding: '6px', border: '1px solid #10B981', borderRadius: 4, fontSize: 12, textAlign: 'right' }} /></td>
-                    <td style={{ padding: '4px 8px' }}><input type="number" step="0.01" value={editForm.accesorios || ''} onChange={e => setEditForm({ ...editForm, accesorios: e.target.value })} style={{ width: '60px', padding: '6px', border: '1px solid #10B981', borderRadius: 4, fontSize: 12, textAlign: 'right' }} /></td>
-                    <td style={{ padding: '4px 8px' }}><input type="number" step="0.01" value={editForm.moviles || ''} onChange={e => setEditForm({ ...editForm, moviles: e.target.value })} style={{ width: '60px', padding: '6px', border: '1px solid #10B981', borderRadius: 4, fontSize: 12, textAlign: 'right' }} /></td>
-                    <td style={{ padding: '4px 8px' }}><input type="number" step="0.01" value={editForm.iva || ''} onChange={e => setEditForm({ ...editForm, iva: e.target.value })} style={{ width: '60px', padding: '6px', border: '1px solid #10B981', borderRadius: 4, fontSize: 12, textAlign: 'right' }} /></td>
-                    <td style={{ padding: '4px 8px' }}><input type="number" step="0.01" value={editForm.totalFactura || ''} onChange={e => setEditForm({ ...editForm, totalFactura: e.target.value })} style={{ width: '70px', padding: '6px', border: '1px solid #10B981', borderRadius: 4, fontSize: 12, textAlign: 'right' }} /></td>
+                    <td style={{ padding: '4px 8px' }}><input type="number" step="0.01" value={editForm.recargo || ''} onChange={e => handleNumericChange('recargo', e.target.value)} style={{ width: '60px', padding: '6px', border: '1px solid #10B981', borderRadius: 4, fontSize: 12, textAlign: 'right' }} /></td>
+                    <td style={{ padding: '4px 8px' }}><input type="number" step="0.01" value={editForm.tarjetas || ''} onChange={e => handleNumericChange('tarjetas', e.target.value)} style={{ width: '60px', padding: '6px', border: '1px solid #10B981', borderRadius: 4, fontSize: 12, textAlign: 'right' }} /></td>
+                    <td style={{ padding: '4px 8px' }}><input type="number" step="0.01" value={editForm.accesorios || ''} onChange={e => handleNumericChange('accesorios', e.target.value)} style={{ width: '60px', padding: '6px', border: '1px solid #10B981', borderRadius: 4, fontSize: 12, textAlign: 'right' }} /></td>
+                    <td style={{ padding: '4px 8px' }}><input type="number" step="0.01" value={editForm.moviles || ''} onChange={e => handleNumericChange('moviles', e.target.value)} style={{ width: '60px', padding: '6px', border: '1px solid #10B981', borderRadius: 4, fontSize: 12, textAlign: 'right' }} /></td>
+                    <td style={{ padding: '4px 8px' }}><input type="number" step="0.01" value={editForm.iva || ''} onChange={e => handleNumericChange('iva', e.target.value)} style={{ width: '60px', padding: '6px', border: '1px solid #10B981', borderRadius: 4, fontSize: 12, textAlign: 'right' }} /></td>
+                    <td style={{ padding: '4px 8px' }}><input type="number" step="0.01" value={editForm.totalFactura || ''} onChange={e => handleNumericChange('totalFactura', e.target.value)} style={{ width: '70px', padding: '6px', border: '1px solid #10B981', borderRadius: 4, fontSize: 12, textAlign: 'right' }} /></td>
                     <td style={{ padding: '4px 8px', textAlign: 'center' }}>
                       <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
                         <button onClick={handleSaveRow} disabled={saving} style={{ background: '#10B981', color: '#FFF', border: 'none', padding: '6px', borderRadius: '4px', cursor: 'pointer' }}><Save size={14} /></button>
@@ -521,22 +539,22 @@ export default function VencimientosPage() {
                           )}
                         </td>
                         <td style={{ padding: '6px 12px', fontSize: '12px', textAlign: 'right', color: '#64748B', whiteSpace: 'nowrap' }}>
-                          {isEditing ? <input type="number" step="0.01" value={editForm.recargo || ''} onChange={e => setEditForm({ ...editForm, recargo: e.target.value })} style={{ width: '60px', padding: '4px', fontSize: 12, textAlign: 'right' }} /> : formatEuro(item.recargo)}
+                          {isEditing ? <input type="number" step="0.01" value={editForm.recargo || ''} onChange={e => handleNumericChange('recargo', e.target.value)} style={{ width: '60px', padding: '4px', fontSize: 12, textAlign: 'right' }} /> : formatEuro(item.recargo)}
                         </td>
                         <td style={{ padding: '6px 12px', fontSize: '12px', textAlign: 'right', color: '#64748B', whiteSpace: 'nowrap' }}>
-                          {isEditing ? <input type="number" step="0.01" value={editForm.tarjetas || ''} onChange={e => setEditForm({ ...editForm, tarjetas: e.target.value })} style={{ width: '60px', padding: '4px', fontSize: 12, textAlign: 'right' }} /> : formatEuro(item.tarjetas)}
+                          {isEditing ? <input type="number" step="0.01" value={editForm.tarjetas || ''} onChange={e => handleNumericChange('tarjetas', e.target.value)} style={{ width: '60px', padding: '4px', fontSize: 12, textAlign: 'right' }} /> : formatEuro(item.tarjetas)}
                         </td>
                         <td style={{ padding: '6px 12px', fontSize: '12px', textAlign: 'right', color: '#64748B', whiteSpace: 'nowrap' }}>
-                          {isEditing ? <input type="number" step="0.01" value={editForm.accesorios || ''} onChange={e => setEditForm({ ...editForm, accesorios: e.target.value })} style={{ width: '60px', padding: '4px', fontSize: 12, textAlign: 'right' }} /> : formatEuro(item.accesorios)}
+                          {isEditing ? <input type="number" step="0.01" value={editForm.accesorios || ''} onChange={e => handleNumericChange('accesorios', e.target.value)} style={{ width: '60px', padding: '4px', fontSize: 12, textAlign: 'right' }} /> : formatEuro(item.accesorios)}
                         </td>
                         <td style={{ padding: '6px 12px', fontSize: '12px', textAlign: 'right', color: '#64748B', whiteSpace: 'nowrap' }}>
-                          {isEditing ? <input type="number" step="0.01" value={editForm.moviles || ''} onChange={e => setEditForm({ ...editForm, moviles: e.target.value })} style={{ width: '60px', padding: '4px', fontSize: 12, textAlign: 'right' }} /> : formatEuro(item.moviles)}
+                          {isEditing ? <input type="number" step="0.01" value={editForm.moviles || ''} onChange={e => handleNumericChange('moviles', e.target.value)} style={{ width: '60px', padding: '4px', fontSize: 12, textAlign: 'right' }} /> : formatEuro(item.moviles)}
                         </td>
                         <td style={{ padding: '6px 12px', fontSize: '12px', textAlign: 'right', color: '#64748B', whiteSpace: 'nowrap' }}>
-                          {isEditing ? <input type="number" step="0.01" value={editForm.iva || ''} onChange={e => setEditForm({ ...editForm, iva: e.target.value })} style={{ width: '60px', padding: '4px', fontSize: 12, textAlign: 'right' }} /> : formatEuro(item.iva)}
+                          {isEditing ? <input type="number" step="0.01" value={editForm.iva || ''} onChange={e => handleNumericChange('iva', e.target.value)} style={{ width: '60px', padding: '4px', fontSize: 12, textAlign: 'right' }} /> : formatEuro(item.iva)}
                         </td>
                         <td style={{ padding: '6px 12px', fontSize: '12px', textAlign: 'right', color: '#1E293B', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
-                          {isEditing ? <input type="number" step="0.01" value={editForm.totalFactura || ''} onChange={e => setEditForm({ ...editForm, totalFactura: e.target.value })} style={{ width: '70px', padding: '4px', fontSize: 12, textAlign: 'right' }} /> : formatEuro(item.totalFactura)}
+                          {isEditing ? <input type="number" step="0.01" value={editForm.totalFactura || ''} onChange={e => handleNumericChange('totalFactura', e.target.value)} style={{ width: '70px', padding: '4px', fontSize: 12, textAlign: 'right' }} /> : formatEuro(item.totalFactura)}
                         </td>
                         <td style={{ padding: '6px 12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
                           {isEditing ? (
