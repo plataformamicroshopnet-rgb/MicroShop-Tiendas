@@ -133,8 +133,32 @@ export default function GastosPage() {
       const data = await res.json()
       if (data.success) {
         const filteredData = data.data.filter((g: any) => g.grupo !== 'IVA')
-        setHistorico(filteredData)
-        const allConcepts = Array.from(new Set(filteredData.map((g: any) => g.concepto))).sort()
+        
+        // Generar registros fake para "Total gastos General" y "Beneficio o Perdida" por cada año y mes
+        const totalsMap = new Map()
+        filteredData.forEach((g: any) => {
+          const key = `${g.year}-${g.month}`
+          if (!totalsMap.has(key)) totalsMap.set(key, { fijos: 0, vars: 0, compras: 0, ventas: 0 })
+          const t = totalsMap.get(key)
+          if (g.grupo === 'Gastos Fijos') t.fijos += g.importe_total
+          if (g.grupo === 'Gastos Variables') t.vars += g.importe_total
+          if (g.concepto === 'Compras Mercaderias') t.compras += g.importe_total
+          if (g.concepto === 'Ventas Mercaderias') t.ventas += g.importe_total
+        })
+        
+        const fakeRecords: any[] = []
+        totalsMap.forEach((t, key) => {
+          const [year, month] = key.split('-').map(Number)
+          const gastosGen = t.fijos + t.vars + t.compras
+          const beneficio = t.ventas - gastosGen
+          fakeRecords.push({ id: `fake-gastos-${key}`, year, month, grupo: 'CALCULADO', concepto: 'Total gastos General', importe_total: gastosGen })
+          fakeRecords.push({ id: `fake-beneficio-${key}`, year, month, grupo: 'CALCULADO', concepto: 'Beneficio o Perdida', importe_total: beneficio })
+        })
+        
+        const finalData = [...filteredData, ...fakeRecords]
+        setHistorico(finalData)
+        
+        const allConcepts = Array.from(new Set(finalData.map((g: any) => g.concepto))).sort()
         setAvailableConceptos(allConcepts as string[])
       }
     } catch (e) { console.error(e) } finally { setLoadingHistorico(false) }
@@ -785,7 +809,9 @@ export default function GastosPage() {
               }} />
               <span style={{ fontWeight: 600, color: 'var(--mercedes-cyan)' }}>Seleccionar Todas</span>
             </label>
-            {availableConceptos.map(c => (
+            {availableConceptos
+              .filter(c => !['Compras Mercaderias', 'Total gastos General', 'Ventas Mercaderias', 'Beneficio o Perdida'].includes(c))
+              .map(c => (
               <label key={c} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', background: selectedConceptos.includes(c) ? 'rgba(0,173,239,0.1)' : 'rgba(255,255,255,0.03)', padding: '6px 12px', borderRadius: 20, border: selectedConceptos.includes(c) ? '1px solid var(--mercedes-cyan)' : '1px solid var(--border-color)', fontSize: 12, color: selectedConceptos.includes(c) ? 'var(--light-text)' : 'var(--medium-gray)', transition: 'all 0.2s' }}>
                 <input type="checkbox" checked={selectedConceptos.includes(c)} onChange={(e) => {
                   if (e.target.checked) setSelectedConceptos(prev => [...prev, c])
@@ -794,6 +820,37 @@ export default function GastosPage() {
                 <span>{c}</span>
               </label>
             ))}
+            
+            <div style={{ width: '100%', height: 1, background: 'var(--border-color)', margin: '4px 0' }} />
+            
+            {['Compras Mercaderias', 'Total gastos General', 'Ventas Mercaderias', 'Beneficio o Perdida'].map(c => {
+              if (!availableConceptos.includes(c)) return null;
+              
+              let bgColor = selectedConceptos.includes(c) ? 'rgba(0,173,239,0.1)' : 'rgba(255,255,255,0.03)';
+              let borderColor = selectedConceptos.includes(c) ? 'var(--mercedes-cyan)' : 'var(--border-color)';
+              let textColor = selectedConceptos.includes(c) ? 'var(--light-text)' : 'var(--medium-gray)';
+              
+              if (c === 'Total gastos General') {
+                 bgColor = selectedConceptos.includes(c) ? 'rgba(250,173,20,0.1)' : 'rgba(255,255,255,0.03)'
+                 borderColor = selectedConceptos.includes(c) ? '#faad14' : 'var(--border-color)'
+                 textColor = selectedConceptos.includes(c) ? '#faad14' : 'var(--medium-gray)'
+              }
+              if (c === 'Beneficio o Perdida') {
+                 bgColor = selectedConceptos.includes(c) ? 'rgba(82,196,26,0.1)' : 'rgba(255,255,255,0.03)'
+                 borderColor = selectedConceptos.includes(c) ? '#52c41a' : 'var(--border-color)'
+                 textColor = selectedConceptos.includes(c) ? '#52c41a' : 'var(--medium-gray)'
+              }
+              
+              return (
+                <label key={c} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', background: bgColor, padding: '6px 12px', borderRadius: 20, border: borderColor, fontSize: 12, color: textColor, transition: 'all 0.2s', fontWeight: 600 }}>
+                  <input type="checkbox" checked={selectedConceptos.includes(c)} onChange={(e) => {
+                    if (e.target.checked) setSelectedConceptos(prev => [...prev, c])
+                    else setSelectedConceptos(prev => prev.filter(x => x !== c))
+                  }} style={{ display: 'none' }} />
+                  <span>{c}</span>
+                </label>
+              )
+            })}
           </div>
         </div>
       </div>
@@ -829,7 +886,7 @@ export default function GastosPage() {
           <div style={{ height: 320, padding: '24px 32px 12px 12px', borderBottom: '1px solid var(--border-color)' }}>
             <ResponsiveContainer width="100%" height="100%">
               {chartViewMode === 'anual' ? (
-                <BarChart data={[...historicoAños].sort((a,b) => a.year - b.year).map(row => ({ name: String(row.year), "Gastos Fijos": row.fijos, "Gastos Variables": row.variables, Total: row.total }))} margin={{ top: 30, right: 10, left: 0, bottom: 0 }}>
+                <BarChart data={[...historicoAños].sort((a,b) => a.year - b.year).map(row => ({ name: String(row.year), "Gastos Fijos": row.fijos, "Gastos Variables": row.variables, "Otros": row.total - row.fijos - row.variables, Total: row.total }))} margin={{ top: 30, right: 10, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: 'var(--medium-gray)', fontSize: 12, fontWeight: 600}} dy={10} />
                   <YAxis axisLine={false} tickLine={false} tick={{fill: 'var(--medium-gray)', fontSize: 12}} tickFormatter={(val) => `€${(val/1000).toFixed(0)}k`} dx={-10} />
@@ -840,7 +897,8 @@ export default function GastosPage() {
                     labelStyle={{color: 'var(--medium-gray)', marginBottom: 4}}
                   />
                   <Bar dataKey="Gastos Fijos" stackId="a" fill="#00adef" barSize={40} />
-                  <Bar dataKey="Gastos Variables" stackId="a" fill="#faad14" radius={[4, 4, 0, 0]} barSize={40}>
+                  <Bar dataKey="Gastos Variables" stackId="a" fill="#faad14" barSize={40} />
+                  <Bar dataKey="Otros" stackId="a" fill="#10B981" radius={[4, 4, 0, 0]} barSize={40}>
                     <LabelList 
                       dataKey="Total" 
                       position="top" 
