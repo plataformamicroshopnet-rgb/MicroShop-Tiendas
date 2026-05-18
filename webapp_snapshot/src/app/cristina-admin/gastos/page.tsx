@@ -432,12 +432,28 @@ export default function GastosPage() {
       const meses = new Array(12).fill(0)
       let fijos = 0
       let variables = 0
+      let compras = 0
+      let ventas = 0
+      
+      // Totales de conceptos seleccionados (para gráfica y filas de meses)
       filteredHistorico.filter(h => h.year === year).forEach(h => {
         meses[h.month - 1] += h.importe_total
+      })
+      
+      // Totales globales del año para métricas
+      historico.filter(h => h.year === year).forEach(h => {
         if (h.grupo === 'Gastos Fijos') fijos += h.importe_total
         if (h.grupo === 'Gastos Variables') variables += h.importe_total
+        if (h.grupo === 'MERCADERIAS') {
+          if (h.concepto === 'Compras Mercaderias') compras += h.importe_total
+          if (h.concepto === 'Ventas Mercaderias') ventas += h.importe_total
+        }
       })
-      return { year, meses, total: meses.reduce((a,b) => a+b, 0), fijos, variables }
+      
+      const gastosGeneral = fijos + variables + compras
+      const beneficio = ventas - gastosGeneral
+      
+      return { year, meses, total: meses.reduce((a,b) => a+b, 0), fijos, variables, compras, ventas, gastosGeneral, beneficio }
     })
     return tabla
   }, [historico, selectedConceptos])
@@ -894,10 +910,44 @@ export default function GastosPage() {
                 ))}
                 {/* Fila de Totales */}
                 <tr style={{ background: 'rgba(0,173,239,0.08)', borderTop: '2px solid var(--border-color)' }}>
-                  <td style={{ padding: '16px 20px', fontWeight: 800, color: 'var(--mercedes-cyan)', fontSize: 14 }}>TOTAL ANUAL</td>
+                  <td style={{ padding: '16px 20px', fontWeight: 800, color: 'var(--mercedes-cyan)', fontSize: 14 }}>TOTAL SELECCIONADO</td>
                   {historicoAños.map((row) => (
                     <td key={row.year} style={{ padding: '16px 20px', textAlign: 'right', fontWeight: 800, color: 'var(--light-text)', fontSize: 15 }}>
                       {formatEuro(row.total)}
+                    </td>
+                  ))}
+                </tr>
+                
+                {/* Filas Adicionales */}
+                <tr style={{ background: 'rgba(255,255,255,0.02)', borderTop: '2px solid var(--border-color)' }}>
+                  <td style={{ padding: '10px 20px', fontWeight: 600, color: 'var(--medium-gray)', fontSize: 13 }}>Compras Mercaderias</td>
+                  {historicoAños.map((row) => (
+                    <td key={row.year} style={{ padding: '10px 20px', textAlign: 'right', fontWeight: 600, color: 'var(--text-main)', fontSize: 13 }}>
+                      {formatEuro(row.compras)}
+                    </td>
+                  ))}
+                </tr>
+                <tr style={{ background: 'rgba(250,173,20,0.1)' }}>
+                  <td style={{ padding: '10px 20px', fontWeight: 700, color: '#faad14', fontSize: 13 }}>Total gastos General</td>
+                  {historicoAños.map((row) => (
+                    <td key={row.year} style={{ padding: '10px 20px', textAlign: 'right', fontWeight: 700, color: '#faad14', fontSize: 13 }}>
+                      {formatEuro(row.gastosGeneral)}
+                    </td>
+                  ))}
+                </tr>
+                <tr style={{ background: 'rgba(255,255,255,0.02)' }}>
+                  <td style={{ padding: '10px 20px', fontWeight: 600, color: 'var(--medium-gray)', fontSize: 13 }}>Ventas Mercaderias</td>
+                  {historicoAños.map((row) => (
+                    <td key={row.year} style={{ padding: '10px 20px', textAlign: 'right', fontWeight: 600, color: 'var(--text-main)', fontSize: 13 }}>
+                      {formatEuro(row.ventas)}
+                    </td>
+                  ))}
+                </tr>
+                <tr style={{ background: 'rgba(82,196,26,0.1)' }}>
+                  <td style={{ padding: '10px 20px', fontWeight: 800, color: '#52c41a', fontSize: 13 }}>Beneficio o Perdida</td>
+                  {historicoAños.map((row) => (
+                    <td key={row.year} style={{ padding: '10px 20px', textAlign: 'right', fontWeight: 800, color: '#52c41a', fontSize: 13 }}>
+                      {formatEuro(row.beneficio)}
                     </td>
                   ))}
                 </tr>
