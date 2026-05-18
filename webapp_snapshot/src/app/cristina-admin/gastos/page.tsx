@@ -421,12 +421,13 @@ export default function GastosPage() {
 
   // AGRUPACIÓN PARA COMPARATIVA HISTÓRICA
   const historicoAños = useMemo(() => {
-    if (selectedConceptos.length === 0) return []
-    const filteredHistorico = historico.filter(h => selectedConceptos.includes(h.concepto))
+    if (historico.length === 0) return []
     
     const añosSet = new Set<number>()
-    filteredHistorico.forEach(h => añosSet.add(h.year))
+    historico.forEach(h => añosSet.add(h.year))
     const años = Array.from(añosSet).sort((a, b) => b - a)
+    
+    const filteredHistorico = selectedConceptos.length > 0 ? historico.filter(h => selectedConceptos.includes(h.concepto)) : []
     
     const tabla = años.map(year => {
       const meses = new Array(12).fill(0)
@@ -438,19 +439,23 @@ export default function GastosPage() {
       // Totales de conceptos seleccionados (para gráfica y filas de meses)
       filteredHistorico.filter(h => h.year === year).forEach(h => {
         meses[h.month - 1] += h.importe_total
-      })
-      
-      // Totales globales del año para métricas
-      historico.filter(h => h.year === year).forEach(h => {
         if (h.grupo === 'Gastos Fijos') fijos += h.importe_total
         if (h.grupo === 'Gastos Variables') variables += h.importe_total
+      })
+      
+      // Totales globales del año para métricas (siempre se muestran aunque no haya selección)
+      let globalFijos = 0
+      let globalVariables = 0
+      historico.filter(h => h.year === year).forEach(h => {
+        if (h.grupo === 'Gastos Fijos') globalFijos += h.importe_total
+        if (h.grupo === 'Gastos Variables') globalVariables += h.importe_total
         if (h.grupo === 'MERCADERIAS') {
           if (h.concepto === 'Compras Mercaderias') compras += h.importe_total
           if (h.concepto === 'Ventas Mercaderias') ventas += h.importe_total
         }
       })
       
-      const gastosGeneral = fijos + variables + compras
+      const gastosGeneral = globalFijos + globalVariables + compras
       const beneficio = ventas - gastosGeneral
       
       return { year, meses, total: meses.reduce((a,b) => a+b, 0), fijos, variables, compras, ventas, gastosGeneral, beneficio }
@@ -795,7 +800,7 @@ export default function GastosPage() {
 
       {loadingHistorico ? (
         <div style={{ padding: 40, textAlign: 'center', color: 'var(--mercedes-cyan)' }}>Cargando histórico...</div>
-      ) : selectedConceptos.length > 0 && historicoAños.length > 0 ? (
+      ) : historicoAños.length > 0 ? (
         <div style={{ background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border-color)', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
 
           <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border-color)', background: 'var(--active-bg)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
@@ -956,7 +961,7 @@ export default function GastosPage() {
           </div>
           )}
         </div>
-      ) : selectedConceptos.length > 0 ? (
+      ) : historicoAños.length > 0 ? (
          <div style={{ padding: 40, textAlign: 'center', color: 'var(--medium-gray)' }}>No hay datos históricos para esta partida.</div>
       ) : null}
     </div>
