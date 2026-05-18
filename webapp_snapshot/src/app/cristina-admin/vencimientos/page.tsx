@@ -216,7 +216,7 @@ export default function VencimientosPage() {
   const annualTotal = chartData.reduce((acc, c) => acc + c.Total, 0)
 
   const filteredItems = useMemo(() => {
-    return items.filter(i => {
+    let result = items.filter(i => {
       const { month, year } = getMonthYear(i.fechaFactura)
       if (year !== selectedYear || month !== selectedMonth) return false
       if (searchTerm) {
@@ -225,6 +225,22 @@ export default function VencimientosPage() {
       }
       return true
     })
+
+    const parseDate = (dStr: string) => {
+      if (!dStr) return 0
+      const parts = dStr.split(/[-/]/)
+      if (parts.length >= 3) {
+        let y = parts[2]
+        if (y.length === 2) y = '20' + y
+        return parseInt(`${y}${parts[1].padStart(2, '0')}${parts[0].padStart(2, '0')}`)
+      }
+      return 0
+    }
+
+    // Ordenar de Mayor a Menor por vencimiento (Descendente)
+    result.sort((a, b) => parseDate(b.vencimiento) - parseDate(a.vencimiento))
+
+    return result
   }, [items, selectedYear, selectedMonth, searchTerm])
 
   const monthTotals = useMemo(() => {
