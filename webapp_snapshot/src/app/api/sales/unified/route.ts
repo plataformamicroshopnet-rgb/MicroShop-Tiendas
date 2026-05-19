@@ -10,9 +10,12 @@ function resolveGrupo(prod: any): string {
   const cat = prod.categoria || ''
   const prodName = prod.producto || ''
 
-  if (cat === 'Ti') return 'TI'
+  if (cat === 'Ti' || cat === 'Contratos Móvil') return 'TI'
   if (cat === 'TMA') return 'TMA'
-  if (cat === 'Micro') return 'MIC'
+  if (cat === 'Micro' || cat === 'MIC') return 'MIC'
+  if (cat === 'miMovistar' || cat === 'Resto BAF') return 'BAF'
+  if (cat === 'Rent' || cat === 'Seguro') return 'REN'
+  if (cat === 'O2') return 'ALTA'
 
   const productMap: Record<string, string[]> = {
     'FD': [

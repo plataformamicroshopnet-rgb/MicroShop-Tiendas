@@ -40,23 +40,37 @@ export default function CombosPage() {
   const prod = (s: any) => (s.producto || s.detalle || '').toLowerCase()
   
   // Lógica de 8 columnas personalizadas
-  const isBafTotal = (s: any) => prod(s).includes('baf total') || (prod(s).includes('fibra') && !prod(s).includes('movil') && !prod(s).includes('móvil'))
-  const isBafConv = (s: any) => prod(s).includes('baf convergente') || prod(s).includes('fd total') || prod(s).includes('fd flex') || (prod(s).includes('fibra') && (prod(s).includes('movil') || prod(s).includes('móvil')))
-  const isDispSeg = (s: any) => prod(s).includes('dispositivo') || prod(s).includes('seguro') || prod(s).includes('rent') || getGroupVisual(s.producto, s.detalle) === 'REN'
+  const isBafTotal = (s: any) => {
+    const cat = String(s.detalle || s.sheet || s.categoria || '').toLowerCase()
+    const p = prod(s)
+    return cat === 'mimovistar' || cat === 'resto baf' || p.includes('baf total') || (p.includes('fibra') && !p.includes('movil') && !p.includes('móvil'))
+  }
+  const isBafConv = (s: any) => {
+    const cat = String(s.detalle || s.sheet || s.categoria || '').toLowerCase()
+    const p = prod(s)
+    return cat === 'mimovistar' || p.includes('baf convergente') || p.includes('fd total') || p.includes('fd flex') || (p.includes('fibra') && (p.includes('movil') || p.includes('móvil')))
+  }
+  const isDispSeg = (s: any) => {
+    const cat = String(s.detalle || s.sheet || s.categoria || '').toLowerCase()
+    const p = prod(s)
+    return cat === 'rent' || cat === 'seguro' || p.includes('dispositivo') || p.includes('seguro') || p.includes('rent') || getGroupVisual(s.producto, s.detalle) === 'REN'
+  }
   const isMpa = (s: any) => prod(s).includes('mpa') || prod(s).includes('alarma') || getGroupVisual(s.producto, s.detalle) === 'MPA'
   const isFttr = (s: any) => prod(s).includes('fttr')
   const isSolar = (s: any) => prod(s).includes('solar') || prod(s).includes('señaliz')
-  const isArpu = (s: any) => prod(s).includes('arpu') || prod(s).includes('ficción') || prod(s).includes('netflix') || prod(s).includes('movistar+') || prod(s).includes('adicional') || prod(s).includes('tv')
+  const isArpu = (s: any) => prod(s).includes('arpu') || prod(s).includes('ficción') || prod(s).includes('netflix') || prod(s).includes('movistar+') || prod(s).includes('adicional') || prod(s).includes('tv') || String(s.detalle || '').toLowerCase() === 'repos'
   const isRepoFutbol = (s: any) => prod(s).includes('futbol') || prod(s).includes('fútbol') || prod(s).includes('repo f')
 
+  const norm = (str: string) => String(str || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()
+
   const rows = useMemo(() => COMERCIAL_CODES.map(({ name, code }) => {
-    const mine = allSales.filter((s: any) => s.vendedor === name)
+    const mine = allSales.filter((s: any) => norm(s.vendedor) === norm(name))
     const clients = (list: any[]) => [...new Set(
       list.map((s: any) => `${(s.nif||'').toUpperCase()} – ${s.nombreCliente||''}`.trim())
     )]
     
     const sumImporte = (list: any[]) => list.reduce((sum, s) => {
-      const val = parseFloat(String(s.importe || '0').replace(',', '.'))
+      const val = parseFloat(String(s.importe || s.cuota || '0').replace(',', '.'))
       return sum + (isNaN(val) ? 0 : val)
     }, 0)
     

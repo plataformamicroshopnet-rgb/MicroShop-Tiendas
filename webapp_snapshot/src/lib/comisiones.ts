@@ -177,7 +177,13 @@ export const PRODUCT_GROUPS: Record<string, string[]> = {
 
 export const getGroupVisual = (producto: string, detalle: string) => {
     const det = String(detalle || '').trim().toLowerCase()
-    if (det === 'ti') return 'TI'
+    
+    // Support new categories from Nueva Venta
+    if (det === 'mimovistar' || det === 'resto baf') return 'BAF'
+    if (det === 'rent' || det === 'seguro') return 'REN'
+    if (det === 'o2') return 'ALTA' // Usually Alta Móvil
+    
+    if (det === 'ti' || det === 'contratos móvil') return 'TI'
     if (det === 'tma') return 'TMA'
     if (det === 'micro' || det === 'mic') return 'MIC'
     

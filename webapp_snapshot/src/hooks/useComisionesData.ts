@@ -34,49 +34,50 @@ export const matchTipoVenta = (sale: any, tipoVentaRaw: string) => {
     // El MultiSelectDropdown separa los valores con comas
     const tipos = tipoVentaRaw.split(',').map(s => s.trim()).filter(Boolean);
     
-    const cat = sale.categoria || sale.detalle || sale.sheet || '';
-    const prod = sale.producto || '';
+        const catRaw = sale.categoria || sale.detalle || sale.sheet || '';
+    const cat = String(catRaw).trim().toLowerCase();
+    const prod = String(sale.producto || '').trim().toLowerCase();
 
     for (const tipoVenta of tipos) {
         if (tipoVenta === 'FORMULA_LIBRE') continue;
         
         let matched = false;
-        switch(tipoVenta) {
-            case 'Alta BAF Total':
-                matched = cat === 'miMovistar' || cat === 'Resto BAF';
+        switch(tipoVenta.toLowerCase().trim()) {
+            case 'alta baf total':
+                matched = cat === 'mimovistar' || cat === 'resto baf';
                 break;
-            case 'Alta BAF Convergente':
-                matched = cat === 'miMovistar';
+            case 'alta baf convergente':
+                matched = cat === 'mimovistar';
                 break;
-            case 'Dispositivos + Seguro':
-                matched = cat === 'Rent' || cat === 'Seguro';
+            case 'dispositivos + seguro':
+                matched = cat === 'rent' || cat === 'seguro';
                 break;
-            case 'Dispositivos':
-                matched = cat === 'Rent';
+            case 'dispositivos':
+                matched = cat === 'rent';
                 break;
-            case 'Seguro':
-                matched = cat === 'Seguro';
+            case 'seguro':
+                matched = cat === 'seguro';
                 break;
-            case 'MPA':
-                matched = prod.includes('Movistar Prosegur Alarmas');
+            case 'mpa':
+                matched = prod.includes('movistar prosegur alarmas') || prod.includes('mpa') || prod.includes('alarma');
                 break;
-            case 'FTTR':
-                matched = prod.includes('Solución FTTR') || prod.includes('FTTR');
+            case 'fttr':
+                matched = prod.includes('solución fttr') || prod.includes('solucion fttr') || prod.includes('fttr');
                 break;
-            case 'Señalización Solar 360':
-                matched = prod.includes('Solar360');
+            case 'señalización solar 360':
+                matched = prod.includes('solar360') || prod.includes('solar 360') || prod.includes('solar');
                 break;
-            case 'ARPU':
-                matched = cat === 'Repos' && !prod.includes('Fútbol');
+            case 'arpu':
+                matched = cat === 'repos' && !prod.includes('fútbol') && !prod.includes('futbol');
                 break;
-            case 'Repo Fútbol':
-                matched = prod.includes('Fútbol') && cat === 'Repos';
+            case 'repo fútbol':
+                matched = (prod.includes('fútbol') || prod.includes('futbol')) && cat === 'repos';
                 break;
             default:
-                if (tipoVenta.toLowerCase().trim() === cat.toLowerCase().trim()) {
+                if (tipoVenta.toLowerCase().trim() === cat) {
                     matched = true;
                 } else {
-                    const searchString = `${prod} ${sale.detalle || ''} ${sale.grupo || ''}`;
+                    const searchString = \`${prod} ${String(sale.detalle || '').toLowerCase()} ${String(sale.grupo || '').toLowerCase()}\`;
                     matched = matchProductFormula(searchString, tipoVenta);
                 }
                 break;
