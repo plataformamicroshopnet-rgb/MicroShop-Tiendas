@@ -38,3 +38,33 @@ export async function GET(request: Request) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const session = await getSession()
+    if (!session || !session.user) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    }
+    
+    // Solo permitimos borrar a usuarios con permisos de edición
+    if (session.user.role !== 'CRISTINA' && session.user.role !== 'JEFE_TIENDAS' && session.user.role !== 'SUPERADMIN' && session.user.role !== 'CONTROLLER') {
+       return NextResponse.json({ success: false, error: 'No tienes permisos para borrar extras' }, { status: 403 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
+
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'ID requerido' }, { status: 400 })
+    }
+
+    await prisma.extraAssignment.delete({
+      where: { id }
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error: any) {
+    console.error('[DELETE ExtraAssignment]', error)
+    return NextResponse.json({ success: false, error: 'No se pudo eliminar el extra' }, { status: 500 })
+  }
+}
