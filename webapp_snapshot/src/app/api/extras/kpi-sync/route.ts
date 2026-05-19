@@ -6,10 +6,37 @@ const prisma = new PrismaClient()
 export async function POST(request: Request) {
     try {
         const body = await request.json()
-        const { assignments } = body
+        const { assignments, periodKey } = body
         
         if (!assignments || !Array.isArray(assignments)) {
             return NextResponse.json({ success: false, error: 'Lista de bonos inválida.' }, { status: 400 })
+        }
+        
+        if (periodKey) {
+            const period = await prisma.workPeriod.findUnique({ where: { period_key: periodKey } });
+            if (period) {
+                // Find existing KPI automatic assignments for this period
+                const existingKpis = await prisma.extraAssignment.findMany({
+                    where: {
+                        periodId: period.id,
+                        sourceType: 'AUTOMATIC',
+                        OR: [
+                            { triggerKey: { contains: '-KPI_' } },
+                            { triggerKey: { startsWith: 'TERRITORIAL_' } }
+                        ]
+                    }
+                });
+                
+                const incomingKeys = assignments.map(a => a.triggerKey);
+                const keysToDelete = existingKpis.filter(e => !incomingKeys.includes(e.triggerKey)).map(e => e.id);
+                
+                if (keysToDelete.length > 0) {
+                    await prisma.extraAssignment.deleteMany({
+                        where: { id: { in: keysToDelete } }
+                    });
+                    console.log(`[API KPI-Sync] Limpiados ${keysToDelete.length} bonos KPI huérfanos.`);
+                }
+            }
         }
 
         let inserted = 0;

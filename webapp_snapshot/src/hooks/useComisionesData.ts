@@ -798,17 +798,16 @@ export function useComisionesData(user?: any) {
 
     // EFFECT: Envío subrepticio de extras KPI a base de datos para grabarlos eternamente
     useEffect(() => {
-        if (loading || sellerStats.length === 0) return;
-        const allVirtual = sellerStats.flatMap(s => s.virtualKpiExtras || []);
-        if (allVirtual.length > 0) {
-            console.log('[Auto-Piloto] Sincronizando bonos KPI globales con servidor:', allVirtual.length);
-            fetch('/api/extras/kpi-sync', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ assignments: allVirtual })
-            }).catch(console.error);
-        }
-    }, [loading, sellerStats]);
+          if (loading || sellerStats.length === 0 || !activePeriodKey) return;
+          const allVirtual = sellerStats.flatMap(s => s.virtualKpiExtras || []);
+          
+          console.log('[Auto-Piloto] Sincronizando bonos KPI globales con servidor:', allVirtual.length);
+          fetch('/api/extras/kpi-sync', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ periodKey: activePeriodKey, assignments: allVirtual })
+          }).catch(console.error);
+      }, [loading, sellerStats, activePeriodKey]);
 
     const isRestrictedComercial = user && typeof user.role === 'string' && user.role.toUpperCase().includes('COMERCIAL');
     const displayedSellerStats = isRestrictedComercial ? sellerStats.filter(s => { const sName = s.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim(); const uName = (user?.username || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim(); return sName === uName; }) : sellerStats;
