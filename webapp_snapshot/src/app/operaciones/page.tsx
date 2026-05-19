@@ -855,6 +855,73 @@ function OperationsContent() {
               {displayedSales.length === 0 ? (
                 <tr>
                   <td colSpan={12} style={{ padding: '24px', textAlign: 'center', color: '#555555' }}>
+                    {activeVendorFilter ? `No hay datos disponibles para ${activeVendorFilter}.` : 'No hay datos disponibles para tu rol o todavía no hay ventas registradas.'}
+                  </td>
+                </tr>
+              ) : (
+                displayedSales.map((sale: any, i: number) => (
+                  <tr key={i} style={{ color: '#333333', borderBottom: '1px solid #F0F0F0', verticalAlign: 'top', backgroundColor: editingId === sale.id ? 'rgba(8, 145, 178, 0.05)' : 'transparent' }}>
+                    <td style={{ padding: '4px 6px' }}><strong>
+                      {sale.vendedor}
+                    </strong></td>
+                    <td style={{ padding: '4px 6px', whiteSpace: 'nowrap' }}>
+                      {sale.fecha}
+                    </td>
+                    <td style={{ padding: '4px 6px', color: '#0078D4', fontWeight: 600 }}>
+                      {sale.codigo}
+                    </td>
+                    <td style={{ padding: '4px 6px', color: '#555555', fontWeight: 600 }}>
+                      {editingId === sale.id ? <input value={editForm.imei || ''} onChange={e => handleEditChange('imei', e.target.value)} style={{ width: 80, padding: 4 }} /> : (sale.imei || '-')}
+                    </td>
+                    <td style={{ padding: '4px 6px', color: '#555555' }}>
+                      {sale.detalle === 'Ti' ? 'Contratos Móvil' : sale.detalle === 'O2' ? 'O2 MovilFree' : (sale.detalle || '-')}
+                    </td>
+                    <td style={{ padding: '4px 6px' }}>
+                      {sale.producto}
+                    </td>
+                    <td style={{ padding: '4px 6px' }}>
+                       {editingId === sale.id ? <input value={editForm.nombreCliente} onChange={e => handleEditChange('nombreCliente', e.target.value)} style={{ width: 80, padding: 4 }} /> : (sale.nombreCliente || '-')}
+                    </td>
+                    <td style={{ padding: '4px 6px' }}>
+                       {editingId === sale.id ? <input value={editForm.nif} onChange={e => handleEditChange('nif', e.target.value)} style={{ width: 90, padding: 4 }} /> : sale.nif}
+                    </td>
+
+                    <td style={{ padding: '4px 6px', textAlign: 'center' }}>
+                       {editingId === sale.id ? <input value={editForm.telf} onChange={e => handleEditChange('telf', e.target.value)} style={{ width: 90, padding: 4 }} /> : sale.telf}
+                    </td>
+                    <td style={{ padding: '4px 6px', textAlign: 'center' }}>
+                      {editingId === sale.id ? (
+                        <select value={editForm.pendiente} onChange={e => handleEditChange('pendiente', e.target.value)} style={{ padding: 4 }}>
+                          <option value="Si">Si</option>
+                          <option value="No">No</option>
+                          <option value="Anulado">Anulado</option>
+                          <option value="">-</option>
+                        </select>
+                      ) : (sale.pendiente === 'Si' ? <span style={{ backgroundColor: '#FFF4E5', color: '#E59837', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', fontSize: '10px' }}>Sí</span> : <span style={{ color: '#555555', fontSize: '11px' }}>No</span>)}
+                    </td>
+                    <td style={{ padding: '4px 6px', textAlign: 'center' }}>
+                      {editingId === sale.id ? (
+                        <select value={editForm.anulado === 'Si' || editForm.pendiente === 'Anulado' ? 'Si' : editForm.anulado} onChange={e => {
+                          handleEditChange('anulado', e.target.value);
+                          if(e.target.value === 'Si') handleEditChange('pendiente', 'Anulado');
+                        }} style={{ padding: 4 }}>
+                          <option value="Si">Si</option>
+                          <option value="No">No</option>
+                          <option value="">-</option>
+                        </select>
+                      ) : (sale.anulado === 'Si' || sale.pendiente === 'Anulado' ? <span style={{ backgroundColor: '#FEE2E2', color: '#EF4444', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', fontSize: '10px' }}>Sí</span> : <span style={{ color: '#555555', fontSize: '11px' }}>No</span>)}
+                    </td>
+                    <td style={{ padding: '4px 6px', color: '#555555', fontSize: 13, lineHeight: '1.4' }}>
+                      {editingId === sale.id ? <textarea value={editForm.anotaciones} onChange={e => handleEditChange('anotaciones', e.target.value)} rows={2} style={{ width: '100%', minWidth: 120, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: 4 }} /> : sale.anotaciones}
+                    </td>
+                    <td style={{ padding: '4px 6px', textAlign: 'center', color: '#10B981', fontWeight: 'bold' }}>
+                      {formatCurrency(sale.dynamicCommission !== undefined ? sale.dynamicCommission : (sale.importe || sale.cuota))}
+                    </td>
+                    <td style={{ padding: '4px 6px', textAlign: 'center' }}>
+                      {editingId === sale.id ? (
+                        <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+                          <button onClick={saveEdit} disabled={saving} style={{ background: 'var(--mercedes-cyan)', border: 'none', color: 'var(--bg-card)', padding: '6px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center' }} title="Guardar">
+                            <Save size={16} />
                           </button>
                           <button onClick={() => setEditingId(null)} disabled={saving} style={{ background: 'var(--medium-gray)', border: 'none', color: 'var(--bg-card)', padding: '6px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center' }} title="Cancelar">
                             <X size={16} />

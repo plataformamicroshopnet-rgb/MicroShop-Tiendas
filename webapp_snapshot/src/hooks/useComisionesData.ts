@@ -77,7 +77,7 @@ export const matchTipoVenta = (sale: any, tipoVentaRaw: string) => {
                 if (tipoVenta.toLowerCase().trim() === cat) {
                     matched = true;
                 } else {
-                    const searchString = \`${prod} ${String(sale.detalle || '').toLowerCase()} ${String(sale.grupo || '').toLowerCase()}\`;
+                    const searchString = `${prod} ${String(sale.detalle || '').toLowerCase()} ${String(sale.grupo || '').toLowerCase()}`;
                     matched = matchProductFormula(searchString, tipoVenta);
                 }
                 break;
