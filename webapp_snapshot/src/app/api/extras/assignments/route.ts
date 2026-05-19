@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 import { getSession } from '@/lib/auth'
+import { can, canEdit } from '@/lib/permissions'
 
 const prisma = new PrismaClient()
 
@@ -46,8 +47,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
     
-    // Solo permitimos borrar a usuarios con permisos de edición
-    if (session.user.role !== 'CRISTINA' && session.user.role !== 'JEFE_TIENDAS' && session.user.role !== 'SUPERADMIN' && session.user.role !== 'CONTROLLER') {
+    if (!(canEdit(session.user, 'MODULE_TIENDAS') || can(session.user, 'CANCEL_SALES') || can(session.user, 'MODULE_CRISTINA') || can(session.user, 'MODULE_BACK_OFFICE'))) {
        return NextResponse.json({ success: false, error: 'No tienes permisos para borrar extras' }, { status: 403 })
     }
 
