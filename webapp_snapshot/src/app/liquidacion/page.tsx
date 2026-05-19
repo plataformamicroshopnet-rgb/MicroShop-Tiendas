@@ -1435,7 +1435,7 @@ export default function LiquidacionesPage() {
             const det = (sale.detalle || '').toLowerCase();
             
             // O2, Seguro, miMovistar and new standalone categories store their commission directly in importe/cuota
-            if (det === 'o2' || det === 'seguro' || det === 'mimovistar' || det === 'repos' || det === 'varios' || det === 'suscripciones tv' || det === 'prepago') {
+            if (det === 'o2' || det === 'seguro' || det === 'mimovistar' || det === 'repos' || det === 'varios' || det === 'suscripciones tv' || det === 'prepago' || det === 'resto baf' || det === 'traslado mimovistar') {
                 return Number(sale.importe || sale.cuota || 0);
             }
             
