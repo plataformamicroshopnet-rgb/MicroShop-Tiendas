@@ -19,6 +19,7 @@ const TABS = [
   { id: 'varios',          label: 'Varios',          emoji: '📦', color: '#8B5CF6', grupo: 'VARIOS' },
   { id: 'repos',           label: 'Repos',           emoji: '🔁', color: '#0891B2', grupo: 'REPOS' },
   { id: 'resto',           label: 'Resto BAF',       emoji: '📡', color: '#3B82F6', grupo: 'RESTO_BAF' },
+  { id: 'traslado',        label: 'Traslado miMovistar', emoji: '🚚', color: '#7C3AED', grupo: 'TRASLADO' },
   { id: 'extras',          label: 'Extras',          emoji: '⚡', color: '#10b981', grupo: 'EXTRAS' },
 ]
 
@@ -49,6 +50,7 @@ const filterByTab = (sale: any, tabId: string): boolean => {
     case 'varios':          return val === 'varios'
     case 'repos':           return val === 'repos'
     case 'resto':           return val === 'resto baf'
+    case 'traslado':        return val === 'traslado mimovistar'
     default:                return false
   }
 }
