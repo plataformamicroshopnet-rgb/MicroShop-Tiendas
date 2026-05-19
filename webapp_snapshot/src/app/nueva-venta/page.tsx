@@ -139,7 +139,12 @@ export default function NuevaVentaPage() {
            return p.producto === value;
          })
          if (selectedItem) {
-            const cat = newProducts[index].categoria
+             const parseSafeNum = (val) => {
+               if (!val) return 0;
+               if (typeof val === 'number') return val;
+               return Number(String(val).replace(',', '.')) || 0;
+             };
+             const cat = newProducts[index].categoria
             if (cat === 'O2' || cat === 'Seguro' || cat === 'Suscripciones TV' || cat === 'Prepago' || cat === 'Varios') {
               newProducts[index].importe = selectedItem.comision || ''
             } else if (cat === 'Repos') {
@@ -151,8 +156,8 @@ export default function NuevaVentaPage() {
                   newProducts[index].importe = selectedItem.comision || ''
                }
             } else if (cat === 'miMovistar' || cat === 'Resto BAF' || cat === 'Traslado miMovistar') {
-              const baseCom = Number(selectedItem.comision) || 0;
-              const mult = Number(selectedItem.comisionConCoste) || 0;
+              const baseCom = parseSafeNum(selectedItem.comision);
+              const mult = parseSafeNum(selectedItem.comisionConCoste);
               newProducts[index].importe = String(baseCom * (mult === 0 ? 1 : mult));
             } else if (cat === 'Ti' || cat === 'TMA' || cat === 'Micro' || cat === 'Rent') {
               newProducts[index].importe = selectedItem.anual || selectedItem.mensual || ''
