@@ -1,6 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-prisma.user.findMany().then(users => {
-  console.log(JSON.stringify(users.map(u => ({name: u.name, role: u.role, codigo: u.codigoComercial})), null, 2));
-  process.exit();
+prisma.user.findMany().then(u => {
+  console.log(JSON.stringify(u.map(x => ({username: x.username, pass: x.password, role: x.role})), null, 2));
+  prisma.$disconnect();
 });

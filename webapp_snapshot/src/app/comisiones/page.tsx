@@ -572,7 +572,7 @@ export default function ComisionesDashboardPage() {
                                                     <React.Fragment key={gName}>
                                                     <tr style={{ backgroundColor: rowBg, borderBottom: '1px solid #e2e8f0', transition: 'background 0.2s', color: '#334155' }}>
                                                         <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
-                                                            {gName}
+                                                            {gName === 'ARPU' ? 'Arpu (Repos)' : gName}
                                                         </td>
                                                         <td style={{ padding: '10px 8px', textAlign: 'center', fontSize: 13, color: '#334155' }}>
                                                             {formatImporteTramo(rule.importePrimerTramo)}

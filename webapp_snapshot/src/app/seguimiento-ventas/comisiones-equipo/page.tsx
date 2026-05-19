@@ -215,7 +215,7 @@ export default function ComisionesEquipoPage() {
                                                                 <DollarSign size={18} />
                                                             </div>
                                                         )}
-                                                        <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-main)' }}>{r.name}</div>
+                                                        <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-main)' }}>{r.name === 'ARPU' ? 'Arpu (Repos)' : r.name}</div>
                                                     </div>
                                                 </td>
                                                 <td style={{ padding: '16px 24px', textAlign: 'center' }}>

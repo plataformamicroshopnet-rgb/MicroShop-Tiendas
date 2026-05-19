@@ -847,7 +847,6 @@ function OperationsContent() {
                 <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Pte.</th>
                 <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Anul.</th>
                 <th style={{ padding: '4px 6px', textAlign: 'left', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px', minWidth: 120, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Anotaciones</th>
-                <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Comisión</th>
                 <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Acciones</th>
               </tr>
             </thead>
@@ -914,9 +913,7 @@ function OperationsContent() {
                     <td style={{ padding: '4px 6px', color: '#555555', fontSize: 13, lineHeight: '1.4' }}>
                       {editingId === sale.id ? <textarea value={editForm.anotaciones} onChange={e => handleEditChange('anotaciones', e.target.value)} rows={2} style={{ width: '100%', minWidth: 120, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: 4 }} /> : sale.anotaciones}
                     </td>
-                    <td style={{ padding: '4px 6px', textAlign: 'center', color: '#10B981', fontWeight: 'bold' }}>
-                      {formatCurrency(sale.dynamicCommission !== undefined ? sale.dynamicCommission : (sale.importe || sale.cuota))}
-                    </td>
+
                     <td style={{ padding: '4px 6px', textAlign: 'center' }}>
                       {editingId === sale.id ? (
                         <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
@@ -964,9 +961,7 @@ function OperationsContent() {
                   <td style={{ padding: '4px 6px', textAlign: 'center', color: '#059669' }}>No</td>
                   <td style={{ padding: '4px 6px', textAlign: 'center', color: '#059669' }}>No</td>
                   <td style={{ padding: '4px 6px', color: '#059669', fontSize: 12 }}>EXTRA TELEFÓNICA ({resolveRawCode(ex)})</td>
-                  <td style={{ padding: '4px 6px', textAlign: 'center', color: '#10b981', fontWeight: 900 }}>
-                    {formatCurrency(ex.telecomRewardAmount)}
-                  </td>
+
                   <td style={{ padding: '4px 6px', textAlign: 'center' }}>
                      <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
                        {canCancel && (
