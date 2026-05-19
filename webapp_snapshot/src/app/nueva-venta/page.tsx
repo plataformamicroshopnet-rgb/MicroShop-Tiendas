@@ -139,7 +139,7 @@ export default function NuevaVentaPage() {
            return p.producto === value;
          })
          if (selectedItem) {
-             const parseSafeNum = (val) => {
+             const parseSafeNum = (val: any) => {
                if (!val) return 0;
                if (typeof val === 'number') return val;
                return Number(String(val).replace(',', '.')) || 0;
