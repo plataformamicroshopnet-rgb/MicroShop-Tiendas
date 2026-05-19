@@ -116,8 +116,8 @@ function CommercialDashboard({ data, activeExtras = [], isComercial }: { data: a
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 20 }}>
         <div className="card" style={{ padding: '14px 24px 4px 24px', position: 'relative', overflow: 'hidden', minHeight: '100px', border: '1px solid var(--border-color)' }}>
           <div style={{ position: 'relative', zIndex: 2 }}>
-            <h3 style={{ fontSize: 13, color: 'var(--medium-gray)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>Ventas Totales</h3>
-            <div style={{ fontSize: 42, fontWeight: 800, color: 'var(--light-text)', lineHeight: 1 }}>{totalVentas}</div>
+            <h3 style={{ fontSize: 13, color: '#555555', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>Ventas Totales</h3>
+            <div style={{ fontSize: 42, fontWeight: 800, color: '#333333', lineHeight: 1 }}>{totalVentas}</div>
           </div>
           <div style={{ position: 'absolute', bottom: -10, left: 0, right: 0, height: 60, zIndex: 1, opacity: 0.2 }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -131,7 +131,7 @@ function CommercialDashboard({ data, activeExtras = [], isComercial }: { data: a
         <div className="card" style={{ padding: '14px 24px 4px 24px', position: 'relative', overflow: 'hidden', minHeight: '100px', border: '1px solid var(--border-color)' }}>
           <div style={{ position: 'relative', zIndex: 2 }}>
             <h3 style={{ fontSize: 13, color: '#10B981', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>Finalizadas</h3>
-            <div style={{ fontSize: 42, fontWeight: 800, color: 'var(--light-text)', lineHeight: 1 }}>{finalizadas}</div>
+            <div style={{ fontSize: 42, fontWeight: 800, color: '#333333', lineHeight: 1 }}>{finalizadas}</div>
           </div>
           <div style={{ position: 'absolute', bottom: -10, left: 0, right: 0, height: 60, zIndex: 1, opacity: 0.15 }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -145,7 +145,7 @@ function CommercialDashboard({ data, activeExtras = [], isComercial }: { data: a
         <div className="card" style={{ padding: '14px 24px 4px 24px', position: 'relative', overflow: 'hidden', minHeight: '100px', border: '1px solid var(--border-color)' }}>
           <div style={{ position: 'relative', zIndex: 2 }}>
             <h3 style={{ fontSize: 13, color: '#F59E0B', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>Pendientes</h3>
-            <div style={{ fontSize: 42, fontWeight: 800, color: 'var(--light-text)', lineHeight: 1 }}>{pendientes}</div>
+            <div style={{ fontSize: 42, fontWeight: 800, color: '#333333', lineHeight: 1 }}>{pendientes}</div>
           </div>
           <div style={{ position: 'absolute', bottom: -10, left: 0, right: 0, height: 60, zIndex: 1, opacity: 0.15 }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -159,7 +159,7 @@ function CommercialDashboard({ data, activeExtras = [], isComercial }: { data: a
         <div className="card" style={{ padding: '14px 24px 4px 24px', position: 'relative', overflow: 'hidden', minHeight: '100px', border: '1px solid var(--border-color)' }}>
           <div style={{ position: 'relative', zIndex: 2 }}>
             <h3 style={{ fontSize: 13, color: '#EF4444', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>Anuladas</h3>
-            <div style={{ fontSize: 42, fontWeight: 800, color: 'var(--light-text)', lineHeight: 1 }}>{anuladas}</div>
+            <div style={{ fontSize: 42, fontWeight: 800, color: '#333333', lineHeight: 1 }}>{anuladas}</div>
           </div>
           <div style={{ position: 'absolute', bottom: -10, left: 0, right: 0, height: 60, zIndex: 1, opacity: 0.1 }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -174,12 +174,12 @@ function CommercialDashboard({ data, activeExtras = [], isComercial }: { data: a
       {/* Main Charts */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 24 }}>
         <div className="card" style={{ padding: '24px', minHeight: '340px' }}>
-          <h3 style={{ fontSize: 16, color: 'var(--light-text)', marginBottom: 24 }}>Top Ventas</h3>
+          <h3 style={{ fontSize: 16, color: '#333333', marginBottom: 24 }}>Top Ventas</h3>
           <ResponsiveContainer width="100%" height={Math.max(260, productData.length * 45)}>
             <BarChart data={productData} layout="vertical" margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
               <XAxis type="number" hide />
               <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} width={180} tick={{ fill: 'var(--medium-gray)', fontSize: 11 }} />
-              <Tooltip cursor={{ fill: 'var(--hover-bg)' }} contentStyle={{ backgroundColor: 'var(--dark-gray)', border: '1px solid var(--border-color)', borderRadius: 8, color: 'var(--light-text)' }} />
+              <Tooltip cursor={{ fill: 'var(--hover-bg)' }} contentStyle={{ backgroundColor: 'var(--dark-gray)', border: '1px solid var(--border-color)', borderRadius: 8, color: '#333333' }} />
               <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={24}>
                 {productData.map((entry, index) => (
                    <Cell key={`cell-${index}`} fill={entry.color} />
@@ -190,7 +190,7 @@ function CommercialDashboard({ data, activeExtras = [], isComercial }: { data: a
         </div>
 
         <div className="card" style={{ padding: '24px', minHeight: '340px' }}>
-          <h3 style={{ fontSize: 16, color: 'var(--light-text)', marginBottom: 24 }}>Distribución</h3>
+          <h3 style={{ fontSize: 16, color: '#333333', marginBottom: 24 }}>Distribución</h3>
           <ResponsiveContainer width="100%" height={260}>
             <PieChart>
               <Pie
@@ -207,12 +207,12 @@ function CommercialDashboard({ data, activeExtras = [], isComercial }: { data: a
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip contentStyle={{ backgroundColor: 'var(--dark-gray)', border: '1px solid var(--border-color)', borderRadius: 8, color: 'var(--light-text)' }} itemStyle={{ color: 'var(--light-text)' }} />
+              <Tooltip contentStyle={{ backgroundColor: 'var(--dark-gray)', border: '1px solid var(--border-color)', borderRadius: 8, color: '#333333' }} itemStyle={{ color: '#333333' }} />
             </PieChart>
           </ResponsiveContainer>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center', margin: '16px auto 0' }}>
             {productData.map((entry, index) => (
-              <div key={index} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--medium-gray)' }}>
+              <div key={index} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#555555' }}>
                 <div style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: entry.color, flexShrink: 0 }}></div>
                 <span style={{ maxWidth: 100, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={entry.name}>{entry.name}</span> ({entry.count})
               </div>
@@ -224,33 +224,33 @@ function CommercialDashboard({ data, activeExtras = [], isComercial }: { data: a
       {/* Compact Operations Table */}
       <div className="card" style={{ padding: 0, overflow: 'hidden', marginTop: 8 }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)' }}>
-          <h3 style={{ fontSize: 16, color: 'var(--light-text)', margin: 0 }}>Desglose de Operaciones</h3>
+          <h3 style={{ fontSize: 16, color: '#333333', margin: 0 }}>Desglose de Operaciones</h3>
         </div>
         <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: '400px' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', tableLayout: 'auto' }}>
+          <table style={{ backgroundColor: '#FFFFFF', width: '100%', borderCollapse: 'collapse', fontSize: '11px', tableLayout: 'auto' }}>
             <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
-              <tr style={{ backgroundColor: 'var(--active-bg)', boxShadow: '0 1px 0 var(--table-border)' }}>
-                <th style={{ padding: '4px 6px', textAlign: 'left', color: 'var(--medium-gray)' }}>Fecha</th>
-                <th style={{ padding: '4px 6px', textAlign: 'left', color: 'var(--medium-gray)' }}>Comercial</th>
-                <th style={{ padding: '4px 6px', textAlign: 'left', color: 'var(--medium-gray)' }}>Tipo de Venta</th>
-                <th style={{ padding: '4px 6px', textAlign: 'left', color: 'var(--medium-gray)' }}>Producto</th>
-                <th style={{ padding: '4px 6px', textAlign: 'left', color: 'var(--medium-gray)' }}>Nombre del Cliente</th>
-                <th style={{ padding: '4px 6px', textAlign: 'left', color: 'var(--medium-gray)' }}>NIF</th>
+              <tr style={{ backgroundColor: '#0078D4', boxShadow: '0 1px 0 rgba(0,0,0,0.1)' }}>
+                <th style={{ padding: '4px 6px', textAlign: 'left', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Fecha</th>
+                <th style={{ padding: '4px 6px', textAlign: 'left', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Comercial</th>
+                <th style={{ padding: '4px 6px', textAlign: 'left', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Tipo de Venta</th>
+                <th style={{ padding: '4px 6px', textAlign: 'left', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Producto</th>
+                <th style={{ padding: '4px 6px', textAlign: 'left', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Nombre del Cliente</th>
+                <th style={{ padding: '4px 6px', textAlign: 'left', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>NIF</th>
 
-                <th style={{ padding: '4px 6px', textAlign: 'center', color: 'var(--medium-gray)' }}>Teléfono</th>
-                <th style={{ padding: '4px 6px', textAlign: 'center', color: 'var(--medium-gray)' }}>Pte.</th>
-                <th style={{ padding: '4px 6px', textAlign: 'center', color: 'var(--medium-gray)' }}>Anul.</th>
-                <th style={{ padding: '4px 6px', textAlign: 'left', color: 'var(--medium-gray)', minWidth: 120, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Anotaciones</th>
-                {!isComercial && <th style={{ padding: '4px 6px', textAlign: 'center', color: 'var(--medium-gray)' }}>Comisión</th>}
-                <th style={{ padding: '4px 6px', textAlign: 'center', color: 'var(--medium-gray)' }}>Estado</th>
+                <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Teléfono</th>
+                <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Pte.</th>
+                <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Anul.</th>
+                <th style={{ padding: '4px 6px', textAlign: 'left', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px', minWidth: 120, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Anotaciones</th>
+                {!isComercial && <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Comisión</th>}
+                <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Estado</th>
               </tr>
             </thead>
             <tbody>
               {data.map((sale: any, i: number) => (
-                <tr key={i} style={{ borderBottom: '1px solid var(--border-color)', verticalAlign: 'top' }}>
+                <tr key={i} style={{ color: '#333333', borderBottom: '1px solid #F0F0F0', verticalAlign: 'top' }}>
                   <td style={{ padding: '4px 6px', whiteSpace: 'nowrap' }}>{sale.fecha}</td>
                   <td style={{ padding: '4px 6px', fontWeight: 600 }}>{sale.vendedor}</td>
-                  <td style={{ padding: '4px 6px', color: 'var(--medium-gray)' }}>{sale.detalle === 'Ti' ? 'Contratos Móvil' : sale.detalle === 'O2' ? 'O2 MovilFree' : (sale.detalle || '-')}</td>
+                  <td style={{ padding: '4px 6px', color: '#555555' }}>{sale.detalle === 'Ti' ? 'Contratos Móvil' : sale.detalle === 'O2' ? 'O2 MovilFree' : (sale.detalle || '-')}</td>
                   <td style={{ padding: '4px 6px' }}>{sale.producto}</td>
                   <td style={{ padding: '4px 6px' }}>{sale.nombreCliente || '-'}</td>
                   <td style={{ padding: '4px 6px' }}>{sale.nif}</td>
@@ -258,8 +258,8 @@ function CommercialDashboard({ data, activeExtras = [], isComercial }: { data: a
                   <td style={{ padding: '4px 6px', textAlign: 'center' }}>{sale.telf}</td>
                   <td style={{ padding: '4px 6px', textAlign: 'center' }}>{sale.pendiente}</td>
                   <td style={{ padding: '4px 6px', textAlign: 'center' }}>{sale.anulado}</td>
-                  <td style={{ padding: '4px 6px', color: 'var(--medium-gray)', fontSize: 12 }}>{sale.anotaciones}</td>
-                  {!isComercial && <td style={{ padding: '4px 6px', textAlign: 'center', color: 'var(--mercedes-cyan)', fontWeight: 'bold' }}>{formatCurrency(sale.dynamicCommission !== undefined ? sale.dynamicCommission : (sale.importe || sale.cuota))}</td>}
+                  <td style={{ padding: '4px 6px', color: '#555555', fontSize: 12 }}>{sale.anotaciones}</td>
+                  {!isComercial && <td style={{ padding: '4px 6px', textAlign: 'center', color: '#0078D4', fontWeight: 'bold' }}>{formatCurrency(sale.dynamicCommission !== undefined ? sale.dynamicCommission : (sale.importe || sale.cuota))}</td>}
                   <td style={{ padding: '4px 6px', textAlign: 'center' }}>
                     {(sale.anulado === 'Si' || sale.pendiente === 'Anulado') ? (
                         <span style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#EF4444', padding: '4px 10px', borderRadius: '12px', fontWeight: 800, fontSize: '11.5px', display: 'inline-block', minWidth: '46px' }}>ANUL</span>
@@ -272,7 +272,7 @@ function CommercialDashboard({ data, activeExtras = [], isComercial }: { data: a
                 </tr>
               ))}
               {activeExtras.length > 0 && activeExtras.map((ex: any, i: number) => (
-                <tr key={`extra-${ex.id || i}`} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'rgba(16, 185, 129, 0.05)', verticalAlign: 'top' }}>
+                <tr key={`extra-${ex.id || i}`} style={{ borderBottom: '1px solid #F0F0F0', backgroundColor: '#F0FDF4', verticalAlign: 'top' }}>
                   <td style={{ padding: '4px 6px', color: '#059669', whiteSpace: 'nowrap' }}>{new Date(ex.createdAt).toLocaleDateString()}</td>
                   <td style={{ padding: '4px 6px', fontWeight: 600, color: '#059669' }}>{ex.seller}</td>
                   <td style={{ padding: '4px 6px', color: '#059669' }}>EXTRA</td>
@@ -302,7 +302,7 @@ function CommercialDashboard({ data, activeExtras = [], isComercial }: { data: a
               ))}
               {data.length === 0 && activeExtras.length === 0 && (
                 <tr>
-                  <td colSpan={12} style={{ padding: '24px', textAlign: 'center', color: 'var(--medium-gray)' }}>
+                  <td colSpan={12} style={{ padding: '24px', textAlign: 'center', color: '#555555' }}>
                     No hay operaciones registradas.
                   </td>
                 </tr>
@@ -734,7 +734,7 @@ function OperationsContent() {
         backFallback={grupoFilter ? "/seguimiento-ventas/productos" : "/back-office"}
         helpContent={
           <div>
-            <h4 style={{ margin: '0 0 12px 0', color: 'var(--mercedes-cyan)', fontSize: 15 }}>Manual: Gestor de Operaciones</h4>
+            <h4 style={{ margin: '0 0 12px 0', color: '#0078D4', fontSize: 15 }}>Manual: Gestor de Operaciones</h4>
             <p style={{ margin: 0, lineHeight: 1.5 }}>Gestor de estado de ventas. Aquí los responsables pueden validar operaciones, marcarlas como 'Pendientes' de instalación o 'Anuladas', actualizando el proyeccionado económico en tiempo real.</p>
           </div>
         }
@@ -747,8 +747,8 @@ function OperationsContent() {
       <div style={{ padding: 0, border: 'none', marginBottom: 20, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
         {(activeVendorFilter || grupoFilter) && (
           <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: 12, backgroundColor: 'rgba(0,173,239,0.1)', padding: '10px 16px', borderRadius: 8, border: '1px solid var(--mercedes-cyan)' }}>
-            <span style={{ color: 'var(--light-text)', fontSize: 14 }}>
-              Mostrando solo las operaciones de: <strong style={{ color: 'var(--mercedes-cyan)' }}>{activeVendorFilter || `Palanca ${grupoFilter}`}</strong>
+            <span style={{ color: '#333333', fontSize: 14 }}>
+              Mostrando solo las operaciones de: <strong style={{ color: '#0078D4' }}>{activeVendorFilter || `Palanca ${grupoFilter}`}</strong>
             </span>
             {can(user, 'PRINT') && (
               <button 
@@ -762,7 +762,7 @@ function OperationsContent() {
             )}
             <button 
               onClick={() => router.push('/operaciones')}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: 'none', color: 'var(--medium-gray)', cursor: 'pointer', fontSize: 13, padding: '4px 8px', borderRadius: 4 }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: 'none', color: '#555555', cursor: 'pointer', fontSize: 13, padding: '4px 8px', borderRadius: 4 }}
               onMouseOver={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
               onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
             >
@@ -775,7 +775,7 @@ function OperationsContent() {
       {/* SEARCH BAR & EXCEL EXPORT */}
       <div className="no-print" style={{ marginBottom: 20, display: 'flex', gap: 16 }}>
         <div style={{ position: 'relative', width: '100%', maxWidth: 400 }}>
-          <Search size={18} style={{ position: 'absolute', left: 14, top: 12, color: 'var(--medium-gray)' }} />
+          <Search size={18} style={{ position: 'absolute', left: 14, top: 12, color: '#555555' }} />
           <input 
             type="text" 
             placeholder="Buscar por comercial, producto, NIF, teléfono..."
@@ -785,7 +785,7 @@ function OperationsContent() {
             style={{ paddingLeft: 40, width: '100%', backgroundColor: 'var(--section-bg)', border: '1px solid var(--border-color)' }}
           />
           {searchTerm && (
-            <button onClick={() => setSearchTerm('')} style={{ position: 'absolute', right: 14, top: 12, background: 'none', border: 'none', color: 'var(--medium-gray)', cursor: 'pointer' }}>
+            <button onClick={() => setSearchTerm('')} style={{ position: 'absolute', right: 14, top: 12, background: 'none', border: 'none', color: '#555555', cursor: 'pointer' }}>
               <X size={18} />
             </button>
           )}
@@ -814,49 +814,49 @@ function OperationsContent() {
       ) : (
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 280px)' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', tableLayout: 'auto' }}>
+          <table style={{ backgroundColor: '#FFFFFF', width: '100%', borderCollapse: 'collapse', fontSize: '11px', tableLayout: 'auto' }}>
             <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
-              <tr style={{ backgroundColor: 'var(--active-bg)', boxShadow: '0 1px 0 var(--table-border)' }}>
-                <th style={{ padding: '4px 6px', textAlign: 'left', color: 'var(--medium-gray)' }}>Vendedor</th>
-                <th style={{ padding: '4px 6px', textAlign: 'left', color: 'var(--medium-gray)' }}>Fecha</th>
-                <th style={{ padding: '4px 6px', textAlign: 'left', color: 'var(--medium-gray)' }}>Tienda</th>
-                <th style={{ padding: '4px 6px', textAlign: 'left', color: 'var(--medium-gray)' }}>IMEI</th>
-                <th style={{ padding: '4px 6px', textAlign: 'left', color: 'var(--medium-gray)' }}>Tipo de Venta</th>
-                <th style={{ padding: '4px 6px', textAlign: 'left', color: 'var(--medium-gray)' }}>Producto</th>
-                <th style={{ padding: '4px 6px', textAlign: 'left', color: 'var(--medium-gray)' }}>Nombre del Cliente</th>
-                <th style={{ padding: '4px 6px', textAlign: 'left', color: 'var(--medium-gray)' }}>NIF</th>
+              <tr style={{ backgroundColor: '#0078D4', boxShadow: '0 1px 0 rgba(0,0,0,0.1)' }}>
+                <th style={{ padding: '4px 6px', textAlign: 'left', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Vendedor</th>
+                <th style={{ padding: '4px 6px', textAlign: 'left', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Fecha</th>
+                <th style={{ padding: '4px 6px', textAlign: 'left', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Tienda</th>
+                <th style={{ padding: '4px 6px', textAlign: 'left', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>IMEI</th>
+                <th style={{ padding: '4px 6px', textAlign: 'left', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Tipo de Venta</th>
+                <th style={{ padding: '4px 6px', textAlign: 'left', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Producto</th>
+                <th style={{ padding: '4px 6px', textAlign: 'left', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Nombre del Cliente</th>
+                <th style={{ padding: '4px 6px', textAlign: 'left', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>NIF</th>
 
-                <th style={{ padding: '4px 6px', textAlign: 'center', color: 'var(--medium-gray)' }}>Teléfono</th>
-                <th style={{ padding: '4px 6px', textAlign: 'center', color: 'var(--medium-gray)' }}>Pte.</th>
-                <th style={{ padding: '4px 6px', textAlign: 'center', color: 'var(--medium-gray)' }}>Anul.</th>
-                <th style={{ padding: '4px 6px', textAlign: 'left', color: 'var(--medium-gray)', minWidth: 120, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Anotaciones</th>
-                <th style={{ padding: '4px 6px', textAlign: 'center', color: 'var(--medium-gray)' }}>Comisión</th>
-                <th style={{ padding: '4px 6px', textAlign: 'center', color: 'var(--medium-gray)' }}>Acciones</th>
+                <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Teléfono</th>
+                <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Pte.</th>
+                <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Anul.</th>
+                <th style={{ padding: '4px 6px', textAlign: 'left', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px', minWidth: 120, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Anotaciones</th>
+                <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Comisión</th>
+                <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {displayedSales.length === 0 ? (
                 <tr>
-                  <td colSpan={12} style={{ padding: '24px', textAlign: 'center', color: 'var(--medium-gray)' }}>
+                  <td colSpan={12} style={{ padding: '24px', textAlign: 'center', color: '#555555' }}>
                     {activeVendorFilter ? `No hay datos disponibles para ${activeVendorFilter}.` : 'No hay datos disponibles para tu rol o todavía no hay ventas registradas.'}
                   </td>
                 </tr>
               ) : (
                 displayedSales.map((sale: any, i: number) => (
-                  <tr key={i} style={{ borderBottom: '1px solid var(--border-color)', verticalAlign: 'top', backgroundColor: editingId === sale.id ? 'rgba(8, 145, 178, 0.05)' : 'transparent' }}>
+                  <tr key={i} style={{ color: '#333333', borderBottom: '1px solid #F0F0F0', verticalAlign: 'top', backgroundColor: editingId === sale.id ? 'rgba(8, 145, 178, 0.05)' : 'transparent' }}>
                     <td style={{ padding: '4px 6px' }}><strong>
                       {editingId === sale.id ? <input value={editForm.vendedor} onChange={e => handleEditChange('vendedor', e.target.value)} style={{ width: 80, padding: 4 }} /> : sale.vendedor}
                     </strong></td>
                     <td style={{ padding: '4px 6px', whiteSpace: 'nowrap' }}>
                       {editingId === sale.id ? <input value={editForm.fecha} onChange={e => handleEditChange('fecha', e.target.value)} style={{ width: 80, padding: 4 }} /> : sale.fecha}
                     </td>
-                    <td style={{ padding: '4px 6px', color: 'var(--mercedes-cyan)', fontWeight: 600 }}>
+                    <td style={{ padding: '4px 6px', color: '#0078D4', fontWeight: 600 }}>
                       {editingId === sale.id ? <input value={editForm.codigo} onChange={e => handleEditChange('codigo', e.target.value)} style={{ width: 80, padding: 4 }} /> : sale.codigo}
                     </td>
-                    <td style={{ padding: '4px 6px', color: 'var(--medium-gray)', fontWeight: 600 }}>
+                    <td style={{ padding: '4px 6px', color: '#555555', fontWeight: 600 }}>
                       {editingId === sale.id ? <input value={editForm.imei || ''} onChange={e => handleEditChange('imei', e.target.value)} style={{ width: 80, padding: 4 }} /> : (sale.imei || '-')}
                     </td>
-                    <td style={{ padding: '4px 6px', color: 'var(--medium-gray)' }}>
+                    <td style={{ padding: '4px 6px', color: '#555555' }}>
                       {editingId === sale.id ? <input value={editForm.detalle || ''} onChange={e => handleEditChange('detalle', e.target.value)} style={{ width: 80, padding: 4 }} /> : (sale.detalle === 'Ti' ? 'Contratos Móvil' : sale.detalle === 'O2' ? 'O2 MovilFree' : (sale.detalle || '-'))}
                     </td>
                     <td style={{ padding: '4px 6px' }}>
@@ -880,7 +880,7 @@ function OperationsContent() {
                           <option value="Anulado">Anulado</option>
                           <option value="">-</option>
                         </select>
-                      ) : sale.pendiente}
+                      ) : (sale.pendiente === 'Si' ? <span style={{ backgroundColor: '#FFF4E5', color: '#E59837', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', fontSize: '10px' }}>Sí</span> : <span style={{ color: '#555555', fontSize: '11px' }}>No</span>)}
                     </td>
                     <td style={{ padding: '4px 6px', textAlign: 'center' }}>
                       {editingId === sale.id ? (
@@ -892,12 +892,12 @@ function OperationsContent() {
                           <option value="No">No</option>
                           <option value="">-</option>
                         </select>
-                      ) : (sale.anulado === 'Si' || sale.pendiente === 'Anulado' ? 'Si' : sale.anulado)}
+                      ) : (sale.anulado === 'Si' || sale.pendiente === 'Anulado' ? <span style={{ backgroundColor: '#FEE2E2', color: '#EF4444', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', fontSize: '10px' }}>Sí</span> : <span style={{ color: '#555555', fontSize: '11px' }}>No</span>)}
                     </td>
-                    <td style={{ padding: '4px 6px', color: 'var(--medium-gray)', fontSize: 13, lineHeight: '1.4' }}>
+                    <td style={{ padding: '4px 6px', color: '#555555', fontSize: 13, lineHeight: '1.4' }}>
                       {editingId === sale.id ? <textarea value={editForm.anotaciones} onChange={e => handleEditChange('anotaciones', e.target.value)} rows={2} style={{ width: '100%', minWidth: 120, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: 4 }} /> : sale.anotaciones}
                     </td>
-                    <td style={{ padding: '4px 6px', textAlign: 'center', color: 'var(--mercedes-cyan)', fontWeight: 'bold' }}>
+                    <td style={{ padding: '4px 6px', textAlign: 'center', color: '#10B981', fontWeight: 'bold' }}>
                       {editingId === sale.id ? <input type="number" step="0.01" value={editForm.importe || editForm.cuota || ''} onChange={e => handleEditChange('importe', e.target.value)} style={{ width: 60, padding: 4 }} /> : formatCurrency(sale.dynamicCommission !== undefined ? sale.dynamicCommission : (sale.importe || sale.cuota))}
                     </td>
                     <td style={{ padding: '4px 6px', textAlign: 'center' }}>
@@ -913,13 +913,13 @@ function OperationsContent() {
                       ) : (
                         <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
                           {canEdit && (
-                            <button onClick={() => startEdit(sale)} style={{ background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--light-text)', padding: '6px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center' }} title="Editar">
-                              <Edit2 size={16} />
+                            <button onClick={() => startEdit(sale)} style={{ background: '#FFFFFF', border: '1px solid #0078D4', color: '#0078D4', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center' }} title="Editar">
+                              <span style={{ fontSize: '10px', fontWeight: 'bold', letterSpacing: '0.5px' }}>EDIT</span>
                             </button>
                           )}
                           {canCancel && (
-                            <button onClick={() => deleteSale(sale.id)} style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#EF4444', padding: '6px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center' }} title="Eliminar">
-                              <Trash2 size={16} />
+                            <button onClick={() => deleteSale(sale.id)} style={{ background: '#FEE2E2', border: '1px solid #FCA5A5', color: '#EF4444', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center' }} title="Eliminar">
+                              <Trash2 size={12} />
                             </button>
                           )}
                         </div>
@@ -929,7 +929,7 @@ function OperationsContent() {
                 ))
               )}
               {activeExtras.length > 0 && activeExtras.map((ex: any, i: number) => (
-                <tr key={`extra-${ex.id || i}`} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'rgba(16, 185, 129, 0.05)', verticalAlign: 'top' }}>
+                <tr key={`extra-${ex.id || i}`} style={{ borderBottom: '1px solid #F0F0F0', backgroundColor: '#F0FDF4', verticalAlign: 'top' }}>
                   <td style={{ padding: '4px 6px', fontWeight: 600, color: '#059669' }}>{ex.seller}</td>
                   <td style={{ padding: '4px 6px', color: '#059669', whiteSpace: 'nowrap' }}>{new Date(ex.createdAt).toLocaleDateString()}</td>
                   <td style={{ padding: '4px 6px', color: '#059669' }}>{resolveRawCode(ex)}</td>
