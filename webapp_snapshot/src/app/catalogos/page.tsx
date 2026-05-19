@@ -81,7 +81,7 @@ type ProductItem = {
   importStatus?: 'new' | 'updated' | 'missing' | 'unchanged'
 }
 
-const CATEGORIES = ['Fija y Móvil', 'Ti', 'Rent', 'Seguro', 'O2', 'miMovistar', 'Suscripciones TV', 'Prepago', 'Varios', 'Repos', 'Resto BAF']
+const CATEGORIES = ['Fija y Móvil', 'Ti', 'Rent', 'Seguro', 'O2', 'miMovistar', 'Suscripciones TV', 'Prepago', 'Varios', 'Repos', 'Resto BAF', 'Traslado miMovistar']
 
 export default function CatalogosPage() {
   const { authorized } = useGuard('MODULE_ADMIN', 'MANAGE_CATALOG')
@@ -100,7 +100,7 @@ export default function CatalogosPage() {
   const previousPeriod = currentIndex > 0 ? sortedPeriods[currentIndex - 1] : null
 
   const [catalogs, setCatalogs] = useState<Record<string, ProductItem[]>>({
-    "Fija y Móvil": [], "Ti": [], "Rent": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": [], "Prepago": [], "Varios": [], "Repos": [], "Resto BAF": []
+    "Fija y Móvil": [], "Ti": [], "Rent": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": [], "Prepago": [], "Varios": [], "Repos": [], "Resto BAF": [], "Traslado miMovistar": []
   })
   const [activeTab, setActiveTab] = useState('Fija y Móvil')
   const isProductTab = CATEGORIES.includes(activeTab) && activeTab !== 'Productos que Comisionan' && activeTab !== 'Comisiones O2 y MovilFree' && activeTab !== 'Territorial Tiendas / O2'
@@ -119,7 +119,7 @@ export default function CatalogosPage() {
       .then(res => res.json())
       .then(data => {
         if (data.success) {
-          const mapped: Record<string, ProductItem[]> = { "Fija y Móvil": [], "Ti": [], "Rent": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": [], "Prepago": [], "Varios": [], "Repos": [], "Resto BAF": [] }
+          const mapped: Record<string, ProductItem[]> = { "Fija y Móvil": [], "Ti": [], "Rent": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": [], "Prepago": [], "Varios": [], "Repos": [], "Resto BAF": [], "Traslado miMovistar": [] }
           for (const [cat, items] of Object.entries(data.catalogs as Record<string, any[]>)) {
              if (!mapped[cat]) mapped[cat] = [];
              mapped[cat] = [...mapped[cat], ...items.map((it: any) => ({
@@ -170,7 +170,7 @@ export default function CatalogosPage() {
           let pName = String(it.producto).trim().toLowerCase();
           
           // Generate a composite key for specific categories where name alone isn't unique
-          if (cat === 'miMovistar' || cat === 'Resto BAF') {
+          if (cat === 'miMovistar' || cat === 'Resto BAF' || cat === 'Traslado miMovistar') {
             pName = `${String(it.subcategoria).trim().toLowerCase()}_${String(it.gama).trim().toLowerCase()}_${pName}`;
           } else if (cat === 'Rent') {
             pName = `${String(it.fabricante).trim().toLowerCase()}_${String(it.subcategoria).trim().toLowerCase()}_${String(it.gama).trim().toLowerCase()}_${pName}`;
@@ -382,7 +382,7 @@ export default function CatalogosPage() {
       } else if (cat === 'O2') {
         newItem.subcategoria = ''
         newItem.comision = ''
-      } else if (cat === 'miMovistar' || cat === 'Resto BAF') {
+      } else if (cat === 'miMovistar' || cat === 'Resto BAF' || cat === 'Traslado miMovistar') {
         newItem.subcategoria = ''
         newItem.gama = ''
         newItem.comision = 0
@@ -483,7 +483,7 @@ export default function CatalogosPage() {
     const excelData: any[] = []
     lines.forEach((line) => {
       const parts = line.split('\t').map(p => p.trim().replace(/___NEWLINE___/g, '\n'))
-      if (parts.length > 0 && (parts[0] || (activeTab === 'miMovistar' && parts[2]))) {
+      if (parts.length > 0 && (parts[0] || ((activeTab === 'miMovistar' || activeTab === 'Resto BAF' || activeTab === 'Traslado miMovistar') && parts[2]))) {
         if (activeTab === 'Rent') {
           // Detectar si el usuario ha pegado el formato con las fechas en medio (después del producto)
           // Ejemplo: Fabricante | Categoria | Producto | Desde | Hasta | Gama | Cuota | Comision | Comision Coste
@@ -590,7 +590,7 @@ export default function CatalogosPage() {
             desde: parts.length > 6 ? parts[6] : '',
             hasta: parts.length > 7 ? parts[7] : '',
           })
-        } else if (activeTab === 'miMovistar' || activeTab === 'Resto BAF') {
+        } else if (activeTab === 'miMovistar' || activeTab === 'Resto BAF' || activeTab === 'Traslado miMovistar') {
           if (!parts[0] && !parts[1] && parts[2] && excelData.length > 0) {
             // Continuation of the previous product's name due to merged cells in Excel
             excelData[excelData.length - 1].producto += '\n' + parts[2];
@@ -654,7 +654,7 @@ export default function CatalogosPage() {
         const isCompositeMatch = (it: ProductItem) => {
           if (activeTab === 'O2') return normalize(it.subcategoria) === normalize(row.categoria);
           if (activeTab === 'Rent') return normalize(it.fabricante) === normalize(row.fabricante) && normalize(it.subcategoria) === normalize(row.categoria) && normalize(it.gama) === normalize(row.gama);
-          if (activeTab === 'miMovistar' || activeTab === 'Resto BAF') return normalize(it.subcategoria) === normalize(row.subcategoria) && normalize(it.gama) === normalize(row.gama);
+          if (activeTab === 'miMovistar' || activeTab === 'Resto BAF' || activeTab === 'Traslado miMovistar') return normalize(it.subcategoria) === normalize(row.subcategoria) && normalize(it.gama) === normalize(row.gama);
           return true;
         };
 
@@ -696,7 +696,7 @@ export default function CatalogosPage() {
             if (item.subcategoria !== row.categoria) { item.subcategoria = row.categoria; changed = true; }
             if (item.comision !== row.comision) { item.comision = row.comision; changed = true; }
             if (item.comisionConCoste !== row.comisionConCoste) { item.comisionConCoste = row.comisionConCoste; changed = true; }
-          } else if (activeTab === 'miMovistar') {
+          } else if (activeTab === 'miMovistar' || activeTab === 'Resto BAF' || activeTab === 'Traslado miMovistar') {
             if (item.subcategoria !== row.subcategoria) { item.subcategoria = row.subcategoria; changed = true; }
             if (item.gama !== row.gama) { item.gama = row.gama; changed = true; }
             if (item.comision !== row.comision) { item.comision = row.comision; changed = true; }
@@ -806,7 +806,7 @@ export default function CatalogosPage() {
             const factor = 24;
             newItem.cuotaMensual = Math.round(amount * 100) / 100
             newItem.cuotaAnual = Math.round((amount * factor) * 100) / 100
-          } else if (activeTab === 'miMovistar' || activeTab === 'Resto BAF') {
+          } else if (activeTab === 'miMovistar' || activeTab === 'Resto BAF' || activeTab === 'Traslado miMovistar') {
             newItem.subcategoria = row.subcategoria
             newItem.gama = row.gama
             newItem.comision = row.comision
@@ -889,6 +889,7 @@ export default function CatalogosPage() {
           { cat: 'Varios', tip: 'Catálogo de productos varios (alarmas, migraciones, etc). Introduce categoría, nombre, cuota total y comisión.' },
           { cat: 'Repos', tip: 'Catálogo de Reposiciones. Introduce categoría, nombre, cuota total, comisión y multiplicador.' },
           { cat: 'Resto BAF', tip: 'Catálogo para Resto BAF. Estructura idéntica a miMovistar.' },
+          { cat: 'Traslado miMovistar', tip: 'Catálogo para Traslado miMovistar. Estructura idéntica a miMovistar.' },
 
           { cat: 'Productos que Comisionan', tip: 'Configura las reglas globales y objetivos que aplicarán a los comerciales de la tienda en este mes.' },
           { cat: 'Comisiones O2 y MovilFree', tip: 'Configuración del motor matemático de comisiones y bonos específicos para O2 y MovilFree.' },
@@ -1063,7 +1064,7 @@ export default function CatalogosPage() {
                     <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '35%' }}>Nombre de Producto</th>
                     <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 140 }}>Comisión (€)</th>
                   </>
-                ) : (activeTab === 'miMovistar' || activeTab === 'Resto BAF') ? (
+                ) : (activeTab === 'miMovistar' || activeTab === 'Resto BAF' || activeTab === 'Traslado miMovistar') ? (
                   <>
                     <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '5%' }}>Categoría</th>
                     <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '20%' }}>Tipo</th>
@@ -1294,7 +1295,7 @@ export default function CatalogosPage() {
                             </div>
                           </td>
                         </>
-                      ) : (activeTab === 'miMovistar' || activeTab === 'Resto BAF') ? (
+                      ) : (activeTab === 'miMovistar' || activeTab === 'Resto BAF' || activeTab === 'Traslado miMovistar') ? (
                         <>
                           <td style={{ padding: '12px 20px' }}>
                             <input 
