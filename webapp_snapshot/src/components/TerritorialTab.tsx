@@ -299,12 +299,12 @@ export default function TerritorialTab() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 1200 }}>
             <thead>
               <tr style={{ background: '#0284c7', color: '#ffffff' }}>
-                <th style={{ padding: '6px 4px' }}>Nombre Comisión</th>
-                <th style={{ padding: '6px 4px' }}>Tipo de Venta</th>
-                <th style={{ padding: '6px 4px' }}>Obj. Primer Tramo</th>
-                <th style={{ padding: '6px 4px' }}>Importe 1º</th>
-                <th style={{ padding: '6px 4px' }}>Obj. Segundo Tramo</th>
-                <th style={{ padding: '6px 4px' }}>Importe 2º</th>
+                <th style={{ padding: '6px 4px' }} title="Nombre descriptivo de la comisión">Nombre Comisión ℹ️</th>
+                <th style={{ padding: '6px 4px' }} title="El producto o grupo de ventas que se va a contar y a pagar.">Tipo de Venta ℹ️</th>
+                <th style={{ padding: '6px 4px' }} title="Objetivo mínimo a alcanzar. Puede ser 'Unif.' (la suma de todas las tiendas juntas debe llegar a este número) o 'Por T.' (cada tienda debe llegar a su propio número individual).">Obj. Primer Tramo ℹ️</th>
+                <th style={{ padding: '6px 4px' }} title="Lo que se paga si se llega al Primer Tramo. (Ej: '10' paga 10€ por venta, '10%' paga el 10% de lo recaudado).">Importe 1º ℹ️</th>
+                <th style={{ padding: '6px 4px' }} title="Objetivo más alto. Si se alcanza, anula el 1º y se paga este.">Obj. Segundo Tramo ℹ️</th>
+                <th style={{ padding: '6px 4px' }} title="Lo que se paga si se llega al Segundo Tramo.">Importe 2º ℹ️</th>
                 <th style={{ padding: '6px 4px' }}>VENTAS AUXILIADORA 45</th>
                 <th style={{ padding: '6px 4px' }}>VENTAS CORREHUELA</th>
                 <th style={{ padding: '6px 4px' }}>VENTAS VILLAMAYOR</th>
@@ -414,8 +414,8 @@ export default function TerritorialTab() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 1200 }}>
             <thead>
               <tr style={{ background: '#0284c7', color: '#ffffff' }}>
-                <th style={{ padding: '6px 4px' }}>Nombre Comisión</th>
-                <th style={{ padding: '6px 4px' }}>Tipo de Venta</th>
+                <th style={{ padding: '6px 4px' }} title="Nombre descriptivo de la comisión">Nombre Comisión ℹ️</th>
+                <th style={{ padding: '6px 4px' }} title="El producto o grupo de ventas que se va a contar para la tienda O2.">Tipo de Venta ℹ️</th>
                 {TRAMOS_MES.map(t => <th key={t.key} style={{ padding: '6px 4px', fontSize: 11 }}>{t.label}</th>)}
                 {TRAMOS_TRIM.map(t => <th key={t.key} style={{ padding: '6px 4px', fontSize: 11 }}>{t.label}</th>)}
                 <th style={{ padding: '6px 4px' }}>Conect.</th>
