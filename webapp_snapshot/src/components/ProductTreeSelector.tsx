@@ -41,11 +41,12 @@ export default function ProductTreeSelector({ value, onChange, disabled, placeho
   }, [])
 
   const toggleOption = (opt: string) => {
+    const cleanOpt = opt.trim()
     let newSelected = [...selectedValues]
-    if (newSelected.includes(opt)) {
-      newSelected = newSelected.filter(v => v !== opt)
+    if (newSelected.includes(cleanOpt)) {
+      newSelected = newSelected.filter(v => v !== cleanOpt)
     } else {
-      newSelected.push(opt)
+      newSelected.push(cleanOpt)
     }
     onChange(newSelected.join(', '))
   }
@@ -61,11 +62,12 @@ export default function ProductTreeSelector({ value, onChange, disabled, placeho
 
   const isLegacy = value && !selectedValues.some(v => predefined.includes(v) || categories.includes(v) || Object.values(catalogs).flat().some(p => p.producto === v)) && !selectedValues.includes('FORMULA_LIBRE')
 
-  const renderCheckbox = (label: string, value: string, isFolder: boolean = false, onClickExpand?: () => void, isExpanded?: boolean) => {
-    const isSelected = selectedValues.includes(value)
+  const renderCheckbox = (label: string, optValue: string, isFolder: boolean = false, onClickExpand?: () => void, isExpanded?: boolean) => {
+    const cleanOpt = optValue.trim()
+    const isSelected = selectedValues.includes(cleanOpt)
     return (
       <div 
-        key={value}
+        key={cleanOpt}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -87,14 +89,14 @@ export default function ProductTreeSelector({ value, onChange, disabled, placeho
         )}
         
         <div 
-          onClick={() => toggleOption(value)}
+          onClick={() => toggleOption(optValue)}
           style={{ width: 14, height: 14, border: '1px solid', borderColor: isSelected ? '#3b82f6' : '#64748b', borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: isSelected ? '#3b82f6' : 'transparent', cursor: 'pointer', flexShrink: 0 }}
         >
           {isSelected && <Check size={10} color="white" strokeWidth={3} />}
         </div>
         
         <div 
-          onClick={() => toggleOption(value)}
+          onClick={() => toggleOption(optValue)}
           style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', color: isSelected ? '#60a5fa' : '#e2e8f0', fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
           title={label}
         >
