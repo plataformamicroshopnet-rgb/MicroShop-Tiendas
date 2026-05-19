@@ -1,0 +1,11 @@
+import fs from 'fs';
+let c = fs.readFileSync('src/app/operaciones/page.tsx', 'utf8');
+c = c.replace(/'12px 16px'/g, "'4px 6px'");
+c = c.replace(/padding: '16px'/g, "padding: '4px 6px'");
+c = c.replace(/minWidth: '900px'/g, "tableLayout: 'auto'");
+c = c.replace(/minWidth: 200/g, "minWidth: 120, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'");
+c = c.replace(/minWidth: 150/g, "minWidth: 120, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'");
+c = c.replace(/fontSize: '12px'/g, "fontSize: '11px'");
+c = c.replace(/width: 120/g, "width: 100");
+c = c.replace(/width: 100/g, "width: 80");
+fs.writeFileSync('src/app/operaciones/page.tsx', c, 'utf8');
