@@ -129,7 +129,7 @@ export default function NuevaVentaPage() {
       if (field === 'producto') {
          const catList = catalogs[newProducts[index].categoria] || []
          const selectedItem = catList.find((p: any) => {
-           if (newProducts[index].categoria === 'miMovistar' || newProducts[index].categoria === 'Resto BAF') {
+           if (newProducts[index].categoria === 'miMovistar' || newProducts[index].categoria === 'Resto BAF' || newProducts[index].categoria === 'Traslado miMovistar') {
              return p.producto === value && p.subcategoria === newProducts[index].subcategoria && p.gama === newProducts[index].gama;
            }
            if (newProducts[index].categoria === 'O2' && newProducts[index].subcategoria) {
@@ -149,7 +149,7 @@ export default function NuevaVentaPage() {
                } else {
                   newProducts[index].importe = selectedItem.comision || ''
                }
-            } else if (cat === 'miMovistar' || cat === 'Resto BAF') {
+            } else if (cat === 'miMovistar' || cat === 'Resto BAF' || cat === 'Traslado miMovistar') {
               const baseCom = Number(selectedItem.comision) || 0;
               const mult = Number(selectedItem.comisionConCoste) || 0;
               newProducts[index].importe = String(baseCom * (mult === 0 ? 1 : mult));
@@ -569,7 +569,7 @@ export default function NuevaVentaPage() {
                       </div>
                     </div>
                   </div>
-                ) : (prod.categoria === 'miMovistar' || prod.categoria === 'Resto BAF') ? (
+                ) : (prod.categoria === 'miMovistar' || prod.categoria === 'Resto BAF' || prod.categoria === 'Traslado miMovistar') ? (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'stretch' }}>
                     {/* COLUMNA 1: TIPO DE VENTA */}
                     <div style={{ flex: '1', minWidth: '250px', backgroundColor: '#B8D5F6', borderRadius: '8px', padding: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>

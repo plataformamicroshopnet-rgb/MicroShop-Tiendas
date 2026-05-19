@@ -13,7 +13,7 @@ function resolveGrupo(prod: any): string {
   if (cat === 'Ti' || cat === 'Contratos Móvil') return 'TI'
   if (cat === 'TMA') return 'TMA'
   if (cat === 'Micro' || cat === 'MIC') return 'MIC'
-  if (cat === 'miMovistar' || cat === 'Resto BAF') return 'BAF'
+  if (cat === 'miMovistar' || cat === 'Resto BAF' || cat === 'Traslado miMovistar') return 'BAF'
   if (cat === 'Rent' || cat === 'Seguro') return 'REN'
   if (cat === 'O2') return 'ALTA'
 
