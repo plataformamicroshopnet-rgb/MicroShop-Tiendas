@@ -83,6 +83,25 @@ type ProductItem = {
 
 const CATEGORIES = ['Fija y Móvil', 'Ti', 'Rent', 'Seguro', 'O2', 'miMovistar', 'Suscripciones TV', 'Prepago', 'Varios', 'Repos', 'Resto BAF']
 
+const getTabStyle = (cat: string, isActive: boolean) => {
+  if (cat === 'Comisiones para Tiendas' || cat === 'Comisiones para Tienda O2 MovilFree') {
+    return {
+      backgroundColor: isActive ? '#e0f2fe' : 'var(--mercedes-cyan)',
+      color: isActive ? 'var(--medium-gray)' : '#FFF'
+    }
+  }
+  if (cat === 'PRV Territorial Movistar y O2') {
+    return {
+      backgroundColor: isActive ? '#dcfce7' : '#5CB615',
+      color: isActive ? 'var(--medium-gray)' : '#FFF'
+    }
+  }
+  return {
+    backgroundColor: isActive ? (CATEGORIES.includes(cat) ? 'var(--mercedes-cyan)' : '#6366f1') : '#e0f2fe',
+    color: isActive ? '#FFF' : 'var(--light-text)'
+  }
+}
+
 export default function CatalogosPage() {
   const { authorized } = useGuard('MODULE_ADMIN', 'MANAGE_CATALOG')
   const { activePeriodKey, availablePeriods, isLoadingPeriods } = usePeriod()
@@ -103,7 +122,7 @@ export default function CatalogosPage() {
     "Fija y Móvil": [], "Ti": [], "Rent": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": [], "Prepago": [], "Varios": [], "Repos": [], "Resto BAF": [], "Traslado miMovistar": []
   })
   const [activeTab, setActiveTab] = useState('Fija y Móvil')
-  const isProductTab = CATEGORIES.includes(activeTab) && activeTab !== 'Productos que Comisionan' && activeTab !== 'Comisiones O2 y MovilFree' && activeTab !== 'Territorial Tiendas / O2'
+  const isProductTab = CATEGORIES.includes(activeTab) && activeTab !== 'Comisiones para Tiendas' && activeTab !== 'Comisiones para Tienda O2 MovilFree' && activeTab !== 'PRV Territorial Movistar y O2'
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [search, setSearch] = useState('')
@@ -890,9 +909,9 @@ export default function CatalogosPage() {
           { cat: 'Repos', tip: 'Catálogo de Reposiciones. Introduce categoría, nombre, cuota total, comisión y multiplicador.' },
           { cat: 'Resto BAF', tip: 'Catálogo para Resto BAF. Estructura idéntica a miMovistar.' },
 
-          { cat: 'Productos que Comisionan', tip: 'Configura las reglas globales y objetivos que aplicarán a los comerciales de la tienda en este mes.' },
-          { cat: 'Comisiones O2 y MovilFree', tip: 'Configuración del motor matemático de comisiones y bonos específicos para O2 y MovilFree.' },
-          { cat: 'Territorial Tiendas / O2', tip: 'Configuración y cálculo automático de tramos y comisiones territoriales.' },
+          { cat: 'Comisiones para Tiendas', tip: 'Configura las reglas globales y objetivos que aplicarán a los comerciales de la tienda en este mes.' },
+          { cat: 'Comisiones para Tienda O2 MovilFree', tip: 'Configuración del motor matemático de comisiones y bonos específicos para O2 y MovilFree.' },
+          { cat: 'PRV Territorial Movistar y O2', tip: 'Configuración y cálculo automático de tramos y comisiones territoriales.' },
         ] as const).map(({ cat, tip }) => (
           <TooltipBox key={cat} title={cat} content={tip} position="bottom">
             <button
@@ -904,8 +923,7 @@ export default function CatalogosPage() {
                 cursor: 'pointer',
                 fontWeight: 600,
                 fontSize: 14,
-                backgroundColor: activeTab === cat ? (CATEGORIES.includes(cat) ? 'var(--mercedes-cyan)' : '#6366f1') : 'var(--active-bg)',
-                color: activeTab === cat ? '#FFF' : 'var(--light-text)',
+                ...getTabStyle(cat, activeTab === cat),
                 transition: 'all 0.2s ease'
               }}
             >
@@ -1653,9 +1671,9 @@ export default function CatalogosPage() {
         </>
       )}
 
-      {!isProductTab && activeTab === 'Productos que Comisionan' && <ProductosComisionanTab />}
-      {!isProductTab && activeTab === 'Comisiones O2 y MovilFree' && <ComisionesO2Tab />}
-      {!isProductTab && activeTab === 'Territorial Tiendas / O2' && <TerritorialTab />}
+      {!isProductTab && activeTab === 'Comisiones para Tiendas' && <ProductosComisionanTab />}
+      {!isProductTab && activeTab === 'Comisiones para Tienda O2 MovilFree' && <ComisionesO2Tab />}
+      {!isProductTab && activeTab === 'PRV Territorial Movistar y O2' && <TerritorialTab />}
 
     </div>
   )

@@ -58,7 +58,7 @@ export default function TiendasComisionesPage() {
 
         {rules.length === 0 || hours.length === 0 ? (
           <div style={{ padding: 40, textAlign: 'center', color: 'var(--medium-gray)', border: '1px dashed var(--border-color)', borderRadius: 12 }}>
-            Faltan reglas o comerciales configurados para este mes en <strong>Entrada de Datos {'>'} Productos que Comisionan</strong>.
+            Faltan reglas o comerciales configurados para este mes en <strong>Entrada de Datos {'>'} Comisiones para Tiendas</strong>.
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
