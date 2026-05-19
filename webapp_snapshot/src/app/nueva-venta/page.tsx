@@ -127,7 +127,8 @@ export default function NuevaVentaPage() {
       
       // Autofill importe if product is selected
       if (field === 'producto') {
-         const catList = catalogs[newProducts[index].categoria] || []
+         const actualCat = newProducts[index].categoria === 'Traslado miMovistar' ? 'miMovistar' : newProducts[index].categoria;
+         const catList = catalogs[actualCat] || []
          const selectedItem = catList.find((p: any) => {
            if (newProducts[index].categoria === 'miMovistar' || newProducts[index].categoria === 'Resto BAF' || newProducts[index].categoria === 'Traslado miMovistar') {
              return p.producto === value && p.subcategoria === newProducts[index].subcategoria && p.gama === newProducts[index].gama;
@@ -587,7 +588,7 @@ export default function NuevaVentaPage() {
                         <label style={{ fontSize: 13, color: '#1B3D6A', display: 'block', marginBottom: 4 }}>Categoría</label>
                         <select className="form-select" value={prod.subcategoria} onChange={e => handleProductChange(index, 'subcategoria', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
                           <option value="">Selecciona...</option>
-                          {[...new Set((catalogs[prod.categoria] || []).map((p:any) => p.subcategoria).filter(Boolean))].sort().map(c => <option key={String(c)} value={String(c)}>{String(c)}</option>)}
+                          {[...new Set((catalogs[prod.categoria === 'Traslado miMovistar' ? 'miMovistar' : prod.categoria] || []).map((p:any) => p.subcategoria).filter(Boolean))].sort().map(c => <option key={String(c)} value={String(c)}>{String(c)}</option>)}
                         </select>
                       </div>
 
@@ -595,7 +596,7 @@ export default function NuevaVentaPage() {
                         <label style={{ fontSize: 13, color: '#1B3D6A', display: 'block', marginBottom: 4 }}>Tipo</label>
                         <select className="form-select" value={prod.gama} onChange={e => handleProductChange(index, 'gama', e.target.value)} required disabled={!prod.subcategoria} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
                           <option value="">Selecciona...</option>
-                          {[...new Set((catalogs[prod.categoria] || []).filter((p:any) => p.subcategoria === prod.subcategoria).map((p:any) => p.gama).filter(Boolean))].sort().map(c => <option key={String(c)} value={String(c)}>{String(c)}</option>)}
+                          {[...new Set((catalogs[prod.categoria === 'Traslado miMovistar' ? 'miMovistar' : prod.categoria] || []).filter((p:any) => p.subcategoria === prod.subcategoria).map((p:any) => p.gama).filter(Boolean))].sort().map(c => <option key={String(c)} value={String(c)}>{String(c)}</option>)}
                         </select>
                       </div>
                     </div>
@@ -610,7 +611,7 @@ export default function NuevaVentaPage() {
                         <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>Producto</label>
                         <select className="form-select" value={prod.producto} onChange={e => handleProductChange(index, 'producto', e.target.value)} required disabled={!prod.gama} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
                           <option value="">Selecciona...</option>
-                          {(catalogs[prod.categoria] || [])
+                          {(catalogs[prod.categoria === 'Traslado miMovistar' ? 'miMovistar' : prod.categoria] || [])
                              .filter((p:any) => p.subcategoria === prod.subcategoria && p.gama === prod.gama)
                              .map((p:any) => p.producto)
                              .filter((p:any, i:number, self:any[]) => self.indexOf(p) === i)
@@ -729,7 +730,7 @@ export default function NuevaVentaPage() {
                           <label className="form-label" style={{ color: '#555' }}>Producto</label>
                           <select className="form-select" value={prod.producto} onChange={e => handleProductChange(index, 'producto', e.target.value)} disabled={!prod.categoria} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
                             <option value="">Selecciona...</option>
-                            {prod.categoria && catalogs[prod.categoria]
+                            {prod.categoria && catalogs[prod.categoria === 'Traslado miMovistar' ? 'miMovistar' : prod.categoria]
                               ?.filter((p: any) => prod.categoria !== 'O2' || !prod.subcategoria || p.subcategoria === prod.subcategoria)
                               ?.filter((p: any, i: number, self: any[]) => self.findIndex(t => t.producto === p.producto) === i)
                               .map((p: any, i: number) => <option key={p.id || i} value={p.producto}>{p.producto}</option>)}

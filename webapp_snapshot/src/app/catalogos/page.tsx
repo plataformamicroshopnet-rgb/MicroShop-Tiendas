@@ -81,7 +81,7 @@ type ProductItem = {
   importStatus?: 'new' | 'updated' | 'missing' | 'unchanged'
 }
 
-const CATEGORIES = ['Fija y Móvil', 'Ti', 'Rent', 'Seguro', 'O2', 'miMovistar', 'Suscripciones TV', 'Prepago', 'Varios', 'Repos', 'Resto BAF', 'Traslado miMovistar']
+const CATEGORIES = ['Fija y Móvil', 'Ti', 'Rent', 'Seguro', 'O2', 'miMovistar', 'Suscripciones TV', 'Prepago', 'Varios', 'Repos', 'Resto BAF']
 
 export default function CatalogosPage() {
   const { authorized } = useGuard('MODULE_ADMIN', 'MANAGE_CATALOG')
@@ -889,7 +889,6 @@ export default function CatalogosPage() {
           { cat: 'Varios', tip: 'Catálogo de productos varios (alarmas, migraciones, etc). Introduce categoría, nombre, cuota total y comisión.' },
           { cat: 'Repos', tip: 'Catálogo de Reposiciones. Introduce categoría, nombre, cuota total, comisión y multiplicador.' },
           { cat: 'Resto BAF', tip: 'Catálogo para Resto BAF. Estructura idéntica a miMovistar.' },
-          { cat: 'Traslado miMovistar', tip: 'Catálogo para Traslado miMovistar. Estructura idéntica a miMovistar.' },
 
           { cat: 'Productos que Comisionan', tip: 'Configura las reglas globales y objetivos que aplicarán a los comerciales de la tienda en este mes.' },
           { cat: 'Comisiones O2 y MovilFree', tip: 'Configuración del motor matemático de comisiones y bonos específicos para O2 y MovilFree.' },
