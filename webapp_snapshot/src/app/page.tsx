@@ -151,8 +151,8 @@ export default function DashboardPage() {
 
     // 1. Facturación (MVP)
     const billingTotals: Record<string, number> = {};
-    // 2. Conectividad (BAF)
-    const bafTotals: Record<string, number> = {};
+    // 2. Ventas miMovistar
+    const miMovistarTotals: Record<string, number> = {};
     // 3. Dispositivos + Seguros
     const dispSegTotals: Record<string, number> = {};
 
@@ -167,9 +167,9 @@ export default function DashboardPage() {
       }
       billingTotals[vName] = (billingTotals[vName] || 0) + amt;
 
-      // Conectividad (Alta BAF Total / Alta BAF Convergente)
-      if (matchTipoVenta(s, 'Alta BAF Total') || matchTipoVenta(s, 'Alta BAF Convergente')) {
-        bafTotals[vName] = (bafTotals[vName] || 0) + 1;
+      // Ventas miMovistar
+      if (matchTipoVenta(s, 'mimovistar')) {
+        miMovistarTotals[vName] = (miMovistarTotals[vName] || 0) + 1;
       }
 
       // Dispositivos + Seguros
@@ -195,31 +195,31 @@ export default function DashboardPage() {
       }
     });
 
-    // Nominado BAF (excluyendo MVP para que no se repitan si es posible)
-    let bafLeaderName = 'Nadie';
-    let bafLeaderTotal = 0;
-    Object.entries(bafTotals).forEach(([name, val]) => {
+    // Nominado miMovistar (excluyendo MVP para que no se repitan si es posible)
+    let miMovistarLeaderName = 'Nadie';
+    let miMovistarLeaderTotal = 0;
+    Object.entries(miMovistarTotals).forEach(([name, val]) => {
       if (name !== mvpName || Object.keys(billingTotals).length <= 1) {
-        if (val > bafLeaderTotal) {
-          bafLeaderTotal = val;
-          bafLeaderName = name;
+        if (val > miMovistarLeaderTotal) {
+          miMovistarLeaderTotal = val;
+          miMovistarLeaderName = name;
         }
       }
     });
-    if (bafLeaderName === 'Nadie') {
-      Object.entries(bafTotals).forEach(([name, val]) => {
-        if (val > bafLeaderTotal) {
-          bafLeaderTotal = val;
-          bafLeaderName = name;
+    if (miMovistarLeaderName === 'Nadie') {
+      Object.entries(miMovistarTotals).forEach(([name, val]) => {
+        if (val > miMovistarLeaderTotal) {
+          miMovistarLeaderTotal = val;
+          miMovistarLeaderName = name;
         }
       });
     }
 
-    // Nominado Disp + Seguros (excluyendo MVP y BAF)
+    // Nominado Disp + Seguros (excluyendo MVP y miMovistar)
     let dispSegLeaderName = 'Nadie';
     let dispSegLeaderTotal = 0;
     Object.entries(dispSegTotals).forEach(([name, val]) => {
-      if ((name !== mvpName && name !== bafLeaderName) || Object.keys(billingTotals).length <= 2) {
+      if ((name !== mvpName && name !== miMovistarLeaderName) || Object.keys(billingTotals).length <= 2) {
         if (val > dispSegLeaderTotal) {
           dispSegLeaderTotal = val;
           dispSegLeaderName = name;
@@ -237,7 +237,7 @@ export default function DashboardPage() {
 
     return {
       mvp: { name: mvpName, total: mvpTotal },
-      nominadoBaf: { name: bafLeaderName, total: bafLeaderTotal },
+      nominadoMiMovistar: { name: miMovistarLeaderName, total: miMovistarLeaderTotal },
       nominadoDispSeg: { name: dispSegLeaderName, total: dispSegLeaderTotal },
       isToday
     };
@@ -439,7 +439,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Nominado 1: Conectividad BAF */}
+            {/* Nominado 1: Ventas miMovistar */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--bg-body)', padding: '10px 12px', borderRadius: '12px', border: '1px solid rgba(14, 165, 233, 0.2)' }}>
               <div style={{ 
                 width: 36, height: 36, borderRadius: '50%', 
@@ -449,15 +449,15 @@ export default function DashboardPage() {
                 background: 'linear-gradient(135deg, #38bdf8 0%, #0284c7 100%)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center'
               }}>
-                {mvp.nominadoBaf.name !== 'Nadie' ? (
+                {mvp.nominadoMiMovistar.name !== 'Nadie' ? (
                   <img 
-                    src={`/${mvp.nominadoBaf.name}.jpg`} 
-                    alt={mvp.nominadoBaf.name} 
+                    src={`/${mvp.nominadoMiMovistar.name}.jpg`} 
+                    alt={mvp.nominadoMiMovistar.name} 
                     onError={(e) => {
                       e.currentTarget.style.display = 'none';
                       const parent = e.currentTarget.parentElement;
                       if (parent) {
-                        parent.innerHTML = `<span style="color:#fff; font-size:14px; font-weight:900">${mvp.nominadoBaf.name.charAt(0).toUpperCase()}</span>`;
+                        parent.innerHTML = `<span style="color:#fff; font-size:14px; font-weight:900">${mvp.nominadoMiMovistar.name.charAt(0).toUpperCase()}</span>`;
                       }
                     }}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
@@ -468,17 +468,17 @@ export default function DashboardPage() {
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: 'var(--text-main)' }}>{mvp.nominadoBaf.name}</h4>
-                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#0ea5e9', background: 'rgba(14, 165, 233, 0.1)', padding: '2px 6px', borderRadius: '8px' }}>Líder Conectividad</span>
+                  <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: 'var(--text-main)' }}>{mvp.nominadoMiMovistar.name}</h4>
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#0ea5e9', background: 'rgba(14, 165, 233, 0.1)', padding: '2px 6px', borderRadius: '8px' }}>Ventas miMovistar</span>
                 </div>
                 <div style={{ fontSize: '11px', color: 'var(--medium-gray)', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
                   <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#0ea5e9' }}></span>
-                  {mvp.nominadoBaf.name !== 'Nadie' ? (
+                  {mvp.nominadoMiMovistar.name !== 'Nadie' ? (
                     <>
-                      Destacado con <strong style={{ color: 'var(--text-main)' }}>{mvp.nominadoBaf.total} Altas BAF</strong>
+                      Destacado con <strong style={{ color: 'var(--text-main)' }}>{mvp.nominadoMiMovistar.total} Ventas miMovistar</strong>
                     </>
                   ) : (
-                    <span>Esperando altas...</span>
+                    <span>Esperando ventas...</span>
                   )}
                 </div>
               </div>
