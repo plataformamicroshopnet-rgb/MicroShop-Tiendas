@@ -172,7 +172,7 @@ export default function AdminDashboardPage() {
         .premium-card {
             background-color: var(--bg-card);
             border-radius: 12px;
-            padding: 12px 16px;
+            padding: 16px 20px;
             cursor: pointer;
             transition: all 0.2s ease;
             border: 1px solid var(--border-strong);
@@ -181,7 +181,7 @@ export default function AdminDashboardPage() {
             flex-direction: row;
             align-items: center;
             gap: 16px;
-            min-height: 76px;
+            min-height: 92px;
         }
         .premium-card:hover {
             transform: translateY(-2px);
@@ -351,7 +351,7 @@ export default function AdminDashboardPage() {
               </div>
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
                 gap: '16px'
               }}>
                 {groupCards.map((c: any) => {
