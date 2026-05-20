@@ -6,7 +6,7 @@ import { FileText, BookOpen, Library, Trophy, Flame, Target, Award, Star, Zap, C
 import { PageHeader } from '@/components/PageHeader'
 import Link from 'next/link'
 import { usePeriod } from '@/components/PeriodProvider'
-import { matchTipoVenta } from '@/hooks/useComisionesData'
+import { matchTipoVenta, matchesRule, getValueForRule } from '@/hooks/useComisionesData'
 
 export default function DashboardPage() {
   const { activePeriodKey } = usePeriod()
@@ -95,18 +95,20 @@ export default function DashboardPage() {
 
     let llevamos = 0;
     teamSales.forEach(s => {
-      if (matchTipoVenta(s, productsCuentan)) {
+      if (matchesRule(s, kpiName, productsCuentan)) {
+        const val = getValueForRule(s, kpiName);
         if (isPercentage) {
-          llevamos += Number(s.cuota) || 0;
+          llevamos += val;
         } else {
           llevamos += 1;
         }
       }
       if (s.seguroImporte && Number(s.seguroImporte) > 0) {
         const virtualSeguro = { ...s, categoria: 'seguro', detalle: 'seguro', cuota: Number(s.seguroImporte) };
-        if (matchTipoVenta(virtualSeguro, productsCuentan)) {
+        if (matchesRule(virtualSeguro, kpiName, productsCuentan)) {
+          const val = getValueForRule(virtualSeguro, kpiName);
           if (isPercentage) {
-            llevamos += Number(s.seguroImporte);
+            llevamos += val;
           } else {
             llevamos += 1;
           }
@@ -166,7 +168,7 @@ export default function DashboardPage() {
       const isPending = String(s.pendiente || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === 'si';
 
       // Facturación total
-      let amt = Number(s.cuota) || 0;
+      let amt = Number(s.cuota || s.importe) || 0;
       if (s.seguroImporte && Number(s.seguroImporte) > 0) {
         amt += Number(s.seguroImporte);
       }
@@ -289,18 +291,20 @@ export default function DashboardPage() {
       
       let llevamos = 0;
       userSales.forEach(s => {
-        if (matchTipoVenta(s, rule.productosCuentan)) {
+        if (matchesRule(s, rule.nombre, rule.productosCuentan)) {
+          const val = getValueForRule(s, rule.nombre);
           if (isPercentage) {
-            llevamos += Number(s.cuota) || 0;
+            llevamos += val;
           } else {
             llevamos += 1;
           }
         }
         if (s.seguroImporte && Number(s.seguroImporte) > 0) {
           const virtualSeguro = { ...s, categoria: 'seguro', detalle: 'seguro', cuota: Number(s.seguroImporte) };
-          if (matchTipoVenta(virtualSeguro, rule.productosCuentan)) {
+          if (matchesRule(virtualSeguro, rule.nombre, rule.productosCuentan)) {
+            const val = getValueForRule(virtualSeguro, rule.nombre);
             if (isPercentage) {
-              llevamos += Number(s.seguroImporte);
+              llevamos += val;
             } else {
               llevamos += 1;
             }

@@ -87,6 +87,37 @@ export const matchTipoVenta = (sale: any, tipoVentaRaw: string) => {
     return false;
 };
 
+export const isSuscripcionesTV = (s: any) => {
+    const text = String(s.categoria || s.detalle || s.sheet || s.producto || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return text.includes("suscripciones tv");
+};
+
+export const isExtraRepoUpFutbol = (s: any) => {
+    const text = String(s.producto || s.detalle || s.categoria || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return text.includes("extra repo up destino futbol");
+};
+
+export const matchesRule = (s: any, ruleName: string, ruleProductosCuentan: string) => {
+    if (ruleName === 'ARPU') {
+        return matchTipoVenta(s, 'ARPU') || isSuscripcionesTV(s) || isExtraRepoUpFutbol(s);
+    }
+    if (ruleName === 'Repo Fútbol') {
+        return matchTipoVenta(s, 'Repo Fútbol') || isExtraRepoUpFutbol(s);
+    }
+    return matchTipoVenta(s, ruleProductosCuentan);
+};
+
+export const getValueForRule = (s: any, ruleName: string) => {
+    let cuotaValue = Number(s.cuota) || 0;
+    if (isNaN(cuotaValue)) cuotaValue = 0;
+
+    if (ruleName === 'ARPU') {
+        if (isSuscripcionesTV(s)) {
+            return Number(s.importe || s.cuota || 0);
+        }
+    }
+    return cuotaValue;
+};
 
 export function useComisionesData(user?: any) {
     const { activePeriodKey } = usePeriod();
@@ -129,30 +160,18 @@ export function useComisionesData(user?: any) {
                 // Filtramos solo las reglas KPI activas 
                 setActiveRules(rulesData.rules.filter((r: any) => r.isActive && r.combinationLabel?.startsWith('[KPI]')));
             }
-            const virtualTvRule = {
-                id: "VIRTUAL_SUSCRIPCIONES_TV",
-                nombre: "Suscripciones TV",
-                productosCuentan: "Suscripciones TV",
-                objPrimerTramo: 0,
-                importePrimerTramo: "-",
-                objSegundoTramo: 0,
-                importeSegundoTramo: "-",
-                condicionantes: "[]",
-                totalHoras: 0
-            };
-
             if (tiendasData && tiendasData.success) {
-                setTiendaRules([...(tiendasData.rules || []), virtualTvRule]);
+                setTiendaRules(tiendasData.rules || []);
                 setTiendaHours(tiendasData.hours || []);
             }
             if (o2Data && o2Data.value) {
                 try {
                     const parsed = JSON.parse(o2Data.value);
-                    setO2Rules([...(parsed.rules || []), virtualTvRule]);
+                    setO2Rules(parsed.rules || []);
                     setO2Hours(parsed.hours || []);
                 } catch(e) {}
             } else {
-                setO2Rules([virtualTvRule]);
+                setO2Rules([]);
                 setO2Hours([]);
             }
             if (territorialData && territorialData.success) {
@@ -176,26 +195,25 @@ export function useComisionesData(user?: any) {
     o2Rules.forEach(rule => { o2TeamGroupCounts[rule.nombre] = 0; });
 
     monthSales.forEach(s => {
-        let cuotaValue = Number(s.cuota) || 0;
-        if (isNaN(cuotaValue)) cuotaValue = 0;
-        
         // Movistar
         if (!String(s.vendedor).toLowerCase().includes('marta')) {
             tiendaRules.forEach(rule => {
-                if (matchTipoVenta(s, rule.productosCuentan)) {
+                if (matchesRule(s, rule.nombre, rule.productosCuentan)) {
                     const isPercentage = String(rule.importePrimerTramo || '').includes('%');
+                    const val = getValueForRule(s, rule.nombre);
                     if (isPercentage) {
-                        teamGroupCounts[rule.nombre] += cuotaValue;
+                        teamGroupCounts[rule.nombre] += val;
                     } else {
                         teamGroupCounts[rule.nombre] += 1;
                     }
                 }
                 if (s.seguroImporte && Number(s.seguroImporte) > 0) {
                     const virtualSeguro = { ...s, categoria: 'seguro', detalle: 'seguro', cuota: Number(s.seguroImporte) };
-                    if (matchTipoVenta(virtualSeguro, rule.productosCuentan)) {
+                    if (matchesRule(virtualSeguro, rule.nombre, rule.productosCuentan)) {
                         const isPercentage = String(rule.importePrimerTramo || '').includes('%');
+                        const val = getValueForRule(virtualSeguro, rule.nombre);
                         if (isPercentage) {
-                            teamGroupCounts[rule.nombre] += Number(s.seguroImporte);
+                            teamGroupCounts[rule.nombre] += val;
                         } else {
                             teamGroupCounts[rule.nombre] += 1;
                         }
@@ -207,20 +225,22 @@ export function useComisionesData(user?: any) {
         // O2
         if (String(s.vendedor).toLowerCase().includes('marta')) {
             o2Rules.forEach(rule => {
-                if (matchTipoVenta(s, rule.productosCuentan)) {
+                if (matchesRule(s, rule.nombre, rule.productosCuentan)) {
                     const isPercentage = String(rule.importePrimerTramo || '').includes('%');
+                    const val = getValueForRule(s, rule.nombre);
                     if (isPercentage) {
-                        o2TeamGroupCounts[rule.nombre] += cuotaValue;
+                        o2TeamGroupCounts[rule.nombre] += val;
                     } else {
                         o2TeamGroupCounts[rule.nombre] += 1;
                     }
                 }
                 if (s.seguroImporte && Number(s.seguroImporte) > 0) {
                     const virtualSeguro = { ...s, categoria: 'seguro', detalle: 'seguro', cuota: Number(s.seguroImporte) };
-                    if (matchTipoVenta(virtualSeguro, rule.productosCuentan)) {
+                    if (matchesRule(virtualSeguro, rule.nombre, rule.productosCuentan)) {
                         const isPercentage = String(rule.importePrimerTramo || '').includes('%');
+                        const val = getValueForRule(virtualSeguro, rule.nombre);
                         if (isPercentage) {
-                            o2TeamGroupCounts[rule.nombre] += Number(s.seguroImporte);
+                            o2TeamGroupCounts[rule.nombre] += val;
                         } else {
                             o2TeamGroupCounts[rule.nombre] += 1;
                         }
@@ -313,20 +333,17 @@ export function useComisionesData(user?: any) {
 
         // COUNTING LOGIC BASED ON RULES
         sSales.forEach(s => {
-            let cuotaValue = Number(s.cuota) || 0;
-            if (isNaN(cuotaValue)) cuotaValue = 0;
-            
             // Un producto puede contar para multiples reglas si encaja en el Tipo de Venta
             activeTiendaRules.forEach(rule => {
-                if (rule.nombre === 'Suscripciones TV') return;
-                if (matchTipoVenta(s, rule.productosCuentan)) {
+                if (matchesRule(s, rule.nombre, rule.productosCuentan)) {
                     // Determinar si el tramo pide % o Euros (heuristic)
                     const isPercentage = String(rule.importePrimerTramo || '').includes('%');
                     const isPending = String(s.pendiente || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === 'si';
+                    const val = getValueForRule(s, rule.nombre);
                     if (isPercentage) {
-                        groupCounts[rule.nombre] += cuotaValue;
-                        if (isPending) groupPending[rule.nombre] += cuotaValue;
-                        totalValueGroupsAmount += cuotaValue;
+                        groupCounts[rule.nombre] += val;
+                        if (isPending) groupPending[rule.nombre] += val;
+                        totalValueGroupsAmount += val;
                     } else {
                         groupCounts[rule.nombre] += 1;
                         if (isPending) groupPending[rule.nombre] += 1;
@@ -335,13 +352,14 @@ export function useComisionesData(user?: any) {
                 }
                 if (s.seguroImporte && Number(s.seguroImporte) > 0) {
                     const virtualSeguro = { ...s, categoria: 'seguro', detalle: 'seguro', cuota: Number(s.seguroImporte) };
-                    if (matchTipoVenta(virtualSeguro, rule.productosCuentan)) {
+                    if (matchesRule(virtualSeguro, rule.nombre, rule.productosCuentan)) {
                         const isPercentage = String(rule.importePrimerTramo || '').includes('%');
                         const isPending = String(s.pendiente || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === 'si';
+                        const val = getValueForRule(virtualSeguro, rule.nombre);
                         if (isPercentage) {
-                            groupCounts[rule.nombre] += Number(s.seguroImporte);
-                            if (isPending) groupPending[rule.nombre] += Number(s.seguroImporte);
-                            totalValueGroupsAmount += Number(s.seguroImporte);
+                            groupCounts[rule.nombre] += val;
+                            if (isPending) groupPending[rule.nombre] += val;
+                            totalValueGroupsAmount += val;
                         } else {
                             groupCounts[rule.nombre] += 1;
                             if (isPending) groupPending[rule.nombre] += 1;
@@ -361,41 +379,6 @@ export function useComisionesData(user?: any) {
 
         activeTiendaRules.forEach(rule => {
             const ruleName = rule.nombre;
-            if (ruleName === 'Suscripciones TV') {
-                let tvCount = 0;
-                let tvPendingCount = 0;
-                let tvComisionTotal = 0;
-                let tvComisionPending = 0;
-
-                sSales.forEach(s => {
-                    const isAnnulled = String(s.anulado || '').toLowerCase() === 'sí' || String(s.anulado || '').toLowerCase() === 'si' || String(s.pendiente || '').toLowerCase() === 'anulado';
-                    if (isAnnulled) return;
-
-                    if (matchTipoVenta(s, 'Suscripciones TV')) {
-                        const comision = Number(s.importe || s.cuota || 0);
-                        const isPending = String(s.pendiente || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === 'si';
-                        
-                        tvCount += 1;
-                        tvComisionTotal += comision;
-                        if (isPending) {
-                            tvPendingCount += 1;
-                            tvComisionPending += comision;
-                        }
-                    }
-                });
-
-                const tvComisionConsolidada = tvComisionTotal - tvComisionPending;
-
-                groupCounts[ruleName] = tvCount;
-                groupPending[ruleName] = tvPendingCount;
-                groupComisions[ruleName] = tvComisionTotal;
-                groupIsConsolidado[ruleName] = tvPendingCount === 0;
-
-                internalTotalComision += tvComisionTotal;
-                internalTotalConsolidada += tvComisionConsolidada;
-                internalTotalPendiente += tvComisionPending;
-                return;
-            }
             const qtty = groupCounts[ruleName] || 0;
             const obj1 = groupObj1[ruleName] || 0;
             const obj2 = groupObj2[ruleName] || 0;
