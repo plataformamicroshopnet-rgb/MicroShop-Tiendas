@@ -6,28 +6,249 @@ import { FileText, BookOpen, Library, Trophy, Flame, Target, Award, Star, Zap, C
 import { PageHeader } from '@/components/PageHeader'
 import Link from 'next/link'
 import { usePeriod } from '@/components/PeriodProvider'
+import { matchTipoVenta } from '@/hooks/useComisionesData'
 
 export default function DashboardPage() {
   const { activePeriodKey } = usePeriod()
-  const [stats, setStats] = useState<any[]>([])
+  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [allSales, setAllSales] = useState<any[]>([])
+  const [tiendaRules, setTiendaRules] = useState<any[]>([])
+  const [o2Rules, setO2Rules] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
-  useEffect(() => {
-    if (!activePeriodKey) return;
-    setLoading(true);
-    fetch(`/api/sales?periodKey=${activePeriodKey}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          setStats(data.stats || [])
-        }
-        setLoading(false)
-      })
-      .catch(() => setLoading(false))
-  }, [activePeriodKey])
+  const fmt = (num: number) => {
+    return num.toLocaleString('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+  };
 
-  if (loading) return <div style={{ padding: 20 }}>Cargando datos del Dashboard...</div>
+  const fetchData = async (isInitial: boolean) => {
+    if (!activePeriodKey) return;
+    if (isInitial) setLoading(true);
+    
+    try {
+      const [userRes, salesRes, tiendasRes, o2Res] = await Promise.all([
+        fetch('/api/auth/me').then(res => res.json()).catch(() => null),
+        fetch(`/api/sales?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({ success: false, logs: [] })),
+        fetch(`/api/tiendas-comisiones?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({ success: false, rules: [] })),
+        fetch(`/api/settings?key=o2_rules_v2_${activePeriodKey}`).then(res => res.json()).catch(() => ({ value: null }))
+      ]);
+
+      if (userRes) {
+        setCurrentUser(userRes);
+      }
+      if (salesRes && salesRes.success && salesRes.logs) {
+        setAllSales(salesRes.logs);
+      }
+      if (tiendasRes && tiendasRes.success) {
+        setTiendaRules(tiendasRes.rules || []);
+      }
+      if (o2Res && o2Res.value) {
+        try {
+          const parsed = JSON.parse(o2Res.value);
+          setO2Rules(parsed.rules || []);
+        } catch (e) {
+          setO2Rules([]);
+        }
+      } else {
+        setO2Rules([]);
+      }
+    } catch (err) {
+      console.error("Error loading dashboard data:", err);
+    } finally {
+      if (isInitial) setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData(true);
+
+    const interval = setInterval(() => {
+      fetchData(false);
+    }, 8000); // Polling every 8 seconds
+
+    const handleFocus = () => {
+      fetchData(false);
+    };
+
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [activePeriodKey]);
+
+  // ── Cómputo del Termómetro Diario (6 KPIs) ──
+  const teamSales = allSales.filter(s => !String(s.vendedor || '').toLowerCase().includes('marta') && s.anulado !== 'Si' && s.pendiente !== 'Anulado');
+
+  const getKPIMetrics = (kpiName: string, fallbackTarget: number, isPercentage: boolean) => {
+    const rule = tiendaRules.find(r => r.nombre.toLowerCase().trim() === kpiName.toLowerCase().trim());
+    let target = fallbackTarget;
+    if (rule && rule.objPrimerTramo) {
+      target = Number(rule.objPrimerTramo) || fallbackTarget;
+    }
+
+    let productsCuentan = kpiName;
+    if (rule && rule.productosCuentan) {
+      productsCuentan = rule.productosCuentan;
+    }
+
+    let llevamos = 0;
+    teamSales.forEach(s => {
+      if (matchTipoVenta(s, productsCuentan)) {
+        if (isPercentage) {
+          llevamos += Number(s.cuota) || 0;
+        } else {
+          llevamos += 1;
+        }
+      }
+      if (s.seguroImporte && Number(s.seguroImporte) > 0) {
+        const virtualSeguro = { ...s, categoria: 'seguro', detalle: 'seguro', cuota: Number(s.seguroImporte) };
+        if (matchTipoVenta(virtualSeguro, productsCuentan)) {
+          if (isPercentage) {
+            llevamos += Number(s.seguroImporte);
+          } else {
+            llevamos += 1;
+          }
+        }
+      }
+    });
+
+    const faltan = Math.max(0, target - llevamos);
+    const progressPct = target > 0 ? Math.min(100, (llevamos / target) * 100) : 0;
+
+    return {
+      llevamos,
+      target,
+      faltan,
+      progressPct
+    };
+  };
+
+  const kpiBafTotal = getKPIMetrics('Alta BAF Total', 87, false);
+  const kpiBafConv = getKPIMetrics('Alta BAF Convergente', 53, false);
+  const kpiDispSeg = getKPIMetrics('Dispositivos + Seguros', 96542, true);
+  const kpiFttr = getKPIMetrics('FTTR', 8, false);
+  const kpiArpu = getKPIMetrics('ARPU', 50000, true);
+  const kpiRepoFutbol = getKPIMetrics('Repo Fútbol', 34, false);
+
+  // ── Cómputo del MVP ──
+  const getMVP = () => {
+    const now = new Date();
+    const d = String(now.getDate()).padStart(2, '0');
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const y = now.getFullYear();
+    const todayStr = `${d}/${m}/${y}`;
+
+    const activeSales = allSales.filter(s => s.anulado !== 'Si' && s.pendiente !== 'Anulado');
+    let salesForMvp = activeSales.filter(s => s.fecha === todayStr);
+    let isToday = true;
+
+    if (salesForMvp.length === 0) {
+      salesForMvp = activeSales;
+      isToday = false;
+    }
+
+    const totals: Record<string, number> = {};
+    salesForMvp.forEach(s => {
+      const vName = String(s.vendedor || '').trim();
+      if (!vName) return;
+      
+      let amt = Number(s.cuota) || 0;
+      if (s.seguroImporte && Number(s.seguroImporte) > 0) {
+        amt += Number(s.seguroImporte);
+      }
+      totals[vName] = (totals[vName] || 0) + amt;
+    });
+
+    let mvpName = 'Nadie';
+    let mvpTotal = 0;
+    Object.entries(totals).forEach(([name, val]) => {
+      if (val > mvpTotal) {
+        mvpTotal = val;
+        mvpName = name;
+      }
+    });
+
+    return {
+      name: mvpName,
+      total: mvpTotal,
+      isToday
+    };
+  };
+
+  const mvp = getMVP();
+
+  // ── Cuenta Kilómetros ──
+  const userRules = String(currentUser?.username || '').toLowerCase().includes('marta') ? o2Rules : tiendaRules;
+  const userSales = allSales.filter(s => {
+    const v = String(s.vendedor || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+    const tgt = String(currentUser?.username || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+    return v === tgt && s.anulado !== 'Si' && s.pendiente !== 'Anulado';
+  });
+
+  const getCuentaKilometros = () => {
+    if (!currentUser || userRules.length === 0) {
+      return {
+        vendedor: 'Equipo',
+        reglaNombre: 'Objetivo de Tienda',
+        llevamos: kpiBafTotal.llevamos,
+        target: kpiBafTotal.target,
+        faltan: kpiBafTotal.faltan,
+        progressPct: kpiBafTotal.progressPct,
+        isPercentage: false
+      };
+    }
+
+    const progressList = userRules.map(rule => {
+      const isPercentage = String(rule.importePrimerTramo || '').includes('%');
+      let target = Number(rule.objPrimerTramo) || 0;
+      
+      let llevamos = 0;
+      userSales.forEach(s => {
+        if (matchTipoVenta(s, rule.productosCuentan)) {
+          if (isPercentage) {
+            llevamos += Number(s.cuota) || 0;
+          } else {
+            llevamos += 1;
+          }
+        }
+        if (s.seguroImporte && Number(s.seguroImporte) > 0) {
+          const virtualSeguro = { ...s, categoria: 'seguro', detalle: 'seguro', cuota: Number(s.seguroImporte) };
+          if (matchTipoVenta(virtualSeguro, rule.productosCuentan)) {
+            if (isPercentage) {
+              llevamos += Number(s.seguroImporte);
+            } else {
+              llevamos += 1;
+            }
+          }
+        }
+      });
+
+      const progressPct = target > 0 ? (llevamos / target) * 100 : 0;
+      const faltan = Math.max(0, target - llevamos);
+
+      return {
+        vendedor: currentUser.username,
+        reglaNombre: rule.nombre,
+        llevamos,
+        target,
+        faltan,
+        progressPct,
+        isPercentage
+      };
+    });
+
+    const incomplete = progressList.filter(p => p.progressPct < 100);
+    if (incomplete.length > 0) {
+      return incomplete.reduce((max, curr) => curr.progressPct > max.progressPct ? curr : max, incomplete[0]);
+    }
+    return progressList.reduce((max, curr) => curr.progressPct > max.progressPct ? curr : max, progressList[0]);
+  };
+
+  const cuentaKms = getCuentaKilometros();
+
+  if (loading && allSales.length === 0) return <div style={{ padding: 20 }}>Cargando datos del Dashboard...</div>
 
   return (
     <div style={{ padding: 20 }}>
@@ -100,7 +321,9 @@ export default function DashboardPage() {
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: 'var(--text-main)' }}>El MVP del Día</h3>
-              <p style={{ margin: 0, fontSize: '13px', color: 'var(--medium-gray)', fontWeight: 500 }}>Rey de la Facturación Hoy</p>
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--medium-gray)', fontWeight: 500 }}>
+                {mvp.isToday ? 'Rey de la Facturación Hoy' : 'Rey de la Facturación del Mes'}
+              </p>
             </div>
           </div>
 
@@ -111,28 +334,42 @@ export default function DashboardPage() {
               boxShadow: '0 4px 12px rgba(219, 39, 119, 0.4)', 
               border: '2px solid #ec4899',
               overflow: 'hidden', flexShrink: 0,
-              background: 'linear-gradient(135deg, #f472b6 0%, #db2777 100%)'
+              background: 'linear-gradient(135deg, #f472b6 0%, #db2777 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
             }}>
-              {/* REEMPLAZA EL 'src' CON LA RUTA DE TU FOTO (ej. '/fotos/carlos.jpg') */}
-              <img 
-                src="/Carlos.jpg" 
-                alt="Carlos" 
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-              />
+              {mvp.name !== 'Nadie' ? (
+                <img 
+                  src={`/${mvp.name}.jpg`} 
+                  alt={mvp.name} 
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    const parent = e.currentTarget.parentElement;
+                    if (parent) {
+                      parent.innerHTML = `<span style="color:#fff; font-size:20px; font-weight:900">${mvp.name.charAt(0).toUpperCase()}</span>`;
+                    }
+                  }}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                />
+              ) : (
+                <Crown size={24} color="#fff" />
+              )}
             </div>
             <div style={{ flex: 1 }}>
-              <h4 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: 800, color: 'var(--text-main)' }}>Carlos</h4>
+              <h4 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: 800, color: 'var(--text-main)' }}>{mvp.name}</h4>
               <div style={{ fontSize: '13px', color: 'var(--medium-gray)', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#10b981' }}></span>
-                Liderando con <strong style={{ color: '#ec4899' }}>1.450€</strong>
+                {mvp.name !== 'Nadie' ? (
+                  <>
+                    Liderando con <strong style={{ color: '#ec4899' }}>{fmt(mvp.total)}</strong>
+                  </>
+                ) : (
+                  <span>Esperando ventas...</span>
+                )}
               </div>
             </div>
           </div>
         </div>
 
-        
-        
-        
       </div>
 
       {/* TERMÓMETRO DIARIO DE LA EMPRESA */}
@@ -163,14 +400,22 @@ export default function DashboardPage() {
                 <Wifi size={18} color="#0ea5e9" />
                 <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>Altas BAF Total</span>
               </div>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>Faltan 4</span>
+              {kpiBafTotal.faltan > 0 ? (
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
+                  Faltan {kpiBafTotal.faltan}
+                </span>
+              ) : (
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
+                  ¡Logrado!
+                </span>
+              )}
             </div>
             <div style={{ width: '100%', height: '8px', background: 'var(--border-strong)', borderRadius: '4px', overflow: 'hidden', marginBottom: 4 }}>
-              <div style={{ width: '60%', height: '100%', background: 'linear-gradient(90deg, #38bdf8, #0284c7)', borderRadius: '4px' }} />
+              <div style={{ width: `${kpiBafTotal.progressPct}%`, height: '100%', background: 'linear-gradient(90deg, #38bdf8, #0284c7)', borderRadius: '4px' }} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--medium-gray)', fontWeight: 600 }}>
-              <span>Llevamos: <strong style={{ color: 'var(--text-main)' }}>6</strong></span>
-              <span>Objetivo Hoy: 10</span>
+              <span>Llevamos: <strong style={{ color: 'var(--text-main)' }}>{kpiBafTotal.llevamos}</strong></span>
+              <span>Objetivo: {kpiBafTotal.target}</span>
             </div>
           </div>
 
@@ -181,14 +426,22 @@ export default function DashboardPage() {
                 <Layers size={18} color="#8b5cf6" />
                 <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>BAF Convergente</span>
               </div>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>¡Logrado!</span>
+              {kpiBafConv.faltan > 0 ? (
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
+                  Faltan {kpiBafConv.faltan}
+                </span>
+              ) : (
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
+                  ¡Logrado!
+                </span>
+              )}
             </div>
             <div style={{ width: '100%', height: '8px', background: 'var(--border-strong)', borderRadius: '4px', overflow: 'hidden', marginBottom: 4 }}>
-              <div style={{ width: '100%', height: '100%', background: 'linear-gradient(90deg, #34d399, #059669)', borderRadius: '4px' }} />
+              <div style={{ width: `${kpiBafConv.progressPct}%`, height: '100%', background: 'linear-gradient(90deg, #8b5cf6, #7c3aed)', borderRadius: '4px' }} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--medium-gray)', fontWeight: 600 }}>
-              <span>Llevamos: <strong style={{ color: 'var(--text-main)' }}>5</strong></span>
-              <span>Objetivo Hoy: 4</span>
+              <span>Llevamos: <strong style={{ color: 'var(--text-main)' }}>{kpiBafConv.llevamos}</strong></span>
+              <span>Objetivo: {kpiBafConv.target}</span>
             </div>
           </div>
 
@@ -199,14 +452,22 @@ export default function DashboardPage() {
                 <Smartphone size={18} color="#f59e0b" />
                 <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>Dispositivos + Seguros</span>
               </div>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>Faltan 7</span>
+              {kpiDispSeg.faltan > 0 ? (
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
+                  Faltan {fmt(kpiDispSeg.faltan)}
+                </span>
+              ) : (
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
+                  ¡Logrado!
+                </span>
+              )}
             </div>
             <div style={{ width: '100%', height: '8px', background: 'var(--border-strong)', borderRadius: '4px', overflow: 'hidden', marginBottom: 4 }}>
-              <div style={{ width: '45%', height: '100%', background: 'linear-gradient(90deg, #fbbf24, #d97706)', borderRadius: '4px' }} />
+              <div style={{ width: `${kpiDispSeg.progressPct}%`, height: '100%', background: 'linear-gradient(90deg, #fbbf24, #d97706)', borderRadius: '4px' }} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--medium-gray)', fontWeight: 600 }}>
-              <span>Llevamos: <strong style={{ color: 'var(--text-main)' }}>8</strong></span>
-              <span>Objetivo Hoy: 15</span>
+              <span>Llevamos: <strong style={{ color: 'var(--text-main)' }}>{fmt(kpiDispSeg.llevamos)}</strong></span>
+              <span>Objetivo: {fmt(kpiDispSeg.target)}</span>
             </div>
           </div>
 
@@ -217,14 +478,22 @@ export default function DashboardPage() {
                 <Zap size={18} color="#ec4899" />
                 <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>FTTR</span>
               </div>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>Falta 1</span>
+              {kpiFttr.faltan > 0 ? (
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
+                  Faltan {kpiFttr.faltan}
+                </span>
+              ) : (
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
+                  ¡Logrado!
+                </span>
+              )}
             </div>
             <div style={{ width: '100%', height: '8px', background: 'var(--border-strong)', borderRadius: '4px', overflow: 'hidden', marginBottom: 4 }}>
-              <div style={{ width: '50%', height: '100%', background: 'linear-gradient(90deg, #f472b6, #db2777)', borderRadius: '4px' }} />
+              <div style={{ width: `${kpiFttr.progressPct}%`, height: '100%', background: 'linear-gradient(90deg, #f472b6, #db2777)', borderRadius: '4px' }} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--medium-gray)', fontWeight: 600 }}>
-              <span>Llevamos: <strong style={{ color: 'var(--text-main)' }}>1</strong></span>
-              <span>Objetivo Hoy: 2</span>
+              <span>Llevamos: <strong style={{ color: 'var(--text-main)' }}>{kpiFttr.llevamos}</strong></span>
+              <span>Objetivo: {kpiFttr.target}</span>
             </div>
           </div>
 
@@ -233,16 +502,24 @@ export default function DashboardPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <TrendingUp size={18} color="#10b981" />
-                <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>ARPU Diario</span>
+                <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>ARPU Acumulado</span>
               </div>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: '#f59e0b', background: 'rgba(245, 158, 11, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>Faltan 120€</span>
+              {kpiArpu.faltan > 0 ? (
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#f59e0b', background: 'rgba(245, 158, 11, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
+                  Faltan {fmt(kpiArpu.faltan)}
+                </span>
+              ) : (
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
+                  ¡Logrado!
+                </span>
+              )}
             </div>
             <div style={{ width: '100%', height: '8px', background: 'var(--border-strong)', borderRadius: '4px', overflow: 'hidden', marginBottom: 4 }}>
-              <div style={{ width: '80%', height: '100%', background: 'linear-gradient(90deg, #34d399, #059669)', borderRadius: '4px' }} />
+              <div style={{ width: `${kpiArpu.progressPct}%`, height: '100%', background: 'linear-gradient(90deg, #34d399, #059669)', borderRadius: '4px' }} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--medium-gray)', fontWeight: 600 }}>
-              <span>Llevamos: <strong style={{ color: 'var(--text-main)' }}>480€</strong></span>
-              <span>Objetivo: 600€</span>
+              <span>Llevamos: <strong style={{ color: 'var(--text-main)' }}>{fmt(kpiArpu.llevamos)}</strong></span>
+              <span>Objetivo: {fmt(kpiArpu.target)}</span>
             </div>
           </div>
 
@@ -253,22 +530,27 @@ export default function DashboardPage() {
                 <Tv size={18} color="#3b82f6" />
                 <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>Repo Fútbol</span>
               </div>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>Faltan 2</span>
+              {kpiRepoFutbol.faltan > 0 ? (
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
+                  Faltan {kpiRepoFutbol.faltan}
+                </span>
+              ) : (
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
+                  ¡Logrado!
+                </span>
+              )}
             </div>
             <div style={{ width: '100%', height: '8px', background: 'var(--border-strong)', borderRadius: '4px', overflow: 'hidden', marginBottom: 4 }}>
-              <div style={{ width: '33%', height: '100%', background: 'linear-gradient(90deg, #60a5fa, #2563eb)', borderRadius: '4px' }} />
+              <div style={{ width: `${kpiRepoFutbol.progressPct}%`, height: '100%', background: 'linear-gradient(90deg, #60a5fa, #2563eb)', borderRadius: '4px' }} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--medium-gray)', fontWeight: 600 }}>
-              <span>Llevamos: <strong style={{ color: 'var(--text-main)' }}>1</strong></span>
-              <span>Objetivo Hoy: 3</span>
+              <span>Llevamos: <strong style={{ color: 'var(--text-main)' }}>{kpiRepoFutbol.llevamos}</strong></span>
+              <span>Objetivo: {kpiRepoFutbol.target}</span>
             </div>
           </div>
 
         </div>
       </div>
-
-      
-      
 
       {/* FILA 3: CUENTA KMS Y MEDALLAS */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '24px' }}>
@@ -293,22 +575,37 @@ export default function DashboardPage() {
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: 'var(--text-main)' }}>Cuenta Kilómetros</h3>
-              <p style={{ margin: 0, fontSize: '13px', color: 'var(--medium-gray)', fontWeight: 500 }}>Objetivo: Tramo PLUS (15%)</p>
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--medium-gray)', fontWeight: 500 }}>
+                Objetivo: {cuentaKms.reglaNombre}
+              </p>
             </div>
           </div>
 
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             <p style={{ margin: '0 0 16px 0', fontSize: '15px', color: 'var(--text-main)', lineHeight: 1.4 }}>
-              <strong style={{ color: 'var(--mercedes-cyan)' }}>Marta</strong>, estás a solo <strong style={{ color: '#10b981', fontSize: '18px' }}>2 ventas</strong> de MovilFree para saltar al siguiente tramo y multiplicar tu comisión mensual.
+              {cuentaKms.faltan > 0 ? (
+                <>
+                  <strong style={{ color: 'var(--mercedes-cyan)' }}>{cuentaKms.vendedor}</strong>, estás a solo{' '}
+                  <strong style={{ color: '#10b981', fontSize: '18px' }}>
+                    {cuentaKms.isPercentage ? fmt(cuentaKms.faltan) : `${cuentaKms.faltan} uds`}
+                  </strong>{' '}
+                  de <strong style={{ color: 'var(--text-main)' }}>{cuentaKms.reglaNombre}</strong> para alcanzar tu tramo objetivo.
+                </>
+              ) : (
+                <>
+                  ¡Felicidades <strong style={{ color: 'var(--mercedes-cyan)' }}>{cuentaKms.vendedor}</strong>! Has superado el tramo objetivo de{' '}
+                  <strong style={{ color: 'var(--text-main)' }}>{cuentaKms.reglaNombre}</strong>.
+                </>
+              )}
             </p>
 
             {/* Progress Bar */}
             <div style={{ width: '100%', height: '14px', background: 'var(--bg-input)', borderRadius: '7px', overflow: 'hidden', position: 'relative' }}>
-              <div style={{ width: '93%', height: '100%', background: 'linear-gradient(90deg, #10b981 0%, #34d399 100%)', borderRadius: '7px', boxShadow: '0 0 10px rgba(16,185,129,0.5)' }} />
+              <div style={{ width: `${Math.min(100, cuentaKms.progressPct)}%`, height: '100%', background: 'linear-gradient(90deg, #10b981 0%, #34d399 100%)', borderRadius: '7px', boxShadow: '0 0 10px rgba(16,185,129,0.5)' }} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '13px', fontWeight: 700, color: 'var(--medium-gray)' }}>
-              <span>28 Ventas</span>
-              <span style={{ color: '#10b981' }}>Meta: 30</span>
+              <span>{cuentaKms.isPercentage ? fmt(cuentaKms.llevamos) : `${cuentaKms.llevamos} uds`}</span>
+              <span style={{ color: '#10b981' }}>Meta: {cuentaKms.isPercentage ? fmt(cuentaKms.target) : `${cuentaKms.target} uds`}</span>
             </div>
           </div>
         </div>
@@ -381,28 +678,6 @@ export default function DashboardPage() {
 
       </div>
 
-
-      {stats.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '24px' }}>
-          {stats.map((s, idx) => (
-            <div key={idx} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <h3 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '4px' }}>{s.name}</h3>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: 'var(--medium-gray)', fontSize: 14 }}>Portabilidades</span>
-                <span style={{ fontSize: 20, fontWeight: 700, color: 'var(--mercedes-cyan)' }}>{s.portas}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: 'var(--medium-gray)', fontSize: 14 }}>Altas Móvil</span>
-                <span style={{ fontSize: 20, fontWeight: 700, color: 'var(--mercedes-cyan)' }}>{s.altas}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: 'var(--medium-gray)', fontSize: 14 }}>Fijas (FD Total/Flex)</span>
-                <span style={{ fontSize: 20, fontWeight: 700, color: 'var(--mercedes-cyan)' }}>{s.fds}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   )
 }

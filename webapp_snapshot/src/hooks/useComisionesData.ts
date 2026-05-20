@@ -178,6 +178,17 @@ export function useComisionesData(user?: any) {
                         teamGroupCounts[rule.nombre] += 1;
                     }
                 }
+                if (s.seguroImporte && Number(s.seguroImporte) > 0) {
+                    const virtualSeguro = { ...s, categoria: 'seguro', detalle: 'seguro', cuota: Number(s.seguroImporte) };
+                    if (matchTipoVenta(virtualSeguro, rule.productosCuentan)) {
+                        const isPercentage = String(rule.importePrimerTramo || '').includes('%');
+                        if (isPercentage) {
+                            teamGroupCounts[rule.nombre] += Number(s.seguroImporte);
+                        } else {
+                            teamGroupCounts[rule.nombre] += 1;
+                        }
+                    }
+                }
             });
         }
         
@@ -190,6 +201,17 @@ export function useComisionesData(user?: any) {
                         o2TeamGroupCounts[rule.nombre] += cuotaValue;
                     } else {
                         o2TeamGroupCounts[rule.nombre] += 1;
+                    }
+                }
+                if (s.seguroImporte && Number(s.seguroImporte) > 0) {
+                    const virtualSeguro = { ...s, categoria: 'seguro', detalle: 'seguro', cuota: Number(s.seguroImporte) };
+                    if (matchTipoVenta(virtualSeguro, rule.productosCuentan)) {
+                        const isPercentage = String(rule.importePrimerTramo || '').includes('%');
+                        if (isPercentage) {
+                            o2TeamGroupCounts[rule.nombre] += Number(s.seguroImporte);
+                        } else {
+                            o2TeamGroupCounts[rule.nombre] += 1;
+                        }
                     }
                 }
             });
@@ -296,6 +318,22 @@ export function useComisionesData(user?: any) {
                         groupCounts[rule.nombre] += 1;
                         if (isPending) groupPending[rule.nombre] += 1;
                         totalUnitGroupsAmount += 1;
+                    }
+                }
+                if (s.seguroImporte && Number(s.seguroImporte) > 0) {
+                    const virtualSeguro = { ...s, categoria: 'seguro', detalle: 'seguro', cuota: Number(s.seguroImporte) };
+                    if (matchTipoVenta(virtualSeguro, rule.productosCuentan)) {
+                        const isPercentage = String(rule.importePrimerTramo || '').includes('%');
+                        const isPending = String(s.pendiente || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === 'si';
+                        if (isPercentage) {
+                            groupCounts[rule.nombre] += Number(s.seguroImporte);
+                            if (isPending) groupPending[rule.nombre] += Number(s.seguroImporte);
+                            totalValueGroupsAmount += Number(s.seguroImporte);
+                        } else {
+                            groupCounts[rule.nombre] += 1;
+                            if (isPending) groupPending[rule.nombre] += 1;
+                            totalUnitGroupsAmount += 1;
+                        }
                     }
                 }
             });

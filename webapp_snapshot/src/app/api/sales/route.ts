@@ -187,6 +187,12 @@ export async function PATCH(request: Request) {
     if (updates.importe !== undefined) {
        updateData.cuota = updates.importe ? parseFloat(String(updates.importe).replace(',', '.')) : null
     }
+    if (updates.seguro !== undefined) updateData.seguro = updates.seguro
+    if (updates.seguroImporte !== undefined) {
+       updateData.seguroImporte = updates.seguroImporte ? parseFloat(String(updates.seguroImporte).replace(',', '.')) : null
+    }
+    if (updates.isLibre !== undefined) updateData.isLibre = updates.isLibre === true
+    if (updates.isSwap !== undefined) updateData.isSwap = updates.isSwap === true
 
     // -------------------------------------------------------------------------------------------------
     // RECALCULO DE PARÁMETROS DERIVADOS (CUOTA Y GRUPO) FRENTE A CAMBIOS ESTRUCTURALES
