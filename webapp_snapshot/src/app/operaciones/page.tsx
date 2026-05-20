@@ -41,7 +41,7 @@ const formatCurrency = (val: any) => {
   return new Intl.NumberFormat('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num) + '€';
 }
 
-function CommercialDashboard({ data, activeExtras = [], isComercial }: { data: any[], activeExtras?: any[], isComercial?: boolean }) {
+function CommercialDashboard({ data, activeExtras = [], isComercial, isAdmin }: { data: any[], activeExtras?: any[], isComercial?: boolean, isAdmin?: boolean }) {
   const totalVentas = data.length + activeExtras.length;
   const pendientes = data.filter((d: any) => d.pendiente === 'Si' && d.anulado !== 'Si' && d.pendiente !== 'Anulado').length + activeExtras.filter((ex: any) => ex.status === 'PENDING').length;
   const anuladas = data.filter((d: any) => d.anulado === 'Si' || d.pendiente === 'Anulado').length + activeExtras.filter((ex: any) => ex.status === 'CANCELLED').length;
@@ -241,6 +241,7 @@ function CommercialDashboard({ data, activeExtras = [], isComercial }: { data: a
                 <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Pte.</th>
                 <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Anul.</th>
                 <th style={{ padding: '4px 6px', textAlign: 'left', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px', minWidth: 120, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Anotaciones</th>
+                {isAdmin && <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Comisión</th>}
                 <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Estado</th>
               </tr>
             </thead>
@@ -258,6 +259,7 @@ function CommercialDashboard({ data, activeExtras = [], isComercial }: { data: a
                   <td style={{ padding: '4px 6px', textAlign: 'center' }}>{sale.pendiente}</td>
                   <td style={{ padding: '4px 6px', textAlign: 'center' }}>{sale.anulado}</td>
                   <td style={{ padding: '4px 6px', color: '#555555', fontSize: 12 }}>{sale.anotaciones}</td>
+                  {isAdmin && <td style={{ padding: '4px 6px', textAlign: 'center', color: '#0078D4', fontWeight: 'bold' }}>{formatCurrency(sale.dynamicCommission !== undefined ? sale.dynamicCommission : (sale.importe || sale.cuota))}</td>}
                   <td style={{ padding: '4px 6px', textAlign: 'center' }}>
                     {(sale.anulado === 'Si' || sale.pendiente === 'Anulado') ? (
                         <span style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#EF4444', padding: '4px 10px', borderRadius: '12px', fontWeight: 800, fontSize: '11.5px', display: 'inline-block', minWidth: '46px' }}>ANUL</span>
@@ -286,6 +288,11 @@ function CommercialDashboard({ data, activeExtras = [], isComercial }: { data: a
                   <td style={{ padding: '4px 6px', textAlign: 'center', color: '#059669' }}>No</td>
                   <td style={{ padding: '4px 6px', textAlign: 'center', color: '#059669' }}>No</td>
                   <td style={{ padding: '4px 6px', color: '#059669', fontSize: 12 }}>EXTRA SISTEMA ({ex.rule?.channelType || 'MANUAL'})</td>
+                  {isAdmin && (
+                    <td style={{ padding: '4px 6px', textAlign: 'center', color: '#10b981', fontWeight: 900 }}>
+                      {formatCurrency(ex.telecomRewardAmount)}
+                    </td>
+                  )}
                   <td style={{ padding: '4px 6px', textAlign: 'center' }}>
                     <span style={{ backgroundColor: 'rgba(13, 148, 136, 0.1)', color: '#0D9488', padding: '4px 10px', borderRadius: '12px', fontWeight: 800, fontSize: '11.5px', display: 'inline-block', minWidth: '46px' }}>
                         {ex.rule?.channelType === 'MANUAL' ? 'MAN' : 'AUTO'}
@@ -295,7 +302,7 @@ function CommercialDashboard({ data, activeExtras = [], isComercial }: { data: a
               ))}
               {data.length === 0 && activeExtras.length === 0 && (
                 <tr>
-                  <td colSpan={11} style={{ padding: '24px', textAlign: 'center', color: '#555555' }}>
+                  <td colSpan={isAdmin ? 12 : 11} style={{ padding: '24px', textAlign: 'center', color: '#555555' }}>
                     No hay operaciones registradas.
                   </td>
                 </tr>
@@ -336,6 +343,7 @@ function OperationsContent() {
 
   const canEdit = canEditMacro(user, 'MODULE_TIENDAS') || can(user, 'EDIT_SALES') || can(user, 'MODULE_CRISTINA') || can(user, 'MODULE_BACK_OFFICE');
   const canCancel = canEditMacro(user, 'MODULE_TIENDAS') || can(user, 'CANCEL_SALES') || can(user, 'MODULE_CRISTINA') || can(user, 'MODULE_BACK_OFFICE');
+  const isAdmin = user?.role === 'ADMIN';
 
   const fetchSales = () => {
     if (!activePeriodKey) return;
@@ -820,7 +828,7 @@ function OperationsContent() {
       
 
       {activeVendorFilter ? (
-        <CommercialDashboard data={displayedSales} activeExtras={activeExtras} isComercial={isComercial} />
+        <CommercialDashboard data={displayedSales} activeExtras={activeExtras} isComercial={isComercial} isAdmin={isAdmin} />
       ) : (
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 280px)' }}>

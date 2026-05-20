@@ -8,6 +8,7 @@ import { useTheme } from '@/components/ThemeProvider'
 import { useRouter } from 'next/navigation'
 import { usePeriod } from '@/components/PeriodProvider'
 import { useComisionesData, matchTipoVenta } from '@/hooks/useComisionesData'
+import { useGuard } from '@/hooks/useGuard'
 
 const formatCurrency = (val: any) => {
     if (!val) return '0,00 €'
@@ -19,15 +20,18 @@ export default function AvancePalancasPage() {
   const { theme } = useTheme()
   const router = useRouter()
   const { activePeriodKey } = usePeriod()
+  const { user } = useGuard('VIEW_DASHBOARD')
   
   const [activeLeverFilter, setActiveLeverFilter] = useState<string | null>(null)
   const tableRef = useRef<HTMLDivElement>(null)
 
   const { loading, monthSales, tiendaRules, sellerStats } = useComisionesData()
 
-  if (loading) {
+  if (loading || !user) {
     return <div style={{ padding: 20, color: 'var(--mercedes-cyan)', fontWeight: 'bold' }}>Cargando datos del dashboard...</div>
   }
+
+  const isAdmin = user?.role === 'ADMIN'
 
   const filteredSales = monthSales || []
   
@@ -298,6 +302,7 @@ export default function AvancePalancasPage() {
                   <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--medium-gray)' }}>Nombre del Cliente</th>
                   <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--medium-gray)' }}>Código</th>
                   <th style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--medium-gray)' }}>Producto</th>
+                  {isAdmin && <th style={{ padding: '12px 16px', textAlign: 'center', color: 'var(--medium-gray)' }}>Importe/Cuota</th>}
                   <th style={{ padding: '12px 16px', textAlign: 'center', color: 'var(--medium-gray)' }}>Anotaciones</th>
                   <th style={{ padding: '12px 16px', textAlign: 'center', color: 'var(--medium-gray)' }}>Estado</th>
                 </tr>
@@ -305,7 +310,7 @@ export default function AvancePalancasPage() {
               <tbody>
                 {activeLeverSales.length === 0 ? (
                   <tr>
-                    <td colSpan={8} style={{ padding: '24px', textAlign: 'center', color: 'var(--medium-gray)' }}>
+                    <td colSpan={isAdmin ? 9 : 8} style={{ padding: '24px', textAlign: 'center', color: 'var(--medium-gray)' }}>
                       No hay operaciones para mostrar en esta vista.
                     </td>
                   </tr>
@@ -322,6 +327,8 @@ export default function AvancePalancasPage() {
                      if (isAnul) { statusText = 'Anulado'; statusBg = 'rgba(239, 68, 68, 0.15)'; statusColor = '#EF4444'; statusBorder = '1px solid rgba(239, 68, 68, 0.3)' }
                      else if (isPed) { statusText = 'Pendiente'; statusBg = 'rgba(255, 149, 0, 0.15)'; statusColor = '#FF9500'; statusBorder = '1px solid rgba(255, 149, 0, 0.3)' }
 
+                     let val = sale.importe || sale.cuota || 0
+
                      return (
                       <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', verticalAlign: 'middle', transition: 'background-color 0.2s', cursor: 'default' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)'} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
                         <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>{sale.fecha}</td>
@@ -330,6 +337,11 @@ export default function AvancePalancasPage() {
                         <td style={{ padding: '12px 16px' }}>{sale.nombreCliente || '-'}</td>
                         <td style={{ padding: '12px 16px', color: 'var(--mercedes-cyan)', fontWeight: 800 }}>{sale.codigo}</td>
                         <td style={{ padding: '12px 16px' }}>{sale.producto}</td>
+                        {isAdmin && (
+                          <td style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 800, color: 'var(--text-main)' }}>
+                              {formatCurrency(val)}
+                          </td>
+                        )}
                         <td style={{ padding: '12px 16px', textAlign: 'center', color: 'var(--medium-gray)' }}>
                            <span style={{ display: 'inline-block', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={sale.anotaciones}>{sale.anotaciones || '-'}</span>
                         </td>
