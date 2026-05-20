@@ -171,41 +171,43 @@ export default function AdminDashboardPage() {
       <style dangerouslySetInnerHTML={{__html: `
         .premium-card {
             background-color: var(--bg-card);
-            border-radius: 16px;
-            padding: 20px;
+            border-radius: 12px;
+            padding: 12px 16px;
             cursor: pointer;
             transition: all 0.2s ease;
             border: 1px solid var(--border-strong);
             box-shadow: 0 2px 8px rgba(0,0,0,0.04);
             display: flex;
-            flex-direction: column;
+            flex-direction: row;
+            align-items: center;
             gap: 16px;
+            min-height: 76px;
         }
         .premium-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 24px rgba(0,0,0,0.10);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
             border-color: #3b82f6;
         }
         .card-icon-wrapper {
-            width: 42px;
-            height: 42px;
-            border-radius: 12px;
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
         }
         .card-title {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 600;
             color: var(--text-main);
-            margin: 0 0 6px 0;
+            margin: 0;
             line-height: 1.25;
-            letter-spacing: -0.3px;
+            letter-spacing: -0.2px;
         }
         .card-desc {
-            font-size: 14px;
+            font-size: 12px;
             color: var(--text-muted);
-            line-height: 1.45;
+            line-height: 1.4;
             margin: 0;
         }
       `}} />
@@ -367,10 +369,10 @@ export default function AdminDashboardPage() {
                         borderColor: c.bgColorOverride ? 'transparent' : undefined
                       }}
                     >
-                      <div className="card-icon-wrapper" style={{ backgroundColor: c.iconBgOverride || c.color, color: c.iconColorOverride || c.textColor }}>
-                        <Icon size={22} strokeWidth={2.5} />
+                      <div className="card-icon-wrapper" style={{ backgroundColor: c.iconBgOverride || c.color, color: c.iconColorOverride || c.textColor, flexShrink: 0 }}>
+                        <Icon size={20} strokeWidth={2.5} />
                       </div>
-                      <div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1 }}>
                         <h3 className="card-title" style={{ color: c.textColorOverride || undefined }}>
                           {c.title}
                         </h3>
