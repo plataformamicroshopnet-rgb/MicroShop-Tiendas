@@ -151,14 +151,19 @@ export default function DashboardPage() {
 
     // 1. Facturación (MVP)
     const billingTotals: Record<string, number> = {};
+    const billingPendingSales: Record<string, number> = {};
     // 2. Ventas miMovistar
     const miMovistarTotals: Record<string, number> = {};
+    const miMovistarPendingSales: Record<string, number> = {};
     // 3. Dispositivos + Seguros
     const dispSegTotals: Record<string, number> = {};
+    const dispSegPendingSales: Record<string, number> = {};
 
     salesForMvp.forEach(s => {
       const vName = String(s.vendedor || '').trim();
       if (!vName) return;
+
+      const isPending = String(s.pendiente || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === 'si';
 
       // Facturación total
       let amt = Number(s.cuota) || 0;
@@ -166,21 +171,33 @@ export default function DashboardPage() {
         amt += Number(s.seguroImporte);
       }
       billingTotals[vName] = (billingTotals[vName] || 0) + amt;
+      if (isPending) {
+        billingPendingSales[vName] = (billingPendingSales[vName] || 0) + 1;
+      }
 
       // Ventas miMovistar
       if (matchTipoVenta(s, 'mimovistar')) {
         miMovistarTotals[vName] = (miMovistarTotals[vName] || 0) + 1;
+        if (isPending) {
+          miMovistarPendingSales[vName] = (miMovistarPendingSales[vName] || 0) + 1;
+        }
       }
 
       // Dispositivos + Seguros
       let isDispSeg = matchTipoVenta(s, 'Dispositivos + Seguros');
       if (isDispSeg) {
         dispSegTotals[vName] = (dispSegTotals[vName] || 0) + (Number(s.cuota) || 0);
+        if (isPending) {
+          dispSegPendingSales[vName] = (dispSegPendingSales[vName] || 0) + 1;
+        }
       }
       if (s.seguroImporte && Number(s.seguroImporte) > 0) {
         const virtualSeguro = { ...s, categoria: 'seguro', detalle: 'seguro', cuota: Number(s.seguroImporte) };
         if (matchTipoVenta(virtualSeguro, 'Dispositivos + Seguros')) {
           dispSegTotals[vName] = (dispSegTotals[vName] || 0) + Number(s.seguroImporte);
+          if (isPending && !isDispSeg) {
+            dispSegPendingSales[vName] = (dispSegPendingSales[vName] || 0) + 1;
+          }
         }
       }
     });
@@ -236,9 +253,9 @@ export default function DashboardPage() {
     }
 
     return {
-      mvp: { name: mvpName, total: mvpTotal },
-      nominadoMiMovistar: { name: miMovistarLeaderName, total: miMovistarLeaderTotal },
-      nominadoDispSeg: { name: dispSegLeaderName, total: dispSegLeaderTotal },
+      mvp: { name: mvpName, total: mvpTotal, pendingCount: billingPendingSales[mvpName] || 0 },
+      nominadoMiMovistar: { name: miMovistarLeaderName, total: miMovistarLeaderTotal, pendingCount: miMovistarPendingSales[miMovistarLeaderName] || 0 },
+      nominadoDispSeg: { name: dispSegLeaderName, total: dispSegLeaderTotal, pendingCount: dispSegPendingSales[dispSegLeaderName] || 0 },
       isToday
     };
   };
@@ -431,6 +448,11 @@ export default function DashboardPage() {
                   {mvp.mvp.name !== 'Nadie' ? (
                     <>
                       Liderando con <strong style={{ color: 'var(--text-main)' }}>{fmt(mvp.mvp.total)}</strong>
+                      {mvp.mvp.pendingCount > 0 && (
+                        <span style={{ fontSize: '11px', color: '#d97706', marginLeft: '6px', fontWeight: 700, backgroundColor: 'rgba(217, 119, 6, 0.1)', padding: '1px 6px', borderRadius: '4px' }}>
+                          ({mvp.mvp.pendingCount} pendientes)
+                        </span>
+                      )}
                     </>
                   ) : (
                     <span>Esperando ventas...</span>
@@ -476,6 +498,11 @@ export default function DashboardPage() {
                   {mvp.nominadoMiMovistar.name !== 'Nadie' ? (
                     <>
                       Destacado con <strong style={{ color: 'var(--text-main)' }}>{mvp.nominadoMiMovistar.total} Ventas miMovistar</strong>
+                      {mvp.nominadoMiMovistar.pendingCount > 0 && (
+                        <span style={{ fontSize: '11px', color: '#d97706', marginLeft: '6px', fontWeight: 700, backgroundColor: 'rgba(217, 119, 6, 0.1)', padding: '1px 6px', borderRadius: '4px' }}>
+                          ({mvp.nominadoMiMovistar.pendingCount} pendientes)
+                        </span>
+                      )}
                     </>
                   ) : (
                     <span>Esperando ventas...</span>
@@ -521,6 +548,11 @@ export default function DashboardPage() {
                   {mvp.nominadoDispSeg.name !== 'Nadie' ? (
                     <>
                       Destacado con <strong style={{ color: 'var(--text-main)' }}>{fmt(mvp.nominadoDispSeg.total)}</strong>
+                      {mvp.nominadoDispSeg.pendingCount > 0 && (
+                        <span style={{ fontSize: '11px', color: '#d97706', marginLeft: '6px', fontWeight: 700, backgroundColor: 'rgba(217, 119, 6, 0.1)', padding: '1px 6px', borderRadius: '4px' }}>
+                          ({mvp.nominadoDispSeg.pendingCount} pendientes)
+                        </span>
+                      )}
                     </>
                   ) : (
                     <span>Esperando ventas...</span>
