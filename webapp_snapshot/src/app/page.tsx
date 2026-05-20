@@ -132,8 +132,8 @@ export default function DashboardPage() {
   const kpiArpu = getKPIMetrics('ARPU', 50000, true);
   const kpiRepoFutbol = getKPIMetrics('Repo Fútbol', 34, false);
 
-  // ── Cómputo del MVP ──
-  const getMVP = () => {
+  // ── Cómputo del MVP y Nominados ──
+  const getMVPAndNominados = () => {
     const now = new Date();
     const d = String(now.getDate()).padStart(2, '0');
     const m = String(now.getMonth() + 1).padStart(2, '0');
@@ -149,35 +149,101 @@ export default function DashboardPage() {
       isToday = false;
     }
 
-    const totals: Record<string, number> = {};
+    // 1. Facturación (MVP)
+    const billingTotals: Record<string, number> = {};
+    // 2. Conectividad (BAF)
+    const bafTotals: Record<string, number> = {};
+    // 3. Dispositivos + Seguros
+    const dispSegTotals: Record<string, number> = {};
+
     salesForMvp.forEach(s => {
       const vName = String(s.vendedor || '').trim();
       if (!vName) return;
-      
+
+      // Facturación total
       let amt = Number(s.cuota) || 0;
       if (s.seguroImporte && Number(s.seguroImporte) > 0) {
         amt += Number(s.seguroImporte);
       }
-      totals[vName] = (totals[vName] || 0) + amt;
+      billingTotals[vName] = (billingTotals[vName] || 0) + amt;
+
+      // Conectividad (Alta BAF Total / Alta BAF Convergente)
+      if (matchTipoVenta(s, 'Alta BAF Total') || matchTipoVenta(s, 'Alta BAF Convergente')) {
+        bafTotals[vName] = (bafTotals[vName] || 0) + 1;
+      }
+
+      // Dispositivos + Seguros
+      let isDispSeg = matchTipoVenta(s, 'Dispositivos + Seguros');
+      if (isDispSeg) {
+        dispSegTotals[vName] = (dispSegTotals[vName] || 0) + (Number(s.cuota) || 0);
+      }
+      if (s.seguroImporte && Number(s.seguroImporte) > 0) {
+        const virtualSeguro = { ...s, categoria: 'seguro', detalle: 'seguro', cuota: Number(s.seguroImporte) };
+        if (matchTipoVenta(virtualSeguro, 'Dispositivos + Seguros')) {
+          dispSegTotals[vName] = (dispSegTotals[vName] || 0) + Number(s.seguroImporte);
+        }
+      }
     });
 
+    // MVP
     let mvpName = 'Nadie';
     let mvpTotal = 0;
-    Object.entries(totals).forEach(([name, val]) => {
+    Object.entries(billingTotals).forEach(([name, val]) => {
       if (val > mvpTotal) {
         mvpTotal = val;
         mvpName = name;
       }
     });
 
+    // Nominado BAF (excluyendo MVP para que no se repitan si es posible)
+    let bafLeaderName = 'Nadie';
+    let bafLeaderTotal = 0;
+    Object.entries(bafTotals).forEach(([name, val]) => {
+      if (name !== mvpName || Object.keys(billingTotals).length <= 1) {
+        if (val > bafLeaderTotal) {
+          bafLeaderTotal = val;
+          bafLeaderName = name;
+        }
+      }
+    });
+    if (bafLeaderName === 'Nadie') {
+      Object.entries(bafTotals).forEach(([name, val]) => {
+        if (val > bafLeaderTotal) {
+          bafLeaderTotal = val;
+          bafLeaderName = name;
+        }
+      });
+    }
+
+    // Nominado Disp + Seguros (excluyendo MVP y BAF)
+    let dispSegLeaderName = 'Nadie';
+    let dispSegLeaderTotal = 0;
+    Object.entries(dispSegTotals).forEach(([name, val]) => {
+      if ((name !== mvpName && name !== bafLeaderName) || Object.keys(billingTotals).length <= 2) {
+        if (val > dispSegLeaderTotal) {
+          dispSegLeaderTotal = val;
+          dispSegLeaderName = name;
+        }
+      }
+    });
+    if (dispSegLeaderName === 'Nadie') {
+      Object.entries(dispSegTotals).forEach(([name, val]) => {
+        if (val > dispSegLeaderTotal) {
+          dispSegLeaderTotal = val;
+          dispSegLeaderName = name;
+        }
+      });
+    }
+
     return {
-      name: mvpName,
-      total: mvpTotal,
+      mvp: { name: mvpName, total: mvpTotal },
+      nominadoBaf: { name: bafLeaderName, total: bafLeaderTotal },
+      nominadoDispSeg: { name: dispSegLeaderName, total: dispSegLeaderTotal },
       isToday
     };
   };
 
-  const mvp = getMVP();
+  const mvp = getMVPAndNominados();
 
   // ── Cuenta Kilómetros ──
   const userRules = String(currentUser?.username || '').toLowerCase().includes('marta') ? o2Rules : tiendaRules;
@@ -320,51 +386,146 @@ export default function DashboardPage() {
               <Crown size={24} color="#ec4899" />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: 'var(--text-main)' }}>El MVP del Día</h3>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: 'var(--text-main)' }}>Destacados y Nominados MVP</h3>
               <p style={{ margin: 0, fontSize: '13px', color: 'var(--medium-gray)', fontWeight: 500 }}>
-                {mvp.isToday ? 'Rey de la Facturación Hoy' : 'Rey de la Facturación del Mes'}
+                {mvp.isToday ? 'Rendimiento y Liderazgo Hoy' : 'Rendimiento y Liderazgo del Mes'}
               </p>
             </div>
           </div>
 
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 16, background: 'var(--bg-body)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(236, 72, 153, 0.2)' }}>
-            {/* Avatar Circle */}
-            <div style={{ 
-              width: 48, height: 48, borderRadius: '50%', 
-              boxShadow: '0 4px 12px rgba(219, 39, 119, 0.4)', 
-              border: '2px solid #ec4899',
-              overflow: 'hidden', flexShrink: 0,
-              background: 'linear-gradient(135deg, #f472b6 0%, #db2777 100%)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}>
-              {mvp.name !== 'Nadie' ? (
-                <img 
-                  src={`/${mvp.name}.jpg`} 
-                  alt={mvp.name} 
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                    const parent = e.currentTarget.parentElement;
-                    if (parent) {
-                      parent.innerHTML = `<span style="color:#fff; font-size:20px; font-weight:900">${mvp.name.charAt(0).toUpperCase()}</span>`;
-                    }
-                  }}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                />
-              ) : (
-                <Crown size={24} color="#fff" />
-              )}
-            </div>
-            <div style={{ flex: 1 }}>
-              <h4 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: 800, color: 'var(--text-main)' }}>{mvp.name}</h4>
-              <div style={{ fontSize: '13px', color: 'var(--medium-gray)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#10b981' }}></span>
-                {mvp.name !== 'Nadie' ? (
-                  <>
-                    Liderando con <strong style={{ color: '#ec4899' }}>{fmt(mvp.total)}</strong>
-                  </>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1, justifyContent: 'center' }}>
+            {/* MVP Principal */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--bg-body)', padding: '10px 12px', borderRadius: '12px', border: '1px solid rgba(236, 72, 153, 0.3)' }}>
+              <div style={{ 
+                width: 40, height: 40, borderRadius: '50%', 
+                boxShadow: '0 4px 10px rgba(219, 39, 119, 0.3)', 
+                border: '2px solid #ec4899',
+                overflow: 'hidden', flexShrink: 0,
+                background: 'linear-gradient(135deg, #f472b6 0%, #db2777 100%)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                {mvp.mvp.name !== 'Nadie' ? (
+                  <img 
+                    src={`/${mvp.mvp.name}.jpg`} 
+                    alt={mvp.mvp.name} 
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      const parent = e.currentTarget.parentElement;
+                      if (parent) {
+                        parent.innerHTML = `<span style="color:#fff; font-size:16px; font-weight:900">${mvp.mvp.name.charAt(0).toUpperCase()}</span>`;
+                      }
+                    }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                  />
                 ) : (
-                  <span>Esperando ventas...</span>
+                  <Crown size={20} color="#fff" />
                 )}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: 'var(--text-main)' }}>{mvp.mvp.name}</h4>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: '#ec4899', background: 'rgba(236, 72, 153, 0.1)', padding: '2px 8px', borderRadius: '10px' }}>Facturación (MVP)</span>
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--medium-gray)', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                  <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#10b981' }}></span>
+                  {mvp.mvp.name !== 'Nadie' ? (
+                    <>
+                      Liderando con <strong style={{ color: 'var(--text-main)' }}>{fmt(mvp.mvp.total)}</strong>
+                    </>
+                  ) : (
+                    <span>Esperando ventas...</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Nominado 1: Conectividad BAF */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--bg-body)', padding: '10px 12px', borderRadius: '12px', border: '1px solid rgba(14, 165, 233, 0.2)' }}>
+              <div style={{ 
+                width: 36, height: 36, borderRadius: '50%', 
+                boxShadow: '0 2px 6px rgba(14, 165, 233, 0.2)', 
+                border: '2px solid #0ea5e9',
+                overflow: 'hidden', flexShrink: 0,
+                background: 'linear-gradient(135deg, #38bdf8 0%, #0284c7 100%)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                {mvp.nominadoBaf.name !== 'Nadie' ? (
+                  <img 
+                    src={`/${mvp.nominadoBaf.name}.jpg`} 
+                    alt={mvp.nominadoBaf.name} 
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      const parent = e.currentTarget.parentElement;
+                      if (parent) {
+                        parent.innerHTML = `<span style="color:#fff; font-size:14px; font-weight:900">${mvp.nominadoBaf.name.charAt(0).toUpperCase()}</span>`;
+                      }
+                    }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                  />
+                ) : (
+                  <Wifi size={16} color="#fff" />
+                )}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: 'var(--text-main)' }}>{mvp.nominadoBaf.name}</h4>
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#0ea5e9', background: 'rgba(14, 165, 233, 0.1)', padding: '2px 6px', borderRadius: '8px' }}>Líder Conectividad</span>
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--medium-gray)', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                  <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#0ea5e9' }}></span>
+                  {mvp.nominadoBaf.name !== 'Nadie' ? (
+                    <>
+                      Destacado con <strong style={{ color: 'var(--text-main)' }}>{mvp.nominadoBaf.total} Altas BAF</strong>
+                    </>
+                  ) : (
+                    <span>Esperando altas...</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Nominado 2: Dispositivos + Seguros */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--bg-body)', padding: '10px 12px', borderRadius: '12px', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+              <div style={{ 
+                width: 36, height: 36, borderRadius: '50%', 
+                boxShadow: '0 2px 6px rgba(245, 158, 11, 0.2)', 
+                border: '2px solid #f59e0b',
+                overflow: 'hidden', flexShrink: 0,
+                background: 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                {mvp.nominadoDispSeg.name !== 'Nadie' ? (
+                  <img 
+                    src={`/${mvp.nominadoDispSeg.name}.jpg`} 
+                    alt={mvp.nominadoDispSeg.name} 
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      const parent = e.currentTarget.parentElement;
+                      if (parent) {
+                        parent.innerHTML = `<span style="color:#fff; font-size:14px; font-weight:900">${mvp.nominadoDispSeg.name.charAt(0).toUpperCase()}</span>`;
+                      }
+                    }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                  />
+                ) : (
+                  <Smartphone size={16} color="#fff" />
+                )}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: 'var(--text-main)' }}>{mvp.nominadoDispSeg.name}</h4>
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#f59e0b', background: 'rgba(245, 158, 11, 0.1)', padding: '2px 6px', borderRadius: '8px' }}>Héroe Disp. + Seguros</span>
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--medium-gray)', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                  <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#f59e0b' }}></span>
+                  {mvp.nominadoDispSeg.name !== 'Nadie' ? (
+                    <>
+                      Destacado con <strong style={{ color: 'var(--text-main)' }}>{fmt(mvp.nominadoDispSeg.total)}</strong>
+                    </>
+                  ) : (
+                    <span>Esperando ventas...</span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
