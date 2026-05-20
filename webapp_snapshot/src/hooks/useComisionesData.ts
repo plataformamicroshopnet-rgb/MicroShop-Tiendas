@@ -129,18 +129,30 @@ export function useComisionesData(user?: any) {
                 // Filtramos solo las reglas KPI activas 
                 setActiveRules(rulesData.rules.filter((r: any) => r.isActive && r.combinationLabel?.startsWith('[KPI]')));
             }
+            const virtualTvRule = {
+                id: "VIRTUAL_SUSCRIPCIONES_TV",
+                nombre: "Suscripciones TV",
+                productosCuentan: "Suscripciones TV",
+                objPrimerTramo: 0,
+                importePrimerTramo: "-",
+                objSegundoTramo: 0,
+                importeSegundoTramo: "-",
+                condicionantes: "[]",
+                totalHoras: 0
+            };
+
             if (tiendasData && tiendasData.success) {
-                setTiendaRules(tiendasData.rules || []);
+                setTiendaRules([...(tiendasData.rules || []), virtualTvRule]);
                 setTiendaHours(tiendasData.hours || []);
             }
             if (o2Data && o2Data.value) {
                 try {
                     const parsed = JSON.parse(o2Data.value);
-                    setO2Rules(parsed.rules || []);
+                    setO2Rules([...(parsed.rules || []), virtualTvRule]);
                     setO2Hours(parsed.hours || []);
                 } catch(e) {}
             } else {
-                setO2Rules([]);
+                setO2Rules([virtualTvRule]);
                 setO2Hours([]);
             }
             if (territorialData && territorialData.success) {
@@ -306,6 +318,7 @@ export function useComisionesData(user?: any) {
             
             // Un producto puede contar para multiples reglas si encaja en el Tipo de Venta
             activeTiendaRules.forEach(rule => {
+                if (rule.nombre === 'Suscripciones TV') return;
                 if (matchTipoVenta(s, rule.productosCuentan)) {
                     // Determinar si el tramo pide % o Euros (heuristic)
                     const isPercentage = String(rule.importePrimerTramo || '').includes('%');
@@ -348,6 +361,41 @@ export function useComisionesData(user?: any) {
 
         activeTiendaRules.forEach(rule => {
             const ruleName = rule.nombre;
+            if (ruleName === 'Suscripciones TV') {
+                let tvCount = 0;
+                let tvPendingCount = 0;
+                let tvComisionTotal = 0;
+                let tvComisionPending = 0;
+
+                sSales.forEach(s => {
+                    const isAnnulled = String(s.anulado || '').toLowerCase() === 'sí' || String(s.anulado || '').toLowerCase() === 'si' || String(s.pendiente || '').toLowerCase() === 'anulado';
+                    if (isAnnulled) return;
+
+                    if (matchTipoVenta(s, 'Suscripciones TV')) {
+                        const comision = Number(s.importe || s.cuota || 0);
+                        const isPending = String(s.pendiente || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === 'si';
+                        
+                        tvCount += 1;
+                        tvComisionTotal += comision;
+                        if (isPending) {
+                            tvPendingCount += 1;
+                            tvComisionPending += comision;
+                        }
+                    }
+                });
+
+                const tvComisionConsolidada = tvComisionTotal - tvComisionPending;
+
+                groupCounts[ruleName] = tvCount;
+                groupPending[ruleName] = tvPendingCount;
+                groupComisions[ruleName] = tvComisionTotal;
+                groupIsConsolidado[ruleName] = tvPendingCount === 0;
+
+                internalTotalComision += tvComisionTotal;
+                internalTotalConsolidada += tvComisionConsolidada;
+                internalTotalPendiente += tvComisionPending;
+                return;
+            }
             const qtty = groupCounts[ruleName] || 0;
             const obj1 = groupObj1[ruleName] || 0;
             const obj2 = groupObj2[ruleName] || 0;
