@@ -93,9 +93,11 @@ export default function AdminDashboardPage() {
       description: 'Editar catálogos de precios, cuotas y objetivos.',
       icon: FileEdit,
       action: () => router.push('/catalogos'),
-      color: 'rgba(175, 82, 222, 0.1)',
-      textColor: '#AF52DE',
-      permission: 'MANAGE_CATALOG'
+      color: 'rgba(255, 255, 255, 0.25)',
+      textColor: '#ffffff',
+      permission: 'MANAGE_CATALOG',
+      bgOverride: '#00ADEF',
+      textOverride: '#ffffff'
     },
     {
       title: 'Control de Caja',
@@ -329,12 +331,19 @@ export default function AdminDashboardPage() {
       }}>
         {sortedCards.map((c: any, i) => {
           const Icon = c.icon
+          const hasOverride = !!c.bgOverride
           return (
             <div
               key={c.title}
               className={`premium-card ${isEditMode ? 'wiggle-mode' : ''}`}
               onClick={isEditMode ? undefined : c.action}
-              style={{ position: 'relative', cursor: isEditMode ? 'default' : 'pointer', borderLeft: `5px solid ${c.textColor}` }}
+              style={{ 
+                position: 'relative', 
+                cursor: isEditMode ? 'default' : 'pointer', 
+                borderLeft: `5px solid ${hasOverride ? '#ffffff' : c.textColor}`,
+                backgroundColor: c.bgOverride || 'var(--bg-card)',
+                color: c.textOverride || 'inherit'
+              }}
             >
               {isEditMode && (
                 <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 10, display: 'flex', gap: 4, background: 'var(--bg-card)', padding: 4, borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.1)', border: '1px solid var(--border-light)' }}>
@@ -350,10 +359,10 @@ export default function AdminDashboardPage() {
                 <Icon size={22} strokeWidth={2.5} />
               </div>
               <div>
-                <h3 className="card-title">
+                <h3 className="card-title" style={c.textOverride ? { color: c.textOverride } : {}}>
                   {c.title}
                 </h3>
-                <p className="card-desc">
+                <p className="card-desc" style={c.textOverride ? { color: 'rgba(255, 255, 255, 0.8)' } : {}}>
                   {c.description}
                 </p>
               </div>
