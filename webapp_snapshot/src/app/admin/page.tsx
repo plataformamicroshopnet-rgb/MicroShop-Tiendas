@@ -11,102 +11,145 @@ import { PageHeader } from '@/components/PageHeader'
 
 export default function AdminDashboardPage() {
   const { authorized, user } = useGuard('MODULE_ADMIN')
-  const { theme, toggleTheme } = useTheme()
-  const [resetting, setResetting] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const router = useRouter()
 
-  const [isEditMode, setIsEditMode] = useState(false)
-  const [cardOrder, setCardOrder] = useState<string[]>([])
-
-  useEffect(() => {
-    const savedOrder = localStorage.getItem('admin_panel_card_order')
-    if (savedOrder) {
-      try { setCardOrder(JSON.parse(savedOrder)) } catch (e) {}
-    }
-  }, [])
-
-  // El proceso de Cierre Destructivo fue deprecado a favor de las directrices 'ACTIVE'/'HISTORIC'.
-
   const cards = [
-    {
-      title: 'Condiciones, Comisiones Extras del mes y Penalizaciones',
-      description: 'Escribir condiciones, notas y comisiones estra para el mes en curso.',
-      icon: FileEdit,
-      action: () => router.push('/admin/condiciones-mensuales'),
-      color: 'rgba(245, 158, 11, 0.1)',
-      textColor: '#f59e0b',
-      permission: 'MODULE_ADMIN'
-    },
-    {
-      title: 'Gestión de Periodos Operativos',
-      description: 'Control estructural de meses DRAFT, ACTIVE e HISTORIC.',
-      icon: CalendarDays,
-      action: () => router.push('/admin/periodos'),
-      color: 'rgba(52, 199, 89, 0.1)',
-      textColor: '#34C759',
-      permission: 'MODULE_ADMIN'
-    },
-    {
-      title: 'Gestión de Usuarios',
-      description: 'Crear perfiles, restablecer contraseñas y asignar permisos.',
-      icon: Users,
-      action: () => router.push('/admin/usuarios'),
-      color: 'rgba(0,173,239,0.1)',
-      textColor: 'var(--mercedes-cyan)'
-    },
-    {
-      title: 'Google Drive Backups',
-      description: 'Copias de seguridad autónomas en la nube.',
-      icon: Cloud,
-      action: () => router.push('/admin/cloud-backup'),
-      color: 'rgba(37, 99, 235, 0.1)',
-      textColor: '#2563eb'
-    },
-    {
-      title: 'Ganancias MicroShop',
-      description: 'Dashboard Financiero Macro e Histórico (2011 - 2026).',
-      icon: TrendingUp,
-      action: () => router.push('/admin/ganancias'),
-      color: 'rgba(14, 165, 233, 0.1)',
-      textColor: '#0ea5e9'
-    },
-    {
-      title: 'Préstamos, Créditos e Hipotecas',
-      description: 'Dashboard Retrospectivo de Patrimonio (2008 - 2026).',
-      icon: Landmark,
-      action: () => router.push('/admin/prestamos'),
-      color: 'rgba(99, 102, 241, 0.1)',
-      textColor: '#6366f1'
-    },
-    {
-      title: 'Trazabilidad y Accesos',
-      description: 'Auditoría en tiempo real de navegación de usuarios.',
-      icon: Activity,
-      action: () => router.push('/admin/tracking'),
-      color: 'rgba(236, 72, 153, 0.1)',
-      textColor: '#ec4899',
-      permission: 'MODULE_ADMIN'
-    },
+    // --- GRUPO CIAN ---
     {
       title: 'Entrada de Datos',
       description: 'Editar catálogos de precios, cuotas y objetivos.',
       icon: FileEdit,
       action: () => router.push('/catalogos'),
-      color: 'rgba(255, 255, 255, 0.25)',
-      textColor: '#ffffff',
+      color: '#ffffff',
+      textColor: 'var(--mercedes-cyan)',
       permission: 'MANAGE_CATALOG',
-      bgOverride: '#00ADEF',
-      textOverride: '#ffffff'
+      bgColorOverride: 'var(--mercedes-cyan)',
+      textColorOverride: '#ffffff',
+      textMutedOverride: 'rgba(255,255,255,0.85)',
+      iconBgOverride: '#ffffff',
+      iconColorOverride: 'var(--mercedes-cyan)',
+      colorGroup: 'cyan'
     },
     {
       title: 'Control de Caja',
       description: 'Gestión de entradas, salidas y trazabilidad de efectivo.',
       icon: Calculator,
       action: () => router.push('/tiendas/caja'),
-      color: 'rgba(0, 173, 239, 0.1)',
+      color: '#ffffff',
       textColor: 'var(--mercedes-cyan)',
-      permission: 'CARD_CAJA'
+      permission: 'CARD_CAJA',
+      bgColorOverride: 'var(--mercedes-cyan)',
+      textColorOverride: '#ffffff',
+      textMutedOverride: 'rgba(255,255,255,0.85)',
+      iconBgOverride: '#ffffff',
+      iconColorOverride: 'var(--mercedes-cyan)',
+      colorGroup: 'cyan'
+    },
+
+    // --- GRUPO NARANJA ---
+    {
+      title: 'Condiciones, Comisiones Extras del mes y Penalizaciones',
+      description: 'Escribir condiciones, notas y comisiones estra para el mes en curso.',
+      icon: FileEdit,
+      action: () => router.push('/admin/condiciones-mensuales'),
+      color: '#ffffff',
+      textColor: '#f97316',
+      permission: 'MODULE_ADMIN',
+      bgColorOverride: '#f97316',
+      textColorOverride: '#ffffff',
+      textMutedOverride: 'rgba(255,255,255,0.85)',
+      iconBgOverride: '#ffffff',
+      iconColorOverride: '#f97316',
+      colorGroup: 'orange'
+    },
+    {
+      title: 'Ganancias MicroShop',
+      description: 'Dashboard Financiero Macro e Histórico (2011 - 2026).',
+      icon: TrendingUp,
+      action: () => router.push('/admin/ganancias'),
+      color: '#ffffff',
+      textColor: '#f97316',
+      bgColorOverride: '#f97316',
+      textColorOverride: '#ffffff',
+      textMutedOverride: 'rgba(255,255,255,0.85)',
+      iconBgOverride: '#ffffff',
+      iconColorOverride: '#f97316',
+      colorGroup: 'orange'
+    },
+    {
+      title: 'Préstamos, Créditos e Hipotecas',
+      description: 'Dashboard Retrospectivo de Patrimonio (2008 - 2026).',
+      icon: Landmark,
+      action: () => router.push('/admin/prestamos'),
+      color: '#ffffff',
+      textColor: '#f97316',
+      bgColorOverride: '#f97316',
+      textColorOverride: '#ffffff',
+      textMutedOverride: 'rgba(255,255,255,0.85)',
+      iconBgOverride: '#ffffff',
+      iconColorOverride: '#f97316',
+      colorGroup: 'orange'
+    },
+
+    // --- GRUPO VERDE ---
+    {
+      title: 'Gestión de Periodos Operativos',
+      description: 'Control estructural de meses DRAFT, ACTIVE e HISTORIC.',
+      icon: CalendarDays,
+      action: () => router.push('/admin/periodos'),
+      color: '#ffffff',
+      textColor: '#5bc500',
+      permission: 'MODULE_ADMIN',
+      bgColorOverride: '#5bc500',
+      textColorOverride: '#ffffff',
+      textMutedOverride: 'rgba(255,255,255,0.85)',
+      iconBgOverride: '#ffffff',
+      iconColorOverride: '#5bc500',
+      colorGroup: 'green'
+    },
+    {
+      title: 'Gestión de Usuarios',
+      description: 'Crear perfiles, restablecer contraseñas y asignar permisos.',
+      icon: Users,
+      action: () => router.push('/admin/usuarios'),
+      color: '#ffffff',
+      textColor: '#5bc500',
+      bgColorOverride: '#5bc500',
+      textColorOverride: '#ffffff',
+      textMutedOverride: 'rgba(255,255,255,0.85)',
+      iconBgOverride: '#ffffff',
+      iconColorOverride: '#5bc500',
+      colorGroup: 'green'
+    },
+    {
+      title: 'Google Drive Backups',
+      description: 'Copias de seguridad autónomas en la nube.',
+      icon: Cloud,
+      action: () => router.push('/admin/cloud-backup'),
+      color: '#ffffff',
+      textColor: '#5bc500',
+      bgColorOverride: '#5bc500',
+      textColorOverride: '#ffffff',
+      textMutedOverride: 'rgba(255,255,255,0.85)',
+      iconBgOverride: '#ffffff',
+      iconColorOverride: '#5bc500',
+      colorGroup: 'green'
+    },
+    {
+      title: 'Trazabilidad y Accesos',
+      description: 'Auditoría en tiempo real de navegación de usuarios.',
+      icon: Activity,
+      action: () => router.push('/admin/tracking'),
+      color: '#ffffff',
+      textColor: '#5bc500',
+      permission: 'MODULE_ADMIN',
+      bgColorOverride: '#5bc500',
+      textColorOverride: '#ffffff',
+      textMutedOverride: 'rgba(255,255,255,0.85)',
+      iconBgOverride: '#ffffff',
+      iconColorOverride: '#5bc500',
+      colorGroup: 'green'
     }
   ]
 
@@ -115,40 +158,9 @@ export default function AdminDashboardPage() {
   }, [cards, user])
 
   const sortedCards = useMemo(() => {
-    if (cardOrder.length === 0) return permittedCards;
-    return [...permittedCards].sort((a, b) => {
-      const indexA = cardOrder.indexOf(a.title);
-      const indexB = cardOrder.indexOf(b.title);
-      return (indexA === -1 ? 99 : indexA) - (indexB === -1 ? 99 : indexB);
-    });
-  }, [permittedCards, cardOrder])
-
-  const moveCard = (index: number, direction: 'up' | 'down') => {
-    if (direction === 'up' && index === 0) return;
-    if (direction === 'down' && index === sortedCards.length - 1) return;
-
-    const newSorted = [...sortedCards];
-    const swapIndex = direction === 'up' ? index - 1 : index + 1;
-    
-    const temp = newSorted[index];
-    newSorted[index] = newSorted[swapIndex];
-    newSorted[swapIndex] = temp;
-
-    setCardOrder(newSorted.map(c => c.title));
-  }
-
-  const saveOrder = () => {
-    const currentOrder = cardOrder.length > 0 ? cardOrder : permittedCards.map(c => c.title);
-    localStorage.setItem('admin_panel_card_order', JSON.stringify(currentOrder));
-    setIsEditMode(false);
-  }
-
-  const cancelEdit = () => {
-    const savedOrder = localStorage.getItem('admin_panel_card_order')
-    if (savedOrder) setCardOrder(JSON.parse(savedOrder))
-    else setCardOrder([])
-    setIsEditMode(false)
-  }
+    const groupOrder: Record<string, number> = { cyan: 1, orange: 2, green: 3 };
+    return [...permittedCards].sort((a, b) => groupOrder[a.colorGroup] - groupOrder[b.colorGroup]);
+  }, [permittedCards])
 
   if (authorized === null) {
     return <div style={{ paddingTop: 40, paddingRight: 40, paddingBottom: 40, paddingLeft: 40, color: 'var(--mercedes-cyan)', fontWeight: 600 }}>Verificando credenciales del módulo...</div>;
@@ -159,15 +171,15 @@ export default function AdminDashboardPage() {
       <style dangerouslySetInnerHTML={{__html: `
         .premium-card {
             background-color: var(--bg-card);
-            border-radius: 12px;
-            padding: 16px;
+            border-radius: 16px;
+            padding: 20px;
             cursor: pointer;
             transition: all 0.2s ease;
             border: 1px solid var(--border-strong);
             box-shadow: 0 2px 8px rgba(0,0,0,0.04);
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 16px;
         }
         .premium-card:hover {
             transform: translateY(-3px);
@@ -175,41 +187,27 @@ export default function AdminDashboardPage() {
             border-color: #3b82f6;
         }
         .card-icon-wrapper {
-            width: 38px;
-            height: 38px;
-            border-radius: 10px;
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
         }
         .card-title {
-            font-size: 15px;
+            font-size: 16px;
             font-weight: 600;
             color: var(--text-main);
-            margin: 0 0 4px 0;
+            margin: 0 0 6px 0;
             line-height: 1.25;
             letter-spacing: -0.3px;
         }
         .card-desc {
-            font-size: 13px;
+            font-size: 14px;
             color: var(--text-muted);
-            line-height: 1.4;
+            line-height: 1.45;
             margin: 0;
         }
-
-        @keyframes wiggle {
-            0% { transform: rotate(0deg); }
-            25% { transform: rotate(-0.5deg); }
-            50% { transform: rotate(0deg); }
-            75% { transform: rotate(0.5deg); }
-            100% { transform: rotate(0deg); }
-        }
-        .wiggle-mode {
-            animation: wiggle 0.4s infinite;
-            border: 2px dashed #3b82f6 !important;
-        }
-
-
       `}} />
 
       {/* HEADER LOCAL */}
@@ -304,70 +302,88 @@ export default function AdminDashboardPage() {
               <p style={{ margin: 0, lineHeight: 1.5 }}>Panel central de administración. Desde aquí puedes acceder a la configuración de Periodos, Mapeo de Catálogos, Tablas de Comisiones base, y gestión de Usuarios. Solo usuarios con rol ADMIN tienen acceso.</p>
             </div>
           }
-          headerActions={
-            isEditMode ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <button onClick={cancelEdit} title="Cancelar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: '50%', background: 'transparent', border: '1px solid var(--border-strong)', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                    <X size={20} />
-                </button>
-                <button onClick={saveOrder} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 16px', height: 40, borderRadius: 20, background: '#10b981', border: 'none', color: '#fff', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 10px rgba(16, 185, 129, 0.3)' }}>
-                    <Save size={18} /> Guardar Orden
-                </button>
-              </div>
-            ) : (
-                <button onClick={() => { setIsEditMode(true); if(cardOrder.length === 0) setCardOrder(permittedCards.map((c:any)=>c.title)); }} title="Personalizar Orden" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: '50%', background: 'transparent', border: '1px solid var(--border-strong)', color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={e => e.currentTarget.style.color = '#3b82f6'} onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}>
-                    <Settings2 size={20} />
-                </button>
-            )
-          }
         />
       </div>
 
       <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
-        gap: '16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '24px',
         marginTop: '16px'
       }}>
-        {sortedCards.map((c: any, i) => {
-          const Icon = c.icon
-          const hasOverride = !!c.bgOverride
+        {['cyan', 'orange', 'green'].map(groupKey => {
+          const groupCards = sortedCards.filter(c => c.colorGroup === groupKey);
+          if (groupCards.length === 0) return null;
+
+          const groupTitle = groupKey === 'cyan' 
+            ? 'CONFIGURACIÓN Y OPERACIONES'
+            : groupKey === 'orange'
+            ? 'FINANZAS, PATRIMONIO Y NOTAS'
+            : 'GESTIÓN, SEGURIDAD Y ACCESOS';
+
+          const groupColor = groupKey === 'cyan'
+            ? 'var(--mercedes-cyan)'
+            : groupKey === 'orange'
+            ? '#f97316'
+            : '#5bc500';
+
           return (
-            <div
-              key={c.title}
-              className={`premium-card ${isEditMode ? 'wiggle-mode' : ''}`}
-              onClick={isEditMode ? undefined : c.action}
-              style={{ 
-                position: 'relative', 
-                cursor: isEditMode ? 'default' : 'pointer', 
-                borderLeft: `5px solid ${hasOverride ? '#ffffff' : c.textColor}`,
-                backgroundColor: c.bgOverride || 'var(--bg-card)',
-                color: c.textOverride || 'inherit'
-              }}
-            >
-              {isEditMode && (
-                <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 10, display: 'flex', gap: 4, background: 'var(--bg-card)', padding: 4, borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.1)', border: '1px solid var(--border-light)' }}>
-                  <button onClick={(e) => { e.stopPropagation(); moveCard(i, 'up') }} disabled={i === 0} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 8, border: 'none', background: i === 0 ? 'transparent' : 'var(--bg-input)', color: i === 0 ? 'var(--border-strong)' : 'var(--text-main)', cursor: i === 0 ? 'not-allowed' : 'pointer' }}>
-                    <ArrowUp size={16} />
-                  </button>
-                  <button onClick={(e) => { e.stopPropagation(); moveCard(i, 'down') }} disabled={i === sortedCards.length - 1} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 8, border: 'none', background: i === sortedCards.length - 1 ? 'transparent' : 'var(--bg-input)', color: i === sortedCards.length - 1 ? 'var(--border-strong)' : 'var(--text-main)', cursor: i === sortedCards.length - 1 ? 'not-allowed' : 'pointer' }}>
-                    <ArrowDown size={16} />
-                  </button>
-                </div>
-              )}
-              <div className="card-icon-wrapper" style={{ backgroundColor: c.color, color: c.textColor }}>
-                <Icon size={22} strokeWidth={2.5} />
+            <div key={groupKey} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                marginTop: 8
+              }}>
+                <div style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: groupColor }} />
+                <h4 style={{
+                  color: groupColor,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  letterSpacing: '0.8px',
+                  margin: 0
+                }}>
+                  {groupTitle}
+                </h4>
+                <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-light)' }} />
               </div>
-              <div>
-                <h3 className="card-title" style={c.textOverride ? { color: c.textOverride } : {}}>
-                  {c.title}
-                </h3>
-                <p className="card-desc" style={c.textOverride ? { color: 'rgba(255, 255, 255, 0.8)' } : {}}>
-                  {c.description}
-                </p>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                gap: '16px'
+              }}>
+                {groupCards.map((c: any) => {
+                  const Icon = c.icon;
+                  return (
+                    <div
+                      key={c.title}
+                      className="premium-card"
+                      onClick={c.action}
+                      style={{
+                        position: 'relative',
+                        cursor: 'pointer',
+                        backgroundColor: c.bgColorOverride || undefined,
+                        color: c.textColorOverride || undefined,
+                        borderColor: c.bgColorOverride ? 'transparent' : undefined
+                      }}
+                    >
+                      <div className="card-icon-wrapper" style={{ backgroundColor: c.iconBgOverride || c.color, color: c.iconColorOverride || c.textColor }}>
+                        <Icon size={22} strokeWidth={2.5} />
+                      </div>
+                      <div>
+                        <h3 className="card-title" style={{ color: c.textColorOverride || undefined }}>
+                          {c.title}
+                        </h3>
+                        <p className="card-desc" style={{ color: c.textMutedOverride || undefined }}>
+                          {c.description}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-          )
+          );
         })}
       </div>
     </div>
