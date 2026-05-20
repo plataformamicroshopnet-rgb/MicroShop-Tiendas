@@ -29,6 +29,7 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url)
     const periodKey = searchParams.get('periodKey')
+    const dashboardParam = searchParams.get('dashboard') === 'true'
 
     const hasJefeTiendas = canView(safeUser, 'MODULE_JEFE_TIENDAS');
     const hasLiquidaciones = canView(safeUser, 'MODULE_LIQUIDACION');
@@ -38,7 +39,8 @@ export async function GET(request: Request) {
                            safeUser.role === ROLES.JEFE_VENTAS || 
                            hasJefeTiendas || 
                            hasLiquidaciones || 
-                           hasCristina;
+                           hasCristina ||
+                           dashboardParam;
 
     const baseWhereClause: any = canSeeAllSales
       ? {} 

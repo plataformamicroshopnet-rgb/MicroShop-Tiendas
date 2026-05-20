@@ -28,7 +28,7 @@ export default function DashboardPage() {
     try {
       const [userRes, salesRes, tiendasRes, o2Res] = await Promise.all([
         fetch('/api/auth/me').then(res => res.json()).catch(() => null),
-        fetch(`/api/sales?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({ success: false, logs: [] })),
+        fetch(`/api/sales?periodKey=${activePeriodKey}&dashboard=true`).then(res => res.json()).catch(() => ({ success: false, logs: [] })),
         fetch(`/api/tiendas-comisiones?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({ success: false, rules: [] })),
         fetch(`/api/settings?key=o2_rules_v2_${activePeriodKey}`).then(res => res.json()).catch(() => ({ value: null }))
       ]);

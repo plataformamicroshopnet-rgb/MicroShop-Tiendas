@@ -103,7 +103,7 @@ export const isSuscripcionesTV = (s: any) => {
 
 export const isExtraRepoUpFutbol = (s: any) => {
     const text = String(s.producto || s.detalle || s.categoria || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    return text.includes("extra repo up destino futbol");
+    return text.includes("extra repo") && text.includes("futbol");
 };
 
 export const matchesRule = (s: any, ruleName: string, ruleProductosCuentan: string) => {
