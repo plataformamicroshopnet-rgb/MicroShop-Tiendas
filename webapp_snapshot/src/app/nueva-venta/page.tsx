@@ -501,7 +501,7 @@ export default function NuevaVentaPage() {
 
                     {/* COLUMNA 3: ESTADO Y FINANZAS */}
                     <div style={{ flex: '1', minWidth: '250px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div style={{ backgroundColor: '#B8D5F6', borderRadius: '8px', padding: '8px' }}>
+                      <div style={{ backgroundColor: '#B8D5F6', borderRadius: '8px', padding: '8px', display: 'none' }}>
                         <label style={{ fontSize: 13, color: '#1B3D6A', display: 'block', marginBottom: 4 }}>Cuota Total</label>
                         <div style={{ position: 'relative' }}>
                           <input type="number" step="0.01" className="form-input" value={prod.importe !== '' && prod.importe !== undefined ? Number(prod.importe).toFixed(2) : ''} onChange={e => handleProductChange(index, 'importe', e.target.value)} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A', fontWeight: 'bold', width: '100%', paddingRight: 24 }} />
@@ -653,7 +653,7 @@ export default function NuevaVentaPage() {
 
                     {/* COLUMNA 3: ESTADO Y FINANZAS */}
                     <div style={{ flex: '1', minWidth: '250px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div style={{ backgroundColor: '#B8D5F6', borderRadius: '8px', padding: '8px' }}>
+                      <div style={{ backgroundColor: '#B8D5F6', borderRadius: '8px', padding: '8px', display: 'none' }}>
                         <label style={{ fontSize: 13, color: '#1B3D6A', display: 'block', marginBottom: 4 }}>Comisión X (Venta)</label>
                         <div style={{ position: 'relative' }}>
                           <input type="number" step="0.01" className="form-input" readOnly value={prod.importe !== '' && prod.importe !== undefined ? Number(prod.importe).toFixed(2) : ''} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A', fontWeight: 'bold', width: '100%', paddingRight: 24 }} />
@@ -801,8 +801,8 @@ export default function NuevaVentaPage() {
                           </div>
                         )
                       })()}
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                        <div className="form-group" style={{ marginBottom: 0 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '6px' }}>
+                        <div className="form-group" style={{ marginBottom: 0, display: 'none' }}>
                           <label className="form-label" style={{ color: '#555' }}>{(prod.categoria === 'O2' || prod.categoria === 'Suscripciones TV' || prod.categoria === 'Prepago' || prod.categoria === 'Varios' || prod.categoria === 'Repos') ? 'Comisión' : 'Importe'}</label>
                           <div style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
                             <input 
