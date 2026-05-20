@@ -459,10 +459,17 @@ export default function ComisionesDashboardPage() {
                                         <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--light-text)' }}>{s.name}</div>
                                         <div style={{ width: 34, height: 34, borderRadius: '50%', overflow: 'hidden', border: '2px solid rgba(0,0,0,0.05)', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
                                             <img 
-                                                src={`/${s.name}.${['Vanesa', 'Lara', 'Nuria', 'Elena'].includes(s.name) ? 'jpeg' : 'jpg'}`} 
+                                                src={`/${s.name}.jpg`} 
                                                 alt={s.name} 
                                                 style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                                onError={(e) => {
+                                                    const img = e.currentTarget;
+                                                    if (img.src.endsWith('.jpg')) {
+                                                        img.src = img.src.replace('.jpg', '.jpeg');
+                                                    } else {
+                                                        img.style.display = 'none';
+                                                    }
+                                                }}
                                             />
                                         </div>
                                     </div>

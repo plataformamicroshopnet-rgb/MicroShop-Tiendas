@@ -145,10 +145,11 @@ export default function RentabilidadTiendasPage() {
       }
 
       const parseToNumber = (val: any): number => {
+        if (val === null || val === undefined) return 0;
         if (typeof val === 'number') return isNaN(val) ? 0 : val;
-        if (!val) return 0;
-        const parsed = Number(String(val).replace(',', '.').trim());
-        return isNaN(parsed) ? 0 : parsed;
+        const clean = String(val).replace('€', '').replace(/\s/g, '').replace(',', '.').trim();
+        const num = parseFloat(clean);
+        return isNaN(num) ? 0 : num;
       }
 
       if (!saleMonth) return { ...sale, comisionReal: parseToNumber(getFallbackValue()) }
@@ -162,7 +163,8 @@ export default function RentabilidadTiendasPage() {
       const dashboardRows = isPlus ? pymeRows : captadorRows;
       const det = (sale.detalle || '').toLowerCase();
       
-      if (det === 'o2' || det === 'seguro' || det === 'mimovistar' || det === 'repos' || det === 'varios' || det === 'suscripciones tv' || det === 'prepago') {
+      const isTV = det === 'suscripciones tv' || det === 'suscripcion tv';
+      if (det === 'o2' || det === 'seguro' || det === 'mimovistar' || det === 'repos' || det === 'varios' || isTV || det === 'prepago') {
           return { ...sale, comisionReal: parseToNumber(sale.importe || sale.cuota || 0) };
       }
       
@@ -235,7 +237,7 @@ export default function RentabilidadTiendasPage() {
       else if (det === 'o2') tipo = 'O2 MovilFree'
       else if (det === 'seguro') tipo = 'Seguro'
       else if (det === 'mimovistar') tipo = 'miMovistar'
-      else if (det === 'suscripciones tv') tipo = 'Suscripciones TV'
+      else if (det === 'suscripciones tv' || det === 'suscripcion tv') tipo = 'Suscripciones TV'
       else if (det === 'prepago') tipo = 'Prepago'
       else if (det === 'varios') tipo = 'Varios'
       else if (det === 'repos') tipo = 'Repos'

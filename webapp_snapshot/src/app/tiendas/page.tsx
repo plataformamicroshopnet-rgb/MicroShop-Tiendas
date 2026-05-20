@@ -192,7 +192,14 @@ export default function TiendasHubPage() {
                       <img 
                           src={`/${user.username.charAt(0).toUpperCase() + user.username.slice(1)}.jpg`} 
                           alt={user.username} 
-                          onError={(e) => { e.currentTarget.style.display = 'none' }}
+                          onError={(e) => {
+                              const img = e.currentTarget;
+                              if (img.src.endsWith('.jpg')) {
+                                  img.src = img.src.replace('.jpg', '.jpeg');
+                              } else {
+                                  img.style.display = 'none';
+                              }
+                          }}
                           style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--mercedes-cyan)', boxShadow: '0 4px 10px rgba(0,0,0,0.1)', marginLeft: 8 }} 
                       />
                   )}

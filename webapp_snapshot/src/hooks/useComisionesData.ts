@@ -50,6 +50,7 @@ export const matchTipoVenta = (sale: any, tipoVentaRaw: string) => {
                 matched = cat === 'mimovistar';
                 break;
             case 'dispositivos + seguro':
+            case 'dispositivos + seguros':
                 matched = cat === 'rent' || cat === 'seguro';
                 break;
             case 'dispositivos':
@@ -87,9 +88,17 @@ export const matchTipoVenta = (sale: any, tipoVentaRaw: string) => {
     return false;
 };
 
+export const parseSafeFloat = (val: any): number => {
+    if (val === null || val === undefined) return 0;
+    if (typeof val === 'number') return isNaN(val) ? 0 : val;
+    const clean = String(val).replace('€', '').replace(/\s/g, '').replace(',', '.').trim();
+    const num = parseFloat(clean);
+    return isNaN(num) ? 0 : num;
+};
+
 export const isSuscripcionesTV = (s: any) => {
     const text = String(s.categoria || s.detalle || s.sheet || s.producto || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    return text.includes("suscripciones tv");
+    return text.includes("suscripciones tv") || text.includes("suscripcion tv");
 };
 
 export const isExtraRepoUpFutbol = (s: any) => {
@@ -108,12 +117,11 @@ export const matchesRule = (s: any, ruleName: string, ruleProductosCuentan: stri
 };
 
 export const getValueForRule = (s: any, ruleName: string) => {
-    let cuotaValue = Number(s.cuota) || 0;
-    if (isNaN(cuotaValue)) cuotaValue = 0;
+    let cuotaValue = parseSafeFloat(s.cuota);
 
     if (ruleName === 'ARPU') {
         if (isSuscripcionesTV(s)) {
-            return Number(s.importe || s.cuota || 0);
+            return parseSafeFloat(s.importe || s.cuota || 0);
         }
     }
     return cuotaValue;

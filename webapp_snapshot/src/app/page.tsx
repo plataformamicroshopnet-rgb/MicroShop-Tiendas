@@ -430,10 +430,15 @@ export default function DashboardPage() {
                     src={`/${mvp.mvp.name}.jpg`} 
                     alt={mvp.mvp.name} 
                     onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                      const parent = e.currentTarget.parentElement;
-                      if (parent) {
-                        parent.innerHTML = `<span style="color:#fff; font-size:16px; font-weight:900">${mvp.mvp.name.charAt(0).toUpperCase()}</span>`;
+                      const img = e.currentTarget;
+                      if (img.src.endsWith('.jpg')) {
+                        img.src = img.src.replace('.jpg', '.jpeg');
+                      } else {
+                        img.style.display = 'none';
+                        const parent = img.parentElement;
+                        if (parent) {
+                          parent.innerHTML = `<span style="color:#fff; font-size:16px; font-weight:900">${mvp.mvp.name.charAt(0).toUpperCase()}</span>`;
+                        }
                       }
                     }}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
@@ -480,10 +485,15 @@ export default function DashboardPage() {
                     src={`/${mvp.nominadoMiMovistar.name}.jpg`} 
                     alt={mvp.nominadoMiMovistar.name} 
                     onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                      const parent = e.currentTarget.parentElement;
-                      if (parent) {
-                        parent.innerHTML = `<span style="color:#fff; font-size:14px; font-weight:900">${mvp.nominadoMiMovistar.name.charAt(0).toUpperCase()}</span>`;
+                      const img = e.currentTarget;
+                      if (img.src.endsWith('.jpg')) {
+                        img.src = img.src.replace('.jpg', '.jpeg');
+                      } else {
+                        img.style.display = 'none';
+                        const parent = img.parentElement;
+                        if (parent) {
+                          parent.innerHTML = `<span style="color:#fff; font-size:14px; font-weight:900">${mvp.nominadoMiMovistar.name.charAt(0).toUpperCase()}</span>`;
+                        }
                       }
                     }}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
@@ -530,10 +540,15 @@ export default function DashboardPage() {
                     src={`/${mvp.nominadoDispSeg.name}.jpg`} 
                     alt={mvp.nominadoDispSeg.name} 
                     onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                      const parent = e.currentTarget.parentElement;
-                      if (parent) {
-                        parent.innerHTML = `<span style="color:#fff; font-size:14px; font-weight:900">${mvp.nominadoDispSeg.name.charAt(0).toUpperCase()}</span>`;
+                      const img = e.currentTarget;
+                      if (img.src.endsWith('.jpg')) {
+                        img.src = img.src.replace('.jpg', '.jpeg');
+                      } else {
+                        img.style.display = 'none';
+                        const parent = img.parentElement;
+                        if (parent) {
+                          parent.innerHTML = `<span style="color:#fff; font-size:14px; font-weight:900">${mvp.nominadoDispSeg.name.charAt(0).toUpperCase()}</span>`;
+                        }
                       }
                     }}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }} 

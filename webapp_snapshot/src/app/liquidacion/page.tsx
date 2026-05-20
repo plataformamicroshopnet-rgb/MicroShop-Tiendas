@@ -1375,6 +1375,14 @@ export default function LiquidacionesPage() {
 
         // 2. Helper to get calculated commission for a specific operation
         const getCommission = (sale: any) => {
+            const parseSafeFloat = (val: any): number => {
+                if (val === null || val === undefined) return 0;
+                if (typeof val === 'number') return isNaN(val) ? 0 : val;
+                const clean = String(val).replace('€', '').replace(/\s/g, '').replace(',', '.').trim();
+                const num = parseFloat(clean);
+                return isNaN(num) ? 0 : num;
+            };
+
             // Enforce unified state filter
             if (sale.anulado === 'Si' || sale.pendiente === 'Anulado') return 0;
 
@@ -1414,10 +1422,10 @@ export default function LiquidacionesPage() {
                      const list = catalogs[catalogKey] || [];
                      const found = list.find((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
                      if (found) {
-                         val = Number(String(found.anual || 0).replace(',','.'));
+                         val = parseSafeFloat(found.anual);
                      }
                  }
-                 return val;
+                 return parseSafeFloat(val);
             }
 
             if (!saleMonth) return getFallbackValue();
@@ -1434,9 +1442,10 @@ export default function LiquidacionesPage() {
             // Fetch catalog override value for technical products if it exists
             const det = (sale.detalle || '').toLowerCase();
             
+            const isTV = det === 'suscripciones tv' || det === 'suscripcion tv';
             // O2, Seguro, miMovistar and new standalone categories store their commission directly in importe/cuota
-            if (det === 'o2' || det === 'seguro' || det === 'mimovistar' || det === 'repos' || det === 'varios' || det === 'suscripciones tv' || det === 'prepago' || det === 'resto baf' || det === 'traslado mimovistar') {
-                return Number(sale.importe || sale.cuota || 0);
+            if (det === 'o2' || det === 'seguro' || det === 'mimovistar' || det === 'repos' || det === 'varios' || isTV || det === 'prepago' || det === 'resto baf' || det === 'traslado mimovistar') {
+                return parseSafeFloat(sale.importe || sale.cuota || 0);
             }
             
             let overrideBaseValue: number | undefined = undefined;
