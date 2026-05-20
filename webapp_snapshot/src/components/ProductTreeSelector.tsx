@@ -175,7 +175,7 @@ export default function ProductTreeSelector({ value, onChange, disabled, placeho
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {categories.map(cat => {
-              const products = catalogs[cat] || []
+              const products = (cat === 'Traslado miMovistar' ? catalogs['miMovistar'] : catalogs[cat]) || []
               // Filter distinct product names
               const distinctProducts = [...new Set(products.map(p => p.producto).filter(Boolean))].sort()
               const isExpanded = expandedCats[cat]
