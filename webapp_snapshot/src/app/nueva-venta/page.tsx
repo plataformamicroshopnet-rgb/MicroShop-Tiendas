@@ -146,7 +146,11 @@ export default function NuevaVentaPage() {
                return Number(String(val).replace(',', '.')) || 0;
              };
              const cat = newProducts[index].categoria
-            if (cat === 'O2' || cat === 'Seguro' || cat === 'Suscripciones TV' || cat === 'Prepago' || cat === 'Varios') {
+            if (cat === 'Suscripciones TV') {
+              const baseCom = parseSafeNum(selectedItem.comision);
+              const mult = parseSafeNum(selectedItem.comisionConCoste || '1.00');
+              newProducts[index].importe = String(baseCom * (mult === 0 ? 1 : mult));
+            } else if (cat === 'O2' || cat === 'Seguro' || cat === 'Prepago' || cat === 'Varios') {
               newProducts[index].importe = selectedItem.comision || ''
             } else if (cat === 'Repos') {
                if (selectedItem.comisionConCoste && Number(selectedItem.comisionConCoste) > 0) {
