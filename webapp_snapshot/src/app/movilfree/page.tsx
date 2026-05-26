@@ -635,6 +635,12 @@ export default function MovilFreeApp() {
                   <label style={{fontSize: 12, fontWeight: 'bold', color: '#666'}}>Stock</label>
                   <input type="number" placeholder="Uds." value={newProd.stock || ''} onChange={e=>setNewProd({...newProd, stock: Number(e.target.value)})} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ddd', marginTop: 4 }} />
                 </div>
+                {newProd.categoria === 'Terminal' && (
+                  <div>
+                    <label style={{fontSize: 12, fontWeight: 'bold', color: '#E91E97'}}>IMEI (15 dígitos)</label>
+                    <input type="text" maxLength={15} placeholder="Ej: 352456789012345" value={newProd.imei || ''} onChange={e=>setNewProd({...newProd, imei: e.target.value.replace(/\D/g, '')})} style={{ width: '100%', padding: 10, borderRadius: 6, border: '2px solid #E91E97', marginTop: 4, fontFamily: 'monospace' }} />
+                  </div>
+                )}
                 <div className="mf-action-buttons">
                   <button onClick={handleCreateProduct} style={{ background: fuchsia, color: 'white', border: 'none', padding: '12px 20px', borderRadius: 6, fontWeight: 'bold', cursor: 'pointer', height: 40, whiteSpace: 'nowrap' }}>Añadir</button>
                   <button onClick={() => setShowPasteModal(true)} style={{ background: '#4CAF50', color: 'white', border: 'none', padding: '12px 20px', borderRadius: 6, fontWeight: 'bold', cursor: 'pointer', height: 40, whiteSpace: 'nowrap' }}>Excel 📋</button>
