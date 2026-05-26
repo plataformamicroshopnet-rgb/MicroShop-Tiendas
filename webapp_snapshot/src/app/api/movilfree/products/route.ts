@@ -24,7 +24,8 @@ export async function POST(req: Request) {
         categoria: data.categoria,
         precio: data.precio,
         coste: data.coste,
-        stock: data.stock
+        stock: data.stock,
+        imei: data.imei || null
       }
     })
     return NextResponse.json(item)
