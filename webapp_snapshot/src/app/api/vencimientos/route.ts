@@ -85,22 +85,23 @@ export async function PUT(req: Request) {
     const { id, ...data } = body
     if (!id) return NextResponse.json({ success: false, error: 'ID required' }, { status: 400 })
 
+    const updateData: any = {}
+    if (data.proveedor !== undefined) updateData.proveedor = data.proveedor
+    if (data.fechaFactura !== undefined) updateData.fechaFactura = data.fechaFactura
+    if (data.albaran !== undefined) updateData.albaran = data.albaran
+    if (data.nFactura !== undefined) updateData.nFactura = data.nFactura
+    if (data.vencimiento !== undefined) updateData.vencimiento = data.vencimiento
+    if (data.pagado !== undefined) updateData.pagado = data.pagado
+    if (data.recargo !== undefined) updateData.recargo = parseFloat(data.recargo) || 0
+    if (data.tarjetas !== undefined) updateData.tarjetas = parseFloat(data.tarjetas) || 0
+    if (data.accesorios !== undefined) updateData.accesorios = parseFloat(data.accesorios) || 0
+    if (data.moviles !== undefined) updateData.moviles = parseFloat(data.moviles) || 0
+    if (data.iva !== undefined) updateData.iva = parseFloat(data.iva) || 0
+    if (data.totalFactura !== undefined) updateData.totalFactura = parseFloat(data.totalFactura) || 0
+
     const updated = await prisma.vencimiento.update({
       where: { id },
-      data: {
-        proveedor: data.proveedor,
-        fechaFactura: data.fechaFactura,
-        albaran: data.albaran,
-        nFactura: data.nFactura,
-        vencimiento: data.vencimiento,
-        pagado: data.pagado,
-        recargo: parseFloat(data.recargo) || 0,
-        tarjetas: parseFloat(data.tarjetas) || 0,
-        accesorios: parseFloat(data.accesorios) || 0,
-        moviles: parseFloat(data.moviles) || 0,
-        iva: parseFloat(data.iva) || 0,
-        totalFactura: parseFloat(data.totalFactura) || 0
-      }
+      data: updateData
     })
     return NextResponse.json({ success: true, data: updated })
   } catch (error: any) {

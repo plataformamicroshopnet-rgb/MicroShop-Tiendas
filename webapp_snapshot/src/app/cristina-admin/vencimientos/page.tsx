@@ -74,7 +74,7 @@ export default function VencimientosPage() {
     await fetch('/api/vencimientos', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: item.id, pagado: updated.pagado })
+      body: JSON.stringify(updated)
     })
   }
 
