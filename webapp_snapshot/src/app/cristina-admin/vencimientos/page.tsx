@@ -38,7 +38,7 @@ export default function VencimientosPage() {
   const loadData = async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/vencimientos')
+      const res = await fetch('/api/vencimientos', { cache: 'no-store' })
       const json = await res.json()
       if (json.success) {
         setItems(json.data)

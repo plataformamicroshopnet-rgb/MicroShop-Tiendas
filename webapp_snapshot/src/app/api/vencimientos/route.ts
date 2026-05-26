@@ -3,7 +3,9 @@ import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
-export async function GET() {
+export const dynamic = 'force-dynamic'
+
+export async function GET(req: Request) {
   try {
     const items = await prisma.vencimiento.findMany({
       orderBy: { createdAt: 'desc' }
