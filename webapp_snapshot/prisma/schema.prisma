@@ -722,6 +722,10 @@ model ComisionFFVVTienda {
   o2Varios     Float? @default(0)
   total        Float? @default(0)
 
+  notasVarios  String?
+  notasDietas  String?
+  notasKm      String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

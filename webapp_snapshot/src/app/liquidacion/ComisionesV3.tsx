@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, ClipboardList, Trash2, ArrowLeft } from 'lucide-react';
+import { Save, ClipboardList, Trash2, ArrowLeft, MessageSquare } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 export function ComisionesV3({ activePeriodKey, canModify }: { activePeriodKey: string, canModify: boolean }) {
@@ -102,6 +102,36 @@ export function ComisionesV3({ activePeriodKey, canModify }: { activePeriodKey: 
 
             return arr;
         });
+    };
+
+    const handleNoteClick = (index: number, field: string) => {
+        if (!canModify) return;
+        const currentNote = comisiones[index][field] || '';
+        const newNote = window.prompt("Editar nota:", currentNote);
+        if (newNote !== null) {
+            setComisiones(prev => {
+                const arr = [...prev];
+                arr[index] = { ...arr[index], [field]: newNote };
+                return arr;
+            });
+        }
+    };
+
+    const renderNoteIcon = (index: number, noteField: string) => {
+        const note = comisiones[index][noteField];
+        const hasNote = !!note && String(note).trim() !== '';
+        return (
+            <button 
+                title={hasNote ? note : "Añadir nota"}
+                onClick={() => handleNoteClick(index, noteField)}
+                style={{ 
+                    background: 'transparent', border: 'none', cursor: 'pointer', padding: '2px', marginLeft: '4px',
+                    color: hasNote ? '#f59e0b' : '#cbd5e1', display: 'flex', alignItems: 'center'
+                }}
+            >
+                <MessageSquare size={14} fill={hasNote ? '#fef3c7' : 'none'} />
+            </button>
+        );
     };
 
     const addNewRow = (tipo: 'FFVV' | 'TIENDA' | 'LOGISTICA') => {
@@ -285,10 +315,25 @@ export function ComisionesV3({ activePeriodKey, canModify }: { activePeriodKey: 
                                             <tr key={r.id} style={{ background: i % 2 === 0 ? '#ffffff' : '#f0f9ff', borderBottom: '1px solid #e2e8f0' }}>
                                                 <td style={{ padding: '2px 4px' }}><input style={inputStyle} value={r.nombre || ''} onChange={e => handleFieldChange(i, 'nombre', e.target.value)} /></td>
                                                 <td style={{ padding: '2px 4px' }}><input style={numInputStyle} value={r.importe ?? ''} onChange={e => handleFieldChange(i, 'importe', e.target.value)} /></td>
-                                                <td style={{ padding: '2px 4px' }}><input style={numInputStyle} value={r.aceleradores ?? ''} onChange={e => handleFieldChange(i, 'aceleradores', e.target.value)} /></td>
+                                                <td style={{ padding: '2px 4px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                                        <input style={numInputStyle} value={r.aceleradores ?? ''} onChange={e => handleFieldChange(i, 'aceleradores', e.target.value)} />
+                                                        {renderNoteIcon(i, 'notasVarios')}
+                                                    </div>
+                                                </td>
                                                 <td style={{ padding: '2px 4px' }}><input style={{...numInputStyle, color: r.descuentos ? '#ef4444' : '#0f172a', fontWeight: r.descuentos ? 600 : 400}} value={r.descuentos ?? ''} onChange={e => handleFieldChange(i, 'descuentos', e.target.value)} /></td>
-                                                <td style={{ padding: '2px 4px' }}><input style={numInputStyle} value={r.dietas ?? ''} onChange={e => handleFieldChange(i, 'dietas', e.target.value)} /></td>
-                                                <td style={{ padding: '2px 4px' }}><input style={numInputStyle} value={r.km ?? ''} onChange={e => handleFieldChange(i, 'km', e.target.value)} /></td>
+                                                <td style={{ padding: '2px 4px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                                        <input style={numInputStyle} value={r.dietas ?? ''} onChange={e => handleFieldChange(i, 'dietas', e.target.value)} />
+                                                        {renderNoteIcon(i, 'notasDietas')}
+                                                    </div>
+                                                </td>
+                                                <td style={{ padding: '2px 4px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                                        <input style={numInputStyle} value={r.km ?? ''} onChange={e => handleFieldChange(i, 'km', e.target.value)} />
+                                                        {renderNoteIcon(i, 'notasKm')}
+                                                    </div>
+                                                </td>
                                                 <td style={{ padding: '2px 4px' }}><input style={numInputStyle} value={r.incentivos ?? ''} onChange={e => handleFieldChange(i, 'incentivos', e.target.value)} /></td>
                                                 <td style={{ padding: '2px 4px', textAlign: 'right', fontWeight: 800 }}>{formatEuro(r.total || 0)}</td>
                                                 <td style={{ padding: '2px 4px', textAlign: 'center' }}>
@@ -329,7 +374,12 @@ export function ComisionesV3({ activePeriodKey, canModify }: { activePeriodKey: 
                                             <tr key={r.id} style={{ background: i % 2 === 0 ? '#ffffff' : '#f0f9ff', borderBottom: '1px solid #e2e8f0' }}>
                                                 <td style={{ padding: '2px 4px' }}><input style={inputStyle} value={r.nombre || ''} onChange={e => handleFieldChange(i, 'nombre', e.target.value)} /></td>
                                                 <td style={{ padding: '2px 4px' }}><input style={numInputStyle} value={r.importe ?? ''} onChange={e => handleFieldChange(i, 'importe', e.target.value)} /></td>
-                                                <td style={{ padding: '2px 4px' }}><input style={numInputStyle} value={r.o2Varios ?? ''} onChange={e => handleFieldChange(i, 'o2Varios', e.target.value)} /></td>
+                                                <td style={{ padding: '2px 4px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                                        <input style={numInputStyle} value={r.o2Varios ?? ''} onChange={e => handleFieldChange(i, 'o2Varios', e.target.value)} />
+                                                        {renderNoteIcon(i, 'notasVarios')}
+                                                    </div>
+                                                </td>
                                                 <td style={{ padding: '2px 4px' }}><input style={{...numInputStyle, color: r.descuentos ? '#ef4444' : '#0f172a', fontWeight: r.descuentos ? 600 : 400}} value={r.descuentos ?? ''} onChange={e => handleFieldChange(i, 'descuentos', e.target.value)} /></td>
                                                 <td style={{ padding: '2px 4px', textAlign: 'right', fontWeight: 800 }}>{formatEuro(r.total || 0)}</td>
                                                 <td style={{ padding: '2px 4px', textAlign: 'center' }}>
@@ -373,8 +423,18 @@ export function ComisionesV3({ activePeriodKey, canModify }: { activePeriodKey: 
                                                 <td style={{ padding: '2px 4px' }}><input style={inputStyle} value={r.nombre || ''} onChange={e => handleFieldChange(i, 'nombre', e.target.value)} /></td>
                                                 <td style={{ padding: '2px 4px' }}><input style={numInputStyle} value={r.importe ?? ''} onChange={e => handleFieldChange(i, 'importe', e.target.value)} /></td>
                                                 <td style={{ padding: '2px 4px' }}><input style={numInputStyle} value={r.gasolina ?? ''} onChange={e => handleFieldChange(i, 'gasolina', e.target.value)} /></td>
-                                                <td style={{ padding: '2px 4px' }}><input style={numInputStyle} value={r.dietas ?? ''} onChange={e => handleFieldChange(i, 'dietas', e.target.value)} /></td>
-                                                <td style={{ padding: '2px 4px' }}><input style={numInputStyle} value={r.km ?? ''} onChange={e => handleFieldChange(i, 'km', e.target.value)} /></td>
+                                                <td style={{ padding: '2px 4px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                                        <input style={numInputStyle} value={r.dietas ?? ''} onChange={e => handleFieldChange(i, 'dietas', e.target.value)} />
+                                                        {renderNoteIcon(i, 'notasDietas')}
+                                                    </div>
+                                                </td>
+                                                <td style={{ padding: '2px 4px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                                        <input style={numInputStyle} value={r.km ?? ''} onChange={e => handleFieldChange(i, 'km', e.target.value)} />
+                                                        {renderNoteIcon(i, 'notasKm')}
+                                                    </div>
+                                                </td>
                                                 <td style={{ padding: '2px 4px' }}><input style={numInputStyle} value={r.incentivos ?? ''} onChange={e => handleFieldChange(i, 'incentivos', e.target.value)} /></td>
                                                 <td style={{ padding: '2px 4px', textAlign: 'right', fontWeight: 800 }}>{formatEuro(r.total || 0)}</td>
                                                 <td style={{ padding: '2px 4px', textAlign: 'center' }}>

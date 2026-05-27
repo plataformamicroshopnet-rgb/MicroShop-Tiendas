@@ -87,6 +87,9 @@ export async function PUT(request: Request) {
                     incentivos: item.incentivos !== null ? parseFloat(item.incentivos) : null,
                     o2Varios: item.o2Varios !== null ? parseFloat(item.o2Varios) : null,
                     total: item.total !== null ? parseFloat(item.total) : null,
+                    notasVarios: item.notasVarios !== undefined ? item.notasVarios : null,
+                    notasDietas: item.notasDietas !== undefined ? item.notasDietas : null,
+                    notasKm: item.notasKm !== undefined ? item.notasKm : null,
                 }
             })
         } else {
@@ -104,6 +107,9 @@ export async function PUT(request: Request) {
                     incentivos: item.incentivos !== null && item.incentivos !== undefined ? parseFloat(item.incentivos) : null,
                     o2Varios: item.o2Varios !== null && item.o2Varios !== undefined ? parseFloat(item.o2Varios) : null,
                     total: item.total !== null && item.total !== undefined ? parseFloat(item.total) : null,
+                    notasVarios: item.notasVarios !== undefined ? item.notasVarios : null,
+                    notasDietas: item.notasDietas !== undefined ? item.notasDietas : null,
+                    notasKm: item.notasKm !== undefined ? item.notasKm : null,
                 }
             })
         }
