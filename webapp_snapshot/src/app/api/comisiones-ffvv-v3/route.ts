@@ -90,6 +90,7 @@ export async function PUT(request: Request) {
                     notasVarios: item.notasVarios !== undefined ? item.notasVarios : null,
                     notasDietas: item.notasDietas !== undefined ? item.notasDietas : null,
                     notasKm: item.notasKm !== undefined ? item.notasKm : null,
+                    notasDescuentos: item.notasDescuentos !== undefined ? item.notasDescuentos : null,
                 }
             })
         } else {
@@ -110,6 +111,7 @@ export async function PUT(request: Request) {
                     notasVarios: item.notasVarios !== undefined ? item.notasVarios : null,
                     notasDietas: item.notasDietas !== undefined ? item.notasDietas : null,
                     notasKm: item.notasKm !== undefined ? item.notasKm : null,
+                    notasDescuentos: item.notasDescuentos !== undefined ? item.notasDescuentos : null,
                 }
             })
         }

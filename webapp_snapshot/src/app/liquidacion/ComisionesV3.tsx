@@ -92,12 +92,14 @@ export function ComisionesV3({ activePeriodKey, canModify }: { activePeriodKey: 
             if (row.tipo === 'FFVV') {
                 const total = (row.importe || 0) + (row.aceleradores || 0) - (row.descuentos || 0);
                 arr[index].total = total;
+                arr[index].incentivos = total - (row.dietas || 0) - (row.km || 0);
             } else if (row.tipo === 'TIENDA') {
                 const total = (row.importe || 0) + (row.o2Varios || 0) - (row.descuentos || 0);
                 arr[index].total = total;
             } else if (row.tipo === 'LOGISTICA') {
                 const total = (row.importe || 0) + (row.gasolina || 0);
                 arr[index].total = total;
+                arr[index].incentivos = total - (row.dietas || 0) - (row.km || 0);
             }
 
             return arr;
@@ -321,7 +323,12 @@ export function ComisionesV3({ activePeriodKey, canModify }: { activePeriodKey: 
                                                         {renderNoteIcon(i, 'notasVarios')}
                                                     </div>
                                                 </td>
-                                                <td style={{ padding: '2px 4px' }}><input style={{...numInputStyle, color: r.descuentos ? '#ef4444' : '#0f172a', fontWeight: r.descuentos ? 600 : 400}} value={r.descuentos ?? ''} onChange={e => handleFieldChange(i, 'descuentos', e.target.value)} /></td>
+                                                <td style={{ padding: '2px 4px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                                        <input style={{...numInputStyle, color: r.descuentos ? '#ef4444' : '#0f172a', fontWeight: r.descuentos ? 600 : 400}} value={r.descuentos ?? ''} onChange={e => handleFieldChange(i, 'descuentos', e.target.value)} />
+                                                        {renderNoteIcon(i, 'notasDescuentos')}
+                                                    </div>
+                                                </td>
                                                 <td style={{ padding: '2px 4px' }}>
                                                     <div style={{ display: 'flex', alignItems: 'center' }}>
                                                         <input style={numInputStyle} value={r.dietas ?? ''} onChange={e => handleFieldChange(i, 'dietas', e.target.value)} />
@@ -334,7 +341,9 @@ export function ComisionesV3({ activePeriodKey, canModify }: { activePeriodKey: 
                                                         {renderNoteIcon(i, 'notasKm')}
                                                     </div>
                                                 </td>
-                                                <td style={{ padding: '2px 4px' }}><input style={numInputStyle} value={r.incentivos ?? ''} onChange={e => handleFieldChange(i, 'incentivos', e.target.value)} /></td>
+                                                <td style={{ padding: '2px 4px', textAlign: 'right', fontWeight: 600, color: '#0066cc' }}>
+                                                    {formatEuro(r.incentivos || 0)}
+                                                </td>
                                                 <td style={{ padding: '2px 4px', textAlign: 'right', fontWeight: 800 }}>{formatEuro(r.total || 0)}</td>
                                                 <td style={{ padding: '2px 4px', textAlign: 'center' }}>
                                                     <button onClick={() => { if(window.confirm('¿Borrar fila?')) deleteRow(r.id); }} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={16} /></button>
@@ -380,7 +389,12 @@ export function ComisionesV3({ activePeriodKey, canModify }: { activePeriodKey: 
                                                         {renderNoteIcon(i, 'notasVarios')}
                                                     </div>
                                                 </td>
-                                                <td style={{ padding: '2px 4px' }}><input style={{...numInputStyle, color: r.descuentos ? '#ef4444' : '#0f172a', fontWeight: r.descuentos ? 600 : 400}} value={r.descuentos ?? ''} onChange={e => handleFieldChange(i, 'descuentos', e.target.value)} /></td>
+                                                <td style={{ padding: '2px 4px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                                        <input style={{...numInputStyle, color: r.descuentos ? '#ef4444' : '#0f172a', fontWeight: r.descuentos ? 600 : 400}} value={r.descuentos ?? ''} onChange={e => handleFieldChange(i, 'descuentos', e.target.value)} />
+                                                        {renderNoteIcon(i, 'notasDescuentos')}
+                                                    </div>
+                                                </td>
                                                 <td style={{ padding: '2px 4px', textAlign: 'right', fontWeight: 800 }}>{formatEuro(r.total || 0)}</td>
                                                 <td style={{ padding: '2px 4px', textAlign: 'center' }}>
                                                     <button onClick={() => { if(window.confirm('¿Borrar fila?')) deleteRow(r.id); }} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={16} /></button>
@@ -435,7 +449,9 @@ export function ComisionesV3({ activePeriodKey, canModify }: { activePeriodKey: 
                                                         {renderNoteIcon(i, 'notasKm')}
                                                     </div>
                                                 </td>
-                                                <td style={{ padding: '2px 4px' }}><input style={numInputStyle} value={r.incentivos ?? ''} onChange={e => handleFieldChange(i, 'incentivos', e.target.value)} /></td>
+                                                <td style={{ padding: '2px 4px', textAlign: 'right', fontWeight: 600, color: '#0066cc' }}>
+                                                    {formatEuro(r.incentivos || 0)}
+                                                </td>
                                                 <td style={{ padding: '2px 4px', textAlign: 'right', fontWeight: 800 }}>{formatEuro(r.total || 0)}</td>
                                                 <td style={{ padding: '2px 4px', textAlign: 'center' }}>
                                                     <button onClick={() => { if(window.confirm('¿Borrar fila?')) deleteRow(r.id); }} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={16} /></button>
