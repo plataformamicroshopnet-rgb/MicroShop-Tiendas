@@ -747,7 +747,9 @@ export default function NuevaVentaPage() {
                           </select>
                         </div>
                         <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label className="form-label" style={{ color: '#555' }}>Teléfono</label>
+                          <label className="form-label" style={{ color: (prod.categoria === 'Repos' || prod.categoria === 'Suscripciones TV') ? '#D32F2F' : '#555', fontWeight: (prod.categoria === 'Repos' || prod.categoria === 'Suscripciones TV') ? 'bold' : 'normal' }}>
+                            {(prod.categoria === 'Repos' || prod.categoria === 'Suscripciones TV') ? 'Teléfono Fijo Obligatorio' : 'Teléfono'}
+                          </label>
                           <input 
                             type="text" 
                             className="form-input" 
