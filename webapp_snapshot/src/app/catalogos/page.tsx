@@ -182,9 +182,19 @@ export default function CatalogosPage() {
        
        // Agrupamos para validar colisiones de fecha
        const byProduct: Record<string, any[]> = {};
+       const seenExactDuplicates = new Set<string>();
        
        exportCatalogs[cat] = items
          .filter(it => it.importStatus !== 'missing') // AUTO-DELETE: Ignorar productos obsoletos
+         .filter(it => {
+            // SILENT DEDUPLICATION: If there are exact duplicates (same product, cat, gama, and dates), keep only one.
+            const exactKey = [it.producto, it.subcategoria, it.gama, it.fabricante, it.validFrom, it.validTo]
+              .map(x => (x || '').trim().toLowerCase())
+              .join('|');
+            if (seenExactDuplicates.has(exactKey)) return false;
+            seenExactDuplicates.add(exactKey);
+            return true;
+         })
          .map(it => {
           const pName = [it.producto, it.subcategoria, it.gama, it.fabricante]
             .map(x => (x || '').trim().toLowerCase())
