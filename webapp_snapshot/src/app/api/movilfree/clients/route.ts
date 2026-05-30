@@ -14,6 +14,26 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const data = await req.json()
+    if (Array.isArray(data)) {
+      const items = await prisma.$transaction(
+        data.map(c => prisma.movilFreeClient.create({
+          data: {
+            nif: c.nif || '',
+            nombre: c.nombre || '',
+            direccion: c.direccion || '',
+            poblacion: c.poblacion || '',
+            provincia: c.provincia || '',
+            cp: c.cp || '',
+            movil: c.movil || '',
+            fijo: c.fijo || '',
+            email: c.email || '',
+            totalComprado: c.totalComprado || 0
+          }
+        }))
+      )
+      return NextResponse.json(items)
+    }
+
     const item = await prisma.movilFreeClient.create({
       data: {
         nif: data.nif,
@@ -24,7 +44,8 @@ export async function POST(req: Request) {
         cp: data.cp,
         movil: data.movil,
         fijo: data.fijo,
-        email: data.email
+        email: data.email,
+        totalComprado: data.totalComprado || 0
       }
     })
     return NextResponse.json(item)

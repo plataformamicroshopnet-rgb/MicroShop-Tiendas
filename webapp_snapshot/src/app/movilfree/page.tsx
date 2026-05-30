@@ -134,6 +134,39 @@ export default function MovilFreeApp() {
     setNewClient({ nif: '', nombre: '', direccion: '', poblacion: '', provincia: '', cp: '', movil: '', fijo: '', email: '' })
   }
 
+  const [showClientPasteModal, setShowClientPasteModal] = useState(false)
+  const [clientPasteText, setClientPasteText] = useState('')
+
+  const handleBulkClientPaste = async () => {
+    if(!clientPasteText.trim()) return
+    const rows = clientPasteText.split('\n').filter(r => r.trim() !== '')
+    const newClients = rows.map(r => {
+      const cols = r.split('\t')
+      return {
+        nif: cols[0] ? cols[0].trim() : '',
+        nombre: cols[1] ? cols[1].trim() : 'Desconocido',
+        movil: cols[2] ? cols[2].trim() : '',
+        direccion: cols[3] ? cols[3].trim() : '',
+        totalComprado: parseFloat((cols[4] || '0').replace(',', '.')) || 0,
+      }
+    })
+    
+    try {
+      const res = await fetch('/api/movilfree/clients', { method: 'POST', body: JSON.stringify(newClients) })
+      if (!res.ok) throw new Error('Error al guardar en masa')
+      
+      const cliRes = await fetch('/api/movilfree/clients')
+      const data = await cliRes.json()
+      setClients(data)
+      
+      setShowClientPasteModal(false)
+      setClientPasteText('')
+      alert(`¡Se han añadido ${newClients.length} clientes correctamente!`)
+    } catch(e: any) {
+      alert(e.message)
+    }
+  }
+
   // 3. VENTAS (NUEVA VENTA)
   const [printModalSale, setPrintModalSale] = useState<Sale | null>(null)
   const [cart, setCart] = useState<{product: Product, cantidad: number}[]>([])
@@ -650,7 +683,7 @@ export default function MovilFreeApp() {
               {showPasteModal && (
                 <div style={{ background: '#e8f5e9', padding: 16, borderRadius: 12, marginBottom: 24, border: '1px solid #4CAF50' }}>
                   <h3 style={{ marginTop: 0, color: '#2e7d32' }}>Importar desde Excel</h3>
-                  <p style={{ fontSize: 13, color: '#333' }}>Copia las filas desde tu Excel respetando el orden de estas 6 columnas: <strong>Nombre, Categoría, Coste, Precio, PVP, Stock</strong>. Pégalas aquí:</p>
+                  <p style={{ fontSize: 13, color: '#333' }}>Copia las filas desde tu Excel respetando el orden de estas 7 columnas: <strong>Nombre, Categoría, Coste, Precio, PVP, Stock, IMEI</strong>. Pégalas aquí:</p>
                   <textarea 
                     value={pasteText}
                     onChange={e => setPasteText(e.target.value)}
@@ -787,8 +820,28 @@ export default function MovilFreeApp() {
                   <label style={{fontSize: 12, fontWeight: 'bold', color: '#666'}}>Email</label>
                   <input type="email" placeholder="correo@..." value={newClient.email} onChange={e=>setNewClient({...newClient, email: e.target.value})} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ddd', marginTop: 4 }} />
                 </div>
-                <button onClick={handleCreateClient} style={{ background: '#E91E97', color: 'white', border: 'none', padding: '12px 20px', borderRadius: 6, fontWeight: 'bold', cursor: 'pointer', height: 40 }}>Registrar Cliente</button>
+                <div className="mf-action-buttons">
+                  <button onClick={handleCreateClient} style={{ background: '#E91E97', color: 'white', border: 'none', padding: '12px 20px', borderRadius: 6, fontWeight: 'bold', cursor: 'pointer', height: 40, whiteSpace: 'nowrap' }}>Registrar Cliente</button>
+                  <button onClick={() => setShowClientPasteModal(true)} style={{ background: '#4CAF50', color: 'white', border: 'none', padding: '12px 20px', borderRadius: 6, fontWeight: 'bold', cursor: 'pointer', height: 40, whiteSpace: 'nowrap' }}>Excel 📋</button>
+                </div>
               </div>
+
+              {showClientPasteModal && (
+                <div style={{ background: '#e8f5e9', padding: 16, borderRadius: 12, marginBottom: 24, border: '1px solid #4CAF50' }}>
+                  <h3 style={{ marginTop: 0, color: '#2e7d32' }}>Importar Clientes desde Excel</h3>
+                  <p style={{ fontSize: 13, color: '#333' }}>Copia las filas desde tu Excel respetando el orden de estas 5 columnas: <strong>NIF, Nombre, Contacto, Dirección y Total Comprado</strong>. Pégalas aquí:</p>
+                  <textarea 
+                    value={clientPasteText}
+                    onChange={e => setClientPasteText(e.target.value)}
+                    style={{ width: '100%', height: 150, padding: 10, borderRadius: 6, border: '1px solid #ddd', fontFamily: 'monospace', whiteSpace: 'pre' }}
+                    placeholder="Ejemplo:&#10;12345678Z&#9;Juan Perez&#9;600123456&#9;Calle Mayor 1&#9;150.00"
+                  />
+                  <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+                    <button onClick={handleBulkClientPaste} style={{ background: '#4CAF50', color: 'white', border: 'none', padding: '10px 20px', borderRadius: 6, fontWeight: 'bold', cursor: 'pointer' }}>Procesar y Guardar</button>
+                    <button onClick={() => setShowClientPasteModal(false)} style={{ background: '#ccc', color: '#333', border: 'none', padding: '10px 20px', borderRadius: 6, fontWeight: 'bold', cursor: 'pointer' }}>Cancelar</button>
+                  </div>
+                </div>
+              )}
 
                             <h3 style={{ margin: 0, color: '#333', marginBottom: 16 }}>Listado de Clientes</h3>
               <div className="mf-table-wrapper">
@@ -798,7 +851,7 @@ export default function MovilFreeApp() {
                     <th style={{ padding: 12, borderRadius: '8px 0 0 8px' }}>NIF</th>
                     <th style={{ padding: 12 }}>Nombre</th>
                     <th style={{ padding: 12 }}>Contacto</th>
-                    <th style={{ padding: 12 }}>Ubicación</th>
+                    <th style={{ padding: 12 }}>Dirección</th>
                     <th style={{ padding: 12, borderRadius: '0 8px 8px 0' }}>Total Comprado</th>
                   </tr>
                 </thead>
