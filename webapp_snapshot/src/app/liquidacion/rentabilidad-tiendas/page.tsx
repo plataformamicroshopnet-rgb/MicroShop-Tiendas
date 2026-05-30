@@ -57,7 +57,7 @@ export default function RentabilidadTiendasPage() {
         if (!activePeriodKey) return;
 
         const [salesRes, catRes, pymeRes, plusRes, objRes] = await Promise.all([
-          fetch(`/api/sales?period=${periodStr}&strictPeriod=1`).catch(() => null),
+          fetch(`/api/sales?periodKey=${activePeriodKey}&strictPeriod=1`).catch(() => null),
           fetch(`/api/catalogs?_t=${Date.now()}`).catch(() => null),
           fetch(`/api/importes-pyme?periodKey=${activePeriodKey}&strictPeriod=1`).catch(() => null),
           fetch(`/api/importes-plus?periodKey=${activePeriodKey}&strictPeriod=1`).catch(() => null),
@@ -158,7 +158,7 @@ export default function RentabilidadTiendasPage() {
           ? `${activePeriodObj.year}${String(activePeriodObj.month).padStart(2, '0')}`
           : getCurrentMonthString();
       
-      if (saleMonth !== viewingPeriod) return { ...sale, comisionReal: parseToNumber(getFallbackValue()) }
+      if (saleMonth && saleMonth !== viewingPeriod) return null;
       
       const dashboardRows = isPlus ? pymeRows : captadorRows;
       const det = (sale.detalle || '').toLowerCase();
@@ -209,7 +209,7 @@ export default function RentabilidadTiendasPage() {
 
       const finalCommission = parseToNumber(calculateDynamicCommission(sale, dashboardRows, overrideBaseValue));
       return { ...sale, comisionReal: finalCommission }
-    })
+    }).filter(Boolean) as any[]
 
     const result = Object.entries(TIENDAS_COMERCIALES).map(([tiendaName, comerciales]) => {
       const rows = comerciales.map(comercial => {
