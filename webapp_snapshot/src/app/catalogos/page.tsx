@@ -186,16 +186,9 @@ export default function CatalogosPage() {
        exportCatalogs[cat] = items
          .filter(it => it.importStatus !== 'missing') // AUTO-DELETE: Ignorar productos obsoletos
          .map(it => {
-          let pName = String(it.producto).trim().toLowerCase();
-          
-          // Generate a composite key for specific categories where name alone isn't unique
-          if (cat === 'miMovistar' || cat === 'Resto BAF' || cat === 'Traslado miMovistar') {
-            pName = `${String(it.subcategoria).trim().toLowerCase()}_${String(it.gama).trim().toLowerCase()}_${pName}`;
-          } else if (cat === 'Rent') {
-            pName = `${String(it.fabricante).trim().toLowerCase()}_${String(it.subcategoria).trim().toLowerCase()}_${String(it.gama).trim().toLowerCase()}_${pName}`;
-          } else if (cat === 'O2') {
-            pName = `${String(it.subcategoria).trim().toLowerCase()}_${pName}`;
-          }
+          const pName = [it.producto, it.subcategoria, it.gama, it.fabricante]
+            .map(x => (x || '').trim().toLowerCase())
+            .join('|');
 
           if (!byProduct[pName]) byProduct[pName] = [];
           
@@ -696,7 +689,7 @@ export default function CatalogosPage() {
         const isCompositeMatch = (it: ProductItem) => {
           if (activeTab === 'O2') return normalize(it.subcategoria) === normalize(row.categoria);
           if (activeTab === 'Rent') return normalize(it.fabricante) === normalize(row.fabricante) && normalize(it.subcategoria) === normalize(row.categoria) && normalize(it.gama) === normalize(row.gama);
-          if (activeTab === 'miMovistar' || activeTab === 'Resto BAF' || activeTab === 'Traslado miMovistar') return normalize(it.subcategoria) === normalize(row.subcategoria) && normalize(it.gama) === normalize(row.gama);
+          if (activeTab === 'miMovistar' || activeTab === 'Resto BAF' || activeTab === 'Traslado miMovistar') return normalize(it.subcategoria) === normalize(row.categoria || row.subcategoria) && normalize(it.gama) === normalize(row.gama);
           return true;
         };
 
@@ -739,7 +732,8 @@ export default function CatalogosPage() {
             if (item.comision !== row.comision) { item.comision = row.comision; changed = true; }
             if (item.comisionConCoste !== row.comisionConCoste) { item.comisionConCoste = row.comisionConCoste; changed = true; }
           } else if (activeTab === 'miMovistar' || activeTab === 'Resto BAF' || activeTab === 'Traslado miMovistar') {
-            if (item.subcategoria !== row.subcategoria) { item.subcategoria = row.subcategoria; changed = true; }
+            const parsedSubcat = row.categoria || row.subcategoria || '';
+            if (item.subcategoria !== parsedSubcat) { item.subcategoria = parsedSubcat; changed = true; }
             if (item.gama !== row.gama) { item.gama = row.gama; changed = true; }
             if (item.comision !== row.comision) { item.comision = row.comision; changed = true; }
             if (item.comisionConCoste !== row.comisionConCoste) { item.comisionConCoste = row.comisionConCoste; changed = true; }
