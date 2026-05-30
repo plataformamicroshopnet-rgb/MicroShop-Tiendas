@@ -17,6 +17,8 @@ export default function ProductosComisionanTab() {
 
   const [rules, setRules] = useState<any[]>([])
   const [hours, setHours] = useState<any[]>([])
+  const [showPasteModal, setShowPasteModal] = useState(false)
+  const [pasteText, setPasteText] = useState('')
 
   useEffect(() => {
     if (!activePeriodKey) return
@@ -82,6 +84,35 @@ export default function ProductosComisionanTab() {
     setRules(newRules)
   }
 
+  const handleBulkPaste = () => {
+    if (!pasteText.trim()) return;
+    const lines = pasteText.split('\n').filter(l => l.trim().length > 0);
+    const newRules: any[] = [];
+    
+    lines.forEach((line) => {
+      const parts = line.split('\t').map(p => p.trim());
+      if (parts.length > 0 && parts[0]) {
+        newRules.push({
+          id: Date.now().toString() + Math.random().toString(),
+          nombre: parts[0] || '',
+          productosCuentan: parts[1] || '',
+          objPrimerTramo: parts[2] ? parseFloat(parts[2].replace(',', '.')) || '' : '',
+          importePrimerTramo: parts[3] || '',
+          objSegundoTramo: parts[4] ? parseFloat(parts[4].replace(',', '.')) || '' : '',
+          importeSegundoTramo: parts[5] || '',
+          condicionantes: parts[6] || '',
+          totalHoras: parts[7] ? parseFloat(parts[7].replace(',', '.')) || '' : ''
+        });
+      }
+    });
+
+    if (newRules.length > 0) {
+      setRules([...rules, ...newRules]);
+      setPasteText('');
+      setShowPasteModal(false);
+    }
+  }
+
   // ---- HOURS HANDLERS ----
   const addHour = () => {
     setHours([...hours, { 
@@ -122,11 +153,33 @@ export default function ProductosComisionanTab() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <h3 style={{ margin: 0, color: 'var(--mercedes-cyan)' }}>1. Reglas Globales y Tramos de Comisiones</h3>
             {!isHistoric && (
-              <button onClick={addRule} className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
-                <Plus size={16} /> Añadir Regla
-              </button>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={() => setShowPasteModal(true)} className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, backgroundColor: '#E91E97', color: 'white', border: 'none' }}>
+                  <FileText size={16} /> Importar Lista
+                </button>
+                <button onClick={addRule} className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+                  <Plus size={16} /> Añadir Regla
+                </button>
+              </div>
             )}
           </div>
+          
+          {showPasteModal && (
+            <div style={{ background: '#FFF0F9', padding: 16, borderRadius: 12, marginBottom: 16, border: '1px solid #E91E97' }}>
+              <h4 style={{ marginTop: 0, color: '#E91E97' }}>Importar Lista desde Excel</h4>
+              <p style={{ fontSize: 13, color: '#333' }}>Copia las filas desde tu Excel respetando el orden de estas 8 columnas: <strong>Nombre Comisión, Tipo de Venta, Obj. Primer Tramo, Importe 1º, Obj. Segundo Tramo, Importe 2º, Condicionantes, Total Horas</strong>. Pégalas aquí:</p>
+              <textarea 
+                value={pasteText}
+                onChange={e => setPasteText(e.target.value)}
+                style={{ width: '100%', height: 120, padding: 10, borderRadius: 6, border: '1px solid #ddd', fontFamily: 'monospace', whiteSpace: 'pre' }}
+                placeholder="Ejemplo:&#10;Alta BAF&#9;Alta BAF Total&#9;15&#9;10€&#9;25&#9;15€&#9;&#9;262"
+              />
+              <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+                <button onClick={handleBulkPaste} style={{ background: '#4CAF50', color: 'white', border: 'none', padding: '8px 16px', borderRadius: 6, fontWeight: 'bold', cursor: 'pointer' }}>Procesar y Añadir</button>
+                <button onClick={() => setShowPasteModal(false)} style={{ background: '#ccc', color: '#333', border: 'none', padding: '8px 16px', borderRadius: 6, fontWeight: 'bold', cursor: 'pointer' }}>Cancelar</button>
+              </div>
+            </div>
+          )}
           
           <div style={{ overflow: 'visible' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>

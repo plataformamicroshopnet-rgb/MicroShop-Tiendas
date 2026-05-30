@@ -124,7 +124,12 @@ export async function POST(req: Request) {
                   mensual: c.mensual,
                   anual: c.anual,
                   validFrom: c.validFrom,
-                  validTo: c.validTo
+                  validTo: c.validTo,
+                  fabricante: c.fabricante,
+                  gama: c.gama,
+                  subcategoria: c.subcategoria,
+                  comision: c.comision,
+                  comisionConCoste: c.comisionConCoste
               }))
           },
           objectives: {
@@ -156,6 +161,55 @@ export async function POST(req: Request) {
         }
       })
       
+      // Duplicate TiendaCommissionRule
+      const sourceRules = await prisma.tiendaCommissionRule.findMany({ where: { periodKey: source.period_key } });
+      if (sourceRules.length > 0) {
+        await prisma.tiendaCommissionRule.createMany({
+          data: sourceRules.map(r => ({
+            periodKey: periodKey,
+            nombre: r.nombre,
+            productosCuentan: r.productosCuentan,
+            objPrimerTramo: r.objPrimerTramo,
+            importePrimerTramo: r.importePrimerTramo,
+            objSegundoTramo: r.objSegundoTramo,
+            importeSegundoTramo: r.importeSegundoTramo,
+            condicionantes: r.condicionantes,
+            totalHoras: r.totalHoras
+          }))
+        });
+      }
+
+      // Duplicate TiendaComercialHour
+      const sourceHours = await prisma.tiendaComercialHour.findMany({ where: { periodKey: source.period_key } });
+      if (sourceHours.length > 0) {
+        await prisma.tiendaComercialHour.createMany({
+          data: sourceHours.map(h => ({
+            periodKey: periodKey,
+            comercial: h.comercial,
+            horario: h.horario
+          }))
+        });
+      }
+
+      // Duplicate AppSettings for Territorial & O2
+      const keysToCopy = [
+        `territorial_tiendas_${source.period_key}`,
+        `territorial_o2_${source.period_key}`,
+        `o2_rules_v2_${source.period_key}`
+      ];
+      
+      for (const oldKey of keysToCopy) {
+        const setting = await prisma.appSetting.findUnique({ where: { key: oldKey } });
+        if (setting) {
+          const newKey = oldKey.replace(source.period_key, periodKey);
+          await prisma.appSetting.upsert({
+            where: { key: newKey },
+            update: { value: setting.value },
+            create: { key: newKey, value: setting.value }
+          });
+        }
+      }
+
       return NextResponse.json({ success: true, period: newPeriod })
     }
 
