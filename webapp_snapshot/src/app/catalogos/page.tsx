@@ -556,22 +556,29 @@ export default function CatalogosPage() {
              pDesde = tail[2];
              pHasta = tail[3];
           } else if (tail.length === 3) {
-             if (isDate(tail[1]) || isDate(tail[2])) {
+             if (isDate(tail[1]) && isDate(tail[2])) {
                 pAmt = tail[0];
                 pDesde = tail[1];
                 pHasta = tail[2];
              } else {
                 pDesc = tail[0];
                 pAmt = tail[1];
-                pDesde = tail[2];
+                if (isDate(tail[2])) {
+                   pHasta = tail[2]; // Asumimos que una sola fecha suele ser el Fin de Vigencia
+                } else {
+                   pDesde = tail[2];
+                }
              }
           } else if (tail.length === 2) {
              if (isDate(tail[1])) {
                 pAmt = tail[0];
-                pDesde = tail[1];
+                pHasta = tail[1];
+             } else if (isMoney(tail[1])) {
+                pDesc = tail[0];
+                pAmt = tail[1];
              } else if (isMoney(tail[0])) {
                 pAmt = tail[0];
-                pDesde = tail[1];
+                pDesc = tail[1];
              } else {
                 pDesc = tail[0];
                 pAmt = tail[1];
