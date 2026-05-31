@@ -84,21 +84,9 @@ type ProductItem = {
 const CATEGORIES = ['Fija y Móvil', 'Ti', 'Rent', 'Seguro', 'O2', 'miMovistar', 'Suscripciones TV', 'Prepago', 'Varios', 'Repos', 'Resto BAF']
 
 const getTabStyle = (cat: string, isActive: boolean) => {
-  if (cat === 'Comisiones para Tiendas' || cat === 'Comisiones para Tienda O2 MovilFree') {
-    return {
-      backgroundColor: isActive ? '#e0f2fe' : 'var(--mercedes-cyan)',
-      color: isActive ? 'var(--medium-gray)' : '#FFF'
-    }
-  }
-  if (cat === 'PRV Territorial Movistar y O2') {
-    return {
-      backgroundColor: isActive ? '#dcfce7' : '#5CB615',
-      color: isActive ? 'var(--medium-gray)' : '#FFF'
-    }
-  }
   return {
-    backgroundColor: isActive ? (CATEGORIES.includes(cat) ? 'var(--mercedes-cyan)' : '#6366f1') : '#e0f2fe',
-    color: isActive ? '#FFF' : 'var(--light-text)'
+    backgroundColor: isActive ? 'var(--mercedes-cyan)' : '#e0f2fe',
+    color: isActive ? '#FFFFFF' : '#000000'
   }
 }
 
