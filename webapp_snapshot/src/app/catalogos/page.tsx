@@ -957,7 +957,7 @@ export default function CatalogosPage() {
                 transition: 'all 0.2s ease'
               }}
             >
-              {cat === 'Ti' ? 'Contratos Móvil' : cat}
+              {cat === 'Ti' ? 'Contratos Móvil' : cat === 'Repos' ? 'Arpu (Repos)' : cat}
             </button>
           </TooltipBox>
         ))}
