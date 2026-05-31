@@ -49,13 +49,15 @@ export default function MovilFreeApp() {
     const rows = pasteText.split('\n').filter(r => r.trim() !== '')
     const newProducts = rows.map(r => {
       const cols = r.split('\t')
+      const rawDate = cols[0] ? cols[0].trim().split(' ')[0] : ''
       return {
-        nombre: cols[0] ? cols[0].trim() : 'Desconocido',
-        categoria: cols[1] ? cols[1].trim() : 'Terminal',
-        coste: parseFloat((cols[2] || '0').replace(',', '.')) || 0,
-        precio: parseFloat((cols[3] || '0').replace(',', '.')) || 0,
-        stock: parseInt((cols[5] || '1'), 10) || 1,
-        imei: cols[6] ? cols[6].trim() : ''
+        createdAt: rawDate ? new Date(rawDate).toISOString() : undefined,
+        nombre: cols[1] ? cols[1].trim() : 'Desconocido',
+        categoria: cols[2] ? cols[2].trim() : 'Varios',
+        coste: parseFloat((cols[3] || '0').replace(',', '.')) || 0,
+        precio: parseFloat((cols[4] || '0').replace(',', '.')) || 0,
+        imei: cols[6] ? cols[6].trim() : '',
+        stock: parseInt((cols[7] || '1'), 10) || 1
       }
     })
     

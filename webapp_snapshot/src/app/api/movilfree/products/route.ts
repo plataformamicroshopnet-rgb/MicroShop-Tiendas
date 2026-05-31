@@ -35,7 +35,8 @@ export async function POST(req: Request) {
               stock: existing.stock + prod.stock,
               precio: prod.precio, // Actualizar precio
               coste: prod.coste,   // Actualizar coste
-              categoria: prod.categoria
+              categoria: prod.categoria,
+              ...(prod.createdAt ? { createdAt: new Date(prod.createdAt) } : {})
             }
           });
         } else {
@@ -46,7 +47,8 @@ export async function POST(req: Request) {
               precio: prod.precio || 0,
               coste: prod.coste || 0,
               stock: prod.stock,
-              imei: prod.imei || null
+              imei: prod.imei || null,
+              ...(prod.createdAt ? { createdAt: new Date(prod.createdAt) } : {})
             }
           });
         }
