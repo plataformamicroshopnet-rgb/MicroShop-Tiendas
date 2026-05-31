@@ -233,9 +233,7 @@ export function MonthlyConditionsDisplay() {
                 <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: condition.color || config.textColor, letterSpacing: '-0.3px' }}>
                   {condition.title || config.label}
                 </h4>
-                <div style={{ color: 'var(--text-muted)', fontSize: '14px', fontWeight: 400, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-                  {condition.text}
-                </div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '14px', fontWeight: 400, lineHeight: 1.6, whiteSpace: 'pre-wrap' }} dangerouslySetInnerHTML={{ __html: condition.text }} />
               </div>
 
               {condition.amount && (() => {

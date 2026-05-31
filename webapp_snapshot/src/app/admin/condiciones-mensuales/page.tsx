@@ -320,7 +320,82 @@ export default function AdminMonthlyConditionsPage() {
                         onChange={e => setEditForm({ ...editForm, amount: e.target.value })}
                         style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-strong)', background: 'var(--bg-input)', color: 'var(--text-main)', width: '250px' }}
                       />
+                      <div style={{ display: 'flex', gap: '8px', marginBottom: '4px' }}>
+                        <button 
+                          title="Negrita"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            const textarea = document.getElementById(`text-${c.id}`) as HTMLTextAreaElement;
+                            if (!textarea) return;
+                            const start = textarea.selectionStart;
+                            const end = textarea.selectionEnd;
+                            const text = displayData.text || '';
+                            const selected = text.substring(start, end);
+                            const newText = text.substring(0, start) + `<b>${selected}</b>` + text.substring(end);
+                            setEditForm({ ...editForm, text: newText });
+                            setTimeout(() => { textarea.focus(); textarea.setSelectionRange(start + 3, start + 3 + selected.length); }, 0);
+                          }}
+                          style={{ padding: '4px 10px', borderRadius: '6px', background: 'var(--bg-input)', border: '1px solid var(--border-strong)', cursor: 'pointer', fontWeight: 'bold', color: 'var(--text-main)' }}
+                        >
+                          B
+                        </button>
+                        <button 
+                          title="Texto Rojo"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            const textarea = document.getElementById(`text-${c.id}`) as HTMLTextAreaElement;
+                            if (!textarea) return;
+                            const start = textarea.selectionStart;
+                            const end = textarea.selectionEnd;
+                            const text = displayData.text || '';
+                            const selected = text.substring(start, end);
+                            const newText = text.substring(0, start) + `<span style="color: #ef4444;">${selected}</span>` + text.substring(end);
+                            setEditForm({ ...editForm, text: newText });
+                            setTimeout(() => { textarea.focus(); textarea.setSelectionRange(start + 29, start + 29 + selected.length); }, 0);
+                          }}
+                          style={{ padding: '4px 10px', borderRadius: '6px', background: 'var(--bg-input)', border: '1px solid var(--border-strong)', cursor: 'pointer', color: '#ef4444', fontWeight: 'bold' }}
+                        >
+                          A
+                        </button>
+                        <button 
+                          title="Texto Azul"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            const textarea = document.getElementById(`text-${c.id}`) as HTMLTextAreaElement;
+                            if (!textarea) return;
+                            const start = textarea.selectionStart;
+                            const end = textarea.selectionEnd;
+                            const text = displayData.text || '';
+                            const selected = text.substring(start, end);
+                            const newText = text.substring(0, start) + `<span style="color: #3b82f6;">${selected}</span>` + text.substring(end);
+                            setEditForm({ ...editForm, text: newText });
+                            setTimeout(() => { textarea.focus(); textarea.setSelectionRange(start + 29, start + 29 + selected.length); }, 0);
+                          }}
+                          style={{ padding: '4px 10px', borderRadius: '6px', background: 'var(--bg-input)', border: '1px solid var(--border-strong)', cursor: 'pointer', color: '#3b82f6', fontWeight: 'bold' }}
+                        >
+                          A
+                        </button>
+                        <button 
+                          title="Texto Verde"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            const textarea = document.getElementById(`text-${c.id}`) as HTMLTextAreaElement;
+                            if (!textarea) return;
+                            const start = textarea.selectionStart;
+                            const end = textarea.selectionEnd;
+                            const text = displayData.text || '';
+                            const selected = text.substring(start, end);
+                            const newText = text.substring(0, start) + `<span style="color: #10b981;">${selected}</span>` + text.substring(end);
+                            setEditForm({ ...editForm, text: newText });
+                            setTimeout(() => { textarea.focus(); textarea.setSelectionRange(start + 29, start + 29 + selected.length); }, 0);
+                          }}
+                          style={{ padding: '4px 10px', borderRadius: '6px', background: 'var(--bg-input)', border: '1px solid var(--border-strong)', cursor: 'pointer', color: '#10b981', fontWeight: 'bold' }}
+                        >
+                          A
+                        </button>
+                      </div>
                       <textarea 
+                        id={`text-${c.id}`}
                         value={displayData.text || ''}
                         onChange={e => setEditForm({ ...editForm, text: e.target.value })}
                         rows={3}
@@ -341,9 +416,7 @@ export default function AdminMonthlyConditionsPage() {
                         <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: c.color || conf.color, letterSpacing: '-0.3px' }}>
                           {c.title || conf.label}
                         </h4>
-                        <div style={{ color: 'var(--text-muted)', fontSize: '14px', fontWeight: 400, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-                          {c.text}
-                        </div>
+                        <div style={{ color: 'var(--text-muted)', fontSize: '14px', fontWeight: 400, lineHeight: 1.6, whiteSpace: 'pre-wrap' }} dangerouslySetInnerHTML={{ __html: c.text }} />
                       </div>
 
                       {c.amount && (() => {
