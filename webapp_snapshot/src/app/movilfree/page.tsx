@@ -35,7 +35,7 @@ export default function MovilFreeApp() {
 
   // --- Subcomponents ---
   
-  // 1. INVENTARIO
+  // 1. STOCK
   const [newProd, setNewProd] = useState({ nombre: '', categoria: 'Accesorio', precio: 0, coste: 0, stock: 0, imei: '' })
   const [showPasteModal, setShowPasteModal] = useState(false)
   const [pasteText, setPasteText] = useState('')
@@ -405,7 +405,7 @@ export default function MovilFreeApp() {
             <ShoppingCart size={18} /> Punto de Venta
           </button>
           <button onClick={() => setActiveTab('productos')} style={{ height: 44, padding: '0 16px', borderRadius: 12, border: 'none', background: activeTab === 'productos' ? '#E91E97' : 'white', color: activeTab === 'productos' ? 'white' : '#666', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: activeTab === 'productos' ? '0 4px 12px rgba(233,30,151,0.2)' : 'none' }}>
-            <Package size={18} /> Inventario
+            <Package size={18} /> Stock
           </button>
           <button onClick={() => setActiveTab('clientes')} style={{ height: 44, padding: '0 16px', borderRadius: 12, border: 'none', background: activeTab === 'clientes' ? '#E91E97' : 'white', color: activeTab === 'clientes' ? 'white' : '#666', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: activeTab === 'clientes' ? '0 4px 12px rgba(233,30,151,0.2)' : 'none' }}>
             <Users size={18} /> Clientes
@@ -424,7 +424,7 @@ export default function MovilFreeApp() {
               <input placeholder="Buscar producto en Punto de Venta..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} style={{ width: '100%', height: 44, padding: '0 16px 0 44px', borderRadius: 12, border: '1px solid #bae6fd', background: '#f0f9ff', color: '#0369a1', fontSize: 14, boxSizing: 'border-box' }} />
             )}
             {activeTab === 'productos' && (
-              <input placeholder="Buscar producto en Inventario..." value={searchInvProducts} onChange={e=>setSearchInvProducts(e.target.value)} style={{ width: '100%', height: 44, padding: '0 16px 0 44px', borderRadius: 12, border: '1px solid #bae6fd', background: '#f0f9ff', color: '#0369a1', fontSize: 14, boxSizing: 'border-box' }} />
+              <input placeholder="Buscar producto en Stock..." value={searchInvProducts} onChange={e=>setSearchInvProducts(e.target.value)} style={{ width: '100%', height: 44, padding: '0 16px 0 44px', borderRadius: 12, border: '1px solid #bae6fd', background: '#f0f9ff', color: '#0369a1', fontSize: 14, boxSizing: 'border-box' }} />
             )}
             {activeTab === 'clientes' && (
               <input placeholder="Buscar cliente por NIF o Nombre..." value={searchClients} onChange={e=>setSearchClients(e.target.value)} style={{ width: '100%', height: 44, padding: '0 16px 0 44px', borderRadius: 12, border: '1px solid #bae6fd', background: '#f0f9ff', color: '#0369a1', fontSize: 14, boxSizing: 'border-box' }} />
@@ -653,16 +653,12 @@ export default function MovilFreeApp() {
                   </select>
                 </div>
                 <div>
-                  <label style={{fontSize: 12, fontWeight: 'bold', color: '#666'}}>Coste (Sin IVA)</label>
+                  <label style={{fontSize: 12, fontWeight: 'bold', color: '#666'}}>Coste sin IVA</label>
                   <input type="number" placeholder="Coste" value={newProd.coste || ''} onChange={e=>setNewProd({...newProd, coste: Number(e.target.value)})} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ddd', marginTop: 4 }} />
                 </div>
                 <div>
-                  <label style={{fontSize: 12, fontWeight: 'bold', color: '#666'}}>Precio (Sin IVA)</label>
-                  <input type="number" placeholder="Precio" value={newProd.precio || ''} onChange={e=>setNewProd({...newProd, precio: Number(e.target.value)})} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ddd', marginTop: 4 }} />
-                </div>
-                <div>
-                  <label style={{fontSize: 12, fontWeight: 'bold', color: fuchsia}}>P.V.P (Con IVA)</label>
-                  <input type="number" placeholder="Con IVA" value={newProd.precio ? Number((newProd.precio * 1.21).toFixed(2)) : ''} onChange={e=>setNewProd({...newProd, precio: Number((Number(e.target.value) / 1.21).toFixed(2))})} style={{ width: '100%', padding: 10, borderRadius: 6, border: `2px solid ${fuchsia}`, marginTop: 4 }} />
+                  <label style={{fontSize: 12, fontWeight: 'bold', color: fuchsia}}>PVP</label>
+                  <input type="number" placeholder="PVP" value={newProd.precio ? Number((newProd.precio * 1.21).toFixed(2)) : ''} onChange={e=>setNewProd({...newProd, precio: Number((Number(e.target.value) / 1.21).toFixed(2))})} style={{ width: '100%', padding: 10, borderRadius: 6, border: `2px solid ${fuchsia}`, marginTop: 4 }} />
                 </div>
                 <div>
                   <label style={{fontSize: 12, fontWeight: 'bold', color: '#666'}}>Stock</label>
@@ -700,7 +696,7 @@ export default function MovilFreeApp() {
 
               {newProd.precio > 0 && newProd.coste > 0 && (
                 <div style={{ marginBottom: 24, fontSize: 14, color: '#555', background: '#e6fffa', padding: '8px 16px', borderRadius: 8, display: 'inline-block' }}>
-                  Ganancia neta aproximada (Sin IVA): <strong style={{ color: '#276749', fontSize: 16 }}>{formatMoney(newProd.precio - newProd.coste)}</strong>
+                  Beneficio: <strong style={{ color: '#276749', fontSize: 16 }}>{formatMoney(newProd.precio - newProd.coste)}</strong>
                 </div>
               )}
 
@@ -710,12 +706,12 @@ export default function MovilFreeApp() {
                 <thead>
                   
                   <tr style={{ background: lightPink, color: fuchsia }}>
-                    <th style={{ padding: 10, borderRadius: '8px 0 0 8px', width: 'auto' }}>Producto</th>
+                    <th style={{ padding: 10, borderRadius: '8px 0 0 8px', width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}>Fecha</th>
+                    <th style={{ padding: 10, width: 'auto' }}>Producto</th>
                     <th style={{ padding: 10, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}>Categoría</th>
-                    <th style={{ padding: 10, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}>Coste</th>
-                    <th style={{ padding: 10, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}>Precio (s/IVA)</th>
-                    <th style={{ padding: 10, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}>P.V.P (c/IVA)</th>
-                    <th style={{ padding: 10, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}>Ganancia</th>
+                    <th style={{ padding: 10, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}>Coste sin IVA</th>
+                    <th style={{ padding: 10, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}>PVP</th>
+                    <th style={{ padding: 10, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}>Beneficio</th>
                     <th style={{ padding: 10, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}>IMEI</th>
                     <th style={{ padding: 10, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}>Stock</th>
                     <th style={{ padding: 10, borderRadius: '0 8px 8px 0', textAlign: 'center', width: '1%', whiteSpace: 'nowrap' }}>Acciones</th>
@@ -727,6 +723,7 @@ export default function MovilFreeApp() {
                     <tr key={p.id} style={{ borderBottom: '1px solid #eee', background: editingProductId === p.id ? '#fdf2f8' : 'transparent' }}>
                       {editingProductId === p.id ? (
                         <>
+                          <td style={{ padding: 10, color: '#888', whiteSpace: 'nowrap', textAlign: 'center', fontSize: 12 }}>{p.createdAt ? new Date(p.createdAt).toLocaleDateString('es-ES') : '-'}</td>
                           <td style={{ padding: 10 }}><input value={editProdData?.nombre || ''} onChange={e => setEditProdData({...editProdData, nombre: e.target.value})} style={{ width: '100%', padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none' }} /></td>
                           <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}>
                             <select value={editProdData?.categoria || ''} onChange={e => setEditProdData({...editProdData, categoria: e.target.value})} style={{ width: '100%', padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none' }}>
@@ -734,8 +731,7 @@ export default function MovilFreeApp() {
                             </select>
                           </td>
                           <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}><input type="number" value={editProdData?.coste || 0} onChange={e => setEditProdData({...editProdData, coste: Number(e.target.value)})} style={{ width: 70, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center' }} /></td>
-                          <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}><input type="number" value={editProdData?.precio || 0} onChange={e => setEditProdData({...editProdData, precio: Number(e.target.value)})} style={{ width: 70, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center' }} /></td>
-                          <td style={{ padding: 10, fontWeight: 'bold', color: fuchsia, whiteSpace: 'nowrap', textAlign: 'center' }}>{formatMoney((editProdData?.precio || 0) * 1.21)}</td>
+                          <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}><input type="number" value={editProdData?.precio ? Number((editProdData.precio * 1.21).toFixed(2)) : 0} onChange={e => setEditProdData({...editProdData, precio: Number((Number(e.target.value) / 1.21).toFixed(2))})} style={{ width: 70, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center', fontWeight: 'bold', color: fuchsia }} /></td>
                           <td style={{ padding: 10, fontWeight: 'bold', color: '#276749', whiteSpace: 'nowrap', textAlign: 'center' }}>{formatMoney((editProdData?.precio || 0) - (editProdData?.coste || 0))}</td>
                           <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}><input value={editProdData?.imei || ''} maxLength={15} onChange={e => setEditProdData({...editProdData, imei: e.target.value.replace(/\D/g,'')})} style={{ width: 110, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center', fontSize: 13, fontFamily: 'monospace' }} /></td>
                           <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}><input type="number" value={editProdData?.stock || 0} onChange={e => setEditProdData({...editProdData, stock: Number(e.target.value)})} style={{ width: 50, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center' }} /></td>
@@ -748,12 +744,12 @@ export default function MovilFreeApp() {
                         </>
                       ) : (
                         <>
+                          <td style={{ padding: 10, color: '#888', whiteSpace: 'nowrap', textAlign: 'center', fontSize: 12 }}>{p.createdAt ? new Date(p.createdAt).toLocaleDateString('es-ES') : '-'}</td>
                           <td style={{ padding: 10, fontWeight: 'bold' }}>{p.nombre}</td>
                           <td style={{ padding: 10, color: '#666', whiteSpace: 'nowrap', textAlign: 'center' }}>
                             <span style={{ background: '#eee', padding: '4px 8px', borderRadius: 4, fontSize: 11 }}>{p.categoria}</span>
                           </td>
                           <td style={{ padding: 10, color: '#888', whiteSpace: 'nowrap', textAlign: 'center' }}>{formatMoney(p.coste)}</td>
-                          <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}>{formatMoney(p.precio)}</td>
                           <td style={{ padding: 10, fontWeight: 'bold', color: fuchsia, whiteSpace: 'nowrap', textAlign: 'center' }}>{formatMoney(p.precio * 1.21)}</td>
                           <td style={{ padding: 10, fontWeight: 'bold', color: '#276749', whiteSpace: 'nowrap', textAlign: 'center' }}>{formatMoney(p.precio - p.coste)}</td>
                           <td style={{ padding: 10, color: '#555', fontSize: 13, fontFamily: 'monospace', whiteSpace: 'nowrap', textAlign: 'center' }}>{p.imei || '-'}</td>
