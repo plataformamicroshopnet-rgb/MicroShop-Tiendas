@@ -130,8 +130,40 @@ export default function MovilFreeApp() {
     const res = await fetch('/api/movilfree/clients', { method: 'POST', body: JSON.stringify(newClient) })
     const created = await res.json()
     if (!res.ok) return alert('Error: ' + (created.error || 'No se pudo crear'))
-    setClients([created, ...clients])
+    const cliRes = await fetch('/api/movilfree/clients')
+    const data = await cliRes.json()
+    setClients(data)
     setNewClient({ nif: '', nombre: '', direccion: '', poblacion: '', provincia: '', cp: '', movil: '', fijo: '', email: '' })
+  }
+
+  const [editingClientId, setEditingClientId] = useState<string | null>(null)
+  const [editClientData, setEditClientData] = useState<any>(null)
+
+  const handleSaveEditClient = async () => {
+    if(!editClientData) return;
+    try {
+      const res = await fetch(`/api/movilfree/clients/${editingClientId}`, { method: 'PUT', body: JSON.stringify(editClientData) })
+      if(res.ok) {
+        const updated = await res.json()
+        setClients(clients.map(c => c.id === editingClientId ? updated : c))
+        setEditingClientId(null)
+        setEditClientData(null)
+      } else {
+        const errRes = await res.json(); alert('Error al guardar: ' + (errRes.error || JSON.stringify(errRes)))
+      }
+    } catch(e:any) { alert(e.message) }
+  }
+
+  const handleDeleteClient = async (id: string) => {
+    if(!confirm('¿Seguro que quieres borrar este cliente?')) return;
+    try {
+      const res = await fetch(`/api/movilfree/clients/${id}`, { method: 'DELETE' })
+      if(res.ok) {
+        setClients(clients.filter(c => c.id !== id))
+      } else {
+        alert('Error al borrar cliente')
+      }
+    } catch(e:any) { alert(e.message) }
   }
 
   const [showClientPasteModal, setShowClientPasteModal] = useState(false)
@@ -416,7 +448,7 @@ export default function MovilFreeApp() {
             <Users size={18} /> Clientes
           </button>
           <button onClick={() => setActiveTab('devoluciones')} style={{ height: 44, padding: '0 16px', borderRadius: 12, border: 'none', background: activeTab === 'devoluciones' ? '#E91E97' : 'white', color: activeTab === 'devoluciones' ? 'white' : '#666', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: activeTab === 'devoluciones' ? '0 4px 12px rgba(233,30,151,0.2)' : 'none' }}>
-            <RefreshCcw size={18} /> Histórico & Devoluciones
+            <RefreshCcw size={18} /> Ventas & Devoluciones
           </button>
           <button onClick={() => setActiveTab('sat')} style={{ height: 44, padding: '0 16px', borderRadius: 12, border: 'none', background: activeTab === 'sat' ? '#E91E97' : 'white', color: activeTab === 'sat' ? 'white' : '#666', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: activeTab === 'sat' ? '0 4px 12px rgba(233,30,151,0.2)' : 'none' }}>
             <Wrench size={18} /> SAT
@@ -853,24 +885,60 @@ export default function MovilFreeApp() {
                     <th style={{ padding: 12 }}>Nombre</th>
                     <th style={{ padding: 12 }}>Contacto</th>
                     <th style={{ padding: 12 }}>Dirección</th>
-                    <th style={{ padding: 12, borderRadius: '0 8px 8px 0' }}>Total Comprado</th>
+                    <th style={{ padding: 12 }}>Total Comprado</th>
+                    <th style={{ padding: 12, borderRadius: '0 8px 8px 0', textAlign: 'center' }}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {clients.filter(c => c.nif.toLowerCase().includes(searchClients.toLowerCase())).map(c => (
                     <tr key={c.id} style={{ borderBottom: '1px solid #eee' }}>
-                      <td style={{ padding: 12, fontWeight: 'bold', color: '#555' }}>{c.nif}</td>
-                      <td style={{ padding: 12, fontWeight: 'bold' }}>{c.nombre}</td>
-                      <td style={{ padding: 8, color: '#666' }}>
-                        {c.movil && <div>📱 {c.movil}</div>}
-                        {c.fijo && <div>📞 {c.fijo}</div>}
-                        {c.email && <div>✉️ {c.email}</div>}
-                      </td>
-                      <td style={{ padding: 8, color: '#666' }}>
-                        <div>{c.direccion || '-'}</div>
-                        <div>{c.cp || ''} {c.poblacion || ''} {c.provincia ? `(${c.provincia})` : ''}</div>
-                      </td>
-                      <td style={{ padding: 12, color: '#E91E97', fontWeight: 'bold', fontSize: 16 }}>{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(c.totalComprado)}</td>
+                      {editingClientId === c.id ? (
+                        <>
+                          <td style={{ padding: 12 }}><input value={editClientData?.nif || ''} onChange={e=>setEditClientData({...editClientData, nif: e.target.value})} style={{ width: '100%', padding: 6, borderRadius: 4, border: '1px solid #E91E97' }} /></td>
+                          <td style={{ padding: 12 }}><input value={editClientData?.nombre || ''} onChange={e=>setEditClientData({...editClientData, nombre: e.target.value})} style={{ width: '100%', padding: 6, borderRadius: 4, border: '1px solid #E91E97' }} /></td>
+                          <td style={{ padding: 8 }}>
+                            <input placeholder="Móvil" value={editClientData?.movil || ''} onChange={e=>setEditClientData({...editClientData, movil: e.target.value})} style={{ width: '100%', padding: 4, marginBottom: 4, border: '1px solid #E91E97', borderRadius: 4 }} />
+                            <input placeholder="Fijo" value={editClientData?.fijo || ''} onChange={e=>setEditClientData({...editClientData, fijo: e.target.value})} style={{ width: '100%', padding: 4, marginBottom: 4, border: '1px solid #E91E97', borderRadius: 4 }} />
+                            <input placeholder="Email" value={editClientData?.email || ''} onChange={e=>setEditClientData({...editClientData, email: e.target.value})} style={{ width: '100%', padding: 4, border: '1px solid #E91E97', borderRadius: 4 }} />
+                          </td>
+                          <td style={{ padding: 8 }}>
+                            <input placeholder="Dirección" value={editClientData?.direccion || ''} onChange={e=>setEditClientData({...editClientData, direccion: e.target.value})} style={{ width: '100%', padding: 4, marginBottom: 4, border: '1px solid #E91E97', borderRadius: 4 }} />
+                            <div style={{ display: 'flex', gap: 4 }}>
+                              <input placeholder="CP" value={editClientData?.cp || ''} onChange={e=>setEditClientData({...editClientData, cp: e.target.value})} style={{ width: 60, padding: 4, border: '1px solid #E91E97', borderRadius: 4 }} />
+                              <input placeholder="Población" value={editClientData?.poblacion || ''} onChange={e=>setEditClientData({...editClientData, poblacion: e.target.value})} style={{ flex: 1, padding: 4, border: '1px solid #E91E97', borderRadius: 4 }} />
+                              <input placeholder="Provincia" value={editClientData?.provincia || ''} onChange={e=>setEditClientData({...editClientData, provincia: e.target.value})} style={{ flex: 1, padding: 4, border: '1px solid #E91E97', borderRadius: 4 }} />
+                            </div>
+                          </td>
+                          <td style={{ padding: 12, color: '#E91E97', fontWeight: 'bold' }}>{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(c.totalComprado)}</td>
+                          <td style={{ padding: 12, textAlign: 'center' }}>
+                            <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                              <button onClick={handleSaveEditClient} style={{ background: '#4CAF50', color: 'white', border: 'none', padding: 8, borderRadius: 6, cursor: 'pointer' }}><Save size={16} /></button>
+                              <button onClick={() => { setEditingClientId(null); setEditClientData(null); }} style={{ background: '#f43f5e', color: 'white', border: 'none', padding: 8, borderRadius: 6, cursor: 'pointer' }}><X size={16} /></button>
+                            </div>
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td style={{ padding: 12, fontWeight: 'bold', color: '#555' }}>{c.nif}</td>
+                          <td style={{ padding: 12, fontWeight: 'bold' }}>{c.nombre}</td>
+                          <td style={{ padding: 8, color: '#666' }}>
+                            {c.movil && <div>📱 {c.movil}</div>}
+                            {c.fijo && <div>📞 {c.fijo}</div>}
+                            {c.email && <div>✉️ {c.email}</div>}
+                          </td>
+                          <td style={{ padding: 8, color: '#666' }}>
+                            <div>{c.direccion || '-'}</div>
+                            <div>{c.cp || ''} {c.poblacion || ''} {c.provincia ? `(${c.provincia})` : ''}</div>
+                          </td>
+                          <td style={{ padding: 12, color: '#E91E97', fontWeight: 'bold', fontSize: 16 }}>{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(c.totalComprado)}</td>
+                          <td style={{ padding: 12, textAlign: 'center' }}>
+                            <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                              <button onClick={() => { setEditingClientId(c.id); setEditClientData({...c}); }} style={{ background: 'white', color: '#0ea5e9', border: '1px solid #e0f2fe', padding: 8, borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }} title="Editar"><Edit2 size={16} /></button>
+                              <button onClick={() => handleDeleteClient(c.id)} style={{ background: 'white', color: '#f43f5e', border: '1px solid #ffe4e6', padding: 8, borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }} title="Borrar"><Trash2 size={16} /></button>
+                            </div>
+                          </td>
+                        </>
+                      )}
                     </tr>
                   ))}
                 </tbody>
