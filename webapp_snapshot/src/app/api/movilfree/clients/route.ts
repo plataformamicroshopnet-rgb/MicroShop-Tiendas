@@ -30,7 +30,12 @@ export async function POST(req: Request) {
               data: {
                 nombre: c.nombre || existing.nombre,
                 movil: c.movil || existing.movil,
+                fijo: c.fijo || existing.fijo,
+                email: c.email || existing.email,
                 direccion: c.direccion || existing.direccion,
+                poblacion: c.poblacion || existing.poblacion,
+                provincia: c.provincia || existing.provincia,
+                cp: c.cp || existing.cp,
                 totalComprado: c.totalComprado || existing.totalComprado
               }
             });
