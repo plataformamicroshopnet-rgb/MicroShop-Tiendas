@@ -398,9 +398,24 @@ export default function GastosPage() {
     const fijos = new Array(12).fill(0)
     const variables = new Array(12).fill(0)
 
+    const fijosVariables = {
+      c: new Array(12).fill(0),
+      r: new Array(12).fill(0),
+      dif: new Array(12).fill(0),
+      total: new Array(12).fill(0)
+    }
+
     gastos.forEach(g => {
       if (g.grupo === 'Gastos Fijos') fijos[g.month - 1] += g.importe_total
       if (g.grupo === 'Gastos Variables') variables[g.month - 1] += g.importe_total
+      
+      if (g.grupo === 'Gastos Fijos' || g.grupo === 'Gastos Variables') {
+         fijosVariables.total[g.month - 1] += g.importe_total;
+         fijosVariables.c[g.month - 1] += g.importe_c;
+         fijosVariables.r[g.month - 1] += g.importe_r;
+         fijosVariables.dif[g.month - 1] += g.importe_dif;
+      }
+
       if (g.grupo === 'MERCADERIAS') {
         if (g.concepto === 'Compras Mercaderias') compras[g.month - 1] += g.importe_total
         if (g.concepto === 'Ventas Mercaderias') ventas[g.month - 1] += g.importe_total
@@ -419,11 +434,15 @@ export default function GastosPage() {
       gastosGeneral,
       ventas,
       beneficio,
+      fijosVariables,
       anual: {
         compras: compras.reduce((a,b)=>a+b, 0),
         gastosGeneral: gastosGeneral.reduce((a,b)=>a+b, 0),
         ventas: ventas.reduce((a,b)=>a+b, 0),
-        beneficio: beneficio.reduce((a,b)=>a+b, 0)
+        beneficio: beneficio.reduce((a,b)=>a+b, 0),
+        fijosVariables: {
+           total: fijosVariables.total.reduce((a,b)=>a+b, 0)
+        }
       }
     }
   }, [gastos])
@@ -703,6 +722,30 @@ export default function GastosPage() {
             ))}
           </tbody>
           <tfoot>
+            {/* FILA FIJOS + VARIABLES */}
+            <tr style={{ background: '#e6f7ff', borderTop: '2px solid var(--border-color)' }}>
+              <td style={{ padding: '6px 16px', fontWeight: 700, color: '#0050b3', position: 'sticky', left: 0, background: '#e6f7ff' }}>Total gastos Fijos + Variables</td>
+              {MESES.map((m, i) => {
+                const isExpanded = expandedMonths.includes(m.id)
+                const valTotal = mercaderiasData.fijosVariables.total[i]
+                const valC = mercaderiasData.fijosVariables.c[i]
+                const valRDif = mercaderiasData.fijosVariables.r[i] + mercaderiasData.fijosVariables.dif[i]
+                return (
+                  <React.Fragment key={m.id}>
+                    {isExpanded && (
+                      <>
+                        <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 600, color: '#0050b3' }}>{formatEuro(valC)}</td>
+                        <td colSpan={2} style={{ padding: '6px 8px', textAlign: 'center', fontWeight: 600, color: '#0050b3', background: 'rgba(0,80,179,0.05)' }}>{formatEuro(valRDif)}</td>
+                      </>
+                    )}
+                    <td style={{ padding: '6px 4px', textAlign: 'center', fontWeight: 700, color: '#0050b3' }}>{formatEuro(valTotal)}</td>
+                  </React.Fragment>
+                )
+              })}
+              <td style={{ padding: '6px 16px', textAlign: 'right', fontWeight: 800, color: '#0050b3' }}>{formatEuro(mercaderiasData.anual.fijosVariables.total)}</td>
+              <td></td>
+            </tr>
+
             {/* FILAS DE MERCADERÍAS (Añadidas a petición) */}
             <tr style={{ background: 'var(--bg-card)', borderTop: '2px solid var(--border-color)', borderBottom: '1px solid var(--border-color)' }}>
               <td style={{ padding: '6px 16px', fontWeight: 600, color: 'var(--light-text)', position: 'sticky', left: 0, background: 'var(--bg-card)' }}>Compras Mercaderias</td>
