@@ -319,10 +319,10 @@ export default function AdminMonthlyConditionsPage() {
                         }}>
                           <conf.icon size={20} strokeWidth={2.5} />
                         </div>
-                        <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: 'var(--text-main)', letterSpacing: '-0.3px' }}>
+                        <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: conf.color, letterSpacing: '-0.3px' }}>
                           {conf.label}
                         </h4>
-                        <div style={{ color: 'var(--text-muted)', fontSize: '13.5px', fontWeight: 400, lineHeight: 1.45 }}>
+                        <div style={{ color: 'var(--text-muted)', fontSize: '14px', fontWeight: 400, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
                           {c.text}
                         </div>
                       </div>

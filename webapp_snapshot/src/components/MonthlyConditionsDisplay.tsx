@@ -227,10 +227,10 @@ export function MonthlyConditionsDisplay() {
                 }}>
                   <Icon size={18} strokeWidth={2.5} />
                 </div>
-                <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: 'var(--text-main)', letterSpacing: '-0.3px' }}>
+                <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: config.textColor, letterSpacing: '-0.3px' }}>
                   {config.label}
                 </h4>
-                <div style={{ color: 'var(--text-muted)', fontSize: '13.5px', fontWeight: 400, lineHeight: 1.45 }}>
+                <div style={{ color: 'var(--text-muted)', fontSize: '14px', fontWeight: 400, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
                   {condition.text}
                 </div>
               </div>
