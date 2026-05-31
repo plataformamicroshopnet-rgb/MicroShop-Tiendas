@@ -17,7 +17,7 @@ export async function GET(request: Request) {
   try {
     const rules = await prisma.tiendaCommissionRule.findMany({
       where: { periodKey },
-      orderBy: { createdAt: 'asc' }
+      orderBy: { order: 'asc' }
     })
 
     const session = await getSession();
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
       prisma.tiendaComercialHour.deleteMany({ where: { periodKey } }),
       
       prisma.tiendaCommissionRule.createMany({
-        data: (rules || []).map((r: any) => ({
+        data: (rules || []).map((r: any, index: number) => ({
           periodKey,
           nombre: r.nombre || '',
           productosCuentan: r.productosCuentan || '',
@@ -76,6 +76,7 @@ export async function POST(request: Request) {
           importeSegundoTramo: r.importeSegundoTramo || '',
           condicionantes: r.condicionantes || '',
           totalHoras: r.totalHoras !== undefined && r.totalHoras !== '' ? Number(r.totalHoras) : null,
+          order: index,
         }))
       }),
 

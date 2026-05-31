@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Trophy, Target, Euro, Calendar, Clock, AlertCircle, Medal, BadgeCheck, ListFilter, XCircle, Sparkles, Crown, Diamond } from 'lucide-react'
+import { Trophy, Target, Euro, Calendar, Clock, AlertCircle, Medal, BadgeCheck, ListFilter, XCircle, Sparkles, Crown, Diamond, ArrowUp, ArrowDown } from 'lucide-react'
 import Link from 'next/link'
 import { PageHeader } from '@/components/PageHeader'
 import { useComisionesData } from '@/hooks/useComisionesData'
@@ -280,9 +280,37 @@ export default function ComisionesDashboardPage() {
         maxSalesSeller,
         monthSales,
         tiendaRules,
+        setTiendaRules,
         o2Rules,
-        territorialO2Rules
+        territorialO2Rules,
+        activePeriodKey
     } = useComisionesData(user)
+
+    const handleReorderTiendaRule = async (index: number, direction: 'up' | 'down') => {
+        if (!tiendaRules || !setTiendaRules || !activePeriodKey) return;
+        if (direction === 'up' && index === 0) return;
+        if (direction === 'down' && index === tiendaRules.length - 1) return;
+
+        const newRules = [...tiendaRules];
+        if (direction === 'up') {
+            [newRules[index - 1], newRules[index]] = [newRules[index], newRules[index - 1]];
+        } else {
+            [newRules[index], newRules[index + 1]] = [newRules[index + 1], newRules[index]];
+        }
+
+        setTiendaRules(newRules);
+
+        try {
+            const orderedIds = newRules.map(r => r.id);
+            await fetch('/api/tiendas-comisiones/reorder', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ periodKey: activePeriodKey, orderedIds })
+            });
+        } catch (e) {
+            console.error('Error reordering', e);
+        }
+    };
 
     useEffect(() => {
         if (user && normalizeRole(user.role) === 'COMERCIAL' && user.username) {
@@ -579,7 +607,29 @@ export default function ComisionesDashboardPage() {
                                                     <React.Fragment key={gName}>
                                                     <tr style={{ backgroundColor: rowBg, borderBottom: '1px solid #e2e8f0', transition: 'background 0.2s', color: '#334155' }}>
                                                         <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
-                                                            {gName === 'ARPU' ? 'Arpu (Repos)' : gName}
+                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                                <span>{gName === 'ARPU' ? 'Arpu (Repos)' : gName}</span>
+                                                                {normalizeRole(user?.role) === 'ADMIN' && activeRulesForSeller === tiendaRules && (
+                                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                                                        <button 
+                                                                            onClick={(e) => { e.stopPropagation(); handleReorderTiendaRule(idx, 'up'); }}
+                                                                            disabled={idx === 0}
+                                                                            style={{ padding: 0, background: 'transparent', border: 'none', cursor: idx === 0 ? 'default' : 'pointer', opacity: idx === 0 ? 0.3 : 1, color: 'var(--medium-gray)' }}
+                                                                            title="Subir"
+                                                                        >
+                                                                            <ArrowUp size={14} />
+                                                                        </button>
+                                                                        <button 
+                                                                            onClick={(e) => { e.stopPropagation(); handleReorderTiendaRule(idx, 'down'); }}
+                                                                            disabled={idx === activeRulesForSeller.length - 1}
+                                                                            style={{ padding: 0, background: 'transparent', border: 'none', cursor: idx === activeRulesForSeller.length - 1 ? 'default' : 'pointer', opacity: idx === activeRulesForSeller.length - 1 ? 0.3 : 1, color: 'var(--medium-gray)' }}
+                                                                            title="Bajar"
+                                                                        >
+                                                                            <ArrowDown size={14} />
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                         </td>
                                                         <td style={{ padding: '10px 8px', textAlign: 'center', fontSize: 13, color: '#334155' }}>
                                                             {formatImporteTramo(rule.importePrimerTramo)}

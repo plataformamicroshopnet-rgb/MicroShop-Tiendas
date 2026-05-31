@@ -912,7 +912,9 @@ export function useComisionesData(user?: any) {
         monthSales,
         extraAssignments,
         tiendaRules,
+        setTiendaRules,
         o2Rules,
-        territorialO2Rules
+        territorialO2Rules,
+        activePeriodKey
     };
 }
