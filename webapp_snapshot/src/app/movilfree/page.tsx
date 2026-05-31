@@ -145,9 +145,14 @@ export default function MovilFreeApp() {
       return {
         nif: cols[0] ? cols[0].trim() : '',
         nombre: cols[1] ? cols[1].trim() : 'Desconocido',
-        movil: cols[2] ? cols[2].trim() : '',
-        direccion: cols[3] ? cols[3].trim() : '',
-        totalComprado: parseFloat((cols[4] || '0').replace(',', '.')) || 0,
+        direccion: cols[2] ? cols[2].trim() : '',
+        poblacion: cols[3] ? cols[3].trim() : '',
+        provincia: cols[4] ? cols[4].trim() : '',
+        cp: cols[5] ? cols[5].trim() : '',
+        movil: cols[6] ? cols[6].trim() : '',
+        fijo: cols[7] ? cols[7].trim() : '',
+        email: cols[8] ? cols[8].trim() : '',
+        totalComprado: 0
       }
     })
     
