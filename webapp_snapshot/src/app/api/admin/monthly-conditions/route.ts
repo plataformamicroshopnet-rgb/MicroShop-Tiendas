@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { periodKey, type, text, amount, order } = body
+    const { periodKey, type, title, color, text, amount, order } = body
 
     if (!periodKey || !type || !text) {
       return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 })
@@ -43,6 +43,8 @@ export async function POST(request: Request) {
       data: {
         periodKey,
         type,
+        title: title || null,
+        color: color || null,
         text,
         amount,
         order: order || 0

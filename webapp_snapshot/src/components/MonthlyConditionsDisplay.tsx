@@ -11,6 +11,8 @@ export interface IMonthlyCondition {
   id: string
   periodKey: string
   type: ConditionType
+  title?: string | null
+  color?: string | null
   text: string
   amount?: string | null
   order: number
@@ -203,7 +205,7 @@ export function MonthlyConditionsDisplay() {
               borderTop: '1px solid var(--border-strong)',
               borderRight: '1px solid var(--border-strong)',
               borderBottom: '1px solid var(--border-strong)',
-              borderLeft: `4px solid ${config.textColor}`,
+              borderLeft: `4px solid ${condition.color || config.textColor}`,
               boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
               transition: 'transform 0.2s ease',
               height: '100%'
@@ -221,14 +223,15 @@ export function MonthlyConditionsDisplay() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
                 <div style={{ 
                   width: '36px', height: '36px', borderRadius: '10px', 
-                  backgroundColor: config.bgColor, color: config.textColor,
+                  backgroundColor: condition.color ? condition.color + '1A' : config.bgColor, 
+                  color: condition.color || config.textColor,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   marginBottom: '2px'
                 }}>
                   <Icon size={18} strokeWidth={2.5} />
                 </div>
-                <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: config.textColor, letterSpacing: '-0.3px' }}>
-                  {config.label}
+                <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: condition.color || config.textColor, letterSpacing: '-0.3px' }}>
+                  {condition.title || config.label}
                 </h4>
                 <div style={{ color: 'var(--text-muted)', fontSize: '14px', fontWeight: 400, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
                   {condition.text}
@@ -251,8 +254,8 @@ export function MonthlyConditionsDisplay() {
                     display: 'inline-flex',
                     alignItems: 'baseline',
                     justifyContent: 'center',
-                    background: config.bgColor,
-                    color: config.textColor,
+                    background: condition.color ? condition.color + '1A' : config.bgColor,
+                    color: condition.color || config.textColor,
                     padding: '8px 18px',
                     borderRadius: '12px',
                     marginTop: 'auto',

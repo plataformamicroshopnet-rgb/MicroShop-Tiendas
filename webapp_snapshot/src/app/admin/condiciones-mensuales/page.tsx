@@ -12,6 +12,8 @@ export interface IMonthlyCondition {
   id: string
   periodKey: string
   type: ConditionType
+  title?: string | null
+  color?: string | null
   text: string
   amount?: string | null
   order: number
@@ -278,7 +280,7 @@ export default function AdminMonthlyConditionsPage() {
                 borderTop: isEditing ? '2px solid #3b82f6' : '1px solid var(--border-strong)',
                 borderRight: isEditing ? '2px solid #3b82f6' : '1px solid var(--border-strong)',
                 borderBottom: isEditing ? '2px solid #3b82f6' : '1px solid var(--border-strong)',
-                borderLeft: isEditing ? '4px solid #3b82f6' : `4px solid ${conf.color}`,
+                borderLeft: isEditing ? '4px solid #3b82f6' : `4px solid ${c.color || conf.color}`,
                 boxShadow: isEditing ? '0 0 0 4px rgba(59,130,246,0.1)' : '0 2px 6px rgba(0,0,0,0.02)',
                 display: 'flex',
                 flexDirection: 'column',
@@ -295,6 +297,22 @@ export default function AdminMonthlyConditionsPage() {
                       >
                         {TYPE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                       </select>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <input 
+                          type="text"
+                          placeholder="Título Personalizado (opcional)"
+                          value={displayData.title || ''}
+                          onChange={e => setEditForm({ ...editForm, title: e.target.value })}
+                          style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-strong)', background: 'var(--bg-input)', color: 'var(--text-main)', flex: 1 }}
+                        />
+                        <input 
+                          type="color"
+                          value={displayData.color || conf.color}
+                          onChange={e => setEditForm({ ...editForm, color: e.target.value })}
+                          style={{ width: '38px', height: '38px', padding: '0', border: 'none', borderRadius: '8px', cursor: 'pointer', background: 'transparent' }}
+                          title="Color de la tarjeta"
+                        />
+                      </div>
                       <input 
                         type="text"
                         placeholder="Importe impactante (Ej: +200€ o Gratis)"
@@ -314,13 +332,14 @@ export default function AdminMonthlyConditionsPage() {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                         <div style={{ 
                           width: '38px', height: '38px', borderRadius: '10px', 
-                          backgroundColor: `rgba(${conf.rgb}, 0.1)`, color: conf.color,
+                          backgroundColor: c.color ? c.color + '1A' : `rgba(${conf.rgb}, 0.1)`, 
+                          color: c.color || conf.color,
                           display: 'flex', alignItems: 'center', justifyContent: 'center'
                         }}>
                           <conf.icon size={20} strokeWidth={2.5} />
                         </div>
-                        <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: conf.color, letterSpacing: '-0.3px' }}>
-                          {conf.label}
+                        <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: c.color || conf.color, letterSpacing: '-0.3px' }}>
+                          {c.title || conf.label}
                         </h4>
                         <div style={{ color: 'var(--text-muted)', fontSize: '14px', fontWeight: 400, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
                           {c.text}
@@ -343,8 +362,8 @@ export default function AdminMonthlyConditionsPage() {
                             display: 'inline-flex',
                             alignItems: 'baseline',
                             justifyContent: 'center',
-                            background: `rgba(${conf.rgb}, 0.1)`,
-                            color: conf.color,
+                            background: c.color ? c.color + '1A' : `rgba(${conf.rgb}, 0.1)`,
+                            color: c.color || conf.color,
                             padding: '8px 18px',
                             borderRadius: '12px',
                             marginTop: 'auto',

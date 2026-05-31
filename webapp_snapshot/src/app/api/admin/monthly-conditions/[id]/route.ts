@@ -13,12 +13,14 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
 
     const { id } = await context.params
     const body = await request.json()
-    const { type, text, amount, order } = body
+    const { type, title, color, text, amount, order } = body
 
     const condition = await prisma.monthlyCondition.update({
       where: { id },
       data: {
         type: type !== undefined ? type : undefined,
+        title: title !== undefined ? (title || null) : undefined,
+        color: color !== undefined ? (color || null) : undefined,
         text: text !== undefined ? text : undefined,
         amount: amount !== undefined ? amount : undefined,
         order: order !== undefined ? order : undefined
