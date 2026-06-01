@@ -73,7 +73,7 @@ export const matchTipoVenta = (sale: any, tipoVentaRaw: string) => {
                 break;
             case 'repo fútbol':
             case 'repo futbol':
-                matched = (prod.includes('fútbol') || prod.includes('futbol')) && cat === 'repos';
+                matched = prod.includes('fútbol') || prod.includes('futbol') || prod.includes('repo f');
                 break;
             default:
                 if (tipoVenta.toLowerCase().trim() === cat) {
@@ -108,10 +108,11 @@ export const isExtraRepoUpFutbol = (s: any) => {
 };
 
 export const matchesRule = (s: any, ruleName: string, ruleProductosCuentan: string) => {
-    if (ruleName === 'ARPU') {
+    const normRule = String(ruleName || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+    if (normRule === 'arpu') {
         return matchTipoVenta(s, 'ARPU') || isSuscripcionesTV(s) || isExtraRepoUpFutbol(s);
     }
-    if (ruleName === 'Repo Fútbol' || ruleName === 'Repo Futbol') {
+    if (normRule === 'repo futbol') {
         return matchTipoVenta(s, 'Repo Fútbol') || isExtraRepoUpFutbol(s);
     }
     return matchTipoVenta(s, ruleProductosCuentan);
