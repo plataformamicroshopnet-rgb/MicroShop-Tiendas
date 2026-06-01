@@ -146,7 +146,7 @@ export function useComisionesData(user?: any) {
         if (!activePeriodKey) return;
         setLoading(true);
         Promise.all([
-            fetch(`/api/sales?periodKey=${activePeriodKey}`).then(res => res.json()),
+            fetch(`/api/sales?periodKey=${activePeriodKey}&dashboard=true`).then(res => res.json()),
             fetch(`/api/condiciones-plus?periodKey=${activePeriodKey}&strictPeriod=1`).then(res => res.json()).catch(() => ({ rows: [] })),
             fetch(`/api/extras/assignments?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({ data: [] })),
             fetch('/api/extras/rules').then(res => res.json()).catch(() => ({ rules: [] })),

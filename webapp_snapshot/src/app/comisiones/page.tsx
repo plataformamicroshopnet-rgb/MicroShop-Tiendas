@@ -815,10 +815,12 @@ export default function ComisionesDashboardPage() {
                                     boxShadow: '0 10px 15px rgba(0,0,0,0.5)',
                                     zIndex: 1
                                 }}>
-                                    <h3 style={{ fontSize: 16, color: 'var(--mercedes-cyan)', margin: '0 0 16px 0', display:'flex', gap: 10, alignItems: 'center', textTransform: 'uppercase', letterSpacing: 1 }}>
-                                        <ListFilter size={18} /> Registro Operativo de {s.name}
-                                    </h3>
-                                    <div style={{ overflowX: 'auto', border: '1px solid rgba(0, 173, 239, 0.2)' }}>
+                                    {(normalizeRole(user?.role) !== 'COMERCIAL' || String(s.name).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === String(user?.username).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()) && (
+                                    <>
+                                        <h3 style={{ fontSize: 16, color: 'var(--mercedes-cyan)', margin: '0 0 16px 0', display:'flex', gap: 10, alignItems: 'center', textTransform: 'uppercase', letterSpacing: 1 }}>
+                                            <ListFilter size={18} /> Registro Operativo de {s.name}
+                                        </h3>
+                                        <div style={{ overflowX: 'auto', border: '1px solid rgba(0, 173, 239, 0.2)' }}>
                                         <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse', fontSize: 13 }}>
                                             <thead>
                                                 <tr style={{ backgroundColor: '#00ADEF', color: 'var(--bg-card)' }}>
@@ -897,6 +899,8 @@ export default function ComisionesDashboardPage() {
                                             </tbody>
                                         </table>
                                     </div>
+                                    </>
+                                    )}
                                 </div>
                             )}
 
