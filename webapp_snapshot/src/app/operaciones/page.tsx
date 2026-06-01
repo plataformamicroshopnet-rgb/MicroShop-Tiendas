@@ -474,22 +474,22 @@ function OperationsContent() {
   }
 
   const isPendingView = searchParams.get('filter') === 'pendientes';
-  if (isPendingView) {
+  if (isPendingView && !searchTerm) {
     displayedSales = displayedSales.filter(s => s.pendiente === 'Si');
   }
 
   if (searchTerm) {
     const lowerTerm = searchTerm.toLowerCase()
     displayedSales = displayedSales.filter(sale => 
-      (sale.vendedor || '').toLowerCase().includes(lowerTerm) ||
-      (sale.fecha || '').toLowerCase().includes(lowerTerm) ||
-      (sale.codigo || '').toLowerCase().includes(lowerTerm) ||
-      (sale.producto || '').toLowerCase().includes(lowerTerm) ||
-      (sale.nombreCliente || '').toLowerCase().includes(lowerTerm) ||
-      (sale.nif || '').toLowerCase().includes(lowerTerm) ||
-      (sale.telf || '').toLowerCase().includes(lowerTerm) ||
-      (sale.anotaciones || '').toLowerCase().includes(lowerTerm) ||
-      (sale.detalle || '').toLowerCase().includes(lowerTerm)
+      String(sale.vendedor || '').toLowerCase().includes(lowerTerm) ||
+      String(sale.fecha || '').toLowerCase().includes(lowerTerm) ||
+      String(sale.codigo || '').toLowerCase().includes(lowerTerm) ||
+      String(sale.producto || '').toLowerCase().includes(lowerTerm) ||
+      String(sale.nombreCliente || '').toLowerCase().includes(lowerTerm) ||
+      String(sale.nif || '').toLowerCase().includes(lowerTerm) ||
+      String(sale.telf || '').toLowerCase().includes(lowerTerm) ||
+      String(sale.anotaciones || '').toLowerCase().includes(lowerTerm) ||
+      String(sale.detalle || '').toLowerCase().includes(lowerTerm)
     )
   }
 
@@ -504,10 +504,10 @@ function OperationsContent() {
       if (searchTerm) {
         const lowerTerm = searchTerm.toLowerCase();
         if (
-          !ea.seller?.toLowerCase().includes(lowerTerm) &&
-          !ea.customerName?.toLowerCase().includes(lowerTerm) &&
-          !ea.customerNif?.toLowerCase().includes(lowerTerm) &&
-          !ea.rule?.name?.toLowerCase().includes(lowerTerm)
+          !String(ea.seller || '').toLowerCase().includes(lowerTerm) &&
+          !String(ea.customerName || '').toLowerCase().includes(lowerTerm) &&
+          !String(ea.customerNif || '').toLowerCase().includes(lowerTerm) &&
+          !String(ea.rule?.name || '').toLowerCase().includes(lowerTerm)
         ) {
            return false;
         }
