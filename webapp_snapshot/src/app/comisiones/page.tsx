@@ -588,12 +588,14 @@ export default function ComisionesDashboardPage() {
                                                     } catch(e) {}
                                                 }
                                                 
+                                                let displayObj2 = obj2;
                                                 const falt1 = Math.max(0, obj1 - qtty)
                                                 let falt2 = Math.max(0, obj2 - qtty)
                                                 if (isTeamObj2) {
                                                     const teamCount = s.activeTeamGroupCounts[gName] || 0;
                                                     const teamPending = s.activeTeamGroupPending[gName] || 0;
-                                                    falt2 = Math.max(0, obj2 - teamCount - teamPending);
+                                                    displayObj2 = rule.objSegundoTramo || 0;
+                                                    falt2 = Math.max(0, displayObj2 - teamCount - teamPending);
                                                 }
                                                 
                                                 const format = (v: number) => {
@@ -662,13 +664,13 @@ export default function ComisionesDashboardPage() {
                                                             {obj1 === 0 ? '-' : format(obj1)}
                                                         </td>
                                                         <td style={{ padding: '10px 8px', textAlign: 'center', fontSize: 13 }}>
-                                                            {obj2 === 0 ? '-' : <>{format(obj2)} {isTeamObj2 && <span style={{ fontSize: 10, color: 'var(--medium-gray)' }}>(Eq)</span>}</>}
+                                                            {displayObj2 === 0 ? '-' : <>{format(displayObj2)} {isTeamObj2 && <span style={{ fontSize: 10, color: 'var(--medium-gray)' }}>(Eq)</span>}</>}
                                                         </td>
                                                         <td style={{ padding: '10px 8px', textAlign: 'center', fontSize: 13, fontWeight: 600 }}>
                                                             {obj1 === 0 ? '-' : (falt1 > 0 ? <span style={{ color: '#ef4444' }}>{format(falt1)}</span> : <span style={{ color: '#10b981' }}>✓</span>)}
                                                         </td>
                                                         <td style={{ padding: '10px 8px', textAlign: 'center', fontSize: 13, fontWeight: 600 }}>
-                                                            {obj2 === 0 ? '-' : (falt2 > 0 ? <span style={{ color: '#ef4444' }}>{format(falt2)} {isTeamObj2 ? 'entre todo el Equipo' : ''}</span> : <span style={{ color: '#10b981' }}>✓</span>)}
+                                                            {displayObj2 === 0 ? '-' : (falt2 > 0 ? <span style={{ color: '#ef4444' }}>{format(falt2)} {isTeamObj2 ? 'entre todo el Equipo' : ''}</span> : <span style={{ color: '#10b981' }}>✓</span>)}
                                                         </td>
                                                         <td style={{ 
                                                             padding: '10px 12px', 
