@@ -901,8 +901,7 @@ export function useComisionesData(user?: any) {
           }).catch(console.error);
       }, [loading, sellerStats, activePeriodKey]);
 
-    const isRestrictedComercial = user && typeof user.role === 'string' && user.role.toUpperCase().includes('COMERCIAL');
-    const displayedSellerStats = isRestrictedComercial ? sellerStats.filter(s => { const sName = s.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim(); const uName = (user?.username || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim(); return sName === uName; }) : sellerStats;
+    const displayedSellerStats = sellerStats;
     const teamTotalComisiones = displayedSellerStats.reduce((acc, s) => acc + s.totalComision, 0);
     const teamTotalSales = displayedSellerStats.reduce((acc, s) => acc + s.totalSales, 0);
 

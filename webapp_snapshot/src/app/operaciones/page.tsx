@@ -479,17 +479,17 @@ function OperationsContent() {
   }
 
   if (searchTerm) {
-    const lowerTerm = searchTerm.toLowerCase()
+    const lowerTerm = normName(searchTerm);
     displayedSales = displayedSales.filter(sale => 
-      String(sale.vendedor || '').toLowerCase().includes(lowerTerm) ||
-      String(sale.fecha || '').toLowerCase().includes(lowerTerm) ||
-      String(sale.codigo || '').toLowerCase().includes(lowerTerm) ||
-      String(sale.producto || '').toLowerCase().includes(lowerTerm) ||
-      String(sale.nombreCliente || '').toLowerCase().includes(lowerTerm) ||
-      String(sale.nif || '').toLowerCase().includes(lowerTerm) ||
-      String(sale.telf || '').toLowerCase().includes(lowerTerm) ||
-      String(sale.anotaciones || '').toLowerCase().includes(lowerTerm) ||
-      String(sale.detalle || '').toLowerCase().includes(lowerTerm)
+      normName(sale.vendedor || '').includes(lowerTerm) ||
+      normName(sale.fecha || '').includes(lowerTerm) ||
+      normName(sale.codigo || '').includes(lowerTerm) ||
+      normName(sale.producto || '').includes(lowerTerm) ||
+      normName(sale.nombreCliente || '').includes(lowerTerm) ||
+      normName(sale.nif || '').includes(lowerTerm) ||
+      normName(sale.telf || '').includes(lowerTerm) ||
+      normName(sale.anotaciones || '').includes(lowerTerm) ||
+      normName(sale.detalle || '').includes(lowerTerm)
     )
   }
 
@@ -502,12 +502,12 @@ function OperationsContent() {
       if (isPendingView) return false; // Extras are never pending
       
       if (searchTerm) {
-        const lowerTerm = searchTerm.toLowerCase();
+        const lowerTerm = normName(searchTerm);
         if (
-          !String(ea.seller || '').toLowerCase().includes(lowerTerm) &&
-          !String(ea.customerName || '').toLowerCase().includes(lowerTerm) &&
-          !String(ea.customerNif || '').toLowerCase().includes(lowerTerm) &&
-          !String(ea.rule?.name || '').toLowerCase().includes(lowerTerm)
+          !normName(ea.seller || '').includes(lowerTerm) &&
+          !normName(ea.customerName || '').includes(lowerTerm) &&
+          !normName(ea.customerNif || '').includes(lowerTerm) &&
+          !normName(ea.rule?.name || '').includes(lowerTerm)
         ) {
            return false;
         }

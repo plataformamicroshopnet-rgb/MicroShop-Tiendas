@@ -1,23 +1,29 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-async function check() {
-    const p = await prisma.productCatalog.findFirst({
-        where: {
-            producto: {
-                contains: 'Movistar+'
-            }
-        }
-    });
-    console.log("Product in catalog:", p);
-
-    const cats = await prisma.productCatalog.findMany({
-        select: {
-            categoria: true
-        },
-        distinct: ['categoria']
-    });
-    console.log("Categories:", cats);
-    await prisma.$disconnect();
+async function main() {
+  const period = await prisma.workPeriod.findUnique({ where: { period_key: '2026_06' } });
+  if (!period) {
+    console.log("No 2026_06 period found");
+    return;
+  }
+  const products = await prisma.productCatalog.findMany({
+    where: { periodId: period.id, categoria: 'Traslado miMovistar' }
+  });
+  console.log("Total items in Traslado miMovistar:", products.length);
+  
+  const grouped = {};
+  for (const p of products) {
+    const key = [p.producto, p.subcategoria, p.gama, p.fabricante].map(x => (x||'').trim().toLowerCase()).join('|');
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(p);
+  }
+  
+  for (const [key, vars] of Object.entries(grouped)) {
+    if (vars.length > 1) {
+      console.log(`\nDUPLICATE FOUND IN DB: ${key}`);
+      console.log(vars);
+    }
+  }
 }
-check();
+main().finally(() => prisma.$disconnect());
