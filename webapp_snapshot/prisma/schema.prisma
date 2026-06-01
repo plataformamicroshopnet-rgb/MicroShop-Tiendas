@@ -536,6 +536,7 @@ model MovilFreeSale {
   listaProductos   String // JSON stringified array of { id, nombre, cantidad, precio, subtotal, cantidadDevuelta }
   importeTotal     Float
   estado           String   @default("COMPLETADA") // "COMPLETADA", "DEVUELTA", "DEVOLUCION_PARCIAL"
+  metodoPago       String?  @default("Efectivo") // "Efectivo" o "Tarjeta"
   motivoDevolucion String?
   fechaVenta       DateTime @default(now())
   createdAt        DateTime @default(now())

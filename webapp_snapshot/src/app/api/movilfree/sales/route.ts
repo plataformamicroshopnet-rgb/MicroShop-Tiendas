@@ -33,6 +33,7 @@ export async function POST(req: Request) {
         listaProductos: listaProductosStr,
         importeTotal: Number(data.importeTotal),
         estado: 'COMPLETADA',
+        metodoPago: data.metodoPago || 'Efectivo',
         numeroFactura: newInvoiceNumber
       }
     })

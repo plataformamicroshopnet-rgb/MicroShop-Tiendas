@@ -7,7 +7,7 @@ import './MovilFree.css'
 // --- Types ---
 type Product = { id: string; nombre: string; categoria: string; precio: number; coste: number; stock: number; createdAt: string; imei?: string }
 type Client = { id: string; nif: string; nombre: string; direccion?: string; poblacion?: string; provincia?: string; cp?: string; movil?: string; fijo?: string; email: string; totalComprado: number }
-type Sale = { id: string; numeroFactura?: number; vendedor: string; nifCliente: string; nombreCliente: string; listaProductos: string; importeTotal: number; estado: string; fechaVenta: string; motivoDevolucion: string }
+type Sale = { id: string; numeroFactura?: number; vendedor: string; nifCliente: string; nombreCliente: string; listaProductos: string; importeTotal: number; metodoPago?: string; estado: string; fechaVenta: string; motivoDevolucion: string }
 type Reparacion = { id?: string; numero: number; nombreApellidos: string; direccion?: string; dniNif?: string; telefono?: string; marca?: string; modelo?: string; imei?: string; fechaRecepcion?: string; observaciones?: string; motivo?: string; fechaEntrega?: string; garantia?: string; informe?: string; repara?: string; costePvd?: number; pvp?: number; createdAt?: string; }
 type BudgetLine = { id: string; desc: string; qty: number; price: number }
 
@@ -234,6 +234,7 @@ export default function MovilFreeApp() {
       nifCliente: selectedClient || (cl ? cl.nif : 'CONTADO'),
       nombreCliente: clientName || (cl ? cl.nombre : 'Cliente Contado'),
       importeTotal: total,
+      metodoPago: paymentMethod,
       listaProductos: cart.map(c => ({ id: c.product.id, nombre: c.product.nombre, cantidad: c.cantidad, precio: c.product.precio * 1.21, coste: c.product.coste }))
     }
 
@@ -242,6 +243,7 @@ export default function MovilFreeApp() {
       const createdSale = await res.json()
       setPrintModalSale(createdSale)
       setCart([])
+      setShowPaymentModal(false)
       fetch('/api/movilfree/sales').then(r => r.json()).then(d => { if(Array.isArray(d)) setSales(d); else console.error(d) })
       fetch('/api/movilfree/products').then(r => r.json()).then(d => { if(Array.isArray(d)) setProducts(d); else console.error(d) })
     }
@@ -389,6 +391,9 @@ export default function MovilFreeApp() {
   const [printModalSat, setPrintModalSat] = useState<Reparacion | null>(null)
   const [satBudgetLines, setSatBudgetLines] = useState<BudgetLine[]>([])
   const [satDeliveryDate, setSatDeliveryDate] = useState('')
+
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [paymentMethod, setPaymentMethod] = useState<'Efectivo' | 'Tarjeta'>('Efectivo')
 
   const handlePrintSat = (r: Reparacion) => {
     setPrintModalSat(r)
@@ -665,7 +670,7 @@ export default function MovilFreeApp() {
                   </div>
                 </div>
 
-                <button onClick={handleCheckout} style={{ width: '100%', background: fuchsia, color: 'white', border: 'none', padding: 16, borderRadius: 12, fontWeight: 'bold', fontSize: 16, cursor: 'pointer' }}>
+                <button onClick={() => { if(cart.length === 0) return alert('El carrito está vacío'); setShowPaymentModal(true); }} style={{ width: '100%', background: fuchsia, color: 'white', border: 'none', padding: 16, borderRadius: 12, fontWeight: 'bold', fontSize: 16, cursor: 'pointer' }}>
                   Cobrar Venta
                 </button>
               </div>
@@ -1003,6 +1008,7 @@ export default function MovilFreeApp() {
                     <th style={{ padding: 12 }}>Cliente</th>
                     <th style={{ padding: 12 }}>Productos</th>
                     <th style={{ padding: 12 }}>Importe</th>
+                    <th style={{ padding: 12 }}>Método de Pago</th>
                     <th style={{ padding: 12 }}>Estado</th>
                     <th style={{ padding: 12, borderRadius: '0 8px 8px 0' }}>Acciones</th>
                   </tr>
@@ -1035,6 +1041,9 @@ export default function MovilFreeApp() {
                         </td>
                         <td style={{ padding: 12, fontWeight: 'bold', color: isDev ? '#e53e3e' : '#333' }}>
                           {isDev ? '-' : ''}{formatMoney(s.importeTotal)}
+                        </td>
+                        <td style={{ padding: 12, color: '#555', fontSize: 13, fontWeight: 500 }}>
+                          {s.metodoPago === 'Tarjeta' ? '💳 Tarjeta' : '💵 Efectivo'}
                         </td>
                         <td style={{ padding: 12 }}>
                                                     {s.estado === 'DEVUELTA' && <span style={{ background: '#fed7d7', color: '#c53030', padding: '4px 8px', borderRadius: 4, fontSize: 11, fontWeight: 'bold' }}>DEVUELTA</span>}
@@ -1452,6 +1461,39 @@ export default function MovilFreeApp() {
         </div>
       )}
 
+
+        {/* PAYMENT MODAL */}
+        {showPaymentModal && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+            <div style={{ background: 'white', padding: 32, borderRadius: 16, width: '100%', maxWidth: 400, textAlign: 'center' }}>
+              <h2 style={{ margin: '0 0 16px 0', color: '#333' }}>Método de Pago</h2>
+              
+              <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
+                <button 
+                  onClick={() => setPaymentMethod('Efectivo')}
+                  style={{ flex: 1, padding: '16px', borderRadius: 8, border: `2px solid ${paymentMethod === 'Efectivo' ? fuchsia : '#ddd'}`, background: paymentMethod === 'Efectivo' ? lightPink : 'white', cursor: 'pointer', fontWeight: 'bold', fontSize: 16, color: paymentMethod === 'Efectivo' ? fuchsia : '#555' }}
+                >
+                  💵 Efectivo
+                </button>
+                <button 
+                  onClick={() => setPaymentMethod('Tarjeta')}
+                  style={{ flex: 1, padding: '16px', borderRadius: 8, border: `2px solid ${paymentMethod === 'Tarjeta' ? fuchsia : '#ddd'}`, background: paymentMethod === 'Tarjeta' ? lightPink : 'white', cursor: 'pointer', fontWeight: 'bold', fontSize: 16, color: paymentMethod === 'Tarjeta' ? fuchsia : '#555' }}
+                >
+                  💳 Tarjeta
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', gap: 12 }}>
+                <button onClick={() => setShowPaymentModal(false)} style={{ flex: 1, padding: '14px', borderRadius: 8, border: 'none', background: '#eee', cursor: 'pointer', fontWeight: 'bold', fontSize: 15 }}>
+                  Cancelar
+                </button>
+                <button onClick={handleCheckout} style={{ flex: 1, padding: '14px', borderRadius: 8, border: 'none', background: fuchsia, color: 'white', cursor: 'pointer', fontWeight: 'bold', fontSize: 15 }}>
+                  Confirmar Venta
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* PRINT MODAL */}
         {printModalSale && (
