@@ -195,14 +195,17 @@ export function useComisionesData(user?: any) {
 
     const monthSales = allSales;
 
-    // Precalcular totales del equipo
     const teamGroupCounts: Record<string, number> = {};
+    const teamGroupPending: Record<string, number> = {};
     const o2TeamGroupCounts: Record<string, number> = {};
+    const o2TeamGroupPending: Record<string, number> = {};
     
-    tiendaRules.forEach(rule => { teamGroupCounts[rule.nombre] = 0; });
-    o2Rules.forEach(rule => { o2TeamGroupCounts[rule.nombre] = 0; });
+    tiendaRules.forEach(rule => { teamGroupCounts[rule.nombre] = 0; teamGroupPending[rule.nombre] = 0; });
+    o2Rules.forEach(rule => { o2TeamGroupCounts[rule.nombre] = 0; o2TeamGroupPending[rule.nombre] = 0; });
 
     monthSales.forEach(s => {
+        const isPending = String(s.pendiente || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === 'si';
+        
         // Movistar
         if (!String(s.vendedor).toLowerCase().includes('marta')) {
             tiendaRules.forEach(rule => {
@@ -211,8 +214,10 @@ export function useComisionesData(user?: any) {
                     const val = getValueForRule(s, rule.nombre);
                     if (isPercentage) {
                         teamGroupCounts[rule.nombre] += val;
+                        if (isPending) teamGroupPending[rule.nombre] += val;
                     } else {
                         teamGroupCounts[rule.nombre] += 1;
+                        if (isPending) teamGroupPending[rule.nombre] += 1;
                     }
                 }
                 if (s.seguroImporte && Number(s.seguroImporte) > 0) {
@@ -222,8 +227,10 @@ export function useComisionesData(user?: any) {
                         const val = getValueForRule(virtualSeguro, rule.nombre);
                         if (isPercentage) {
                             teamGroupCounts[rule.nombre] += val;
+                            if (isPending) teamGroupPending[rule.nombre] += val;
                         } else {
                             teamGroupCounts[rule.nombre] += 1;
+                            if (isPending) teamGroupPending[rule.nombre] += 1;
                         }
                     }
                 }
@@ -238,8 +245,10 @@ export function useComisionesData(user?: any) {
                     const val = getValueForRule(s, rule.nombre);
                     if (isPercentage) {
                         o2TeamGroupCounts[rule.nombre] += val;
+                        if (isPending) o2TeamGroupPending[rule.nombre] += val;
                     } else {
                         o2TeamGroupCounts[rule.nombre] += 1;
+                        if (isPending) o2TeamGroupPending[rule.nombre] += 1;
                     }
                 }
                 if (s.seguroImporte && Number(s.seguroImporte) > 0) {
@@ -249,8 +258,10 @@ export function useComisionesData(user?: any) {
                         const val = getValueForRule(virtualSeguro, rule.nombre);
                         if (isPercentage) {
                             o2TeamGroupCounts[rule.nombre] += val;
+                            if (isPending) o2TeamGroupPending[rule.nombre] += val;
                         } else {
                             o2TeamGroupCounts[rule.nombre] += 1;
+                            if (isPending) o2TeamGroupPending[rule.nombre] += 1;
                         }
                     }
                 }
@@ -314,6 +325,7 @@ export function useComisionesData(user?: any) {
         const activeTiendaHours = isO2 ? o2Hours : tiendaHours;
         
         const activeTeamGroupCounts = isO2 ? o2TeamGroupCounts : teamGroupCounts;
+        const activeTeamGroupPending = isO2 ? o2TeamGroupPending : teamGroupPending;
         const comercialHour = activeTiendaHours.find(h => String(h.comercial).toLowerCase() === String(name).toLowerCase());
         const horario = comercialHour ? Number(comercialHour.horario) : 0;
 
@@ -869,7 +881,9 @@ export function useComisionesData(user?: any) {
             rawExtras: [...sExtras, ...virtualKpiExtras],
             virtualKpiExtras, // Exporting to emit later
             extraGroups,
-            groupIsConsolidado
+            groupIsConsolidado,
+            activeTeamGroupCounts,
+            activeTeamGroupPending
         };
         return sellerObj;
     });

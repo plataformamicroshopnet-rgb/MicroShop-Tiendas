@@ -578,8 +578,23 @@ export default function ComisionesDashboardPage() {
                                                 else if (qtty >= obj1 && obj1 > 0) gradientColor = 'linear-gradient(90deg, #fde68a, #f59e0b)' // Amarillo (Medio rendimiento)
                                                 else if (qtty > 0 && obj1 === 0 && obj2 === 0) gradientColor = 'linear-gradient(90deg, #86efac, #22c55e)' // Verde Default (sin objetivos configurados)
                                                 
+                                                let isTeamObj2 = false;
+                                                if (rule.condicionantes && rule.condicionantes.startsWith('[')) {
+                                                    try {
+                                                        const conds = JSON.parse(rule.condicionantes);
+                                                        if (Array.isArray(conds)) {
+                                                            isTeamObj2 = conds.some((c: any) => c.type === 'REQUIRE_TEAM_OBJ2');
+                                                        }
+                                                    } catch(e) {}
+                                                }
+                                                
                                                 const falt1 = Math.max(0, obj1 - qtty)
-                                                const falt2 = Math.max(0, obj2 - qtty)
+                                                let falt2 = Math.max(0, obj2 - qtty)
+                                                if (isTeamObj2) {
+                                                    const teamCount = s.activeTeamGroupCounts[gName] || 0;
+                                                    const teamPending = s.activeTeamGroupPending[gName] || 0;
+                                                    falt2 = Math.max(0, obj2 - teamCount - teamPending);
+                                                }
                                                 
                                                 const format = (v: number) => {
                                                     if (v === 0) return '0';
@@ -647,13 +662,13 @@ export default function ComisionesDashboardPage() {
                                                             {obj1 === 0 ? '-' : format(obj1)}
                                                         </td>
                                                         <td style={{ padding: '10px 8px', textAlign: 'center', fontSize: 13 }}>
-                                                            {obj2 === 0 ? '-' : format(obj2)}
+                                                            {obj2 === 0 ? '-' : <>{format(obj2)} {isTeamObj2 && <span style={{ fontSize: 10, color: 'var(--medium-gray)' }}>(Eq)</span>}</>}
                                                         </td>
                                                         <td style={{ padding: '10px 8px', textAlign: 'center', fontSize: 13, fontWeight: 600 }}>
                                                             {obj1 === 0 ? '-' : (falt1 > 0 ? <span style={{ color: '#ef4444' }}>{format(falt1)}</span> : <span style={{ color: '#10b981' }}>✓</span>)}
                                                         </td>
                                                         <td style={{ padding: '10px 8px', textAlign: 'center', fontSize: 13, fontWeight: 600 }}>
-                                                            {obj2 === 0 ? '-' : (falt2 > 0 ? <span style={{ color: '#ef4444' }}>{format(falt2)}</span> : <span style={{ color: '#10b981' }}>✓</span>)}
+                                                            {obj2 === 0 ? '-' : (falt2 > 0 ? <span style={{ color: '#ef4444' }}>{format(falt2)} {isTeamObj2 ? 'entre todo el Equipo' : ''}</span> : <span style={{ color: '#10b981' }}>✓</span>)}
                                                         </td>
                                                         <td style={{ 
                                                             padding: '10px 12px', 
