@@ -747,7 +747,7 @@ function OperationsContent() {
   return (
     <div className="print-container" style={{ padding: 20 }}>
       <PageHeader 
-        title={isPendingView ? 'Operaciones Pendientes' : (grupoFilter ? `Palanca ${grupoFilter}` : 'Ventas')}
+        title={isPendingView && !searchTerm ? 'Operaciones Pendientes' : (grupoFilter ? `Palanca ${grupoFilter}` : 'Ventas')}
         showBack={true}
         backFallback={grupoFilter ? "/seguimiento-ventas/productos" : "/back-office"}
         helpContent={
@@ -763,10 +763,10 @@ function OperationsContent() {
       )}
 
       <div style={{ padding: 0, border: 'none', marginBottom: 20, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
-        {(activeVendorFilter || grupoFilter) && (
+        {(activeVendorFilter || grupoFilter || isPendingView) && (
           <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: 12, backgroundColor: 'rgba(0,173,239,0.1)', padding: '10px 16px', borderRadius: 8, border: '1px solid var(--mercedes-cyan)' }}>
             <span style={{ color: '#333333', fontSize: 14 }}>
-              Mostrando solo las operaciones de: <strong style={{ color: '#0078D4' }}>{activeVendorFilter || `Palanca ${grupoFilter}`}</strong>
+              Filtro activo: <strong style={{ color: '#0078D4' }}>{activeVendorFilter || (grupoFilter ? `Palanca ${grupoFilter}` : 'Solo Pendientes')}</strong>
             </span>
             {can(user, 'PRINT') && (
               <button 
@@ -784,7 +784,7 @@ function OperationsContent() {
               onMouseOver={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
               onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
             >
-              <FilterX size={16} /> Quitar Filtro
+              <FilterX size={16} /> Quitar Filtros
             </button>
           </div>
         )}
