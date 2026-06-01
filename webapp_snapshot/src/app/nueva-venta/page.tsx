@@ -147,9 +147,13 @@ export default function NuevaVentaPage() {
              };
              const cat = newProducts[index].categoria
             if (cat === 'Suscripciones TV') {
-              const baseCom = parseSafeNum(selectedItem.comision);
-              const mult = parseSafeNum(selectedItem.comisionConCoste || '1.00');
-              newProducts[index].importe = String(baseCom * (mult === 0 ? 1 : mult));
+              if (newProducts[index].isSuscTraslado) {
+                newProducts[index].importe = '0';
+              } else {
+                const baseCom = parseSafeNum(selectedItem.comision);
+                const mult = parseSafeNum(selectedItem.comisionConCoste || '1.00');
+                newProducts[index].importe = String(baseCom * (mult === 0 ? 1 : mult));
+              }
             } else if (cat === 'O2' || cat === 'Seguro' || cat === 'Prepago' || cat === 'Varios') {
               newProducts[index].importe = selectedItem.comision || ''
             } else if (cat === 'Repos') {
@@ -261,29 +265,50 @@ export default function NuevaVentaPage() {
   const handleAddSuscripcion = (index: number) => {
     if (formData.productos.length >= 50) return
     const currentProd = formData.productos[index]
-    setFormData((prev: any) => ({
-      ...prev,
-      productos: [
-        ...prev.productos,
-        {
-          categoria: 'Suscripciones TV',
-          producto: '',
-          telf: currentProd.telf || '',
-          noCliente: currentProd.noCliente || '',
-          pendiente: 'No',
-          importe: '',
-          imei: '',
-          rentConCoste: '',
-          seguro: '',
-          seguroImporte: 0,
-          fabricante: '',
-          subcategoria: '',
-          gama: '',
-          isLibre: false,
-          isSwap: false
-        }
-      ]
-    }))
+    
+    let isTraslado = currentProd.categoria === 'Traslado miMovistar' || String(currentProd.producto || '').toLowerCase().includes('traslado');
+    let extraAnotacion = '';
+    let isSuscTraslado = false;
+    
+    if (isTraslado) {
+       const confirmTraslado = window.confirm('Cualquier Suscripción en Traslado no cuenta, quiere continuar, Si o No');
+       if (!confirmTraslado) return;
+       isSuscTraslado = true;
+       extraAnotacion = ' - No se abona por ser un traslado miMovistar';
+    }
+
+    setFormData((prev: any) => {
+      let newAnotaciones = prev.anotaciones || '';
+      if (extraAnotacion && !newAnotaciones.includes('No se abona por ser un traslado')) {
+          newAnotaciones = newAnotaciones + extraAnotacion;
+      }
+      
+      return {
+        ...prev,
+        anotaciones: newAnotaciones,
+        productos: [
+          ...prev.productos,
+          {
+            categoria: 'Suscripciones TV',
+            producto: '',
+            telf: currentProd.telf || '',
+            noCliente: currentProd.noCliente || '',
+            pendiente: 'No',
+            importe: isSuscTraslado ? '0' : '',
+            imei: '',
+            rentConCoste: '',
+            seguro: '',
+            seguroImporte: 0,
+            fabricante: '',
+            subcategoria: '',
+            gama: '',
+            isLibre: false,
+            isSwap: false,
+            isSuscTraslado: isSuscTraslado // Custom flag for handleProductChange
+          }
+        ]
+      }
+    })
   }
 
 
