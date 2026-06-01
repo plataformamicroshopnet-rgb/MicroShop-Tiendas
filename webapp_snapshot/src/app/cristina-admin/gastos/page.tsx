@@ -238,24 +238,46 @@ export default function GastosPage() {
     let importe = parseFloat(importeStr.replace(',', '.'))
     if (isNaN(importe)) importe = 0
 
+    let finalTotal = importe
+    const isSubField = ['importe_c', 'importe_r', 'importe_dif'].includes(field)
+
     // Update local state optimistic
     setGastos(prev => {
       const exists = prev.find(g => g.concepto === concepto && g.month === month && g.grupo === grupo)
       if (exists) {
-        return prev.map(g => g.id === exists.id ? { ...g, [field]: importe } : g)
+        return prev.map(g => {
+          if (g.id === exists.id) {
+            const updated = { ...g, [field]: importe }
+            if (isSubField) {
+              updated.importe_total = updated.importe_c + updated.importe_r + updated.importe_dif
+              finalTotal = updated.importe_total
+            }
+            return updated
+          }
+          return g
+        })
       } else {
         const newGasto: any = { id: Math.random().toString(), year: activeYear, month, grupo, concepto, importe_c: 0, importe_r: 0, importe_dif: 0, importe_total: 0 }
         newGasto[field] = importe
+        if (isSubField) {
+          newGasto.importe_total = newGasto.importe_c + newGasto.importe_r + newGasto.importe_dif
+          finalTotal = newGasto.importe_total
+        }
         return [...prev, newGasto as Gasto]
       }
     })
 
     // Persist
     try {
+      const payload: any = { year: activeYear, month, grupo, concepto, [field]: importe }
+      if (isSubField) {
+        payload.importe_total = finalTotal
+      }
+
       await fetch('/api/gastos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ year: activeYear, month, grupo, concepto, [field]: importe })
+        body: JSON.stringify(payload)
       })
     } catch (e) {
       console.error('Error saving cell', e)
