@@ -67,6 +67,42 @@ export async function POST(request: Request) {
     const numValidProducts = data.productos.filter((p: any) => p.producto !== '').length
     if (numValidProducts === 0) return NextResponse.json({ success: false, error: 'Configura al menos un producto' }, { status: 400 })
 
+    // --- REGLA ANTI-FRAUDE TRASLADOS MISTAR + SUSCRIPCIONES TV ---
+    const hasSuscripcionTV = data.productos.some((p: any) => p.categoria === 'Suscripciones TV' && p.producto !== '');
+    
+    if (hasSuscripcionTV && data.nif) {
+       const hasTrasladoInPayload = data.productos.some((p: any) => 
+           p.producto !== '' && (p.categoria === 'Traslado miMovistar' || String(p.producto || '').toLowerCase().includes('traslado'))
+       );
+       
+       const twentyDaysAgo = new Date();
+       twentyDaysAgo.setDate(twentyDaysAgo.getDate() - 20);
+
+       const recentTraslado = await prisma.sale.findFirst({
+         where: {
+           nif: data.nif.toUpperCase(),
+           createdAt: { gte: twentyDaysAgo },
+           detalle: 'Traslado miMovistar'
+         }
+       });
+
+       if (hasTrasladoInPayload || recentTraslado) {
+         const hasInvalidSuscripcion = data.productos.some((p: any) => {
+            if (p.categoria !== 'Suscripciones TV' || p.producto === '') return false;
+            const imp = parseFloat(String(p.importe || '0').replace(',','.'));
+            return !isNaN(imp) && imp > 0;
+         });
+         
+         if (hasInvalidSuscripcion) {
+            return NextResponse.json({ 
+              success: false, 
+              error: 'Antifraude: No se puede comisionar una Suscripción TV a este NIF porque ha realizado un Traslado miMovistar (hoy o en los últimos 20 días).' 
+            }, { status: 400 });
+         }
+       }
+    }
+    // -------------------------------------------------------------
+
     let activePeriod = null
     if (data.periodKey) {
       activePeriod = await prisma.workPeriod.findUnique({
