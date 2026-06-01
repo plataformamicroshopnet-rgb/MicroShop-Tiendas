@@ -44,10 +44,10 @@ export const matchTipoVenta = (sale: any, tipoVentaRaw: string) => {
         let matched = false;
         switch(tipoVenta.toLowerCase().trim()) {
             case 'alta baf total':
-                matched = cat === 'mimovistar' || cat === 'resto baf';
+                matched = cat === 'mimovistar' || cat === 'resto baf' || prod.includes('baf total') || (prod.includes('fibra') && !prod.includes('movil') && !prod.includes('móvil'));
                 break;
             case 'alta baf convergente':
-                matched = cat === 'mimovistar';
+                matched = cat === 'mimovistar' || prod.includes('baf convergente') || prod.includes('fd total') || prod.includes('fd flex') || (prod.includes('fibra') && (prod.includes('movil') || prod.includes('móvil')));
                 break;
             case 'dispositivos + seguro':
             case 'dispositivos + seguros':
@@ -72,6 +72,7 @@ export const matchTipoVenta = (sale: any, tipoVentaRaw: string) => {
                 matched = cat === 'repos' && !prod.includes('fútbol') && !prod.includes('futbol');
                 break;
             case 'repo fútbol':
+            case 'repo futbol':
                 matched = (prod.includes('fútbol') || prod.includes('futbol')) && cat === 'repos';
                 break;
             default:
@@ -110,7 +111,7 @@ export const matchesRule = (s: any, ruleName: string, ruleProductosCuentan: stri
     if (ruleName === 'ARPU') {
         return matchTipoVenta(s, 'ARPU') || isSuscripcionesTV(s) || isExtraRepoUpFutbol(s);
     }
-    if (ruleName === 'Repo Fútbol') {
+    if (ruleName === 'Repo Fútbol' || ruleName === 'Repo Futbol') {
         return matchTipoVenta(s, 'Repo Fútbol') || isExtraRepoUpFutbol(s);
     }
     return matchTipoVenta(s, ruleProductosCuentan);

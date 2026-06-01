@@ -7,7 +7,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { useTheme } from '@/components/ThemeProvider'
 import { useRouter } from 'next/navigation'
 import { usePeriod } from '@/components/PeriodProvider'
-import { useComisionesData, matchTipoVenta } from '@/hooks/useComisionesData'
+import { useComisionesData, matchesRule } from '@/hooks/useComisionesData'
 import { useGuard } from '@/hooks/useGuard'
 
 const formatCurrency = (val: any) => {
@@ -136,7 +136,7 @@ export default function AvancePalancasPage() {
   if (activeLeverFilter) {
       const activeRule = tiendaRules.find(r => r.nombre === activeLeverFilter);
       if (activeRule) {
-          activeLeverSales = activeLeverSales.filter(s => matchTipoVenta(s, activeRule.productosCuentan));
+          activeLeverSales = activeLeverSales.filter(s => matchesRule(s, activeRule.nombre, activeRule.productosCuentan));
       }
   }
 

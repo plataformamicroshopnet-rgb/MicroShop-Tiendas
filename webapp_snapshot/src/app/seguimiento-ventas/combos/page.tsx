@@ -58,7 +58,16 @@ export default function CombosPage() {
   const isMpa = (s: any) => prod(s).includes('mpa') || prod(s).includes('alarma') || getGroupVisual(s.producto, s.detalle) === 'MPA'
   const isFttr = (s: any) => prod(s).includes('fttr')
   const isSolar = (s: any) => prod(s).includes('solar') || prod(s).includes('señaliz')
-  const isArpu = (s: any) => prod(s).includes('arpu') || prod(s).includes('ficción') || prod(s).includes('netflix') || prod(s).includes('movistar+') || prod(s).includes('adicional') || prod(s).includes('tv') || String(s.detalle || '').toLowerCase() === 'repos'
+  const isArpu = (s: any) => {
+    const cat = String(s.detalle || s.sheet || s.categoria || '').trim().toLowerCase();
+    const p = prod(s);
+    const textNorm = String(s.categoria || s.detalle || s.sheet || s.producto || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    
+    const isSuscripcionesTV = textNorm.includes("suscripciones tv") || textNorm.includes("suscripcion tv");
+    const isExtraRepoUpFutbol = textNorm.includes("extra repo") && textNorm.includes("futbol");
+    
+    return (cat === 'repos' && !p.includes('fútbol') && !p.includes('futbol')) || isSuscripcionesTV || isExtraRepoUpFutbol;
+  }
   const isRepoFutbol = (s: any) => prod(s).includes('futbol') || prod(s).includes('fútbol') || prod(s).includes('repo f')
 
   const norm = (str: string) => String(str || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()
@@ -71,6 +80,17 @@ export default function CombosPage() {
     
     const sumImporte = (list: any[]) => list.reduce((sum, s) => {
       const val = parseFloat(String(s.importe || s.cuota || '0').replace(',', '.'))
+      return sum + (isNaN(val) ? 0 : val)
+    }, 0)
+    
+    const sumArpu = (list: any[]) => list.reduce((sum, s) => {
+      const textNorm = String(s.categoria || s.detalle || s.sheet || s.producto || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const isSuscripcionesTV = textNorm.includes("suscripciones tv") || textNorm.includes("suscripcion tv");
+      let valRaw = s.cuota;
+      if (isSuscripcionesTV) {
+         valRaw = s.importe || s.cuota || 0;
+      }
+      const val = parseFloat(String(valRaw || '0').replace(',', '.'))
       return sum + (isNaN(val) ? 0 : val)
     }, 0)
     
@@ -90,7 +110,7 @@ export default function CombosPage() {
       mpa: { n: mpa.length, cl: clients(mpa) },
       fttr: { n: fttr.length, cl: clients(fttr) },
       solar: { n: solar.length, cl: clients(solar) },
-      arpu: { n: sumImporte(arpu), cl: clients(arpu) },
+      arpu: { n: sumArpu(arpu), cl: clients(arpu) },
       repoFutbol: { n: repoFutbol.length, cl: clients(repoFutbol) },
     }
   }), [allSales])

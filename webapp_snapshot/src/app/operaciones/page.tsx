@@ -459,7 +459,7 @@ function OperationsContent() {
   const activeVendorFilter = forceVendorName || vendorFilter;
 
   // Apply filter locally
-  const normName = (name: string) => name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  const normName = (name: any) => String(name || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
   let displayedSales = activeVendorFilter 
     ? sales.filter(s => normName(s.vendedor || '') === normName(activeVendorFilter))
