@@ -387,10 +387,13 @@ export default function GastosPage() {
           total: new Array(12).fill(0)
         }
       }
+      const sumCRD = g.importe_c + g.importe_r + g.importe_dif;
+      const effectiveTotal = sumCRD !== 0 ? sumCRD : g.importe_total;
+      
       agrupado[g.grupo][g.concepto].c[g.month - 1] = g.importe_c
       agrupado[g.grupo][g.concepto].r[g.month - 1] = g.importe_r
       agrupado[g.grupo][g.concepto].dif[g.month - 1] = g.importe_dif
-      agrupado[g.grupo][g.concepto].total[g.month - 1] = g.importe_total
+      agrupado[g.grupo][g.concepto].total[g.month - 1] = effectiveTotal
     })
 
     // Sort grupos y conceptos
@@ -428,19 +431,22 @@ export default function GastosPage() {
     }
 
     gastos.forEach(g => {
-      if (g.grupo === 'Gastos Fijos') fijos[g.month - 1] += g.importe_total
-      if (g.grupo === 'Gastos Variables') variables[g.month - 1] += g.importe_total
+      const sumCRD = g.importe_c + g.importe_r + g.importe_dif;
+      const effectiveTotal = sumCRD !== 0 ? sumCRD : g.importe_total;
+
+      if (g.grupo === 'Gastos Fijos') fijos[g.month - 1] += effectiveTotal
+      if (g.grupo === 'Gastos Variables') variables[g.month - 1] += effectiveTotal
       
       if (g.grupo === 'Gastos Fijos' || g.grupo === 'Gastos Variables') {
-         fijosVariables.total[g.month - 1] += g.importe_total;
+         fijosVariables.total[g.month - 1] += effectiveTotal;
          fijosVariables.c[g.month - 1] += g.importe_c;
          fijosVariables.r[g.month - 1] += g.importe_r;
          fijosVariables.dif[g.month - 1] += g.importe_dif;
       }
 
       if (g.grupo === 'MERCADERIAS') {
-        if (g.concepto === 'Compras Mercaderias') compras[g.month - 1] += g.importe_total
-        if (g.concepto === 'Ventas Mercaderias') ventas[g.month - 1] += g.importe_total
+        if (g.concepto === 'Compras Mercaderias') compras[g.month - 1] += effectiveTotal
+        if (g.concepto === 'Ventas Mercaderias') ventas[g.month - 1] += effectiveTotal
       }
     })
 
