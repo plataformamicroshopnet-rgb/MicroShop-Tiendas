@@ -96,7 +96,7 @@ export async function POST(request: Request) {
          if (hasInvalidSuscripcion) {
             return NextResponse.json({ 
               success: false, 
-              error: 'Antifraude: No se puede comisionar una Suscripción TV a este NIF porque ha realizado un Traslado miMovistar (hoy o en los últimos 20 días).' 
+              error: 'Antifraude: No se puede comisionar una Suscripción TV a este NIF porque ha realizado un Traslado miMovistar (hoy o en los próximos 20 días).' 
             }, { status: 400 });
          }
        }
