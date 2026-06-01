@@ -101,6 +101,19 @@ export default function NuevaVentaPage() {
         }
       }
 
+      if (field === 'categoria' && value === 'Repos') {
+         const confirmRepos = window.confirm(
+           'ADVERTENCIA puede tener penalización si:\n' +
+           '- No aplica si hay pérdida de valor en los 20 días anteriores o posteriores (cualquier canal).\n' +
+           '- No aplica a reposicionamientos con origen Laliga y destino Fútbol Total.\n' +
+           '- Cliente debe mantener activo el paquete el día 8 del m+2.\n\n' +
+           '¿Quiere continuar, Si o No?'
+         );
+         if (!confirmRepos) {
+           return prev; // Cancel the change
+         }
+      }
+
       newProducts[index] = { ...newProducts[index], [field]: value }
       
       // Reset product dropdown if switching categoria
