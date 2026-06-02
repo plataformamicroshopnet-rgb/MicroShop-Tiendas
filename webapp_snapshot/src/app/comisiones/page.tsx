@@ -442,6 +442,12 @@ export default function ComisionesDashboardPage() {
                         grid-template-columns: 1fr;
                     }
                 }
+                .comisiones-table th, .comisiones-table td {
+                    border-right: 1px solid #e2e8f0;
+                }
+                .comisiones-table th:last-child, .comisiones-table td:last-child {
+                    border-right: none;
+                }
             `}} />
             
             <div className="comisiones-grid-cards">
@@ -535,7 +541,7 @@ export default function ComisionesDashboardPage() {
                                 {/* GRÁFICO DE BARRAS DE VENTAS POR GRUPO */}
                                 <div style={{ flex: 1 }}>
                                     <div style={{ backgroundColor: '#ffffff', borderRadius: 8, overflow: 'hidden', border: '1px solid #bfdbfe', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+                                    <table className="comisiones-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
                                         <thead>
                                             <tr style={{ 
                                                 backgroundColor: '#0078D4', 
