@@ -156,13 +156,13 @@ export default function SeguimientoVentasPage() {
             .hub-grid { grid-template-columns: repeat(2, 1fr); }
         }
         @media (min-width: 1024px) {
-            .hub-grid { grid-template-columns: repeat(2, 1fr); }
+            .hub-grid { grid-template-columns: repeat(3, 1fr); }
         }
 
         .hub-card {
             background: var(--bg-card);
             border-radius: 16px;
-            padding: 20px;
+            padding: 16px;
             cursor: pointer;
             transition: all 0.2s ease;
             border: 1px solid rgba(226, 232, 240, 0.8);
@@ -181,7 +181,7 @@ export default function SeguimientoVentasPage() {
         .hub-card-main {
             flex-direction: row;
             align-items: center;
-            gap: 24px;
+            gap: 16px;
             background: linear-gradient(to right, var(--bg-card), var(--active-bg));
         }
         @media (max-width: 768px) {
@@ -259,19 +259,19 @@ export default function SeguimientoVentasPage() {
                 <div style={{ 
                     background: c.color || 'rgba(59, 130, 246, 0.1)', 
                     color: iconColor, 
-                    width: 64, 
-                    height: 64, 
+                    width: 56, 
+                    height: 56, 
                     flexShrink: 0,
-                    borderRadius: 18, 
+                    borderRadius: 16, 
                     display: 'flex', 
                     alignItems: 'center', 
                     justifyContent: 'center',
                     boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.05)'
                 }}>
-                  <Icon size={28} strokeWidth={2.5} />
+                  <Icon size={26} strokeWidth={2.5} />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <h3 style={{ margin: '0 0 6px 0', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.3px', fontSize: 20 }}>
+                  <h3 style={{ margin: '0 0 4px 0', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.3px', fontSize: 18 }}>
                     {c.title}
                   </h3>
                   <p style={{ margin: 0, color: 'var(--text-muted)', fontWeight: 500, fontSize: 14, lineHeight: 1.4 }}>

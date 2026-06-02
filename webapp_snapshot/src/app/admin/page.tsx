@@ -21,14 +21,9 @@ export default function AdminDashboardPage() {
       description: 'Editar catálogos de precios, cuotas y objetivos.',
       icon: FileEdit,
       action: () => router.push('/catalogos'),
-      color: '#ffffff',
+      color: 'rgba(0,173,239,0.1)',
       textColor: 'var(--mercedes-cyan)',
       permission: 'MANAGE_CATALOG',
-      bgColorOverride: 'var(--mercedes-cyan)',
-      textColorOverride: '#ffffff',
-      textMutedOverride: 'rgba(255,255,255,0.85)',
-      iconBgOverride: '#ffffff',
-      iconColorOverride: 'var(--mercedes-cyan)',
       colorGroup: 'cyan'
     },
     {
@@ -36,14 +31,9 @@ export default function AdminDashboardPage() {
       description: 'Gestión de entradas, salidas y trazabilidad de efectivo.',
       icon: Calculator,
       action: () => router.push('/tiendas/caja'),
-      color: '#ffffff',
+      color: 'rgba(0,173,239,0.1)',
       textColor: 'var(--mercedes-cyan)',
       permission: 'CARD_CAJA',
-      bgColorOverride: 'var(--mercedes-cyan)',
-      textColorOverride: '#ffffff',
-      textMutedOverride: 'rgba(255,255,255,0.85)',
-      iconBgOverride: '#ffffff',
-      iconColorOverride: 'var(--mercedes-cyan)',
       colorGroup: 'cyan'
     },
 
@@ -53,14 +43,9 @@ export default function AdminDashboardPage() {
       description: 'Escribir condiciones, notas y comisiones estra para el mes en curso.',
       icon: FileEdit,
       action: () => router.push('/admin/condiciones-mensuales'),
-      color: '#ffffff',
+      color: 'rgba(249,115,22,0.1)',
       textColor: '#f97316',
       permission: 'MODULE_ADMIN',
-      bgColorOverride: '#f97316',
-      textColorOverride: '#ffffff',
-      textMutedOverride: 'rgba(255,255,255,0.85)',
-      iconBgOverride: '#ffffff',
-      iconColorOverride: '#f97316',
       colorGroup: 'orange'
     },
     {
@@ -68,13 +53,8 @@ export default function AdminDashboardPage() {
       description: 'Dashboard Financiero Macro e Histórico (2011 - 2026).',
       icon: TrendingUp,
       action: () => router.push('/admin/ganancias'),
-      color: '#ffffff',
+      color: 'rgba(249,115,22,0.1)',
       textColor: '#f97316',
-      bgColorOverride: '#f97316',
-      textColorOverride: '#ffffff',
-      textMutedOverride: 'rgba(255,255,255,0.85)',
-      iconBgOverride: '#ffffff',
-      iconColorOverride: '#f97316',
       colorGroup: 'orange'
     },
     {
@@ -82,13 +62,8 @@ export default function AdminDashboardPage() {
       description: 'Dashboard Retrospectivo de Patrimonio (2008 - 2026).',
       icon: Landmark,
       action: () => router.push('/admin/prestamos'),
-      color: '#ffffff',
+      color: 'rgba(249,115,22,0.1)',
       textColor: '#f97316',
-      bgColorOverride: '#f97316',
-      textColorOverride: '#ffffff',
-      textMutedOverride: 'rgba(255,255,255,0.85)',
-      iconBgOverride: '#ffffff',
-      iconColorOverride: '#f97316',
       colorGroup: 'orange'
     },
 
@@ -98,14 +73,9 @@ export default function AdminDashboardPage() {
       description: 'Control estructural de meses DRAFT, ACTIVE e HISTORIC.',
       icon: CalendarDays,
       action: () => router.push('/admin/periodos'),
-      color: '#ffffff',
+      color: 'rgba(91,197,0,0.1)',
       textColor: '#5bc500',
       permission: 'MODULE_ADMIN',
-      bgColorOverride: '#5bc500',
-      textColorOverride: '#ffffff',
-      textMutedOverride: 'rgba(255,255,255,0.85)',
-      iconBgOverride: '#ffffff',
-      iconColorOverride: '#5bc500',
       colorGroup: 'green'
     },
     {
@@ -113,13 +83,8 @@ export default function AdminDashboardPage() {
       description: 'Crear perfiles, restablecer contraseñas y asignar permisos.',
       icon: Users,
       action: () => router.push('/admin/usuarios'),
-      color: '#ffffff',
+      color: 'rgba(91,197,0,0.1)',
       textColor: '#5bc500',
-      bgColorOverride: '#5bc500',
-      textColorOverride: '#ffffff',
-      textMutedOverride: 'rgba(255,255,255,0.85)',
-      iconBgOverride: '#ffffff',
-      iconColorOverride: '#5bc500',
       colorGroup: 'green'
     },
     {
@@ -127,13 +92,8 @@ export default function AdminDashboardPage() {
       description: 'Copias de seguridad autónomas en la nube.',
       icon: Cloud,
       action: () => router.push('/admin/cloud-backup'),
-      color: '#ffffff',
+      color: 'rgba(91,197,0,0.1)',
       textColor: '#5bc500',
-      bgColorOverride: '#5bc500',
-      textColorOverride: '#ffffff',
-      textMutedOverride: 'rgba(255,255,255,0.85)',
-      iconBgOverride: '#ffffff',
-      iconColorOverride: '#5bc500',
       colorGroup: 'green'
     },
     {
@@ -141,14 +101,9 @@ export default function AdminDashboardPage() {
       description: 'Auditoría en tiempo real de navegación de usuarios.',
       icon: Activity,
       action: () => router.push('/admin/tracking'),
-      color: '#ffffff',
+      color: 'rgba(91,197,0,0.1)',
       textColor: '#5bc500',
       permission: 'MODULE_ADMIN',
-      bgColorOverride: '#5bc500',
-      textColorOverride: '#ffffff',
-      textMutedOverride: 'rgba(255,255,255,0.85)',
-      iconBgOverride: '#ffffff',
-      iconColorOverride: '#5bc500',
       colorGroup: 'green'
     }
   ]
