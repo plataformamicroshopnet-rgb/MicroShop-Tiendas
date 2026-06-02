@@ -72,6 +72,35 @@ export async function GET(request: Request) {
       orderBy: { createdAt: 'desc' },
     })
     
+    // Enrich Seguro sales that have no seguroImporte by looking up ProductCatalog
+    const seguroSales = sales.filter(s => 
+      (String(s.detalle || '').toLowerCase() === 'seguro' || String(s.sheet || '').toLowerCase() === 'seguro') && 
+      (!s.seguroImporte || s.seguroImporte === 0)
+    );
+    if (seguroSales.length > 0 && periodKey) {
+      const wp = await prisma.workPeriod.findUnique({ where: { period_key: periodKey } });
+      if (wp) {
+        const seguroCatalog = await prisma.productCatalog.findMany({
+          where: { periodId: wp.id, categoria: 'Seguro' }
+        });
+        const catalogByProduct: Record<string, number> = {};
+        for (const c of seguroCatalog) {
+          if (c.producto && c.anual) {
+            catalogByProduct[c.producto.toLowerCase().trim()] = parseFloat(String(c.anual).replace(',', '.')) || 0;
+          }
+        }
+        sales = sales.map(s => {
+          if ((String(s.detalle || '').toLowerCase() === 'seguro' || String(s.sheet || '').toLowerCase() === 'seguro') && (!s.seguroImporte || s.seguroImporte === 0)) {
+            const cuotaFromCatalog = catalogByProduct[String(s.producto || '').toLowerCase().trim()];
+            if (cuotaFromCatalog && cuotaFromCatalog > 0) {
+              return { ...s, seguroImporte: cuotaFromCatalog };
+            }
+          }
+          return s;
+        });
+      }
+    }
+    
     // Fallback: Filtrado en memoria estricto sobre el nombre (por si acaso el query no filtró bien)
     if (!canSeeAllSales) {
       const normName = (name: string) => name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
@@ -114,6 +143,8 @@ export async function GET(request: Request) {
         cuota: sale.cuota ?? 0,
         detalle: sale.detalle || '',
         rentConCoste: sale.rentConCoste || 'No',
+        seguro: sale.seguro || '',
+        seguroImporte: (sale as any).seguroImporte ?? null,
         motivoModificacion: ''
       }
     })
