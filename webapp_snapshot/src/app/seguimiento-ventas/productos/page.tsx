@@ -205,7 +205,9 @@ export default function AvancePalancasPage() {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <div style={{ backgroundColor: isActive ? 'var(--mercedes-cyan)' : 'rgba(255,255,255,0.08)', padding: '6px 12px', borderRadius: 8, fontWeight: 900, color: isActive ? '#000' : 'var(--medium-gray)', fontSize: 16, transition: 'all 0.3s ease' }}>
-                          {rule.nombre}
+                          {rule.nombre === 'Dispositivos + Seguros' ? 'Dispos + Seg' : 
+                           rule.nombre === 'Alta BAF Convergente' ? 'BAF Converg' : 
+                           rule.nombre === 'Señalización Solar 360' ? 'Solar 360' : rule.nombre}
                       </div>
                   </div>
                   {(() => {
@@ -243,25 +245,26 @@ export default function AvancePalancasPage() {
               {/* INTEGRATED METRICS PANEL */}
               <div style={{ 
                   marginTop: 8,
-                  backgroundColor: 'rgba(0,0,0,0.15)', 
+                  backgroundColor: '#0ea5e9', // Azul cian
                   borderRadius: 12,
                   padding: '12px', 
                   display: 'flex', 
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  border: '1px solid rgba(255,255,255,0.03)',
+                  boxShadow: '0 4px 12px rgba(14, 165, 233, 0.2)',
+                  border: 'none',
                   zIndex: 1
               }}>
                   <div style={{ display: 'flex', flexDirection: 'column', flex: 1, fontSize: 11, gap: 4 }}>
-                      <span style={{ fontSize: 10, color: 'var(--medium-gray)', fontWeight: 800, letterSpacing: 0.5 }}>FINALIZADAS</span>
-                      <span style={{ color: 'var(--text-main)', fontSize: 14, fontWeight: 900 }}>
+                      <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.9)', fontWeight: 800, letterSpacing: 0.5 }}>FINALIZADAS</span>
+                      <span style={{ color: '#FFFFFF', fontSize: 14, fontWeight: 900 }}>
                           {stats.isMonetary ? formatCurrency(stats.finalizadas) : stats.finalizadas}
                       </span>
                   </div>
-                  <div style={{ width: 1, height: 30, backgroundColor: 'rgba(255,255,255,0.05)', margin: '0 12px' }}></div>
+                  <div style={{ width: 1, height: 30, backgroundColor: 'rgba(255,255,255,0.3)', margin: '0 12px' }}></div>
                   <div style={{ display: 'flex', flexDirection: 'column', flex: 1, textAlign: 'right', fontSize: 11, gap: 4 }}>
-                      <span style={{ fontSize: 10, color: '#FF9500', fontWeight: 800, letterSpacing: 0.5 }}>PENDIENTES</span>
-                      <span style={{ color: stats.pendientes > 0 ? '#FF9500' : 'var(--text-main)', fontSize: 14, fontWeight: 900 }}>
+                      <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.9)', fontWeight: 800, letterSpacing: 0.5 }}>PENDIENTES</span>
+                      <span style={{ color: '#FFFFFF', fontSize: 14, fontWeight: 900 }}>
                           {stats.isMonetary ? formatCurrency(stats.pendientes) : stats.pendientes}
                       </span>
                   </div>
