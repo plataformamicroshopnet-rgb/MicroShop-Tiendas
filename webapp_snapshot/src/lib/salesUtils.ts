@@ -291,7 +291,7 @@ export function renderDashboardData(
                         const cat = String(s.categoria || '').trim().toLowerCase();
                         const det = String(s.detalle || '').trim().toLowerCase();
                         const sheet = String(s.sheet || '').trim().toLowerCase();
-                        if (['terminales', 'seguro', 'accesorios', 'dispositivos'].includes(cat) || det.includes('seguro') || sheet.includes('seguro')) {
+                        if (['rent', 'seguro'].includes(cat) || det.includes('seguro') || sheet.includes('seguro')) {
                             return s.pendiente !== 'Anulado';
                         }
                     }
