@@ -338,12 +338,18 @@ export default function ComisionesJefeTiendasPage() {
                                 {/* Celdas combinadas para Total y Avance (Solo se renderizan en la primera fila) */}
                                 {index === 0 && (
                                     <>
-                                        <td rowSpan={tableData.length} style={{ fontWeight: 'bold', fontSize: 16 }}>
+                                        <td rowSpan={tableData.length} style={{ fontWeight: 'bold', fontSize: 16, verticalAlign: 'middle' }}>
                                             {totalDispVentas > 0 ? `${totalDispVentas.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : '- €'}
                                         </td>
-                                        <td rowSpan={tableData.length} className="cell-green" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-around', height: `${tableData.length * 40}px`, border: 'none' }}>
-                                            <div>{avanceDisp1.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</div>
-                                            <div>{avanceDisp2.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</div>
+                                        <td rowSpan={tableData.length} className="cell-green" style={{ verticalAlign: 'middle', padding: 0 }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: `${tableData.length * 35}px` }}>
+                                                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid #d1d5db' }}>
+                                                    {avanceDisp1.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                                                </div>
+                                                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    {avanceDisp2.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                                                </div>
+                                            </div>
                                         </td>
                                     </>
                                 )}
@@ -354,12 +360,18 @@ export default function ComisionesJefeTiendasPage() {
 
                                 {index === 0 && (
                                     <>
-                                        <td rowSpan={tableData.length} style={{ fontWeight: 'bold', fontSize: 16 }}>
+                                        <td rowSpan={tableData.length} style={{ fontWeight: 'bold', fontSize: 16, verticalAlign: 'middle' }}>
                                             {totalArpuVentas > 0 ? `${totalArpuVentas.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : '- €'}
                                         </td>
-                                        <td rowSpan={tableData.length} className="cell-green" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-around', height: `${tableData.length * 40}px`, border: 'none' }}>
-                                            <div>{avanceArpu1.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</div>
-                                            <div>{avanceArpu2.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</div>
+                                        <td rowSpan={tableData.length} className="cell-green" style={{ verticalAlign: 'middle', padding: 0 }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: `${tableData.length * 35}px` }}>
+                                                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid #d1d5db' }}>
+                                                    {avanceArpu1.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                                                </div>
+                                                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    {avanceArpu2.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                                                </div>
+                                            </div>
                                         </td>
                                     </>
                                 )}
