@@ -103,7 +103,7 @@ export default function DashboardPage() {
           llevamos += 1;
         }
       }
-      if (s.seguroImporte && Number(s.seguroImporte) > 0) {
+      if (s.seguroImporte && Number(s.seguroImporte) > 0 && String(s.categoria || s.detalle || s.sheet).toLowerCase() !== 'seguro') {
         const virtualSeguro = { ...s, categoria: 'seguro', detalle: 'seguro', cuota: Number(s.seguroImporte) };
         if (matchesRule(virtualSeguro, kpiName, productsCuentan)) {
           const val = getValueForRule(virtualSeguro, kpiName);
@@ -168,9 +168,11 @@ export default function DashboardPage() {
       const isPending = String(s.pendiente || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === 'si';
 
       // Facturación total
-      let amt = Number(s.cuota || s.importe) || 0;
-      if (s.seguroImporte && Number(s.seguroImporte) > 0) {
-        amt += Number(s.seguroImporte);
+      let amt = 0;
+      if (String(s.categoria || s.detalle || s.sheet).toLowerCase() === 'seguro') {
+        amt = Number(s.seguroImporte) || Number(s.cuota) || Number(s.importe) || 0;
+      } else {
+        amt = (Number(s.cuota || s.importe) || 0) + (s.seguroImporte && Number(s.seguroImporte) > 0 ? Number(s.seguroImporte) : 0);
       }
       billingTotals[vName] = (billingTotals[vName] || 0) + amt;
       if (isPending) {
@@ -188,12 +190,16 @@ export default function DashboardPage() {
       // Dispositivos + Seguros
       let isDispSeg = matchTipoVenta(s, 'Dispositivos + Seguros');
       if (isDispSeg) {
-        dispSegTotals[vName] = (dispSegTotals[vName] || 0) + (Number(s.cuota) || 0);
+        let val = Number(s.cuota) || 0;
+        if (String(s.categoria || s.detalle || s.sheet).toLowerCase() === 'seguro') {
+          val = Number(s.seguroImporte) || Number(s.cuota) || 0;
+        }
+        dispSegTotals[vName] = (dispSegTotals[vName] || 0) + val;
         if (isPending) {
           dispSegPendingSales[vName] = (dispSegPendingSales[vName] || 0) + 1;
         }
       }
-      if (s.seguroImporte && Number(s.seguroImporte) > 0) {
+      if (s.seguroImporte && Number(s.seguroImporte) > 0 && String(s.categoria || s.detalle || s.sheet).toLowerCase() !== 'seguro') {
         const virtualSeguro = { ...s, categoria: 'seguro', detalle: 'seguro', cuota: Number(s.seguroImporte) };
         if (matchTipoVenta(virtualSeguro, 'Dispositivos + Seguros')) {
           dispSegTotals[vName] = (dispSegTotals[vName] || 0) + Number(s.seguroImporte);
@@ -299,7 +305,7 @@ export default function DashboardPage() {
             llevamos += 1;
           }
         }
-        if (s.seguroImporte && Number(s.seguroImporte) > 0) {
+        if (s.seguroImporte && Number(s.seguroImporte) > 0 && String(s.categoria || s.detalle || s.sheet).toLowerCase() !== 'seguro') {
           const virtualSeguro = { ...s, categoria: 'seguro', detalle: 'seguro', cuota: Number(s.seguroImporte) };
           if (matchesRule(virtualSeguro, rule.nombre, rule.productosCuentan)) {
             const val = getValueForRule(virtualSeguro, rule.nombre);

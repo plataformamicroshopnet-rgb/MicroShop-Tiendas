@@ -225,7 +225,7 @@ export function useComisionesData(user?: any) {
                         if (isPending) teamGroupPending[rule.nombre] += 1;
                     }
                 }
-                if (s.seguroImporte && Number(s.seguroImporte) > 0) {
+                if (s.seguroImporte && Number(s.seguroImporte) > 0 && String(s.categoria || s.detalle || s.sheet).toLowerCase() !== 'seguro') {
                     const virtualSeguro = { ...s, categoria: 'seguro', detalle: 'seguro', cuota: Number(s.seguroImporte) };
                     if (matchesRule(virtualSeguro, rule.nombre, rule.productosCuentan)) {
                         const isPercentage = String(rule.importePrimerTramo || '').includes('%');
@@ -256,7 +256,7 @@ export function useComisionesData(user?: any) {
                         if (isPending) o2TeamGroupPending[rule.nombre] += 1;
                     }
                 }
-                if (s.seguroImporte && Number(s.seguroImporte) > 0) {
+                if (s.seguroImporte && Number(s.seguroImporte) > 0 && String(s.categoria || s.detalle || s.sheet).toLowerCase() !== 'seguro') {
                     const virtualSeguro = { ...s, categoria: 'seguro', detalle: 'seguro', cuota: Number(s.seguroImporte) };
                     if (matchesRule(virtualSeguro, rule.nombre, rule.productosCuentan)) {
                         const isPercentage = String(rule.importePrimerTramo || '').includes('%');
@@ -378,7 +378,7 @@ export function useComisionesData(user?: any) {
                     }
                     groupSales[rule.nombre].push(s);
                 }
-                if (s.seguroImporte && Number(s.seguroImporte) > 0) {
+                if (s.seguroImporte && Number(s.seguroImporte) > 0 && String(s.categoria || s.detalle || s.sheet).toLowerCase() !== 'seguro') {
                     const virtualSeguro = { ...s, categoria: 'seguro', detalle: 'seguro', cuota: Number(s.seguroImporte) };
                     if (matchesRule(virtualSeguro, rule.nombre, rule.productosCuentan)) {
                         const isPercentage = String(rule.importePrimerTramo || '').includes('%');
