@@ -148,7 +148,7 @@ export function PageHeader({
             style={{
               ...buttonStyle,
               background: isAuditMode ? 'rgba(59, 130, 246, 0.1)' : buttonStyle.background,
-              borderColor: isAuditMode ? '#3b82f6' : buttonStyle.border,
+              borderColor: isAuditMode ? '#3b82f6' : 'var(--border-color)',
               color: isAuditMode ? '#3b82f6' : buttonStyle.color
             }}
             onMouseEnter={e => e.currentTarget.style.background = isAuditMode ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.1)'}
