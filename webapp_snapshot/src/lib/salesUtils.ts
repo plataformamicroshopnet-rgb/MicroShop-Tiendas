@@ -286,9 +286,19 @@ export function renderDashboardData(
                         return distincDet === 'micro' && s.pendiente !== 'Anulado'
                     }
 
+                    // Special hardcoded match for "Dispositivos + Seguros" to mirror main dashboard logic
+                    if (String(row.concepto || '').trim().toLowerCase() === 'dispositivos + seguros') {
+                        const cat = String(s.categoria || '').trim().toLowerCase();
+                        const det = String(s.detalle || '').trim().toLowerCase();
+                        const sheet = String(s.sheet || '').trim().toLowerCase();
+                        if (['terminales', 'seguro', 'accesorios', 'dispositivos'].includes(cat) || det.includes('seguro') || sheet.includes('seguro')) {
+                            return s.pendiente !== 'Anulado';
+                        }
+                    }
+
                     // Fallback to previous mapped logic for others
-                    if (!s.producto) return false
-                    const saleProd = String(s.producto).normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase()
+                    if (!s.producto && !s.categoria) return false
+                    const saleProd = String(s.producto || s.categoria).normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase()
                     return mappedProducts.includes(saleProd) && s.pendiente !== 'Anulado'
                 })
 
