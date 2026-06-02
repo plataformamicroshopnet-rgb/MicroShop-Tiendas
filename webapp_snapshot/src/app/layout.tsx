@@ -5,6 +5,8 @@ import BottomNav from '@/components/BottomNav'
 import { ThemeProvider } from '@/components/ThemeProvider'
 import { PeriodProvider } from '@/components/PeriodProvider'
 import ClientTracker from '@/components/ClientTracker'
+import { AuditProvider } from '@/hooks/useAuditMode'
+import { AuditDrawer } from '@/components/AuditDrawer'
 
 export const metadata: Metadata = {
   title: 'MicroShop Tiendas',
@@ -30,17 +32,20 @@ export default function RootLayout({
       <body>
         <ThemeProvider>
           <PeriodProvider>
-            <ClientTracker />
-            <div className="app-container">
-              <Sidebar />
-              <main className="main-content">
-                <div className="topbar">
-                  <span style={{ fontWeight: 800, fontSize: 18 }}>MicroShop <span style={{ color: 'var(--mercedes-cyan)' }}>Tiendas</span></span>
-                </div>
-                {children}
-              </main>
-              <BottomNav />
-            </div>
+            <AuditProvider>
+              <ClientTracker />
+              <div className="app-container">
+                <Sidebar />
+                <main className="main-content">
+                  <div className="topbar">
+                    <span style={{ fontWeight: 800, fontSize: 18 }}>MicroShop <span style={{ color: 'var(--mercedes-cyan)' }}>Tiendas</span></span>
+                  </div>
+                  {children}
+                </main>
+                <BottomNav />
+              </div>
+              <AuditDrawer />
+            </AuditProvider>
           </PeriodProvider>
         </ThemeProvider>
       </body>

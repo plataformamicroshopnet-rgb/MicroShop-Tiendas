@@ -2,9 +2,10 @@
 
 import React from 'react'
 import { useRouter } from 'next/navigation'
-import { Sun, Moon, ArrowLeft, Info } from 'lucide-react'
+import { Sun, Moon, ArrowLeft, Info, Eye, EyeOff } from 'lucide-react'
 import { useTheme } from '@/components/ThemeProvider'
 import { PeriodSelector } from '@/components/PeriodSelector'
+import { useAuditMode } from '@/hooks/useAuditMode'
 
 
 export interface PageHeaderProps {
@@ -32,6 +33,7 @@ export function PageHeader({
 }: PageHeaderProps) {
   const router = useRouter();
   const { theme, toggleTheme } = useTheme();
+  const { isAuditMode, setAuditMode } = useAuditMode();
   const [showHelp, setShowHelp] = React.useState(false);
 
   const handleBack = () => {
@@ -139,6 +141,21 @@ export function PageHeader({
               {theme === 'dark' ? <Sun size={20} color="#FF9500" /> : <Moon size={20} color="#00ADEF" />}
             </button>
           )}
+          <button 
+            type="button"
+            onClick={() => setAuditMode(!isAuditMode)} 
+            title={isAuditMode ? 'Desactivar Modo Auditoría' : 'Activar Modo Auditoría (Trazabilidad)'}
+            style={{
+              ...buttonStyle,
+              background: isAuditMode ? 'rgba(59, 130, 246, 0.1)' : buttonStyle.background,
+              borderColor: isAuditMode ? '#3b82f6' : buttonStyle.border,
+              color: isAuditMode ? '#3b82f6' : buttonStyle.color
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = isAuditMode ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.1)'}
+            onMouseLeave={e => e.currentTarget.style.background = isAuditMode ? 'rgba(59, 130, 246, 0.1)' : 'rgba(255,255,255,0.05)'}
+          >
+            {isAuditMode ? <Eye size={20} /> : <EyeOff size={20} />}
+          </button>
           {headerActions}
           {showPeriodSelector && <PeriodSelector />}
         </div>

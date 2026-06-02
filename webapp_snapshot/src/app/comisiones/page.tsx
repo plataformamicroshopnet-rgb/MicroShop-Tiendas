@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation'
 import { normalizeRole } from '@/lib/appConfig'
 import { useEffect } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts'
+import { AuditableCell } from '@/components/AuditableCell'
 
 
 
@@ -551,8 +552,8 @@ export default function ComisionesDashboardPage() {
                                                 borderBottom: 'none'
                                             }}>
                                                 <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700 }}>Nombre Comisión</th>
-                                                <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700 }}>Importe<br/>Primer Tramo</th>
-                                                <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700 }}>Importe<br/>Segundo Tramo</th>
+                                                <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700 }}><AuditableCell metricKey="COMISION_INDIVIDUAL_TRAMO">Importe<br/>Primer Tramo</AuditableCell></th>
+                                                <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700 }}><AuditableCell metricKey="COMISION_INDIVIDUAL_TRAMO">Importe<br/>Segundo Tramo</AuditableCell></th>
                                                 <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700 }}>Ventas</th>
                                                 <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700 }}>Pte.</th>
                                                 <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700 }}>Obj. 1</th>
@@ -631,7 +632,9 @@ export default function ComisionesDashboardPage() {
                                                     <tr style={{ backgroundColor: rowBg, borderBottom: '1px solid #e2e8f0', transition: 'background 0.2s', color: '#334155' }}>
                                                         <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
                                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                                <span>{gName === 'ARPU' ? 'Arpu (Repos)' : gName}</span>
+                                                                <AuditableCell metricKey={gName === 'ARPU' ? 'ARPU_VENTAS' : 'DISP_SEG_VENTAS'}>
+                                                                    <span>{gName === 'ARPU' ? 'Arpu (Repos)' : gName}</span>
+                                                                </AuditableCell>
                                                                 {normalizeRole(user?.role) === 'ADMIN' && activeRulesForSeller === tiendaRules && (
                                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                                                         <button 
