@@ -92,6 +92,14 @@ export default function SeguimientoVentasPage() {
       action: () => router.push('/seguimiento-ventas/tramitacion'),
       color: 'rgba(236, 72, 153, 0.1)',
       textColor: '#ec4899'
+    },
+    {
+      title: 'Comisiones del Mes (Jefe)',
+      description: 'Cálculo dinámico de comisiones del Jefe Tiendas (media de equipo y bonos).',
+      icon: Calculator,
+      action: () => router.push('/seguimiento-ventas/comisiones-jefe'),
+      color: 'rgba(239, 68, 68, 0.1)', // Red tint
+      textColor: '#ef4444' // Red color for distinction
     }
   ]
 
