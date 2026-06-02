@@ -61,33 +61,16 @@ export default function ComisionesJefeTiendasPage() {
         let tDisp = 0
         let tArpu = 0
 
-        // Filtrar a Marta
+            // Filtrar a Marta
         const validSellers = sellerStats.filter(s => !s.name.toLowerCase().includes('marta'))
 
         const data = validSellers.map(s => {
-            // Calcular ventas en EUR para Disp+Seg y ARPU
-            let dispEur = 0
-            let arpuEur = 0
+            // Utilizar groupCounts que ya viene calculado y validado por useComisionesData
+            const dispKey = Object.keys(s.groupCounts || {}).find(k => k.toLowerCase().includes('dispositivo') && k.toLowerCase().includes('seguro'))
+            const arpuKey = Object.keys(s.groupCounts || {}).find(k => k.toLowerCase().includes('arpu'))
 
-            s.rawSales?.forEach((sale: any) => {
-                const isPendingOrAnnulled = String(sale.anulado || '').toLowerCase() === 'sí' || String(sale.anulado || '').toLowerCase() === 'si' || String(sale.pendiente || '').toLowerCase() === 'anulado'
-                if (isPendingOrAnnulled) return;
-
-                if (dispRule && matchTipoVenta(sale, dispRule.productosCuentan || 'dispositivos + seguro')) {
-                    dispEur += parseSafeFloat(sale.importe || sale.cuota || 0)
-                }
-                // Si la venta tiene importe de seguro adicional
-                if (sale.seguroImporte && Number(sale.seguroImporte) > 0) {
-                    const virtualSeguro = { ...sale, categoria: 'seguro', detalle: 'seguro', cuota: Number(sale.seguroImporte) };
-                    if (dispRule && matchTipoVenta(virtualSeguro, dispRule.productosCuentan || 'dispositivos + seguro')) {
-                        dispEur += parseSafeFloat(virtualSeguro.importe || virtualSeguro.cuota || 0)
-                    }
-                }
-
-                if (arpuRule && matchTipoVenta(sale, arpuRule.productosCuentan || 'arpu')) {
-                    arpuEur += parseSafeFloat(sale.importe || sale.cuota || 0)
-                }
-            })
+            const dispEur = dispKey ? (s.groupCounts[dispKey] || 0) : 0
+            const arpuEur = arpuKey ? (s.groupCounts[arpuKey] || 0) : 0
 
             tDisp += dispEur
             tArpu += arpuEur
