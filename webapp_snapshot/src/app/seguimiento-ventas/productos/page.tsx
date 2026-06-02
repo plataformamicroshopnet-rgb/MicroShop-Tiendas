@@ -211,22 +211,30 @@ export default function AvancePalancasPage() {
                       </div>
                   </div>
                   {(() => {
-                      const globalTarget = stats.targetT1; // Use Tramo 1 as the primary goal to display "Faltan"
+                      const globalTarget = stats.targetT1;
                       const isMonetary = stats.isMonetary;
-                      const remaining = globalTarget > stats.totalCount ? globalTarget - stats.totalCount : 0;
+                      const diff = stats.totalCount - globalTarget;
                       
                       if (globalTarget > 0) {
+                          const isPositive = diff >= 0;
+                          const bgColor = isPositive ? '#10B981' : '#9F1239'; // verde suave / granate suave
+                          const shadowColor = isPositive ? 'rgba(16, 185, 129, 0.3)' : 'rgba(159, 18, 57, 0.3)';
+                          
+                          const valStr = isMonetary ? formatCurrency(Math.abs(diff)) : `${Math.abs(diff)} uds`;
+                          const prefix = isPositive ? '+' : '-';
+
                           return (
                               <div style={{ 
                                   fontSize: 11, 
                                   fontWeight: 800, 
                                   padding: '4px 10px', 
                                   borderRadius: 20, 
-                                  backgroundColor: remaining > 0 ? '#EA580C' : '#16A34A',
+                                  backgroundColor: bgColor,
                                   color: '#FFFFFF',
-                                  boxShadow: remaining > 0 ? '0 4px 10px rgba(234, 88, 12, 0.3)' : '0 4px 10px rgba(22, 163, 74, 0.3)'
+                                  boxShadow: `0 4px 10px ${shadowColor}`,
+                                  letterSpacing: '0.5px'
                               }}>
-                                  {remaining > 0 ? `Faltan T1: ${isMonetary ? formatCurrency(remaining) : remaining + ' uds'}` : '✓ T1 Superado'}
+                                  {prefix}{valStr}
                               </div>
                           );
                       }
