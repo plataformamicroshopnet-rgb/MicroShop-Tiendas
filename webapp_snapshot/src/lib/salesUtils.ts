@@ -297,18 +297,62 @@ export function renderDashboardData(
             matchedOps = matchedOps.filter(s => s.estado !== 'Pendiente' && s.pendiente !== 'Si')
 
             quantity = matchedOps.reduce((acc, s) => {
-                const isSeguro = String(s.categoria || s.detalle || s.sheet || '').trim().toLowerCase() === 'seguro';
-                const valToUse = (isSeguro && s.seguroImporte) ? s.seguroImporte : (s.importe || s.cuota || '0');
-                const rawImporte = String(valToUse)
-                const cleanImporte = parseFloat(rawImporte.replace('€', '').replace(/\s/g, '').replace(',', '.')) || 0
-                return acc + cleanImporte
+                let rowSum = 0;
+                const cat = String(s.categoria || '').trim().toLowerCase();
+                const det = String(s.detalle || '').trim().toLowerCase();
+                const sheet = String(s.sheet || '').trim().toLowerCase();
+                const prod = String(s.producto || '').trim().toLowerCase();
+                
+                // Si es un seguro puro (añadido desde el botón + Seguro)
+                const isExclusivelySeguro = cat.includes('seguro') || det.includes('seguro') || sheet.includes('seguro') || prod.includes('seguro');
+                
+                if (isExclusivelySeguro) {
+                    if (s.seguroImporte && Number(s.seguroImporte) > 0) {
+                        rowSum += Number(s.seguroImporte);
+                    } else {
+                        // Seguro antiguo sin seguroImporte, usamos lo que haya
+                        const rawImporte = String(s.importe || s.cuota || '0');
+                        rowSum += parseFloat(rawImporte.replace('€', '').replace(/\s/g, '').replace(',', '.')) || 0;
+                    }
+                } else {
+                    // Es un terminal u otro producto. Sumamos su importe base.
+                    const rawImporte = String(s.importe || s.cuota || '0');
+                    rowSum += parseFloat(rawImporte.replace('€', '').replace(/\s/g, '').replace(',', '.')) || 0;
+                    
+                    // Si además tiene un seguro pegado en la misma línea, lo sumamos también
+                    if (s.seguroImporte && Number(s.seguroImporte) > 0) {
+                        rowSum += Number(s.seguroImporte);
+                    }
+                }
+                
+                return acc + rowSum;
             }, 0)
             quantityPending = matchedOpsPending.reduce((acc, s) => {
-                const isSeguro = String(s.categoria || s.detalle || s.sheet || '').trim().toLowerCase() === 'seguro';
-                const valToUse = (isSeguro && s.seguroImporte) ? s.seguroImporte : (s.importe || s.cuota || '0');
-                const rawImporte = String(valToUse)
-                const cleanImporte = parseFloat(rawImporte.replace('€', '').replace(/\s/g, '').replace(',', '.')) || 0
-                return acc + cleanImporte
+                let rowSum = 0;
+                const cat = String(s.categoria || '').trim().toLowerCase();
+                const det = String(s.detalle || '').trim().toLowerCase();
+                const sheet = String(s.sheet || '').trim().toLowerCase();
+                const prod = String(s.producto || '').trim().toLowerCase();
+                
+                const isExclusivelySeguro = cat.includes('seguro') || det.includes('seguro') || sheet.includes('seguro') || prod.includes('seguro');
+                
+                if (isExclusivelySeguro) {
+                    if (s.seguroImporte && Number(s.seguroImporte) > 0) {
+                        rowSum += Number(s.seguroImporte);
+                    } else {
+                        const rawImporte = String(s.importe || s.cuota || '0');
+                        rowSum += parseFloat(rawImporte.replace('€', '').replace(/\s/g, '').replace(',', '.')) || 0;
+                    }
+                } else {
+                    const rawImporte = String(s.importe || s.cuota || '0');
+                    rowSum += parseFloat(rawImporte.replace('€', '').replace(/\s/g, '').replace(',', '.')) || 0;
+                    
+                    if (s.seguroImporte && Number(s.seguroImporte) > 0) {
+                        rowSum += Number(s.seguroImporte);
+                    }
+                }
+                
+                return acc + rowSum;
             }, 0)
         } else if (mappedProducts.length > 0) {
             let allMatched = profileSales.filter(s => {
