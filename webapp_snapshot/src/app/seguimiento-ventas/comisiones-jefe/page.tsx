@@ -8,8 +8,11 @@ import { useRouter } from 'next/navigation'
 
 export default function ComisionesJefeTiendasPage() {
     const router = useRouter()
-    const { authorized } = useGuard('MODULE_JEFE_TIENDAS')
+    const { authorized, user } = useGuard('MODULE_JEFE_TIENDAS')
     const { loading, sellerStats, tiendaRules } = useComisionesData()
+    
+    // Solo el administrador puede editar los porcentajes
+    const isSuperAdmin = user && user.role?.toUpperCase() === 'ADMIN'
 
     const [dispPct1, setDispPct1] = useState<number>(0.40)
     const [dispPct2, setDispPct2] = useState<number>(0.60)
@@ -70,18 +73,18 @@ export default function ComisionesJefeTiendasPage() {
                 const isPendingOrAnnulled = String(sale.anulado || '').toLowerCase() === 'sí' || String(sale.anulado || '').toLowerCase() === 'si' || String(sale.pendiente || '').toLowerCase() === 'anulado'
                 if (isPendingOrAnnulled) return;
 
-                if (dispRule && matchTipoVenta(sale, dispRule.productosCuentan)) {
+                if (dispRule && matchTipoVenta(sale, dispRule.productosCuentan || 'dispositivos + seguro')) {
                     dispEur += parseSafeFloat(sale.importe || sale.cuota || 0)
                 }
                 // Si la venta tiene importe de seguro adicional
                 if (sale.seguroImporte && Number(sale.seguroImporte) > 0) {
                     const virtualSeguro = { ...sale, categoria: 'seguro', detalle: 'seguro', cuota: Number(sale.seguroImporte) };
-                    if (dispRule && matchTipoVenta(virtualSeguro, dispRule.productosCuentan)) {
+                    if (dispRule && matchTipoVenta(virtualSeguro, dispRule.productosCuentan || 'dispositivos + seguro')) {
                         dispEur += parseSafeFloat(virtualSeguro.importe || virtualSeguro.cuota || 0)
                     }
                 }
 
-                if (arpuRule && matchTipoVenta(sale, arpuRule.productosCuentan)) {
+                if (arpuRule && matchTipoVenta(sale, arpuRule.productosCuentan || 'arpu')) {
                     arpuEur += parseSafeFloat(sale.importe || sale.cuota || 0)
                 }
             })
@@ -211,11 +214,13 @@ export default function ComisionesJefeTiendasPage() {
                                         className="input-pct"
                                         type="number" step="0.01" 
                                         value={dispPct1}
+                                        disabled={!isSuperAdmin}
                                         onChange={e => {
                                             const v = Number(e.target.value);
                                             setDispPct1(v);
                                             handleSavePct('COMISION_JEFE_DISP_PCT1', v);
                                         }}
+                                        style={{ opacity: isSuperAdmin ? 1 : 0.7 }}
                                     /> %
                                 </td>
                                 <td>
@@ -223,11 +228,13 @@ export default function ComisionesJefeTiendasPage() {
                                         className="input-pct"
                                         type="number" step="0.01" 
                                         value={dispPct2}
+                                        disabled={!isSuperAdmin}
                                         onChange={e => {
                                             const v = Number(e.target.value);
                                             setDispPct2(v);
                                             handleSavePct('COMISION_JEFE_DISP_PCT2', v);
                                         }}
+                                        style={{ opacity: isSuperAdmin ? 1 : 0.7 }}
                                     /> %
                                 </td>
                             </tr>
@@ -256,11 +263,13 @@ export default function ComisionesJefeTiendasPage() {
                                         className="input-pct"
                                         type="number" step="0.01" 
                                         value={arpuPct1}
+                                        disabled={!isSuperAdmin}
                                         onChange={e => {
                                             const v = Number(e.target.value);
                                             setArpuPct1(v);
                                             handleSavePct('COMISION_JEFE_ARPU_PCT1', v);
                                         }}
+                                        style={{ opacity: isSuperAdmin ? 1 : 0.7 }}
                                     /> %
                                 </td>
                                 <td>
@@ -268,11 +277,13 @@ export default function ComisionesJefeTiendasPage() {
                                         className="input-pct"
                                         type="number" step="0.01" 
                                         value={arpuPct2}
+                                        disabled={!isSuperAdmin}
                                         onChange={e => {
                                             const v = Number(e.target.value);
                                             setArpuPct2(v);
                                             handleSavePct('COMISION_JEFE_ARPU_PCT2', v);
                                         }}
+                                        style={{ opacity: isSuperAdmin ? 1 : 0.7 }}
                                     /> %
                                 </td>
                             </tr>
