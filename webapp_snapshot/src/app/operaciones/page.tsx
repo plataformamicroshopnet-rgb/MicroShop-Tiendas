@@ -377,7 +377,11 @@ function OperationsContent() {
         let cleanedSales = (sData.logs || []).map(sanitizeSale)
         cleanedSales = cleanedSales.filter((s: any) => {
             const p = String(s.producto || '').toLowerCase()
-            return !p.includes('solar360') && !p.includes('solar 360')
+            const c = String(s.categoria || '').toLowerCase()
+            const d = String(s.detalle || '').toLowerCase()
+            return !p.includes('solar360') && !p.includes('solar 360') && 
+                   !c.includes('solar360') && !c.includes('solar 360') && 
+                   !d.includes('solar360') && !d.includes('solar 360')
         })
         setSales(cleanedSales)
       }

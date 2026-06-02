@@ -846,8 +846,8 @@ export default function NuevaVentaPage() {
                           </div>
                         )
                       })()}
-                      <div style={{ display: 'grid', gridTemplateColumns: isAdmin ? (prod.categoria === 'Seguro' ? '1fr 1fr 1fr' : '1fr 1fr') : (prod.categoria === 'Seguro' ? '1fr 1fr' : '1fr'), gap: '6px' }}>
-                        <div className="form-group" style={{ marginBottom: 0, display: isAdmin ? 'block' : 'none' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: (isAdmin || prod.categoria === 'Seguro') ? (prod.categoria === 'Seguro' ? '1fr 1fr 1fr' : '1fr 1fr') : '1fr', gap: '6px' }}>
+                        <div className="form-group" style={{ marginBottom: 0, display: (isAdmin || prod.categoria === 'Seguro') ? 'block' : 'none' }}>
                           <label className="form-label" style={{ color: '#555' }}>{(prod.categoria === 'O2' || prod.categoria === 'Suscripciones TV' || prod.categoria === 'Prepago' || prod.categoria === 'Varios' || prod.categoria === 'Repos' || prod.categoria === 'Seguro') ? 'Comisión' : 'Importe'}</label>
                           <div style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
                             <input 
