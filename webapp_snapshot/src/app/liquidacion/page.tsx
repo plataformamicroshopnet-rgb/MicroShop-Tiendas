@@ -1501,12 +1501,19 @@ export default function LiquidacionesPage() {
 
         // Helper: Cuota Total del producto (para Seguros usa seguroImporte, para el resto cuota)
         const getCuotaTotal = (sale: any): number => {
+            const parse = (val: any): number => {
+                if (val === null || val === undefined) return 0;
+                if (typeof val === 'number') return isNaN(val) ? 0 : val;
+                const clean = String(val).replace('€', '').replace(/\s/g, '').replace(',', '.').trim();
+                const num = parseFloat(clean);
+                return isNaN(num) ? 0 : num;
+            };
             const det = String(sale.detalle || '').toLowerCase();
             if (det === 'seguro' && sale.seguroImporte) {
-                const v = parseSafeFloat(sale.seguroImporte);
+                const v = parse(sale.seguroImporte);
                 if (v > 0) return v;
             }
-            return parseSafeFloat(sale.cuota || sale.importe || 0);
+            return parse(sale.cuota || sale.importe || 0);
         };
 
         const activeExtras = extraAssignments.filter(ea => ea.status !== 'CANCELLED')
