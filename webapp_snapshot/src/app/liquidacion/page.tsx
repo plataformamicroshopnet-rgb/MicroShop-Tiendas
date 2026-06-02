@@ -1569,7 +1569,16 @@ export default function LiquidacionesPage() {
 
         const esAdmin = canEdit(user, 'MODULE_ADMIN')
         
-        const tableTotal = filteredSalesGlobal.reduce((acc, sale) => acc + getCommission(sale), 0) + activeExtras.reduce((acc, ex) => acc + (esAdmin ? (ex.telecomRewardAmount || 0) : (ex.sellerRewardAmount || 0)), 0);
+        const salesForTable = filteredSalesGlobal.filter((s: any) => {
+            const p = String(s.producto || '').toLowerCase()
+            const c = String(s.categoria || '').toLowerCase()
+            const d = String(s.detalle || '').toLowerCase()
+            return !p.includes('solar360') && !p.includes('solar 360') && 
+                   !c.includes('solar360') && !c.includes('solar 360') && 
+                   !d.includes('solar360') && !d.includes('solar 360')
+        });
+
+        const tableTotal = salesForTable.reduce((acc, sale) => acc + getCommission(sale), 0) + activeExtras.reduce((acc, ex) => acc + (esAdmin ? (ex.telecomRewardAmount || 0) : (ex.sellerRewardAmount || 0)), 0);
 
         return (
             <>
@@ -1593,7 +1602,7 @@ export default function LiquidacionesPage() {
                             )
                         })()}
                         <span style={{ backgroundColor: 'var(--mercedes-cyan)', color: '#000', padding: '1px 8px', borderRadius: '8px', fontSize: 11, fontWeight: 800 }}>
-                            {filteredSalesGlobal.length} VENTAS
+                            {salesForTable.length} VENTAS
                         </span>
                         <div style={{ backgroundColor: '#111827', color: '#F9FAFB', padding: '2px 12px', borderRadius: '8px', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
                             <span>TOTAL OP.</span>
@@ -1619,7 +1628,7 @@ export default function LiquidacionesPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredSalesGlobal.length > 0 ? filteredSalesGlobal.map((s, i) => {
+                            {salesForTable.length > 0 ? salesForTable.map((s, i) => {
                                 const isEditing = editingId === s.id;
 
                                 return (
@@ -1721,7 +1730,7 @@ export default function LiquidacionesPage() {
                                 </tr>
                             ))}
 
-                            {filteredSalesGlobal.length === 0 && activeExtras.length === 0 && (
+                            {salesForTable.length === 0 && activeExtras.length === 0 && (
                                 <tr>
                                     <td colSpan={10} style={{ padding: '40px', textAlign: 'center', color: 'var(--medium-gray)' }}>
                                         No hay operaciones registradas para el mes seleccionado.

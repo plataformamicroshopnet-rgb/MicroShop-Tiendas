@@ -297,12 +297,16 @@ export function renderDashboardData(
             matchedOps = matchedOps.filter(s => s.estado !== 'Pendiente' && s.pendiente !== 'Si')
 
             quantity = matchedOps.reduce((acc, s) => {
-                const rawImporte = String(s.importe || s.cuota || '0')
+                const isSeguro = String(s.categoria || '').trim().toLowerCase() === 'seguro';
+                const valToUse = (isSeguro && s.seguroImporte) ? s.seguroImporte : (s.importe || s.cuota || '0');
+                const rawImporte = String(valToUse)
                 const cleanImporte = parseFloat(rawImporte.replace('€', '').replace(/\s/g, '').replace(',', '.')) || 0
                 return acc + cleanImporte
             }, 0)
             quantityPending = matchedOpsPending.reduce((acc, s) => {
-                const rawImporte = String(s.importe || s.cuota || '0')
+                const isSeguro = String(s.categoria || '').trim().toLowerCase() === 'seguro';
+                const valToUse = (isSeguro && s.seguroImporte) ? s.seguroImporte : (s.importe || s.cuota || '0');
+                const rawImporte = String(valToUse)
                 const cleanImporte = parseFloat(rawImporte.replace('€', '').replace(/\s/g, '').replace(',', '.')) || 0
                 return acc + cleanImporte
             }, 0)
