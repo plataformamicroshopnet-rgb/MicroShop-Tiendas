@@ -1498,6 +1498,17 @@ export default function LiquidacionesPage() {
             }
             return finalCommission;
         }
+
+        // Helper: Cuota Total del producto (para Seguros usa seguroImporte, para el resto cuota)
+        const getCuotaTotal = (sale: any): number => {
+            const det = String(sale.detalle || '').toLowerCase();
+            if (det === 'seguro' && sale.seguroImporte) {
+                const v = parseSafeFloat(sale.seguroImporte);
+                if (v > 0) return v;
+            }
+            return parseSafeFloat(sale.cuota || sale.importe || 0);
+        };
+
         const activeExtras = extraAssignments.filter(ea => ea.status !== 'CANCELLED')
 
         const exportToExcel = async () => {
@@ -1512,7 +1523,8 @@ export default function LiquidacionesPage() {
                 { header: 'Tienda', key: 'codigo', width: 15 },
                 { header: 'Tipo de Venta', key: 'tipoVenta', width: 20 },
                 { header: 'Producto', key: 'producto', width: 30 },
-                { header: 'Comisión', key: 'comision', width: 15 },
+                { header: 'Cuota Total', key: 'cuotaTotal', width: 15 },
+                { header: 'Comisión (€)', key: 'comision', width: 15 },
                 { header: 'Varios', key: 'varios', width: 25 },
                 { header: 'Estado', key: 'estado', width: 15 }
             ];
@@ -1522,6 +1534,7 @@ export default function LiquidacionesPage() {
 
             filteredSalesGlobal.forEach(sale => {
                 const comisionEuros = getCommission(sale);
+                const cuotaTotalEuros = getCuotaTotal(sale);
                 // Status Mapping identical to table
                 let estadoText = (sale.anulado === 'Si' || sale.pendiente === 'Anulado') ? 'NULL' : (sale.pendiente === 'Si' ? 'PED' : 'OK');
                 
@@ -1533,6 +1546,7 @@ export default function LiquidacionesPage() {
                     codigo: sale.codigo || '-',
                     tipoVenta: sale.detalle === 'Ti' ? 'Contratos Móvil' : sale.detalle === 'O2' ? 'O2 MovilFree' : (sale.detalle || '-'),
                     producto: sale.producto || 'Sin especificar',
+                    cuotaTotal: Number(cuotaTotalEuros),
                     comision: Number(comisionEuros),
                     varios: sale.anotaciones || '-',
                     estado: estadoText
@@ -1554,7 +1568,8 @@ export default function LiquidacionesPage() {
                 });
             });
 
-            // Format monetary column correctly for math operations in Excel
+            // Format monetary columns correctly for math operations in Excel
+            worksheet.getColumn('cuotaTotal').numFmt = '#,##0.00 €';
             worksheet.getColumn('comision').numFmt = '#,##0.00 €';
 
             const buffer = await workbook.xlsx.writeBuffer();
@@ -1578,7 +1593,7 @@ export default function LiquidacionesPage() {
                    !d.includes('solar360') && !d.includes('solar 360')
         });
 
-        const tableTotal = salesForTable.reduce((acc, sale) => acc + getCommission(sale), 0) + activeExtras.reduce((acc, ex) => acc + (esAdmin ? (ex.telecomRewardAmount || 0) : (ex.sellerRewardAmount || 0)), 0);
+        const tableTotal = salesForTable.reduce((acc, sale) => acc + getCuotaTotal(sale), 0) + activeExtras.reduce((acc, ex) => acc + (esAdmin ? (ex.telecomRewardAmount || 0) : (ex.sellerRewardAmount || 0)), 0);
 
         return (
             <>
@@ -1621,7 +1636,8 @@ export default function LiquidacionesPage() {
                                 <th style={{ textAlign: 'left', color: 'var(--medium-gray)' }}>Tienda</th>
                                 <th style={{ textAlign: 'left', color: 'var(--medium-gray)' }}>Tipo de Venta</th>
                                 <th style={{ textAlign: 'left', color: 'var(--medium-gray)' }}>Producto</th>
-                                <th style={{ textAlign: 'center', color: 'var(--medium-gray)' }}>Comisión</th>
+                                <th style={{ textAlign: 'center', color: 'var(--medium-gray)' }}>Cuota Total</th>
+                                <th style={{ textAlign: 'center', color: 'var(--medium-gray)' }}>Comisión (€)</th>
                                 <th style={{ textAlign: 'left', color: 'var(--medium-gray)' }}>Varios</th>
                                 <th style={{ textAlign: 'center', color: 'var(--medium-gray)' }}>Estado</th>
                                 <th style={{ textAlign: 'center', color: 'var(--brand-danger)' }}>Acciones</th>
@@ -1657,6 +1673,9 @@ export default function LiquidacionesPage() {
                                             ) : (
                                                 s.producto || 'Sin especificar'
                                             )}
+                                        </td>
+                                        <td className="col-importe" style={{ textAlign: 'center', color: '#059669', fontWeight: 800 }}>
+                                            {`${getCuotaTotal(s).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`}
                                         </td>
                                         <td className="col-importe" style={{ textAlign: 'center', color: '#0000FF' }}>
                                             {isEditing ? <input className="form-input" style={{ padding: '0 4px', width: 70, textAlign: 'center', color: '#0000FF' }} value={editForm.importe || editForm.cuota || ''} onChange={e => setEditForm({ ...editForm, importe: e.target.value })} /> : `${getCommission(s).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`}
@@ -1713,6 +1732,7 @@ export default function LiquidacionesPage() {
                                     <td style={{ color: '#059669' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Zap size={14} /> {ex.rule?.name || 'Incentivo Manual'}</div>
                                     </td>
+                                    <td style={{ textAlign: 'center', color: '#059669' }}>-</td>
                                     <td style={{ textAlign: 'center', color: '#10b981' }}>
                                         {`+ ${Number(ex.telecomRewardAmount).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`}
                                     </td>
@@ -1732,7 +1752,7 @@ export default function LiquidacionesPage() {
 
                             {salesForTable.length === 0 && activeExtras.length === 0 && (
                                 <tr>
-                                    <td colSpan={10} style={{ padding: '40px', textAlign: 'center', color: 'var(--medium-gray)' }}>
+                                    <td colSpan={11} style={{ padding: '40px', textAlign: 'center', color: 'var(--medium-gray)' }}>
                                         No hay operaciones registradas para el mes seleccionado.
                                     </td>
                                 </tr>
