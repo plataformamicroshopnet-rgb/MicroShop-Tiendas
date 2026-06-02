@@ -634,7 +634,7 @@ export default function ComisionesDashboardPage() {
                                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                                                 <AuditableCell 
                                                                     metricKey={gName === 'ARPU' ? 'ARPU_VENTAS' : 'DISP_SEG_VENTAS'}
-                                                                    data={{ sales: stat.groupSales[gName] || [] }}
+                                                                    data={{ sales: s.groupSales[gName] || [] }}
                                                                 >
                                                                     <span>{gName === 'ARPU' ? 'Arpu (Repos)' : gName}</span>
                                                                 </AuditableCell>
