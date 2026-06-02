@@ -169,6 +169,10 @@ export default function NuevaVentaPage() {
               }
             } else if (cat === 'O2' || cat === 'Seguro' || cat === 'Prepago' || cat === 'Varios') {
               newProducts[index].importe = selectedItem.comision || ''
+              // Para Seguros, también auto-rellenar seguroImporte con la Cuota Total (anual)
+              if (cat === 'Seguro' && selectedItem.anual) {
+                newProducts[index].seguroImporte = parseFloat(String(selectedItem.anual).replace(',', '.')) || 0
+              }
             } else if (cat === 'Repos') {
                if (selectedItem.comisionConCoste && Number(selectedItem.comisionConCoste) > 0) {
                   const ant = Number(newProducts[index].facturacionAnterior || 0)

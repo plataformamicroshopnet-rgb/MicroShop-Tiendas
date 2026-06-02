@@ -152,7 +152,11 @@ export async function POST(request: Request) {
         telefonoMovil: data.telefonoMovil || '',
         boletin: data.boletin || '',
         grupo: calculatedGroup,
-        cuota: prod.importe ? parseFloat(prod.importe.toString().replace(',','.')) : null,
+        // Para Seguros: cuota en BD = Cuota Total (seguroImporte), no la Comisión (importe)
+        // Esto asegura que el Registro de Operaciones y todos los paneles lean el valor correcto.
+        cuota: (prod.categoria === 'Seguro' && prod.seguroImporte && parseFloat(prod.seguroImporte.toString().replace(',','.')) > 0)
+          ? parseFloat(prod.seguroImporte.toString().replace(',','.'))
+          : (prod.importe ? parseFloat(prod.importe.toString().replace(',','.')) : null),
         detalle: prod.categoria || '',
         imei: prod.imei || null,
         rentConCoste: prod.rentConCoste || null,
