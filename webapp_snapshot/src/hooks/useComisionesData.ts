@@ -120,6 +120,9 @@ export const matchesRule = (s: any, ruleName: string, ruleProductosCuentan: stri
 
 export const getValueForRule = (s: any, ruleName: string) => {
     let cuotaValue = parseSafeFloat(s.cuota);
+    if (String(s.categoria || s.detalle || s.sheet).toLowerCase() === 'seguro' && s.seguroImporte) {
+        cuotaValue = parseSafeFloat(s.seguroImporte);
+    }
 
     if (ruleName === 'ARPU') {
         if (isSuscripcionesTV(s)) {
@@ -320,6 +323,7 @@ export function useComisionesData(user?: any) {
         const groupObj1: Record<string, number> = {};
         const groupObj2: Record<string, number> = {};
         const groupComisions: Record<string, number> = {};
+        const groupSales: Record<string, any[]> = {};
 
         // INICIALIZAR OBJETIVOS Y CONTADORES BASADOS EN REGLAS DINAMICAS
         const isO2 = String(name).toLowerCase().includes('marta');
@@ -336,6 +340,7 @@ export function useComisionesData(user?: any) {
             groupCounts[ruleName] = 0;
             groupPending[ruleName] = 0;
             groupComisions[ruleName] = 0;
+            groupSales[ruleName] = [];
             
             const totalHoras = rule.totalHoras || 0;
             if (totalHoras > 0 && horario > 0) {
@@ -371,6 +376,7 @@ export function useComisionesData(user?: any) {
                         if (isPending) groupPending[rule.nombre] += 1;
                         totalUnitGroupsAmount += 1;
                     }
+                    groupSales[rule.nombre].push(s);
                 }
                 if (s.seguroImporte && Number(s.seguroImporte) > 0) {
                     const virtualSeguro = { ...s, categoria: 'seguro', detalle: 'seguro', cuota: Number(s.seguroImporte) };
@@ -387,6 +393,7 @@ export function useComisionesData(user?: any) {
                             if (isPending) groupPending[rule.nombre] += 1;
                             totalUnitGroupsAmount += 1;
                         }
+                        groupSales[rule.nombre].push(virtualSeguro);
                     }
                 }
             });
@@ -873,6 +880,7 @@ export function useComisionesData(user?: any) {
             ultimaVenta,
             totalSales: numSalesTotal,
             groupCounts,
+            groupSales,
             groupPending,
             groupObj1,
             groupObj2,

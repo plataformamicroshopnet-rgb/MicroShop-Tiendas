@@ -5,7 +5,7 @@ import { useAuditMode } from '@/hooks/useAuditMode';
 import { X, ArrowRight, Database, Settings, BarChart2 } from 'lucide-react';
 
 export function AuditDrawer() {
-    const { selectedMetric, selectMetric } = useAuditMode();
+    const { selectedMetric, selectedMetricData, selectMetric } = useAuditMode();
 
     if (!selectedMetric) return null;
 
@@ -81,6 +81,28 @@ export function AuditDrawer() {
                                     {getNodeIcon(s.type)} {s.label}
                                 </div>
                                 {s.description && <div style={{ fontSize: 12, color: '#64748b', paddingLeft: 24 }}>{s.description}</div>}
+                                
+                                {s.id === 's1' && selectedMetricData?.sales && selectedMetricData.sales.length > 0 && (
+                                    <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px dashed #cbd5e1' }}>
+                                        <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 8, textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between' }}>
+                                            <span>Desglose de Operaciones ({selectedMetricData.sales.length})</span>
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 250, overflowY: 'auto', paddingRight: 4 }}>
+                                            {selectedMetricData.sales.map((sale: any, idx: number) => {
+                                                const val = sale.categoria === 'seguro' && sale.seguroImporte ? sale.seguroImporte : (sale.cuota || sale.importe || 0);
+                                                return (
+                                                    <div key={idx} style={{ padding: '6px 8px', backgroundColor: '#ffffff', borderRadius: 4, border: '1px solid #e2e8f0', fontSize: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                            <span style={{ color: '#334155', fontWeight: 600 }}>{sale.producto || sale.detalle || sale.categoria}</span>
+                                                            <span style={{ color: '#94a3b8', fontSize: 10 }}>{sale.fecha || sale.createdAt?.split('T')[0]}</span>
+                                                        </div>
+                                                        <span style={{ color: '#3b82f6', fontWeight: 700 }}>{Number(val).toFixed(2)}€</span>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>

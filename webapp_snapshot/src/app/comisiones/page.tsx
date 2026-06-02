@@ -632,7 +632,10 @@ export default function ComisionesDashboardPage() {
                                                     <tr style={{ backgroundColor: rowBg, borderBottom: '1px solid #e2e8f0', transition: 'background 0.2s', color: '#334155' }}>
                                                         <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
                                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                                <AuditableCell metricKey={gName === 'ARPU' ? 'ARPU_VENTAS' : 'DISP_SEG_VENTAS'}>
+                                                                <AuditableCell 
+                                                                    metricKey={gName === 'ARPU' ? 'ARPU_VENTAS' : 'DISP_SEG_VENTAS'}
+                                                                    data={{ sales: stat.groupSales[gName] || [] }}
+                                                                >
                                                                     <span>{gName === 'ARPU' ? 'Arpu (Repos)' : gName}</span>
                                                                 </AuditableCell>
                                                                 {normalizeRole(user?.role) === 'ADMIN' && activeRulesForSeller === tiendaRules && (

@@ -6,10 +6,11 @@ import { Info } from 'lucide-react';
 
 interface AuditableCellProps {
     metricKey: string;
+    data?: any;
     children: React.ReactNode;
 }
 
-export function AuditableCell({ metricKey, children }: AuditableCellProps) {
+export function AuditableCell({ metricKey, data, children }: AuditableCellProps) {
     const { isAuditMode, selectMetric, selectedMetric } = useAuditMode();
 
     if (!isAuditMode) {
@@ -22,7 +23,7 @@ export function AuditableCell({ metricKey, children }: AuditableCellProps) {
         <div 
             onClick={(e) => {
                 e.stopPropagation();
-                selectMetric(metricKey);
+                selectMetric(metricKey, data);
             }}
             style={{
                 position: 'relative',

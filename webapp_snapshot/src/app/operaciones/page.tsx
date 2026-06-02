@@ -374,7 +374,12 @@ function OperationsContent() {
         setCatalogs(catData.catalogs || {})
       }
       if (sData && sData.success) {
-        setSales((sData.logs || []).map(sanitizeSale))
+        let cleanedSales = (sData.logs || []).map(sanitizeSale)
+        cleanedSales = cleanedSales.filter((s: any) => {
+            const p = String(s.producto || '').toLowerCase()
+            return !p.includes('solar360') && !p.includes('solar 360')
+        })
+        setSales(cleanedSales)
       }
       if (extrasData && extrasData.success) {
         setExtraAssignments(extrasData.assignments || [])

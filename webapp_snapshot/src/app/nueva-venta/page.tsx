@@ -846,9 +846,9 @@ export default function NuevaVentaPage() {
                           </div>
                         )
                       })()}
-                      <div style={{ display: 'grid', gridTemplateColumns: isAdmin ? '1fr 1fr' : '1fr', gap: '6px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: isAdmin ? (prod.categoria === 'Seguro' ? '1fr 1fr 1fr' : '1fr 1fr') : (prod.categoria === 'Seguro' ? '1fr 1fr' : '1fr'), gap: '6px' }}>
                         <div className="form-group" style={{ marginBottom: 0, display: isAdmin ? 'block' : 'none' }}>
-                          <label className="form-label" style={{ color: '#555' }}>{(prod.categoria === 'O2' || prod.categoria === 'Suscripciones TV' || prod.categoria === 'Prepago' || prod.categoria === 'Varios' || prod.categoria === 'Repos') ? 'Comisión' : 'Importe'}</label>
+                          <label className="form-label" style={{ color: '#555' }}>{(prod.categoria === 'O2' || prod.categoria === 'Suscripciones TV' || prod.categoria === 'Prepago' || prod.categoria === 'Varios' || prod.categoria === 'Repos' || prod.categoria === 'Seguro') ? 'Comisión' : 'Importe'}</label>
                           <div style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
                             <input 
                               type="number" 
@@ -861,6 +861,23 @@ export default function NuevaVentaPage() {
                             <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: '#1B3D6A', fontSize: 13, pointerEvents: 'none' }}>€</span>
                           </div>
                         </div>
+
+                        {prod.categoria === 'Seguro' && (
+                          <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label className="form-label" style={{ color: '#555' }}>Cuota Total</label>
+                            <div style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
+                              <input 
+                                type="number" 
+                                step="0.01"
+                                className="form-input" 
+                                style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A', fontWeight: 'bold', width: '100%', paddingRight: 24 }}
+                                value={prod.seguroImporte !== '' && prod.seguroImporte !== undefined && prod.seguroImporte !== 0 ? Number(prod.seguroImporte).toFixed(2) : ''} 
+                                onChange={e => handleProductChange(index, 'seguroImporte', e.target.value)} 
+                              />
+                              <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: '#1B3D6A', fontSize: 13, pointerEvents: 'none' }}>€</span>
+                            </div>
+                          </div>
+                        )}
 
                         <div className="form-group" style={{ marginBottom: 0 }}>
                           <label className="form-label" style={{ color: '#555' }}>¿Pendiente?</label>
