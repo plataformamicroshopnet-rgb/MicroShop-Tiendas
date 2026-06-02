@@ -48,7 +48,7 @@ export default function ComisionesJefeTiendasPage() {
         }
 
         const dispRule = tiendaRules?.find(r => r.nombre?.toLowerCase().includes('dispositivo') && r.nombre?.toLowerCase().includes('seguro'))
-        const arpuRule = tiendaRules?.find(r => r.nombre?.toLowerCase() === 'arpu')
+        const arpuRule = tiendaRules?.find(r => r.nombre?.toLowerCase().includes('arpu'))
 
         const gDispObj1 = dispRule ? Number(dispRule.objPrimerTramo || 0) : 0
         const gDispObj2 = dispRule ? Number(dispRule.objSegundoTramo || 0) : 0
@@ -290,7 +290,7 @@ export default function ComisionesJefeTiendasPage() {
                         </thead>
                         <tbody>
                             <tr>
-                                <td className="cell-green" style={{ fontSize: 28, height: 70, border: '2px solid #10b981' }}>
+                                <td className="cell-green" style={{ fontSize: 28, height: 70 }}>
                                     {totalCondicionado.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
                                 </td>
                             </tr>
