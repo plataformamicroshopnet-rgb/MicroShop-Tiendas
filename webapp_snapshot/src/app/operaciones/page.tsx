@@ -850,6 +850,9 @@ function OperationsContent() {
         </div>
         
         {(() => {
+          const roleName = normalizeRole(user?.role);
+          if (roleName === 'COMERCIAL') return null;
+
           const hasExportPermission = can(user, 'EXPORT_EXCEL');
           return (
             <button 

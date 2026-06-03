@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useMemo, useRef } from 'react'
-import { Package, LineChart, ChevronLeft, Calendar, Globe, Calculator, Building2, Target, Briefcase, Settings2, ArrowUp, ArrowDown, Save, X, Trophy, TrendingUp, GripVertical } from 'lucide-react'
+import { Package, LineChart, ChevronLeft, ChevronRight, Calendar, Globe, Calculator, Building2, Target, Briefcase, Settings2, ArrowUp, ArrowDown, Save, X, Trophy, TrendingUp, GripVertical } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useGuard } from '@/hooks/useGuard'
 import { PageHeader } from '@/components/PageHeader'
@@ -15,6 +15,7 @@ export default function SeguimientoVentasPage() {
   const longPressTimeout = useRef<NodeJS.Timeout | null>(null)
   const isLongPressActive = useRef<boolean>(false)
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
 
   useEffect(() => {
     const savedOrder = localStorage.getItem('seguimiento_ventas_card_order')
@@ -100,12 +101,12 @@ export default function SeguimientoVentasPage() {
     });
   }, [cards, cardOrder])
 
-  const moveCard = (index: number, direction: 'up' | 'down') => {
-    if (direction === 'up' && index === 0) return;
-    if (direction === 'down' && index === sortedCards.length - 1) return;
+  const moveCard = (index: number, direction: 'prev' | 'next') => {
+    if (direction === 'prev' && index === 0) return;
+    if (direction === 'next' && index === sortedCards.length - 1) return;
 
     const newSorted = [...sortedCards];
-    const swapIndex = direction === 'up' ? index - 1 : index + 1;
+    const swapIndex = direction === 'prev' ? index - 1 : index + 1;
     
     const temp = newSorted[index];
     newSorted[index] = newSorted[swapIndex];
@@ -185,25 +186,40 @@ export default function SeguimientoVentasPage() {
   const handleDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
     if (draggedIndex === null || draggedIndex === index) return;
+    setDragOverIndex(index);
+  };
+
+  const handleDragLeave = (index: number) => {
+    if (dragOverIndex === index) {
+      setDragOverIndex(null);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === targetIndex) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
 
     const currentOrder = cardOrder.length > 0 ? [...cardOrder] : cards.map(c => c.title);
     const draggedTitle = sortedCards[draggedIndex].title;
-    const targetTitle = sortedCards[index].title;
+    const targetTitle = sortedCards[targetIndex].title;
 
-    const newOrder = [...currentOrder];
-    const idxA = newOrder.indexOf(draggedTitle);
-    const idxB = newOrder.indexOf(targetTitle);
+    const filteredOrder = currentOrder.filter(title => title !== draggedTitle);
+    const insertAt = filteredOrder.indexOf(targetTitle);
 
-    if (idxA !== -1 && idxB !== -1) {
-      newOrder[idxA] = targetTitle;
-      newOrder[idxB] = draggedTitle;
-      setCardOrder(newOrder);
-      setDraggedIndex(index);
-    }
+    filteredOrder.splice(insertAt, 0, draggedTitle);
+
+    setCardOrder(filteredOrder);
+    setDraggedIndex(null);
+    setDragOverIndex(null);
   };
 
   const handleDragEnd = () => {
     setDraggedIndex(null);
+    setDragOverIndex(null);
   };
 
   return (
@@ -277,6 +293,13 @@ export default function SeguimientoVentasPage() {
             border: 2px dashed #2563eb !important;
             transform: scale(0.98) !important;
             box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+        }
+
+        .drag-over {
+            border: 2px solid #2563eb !important;
+            background-color: rgba(37, 99, 235, 0.05) !important;
+            box-shadow: 0 0 12px rgba(37, 99, 235, 0.25) !important;
+            transform: scale(1.01) !important;
         }
       `}} />
 
@@ -358,7 +381,7 @@ export default function SeguimientoVentasPage() {
               flexShrink: 0
           }}>!</div>
           <div style={{ flex: 1 }}>
-            <strong>Modo reorganización activo:</strong> Mantén pulsado y arrastra cualquier tarjeta para moverla, o utiliza las flechas laterales. Haz clic en <strong>Guardar Orden</strong> para aplicar.
+            <strong>Modo reorganización activo:</strong> Mantén pulsado y arrastra cualquier tarjeta sobre otra para moverla de lugar, o utiliza los cheurones laterales. Haz clic en <strong>Guardar Orden</strong> para aplicar.
           </div>
         </div>
       )}
@@ -375,10 +398,12 @@ export default function SeguimientoVentasPage() {
               draggable={isEditMode}
               onDragStart={(e) => handleDragStart(e, i)}
               onDragOver={(e) => handleDragOver(e, i)}
+              onDragLeave={() => handleDragLeave(i)}
+              onDrop={(e) => handleDrop(e, i)}
               onDragEnd={handleDragEnd}
             >
               <div 
-                  className={`hub-card hub-card-main ${isEditMode ? 'edit-mode-card' : ''} ${draggedIndex === i ? 'dragging' : ''}`} 
+                  className={`hub-card hub-card-main ${isEditMode ? 'edit-mode-card' : ''} ${draggedIndex === i ? 'dragging' : ''} ${dragOverIndex === i ? 'drag-over' : ''}`} 
                   onMouseDown={(e) => handleStartPress(e, i)}
                   onMouseUp={(e) => handleReleasePress(e, c.action)}
                   onMouseMove={handleMovePress}
@@ -437,7 +462,7 @@ export default function SeguimientoVentasPage() {
                     </div>
                     <div style={{ display: 'flex', gap: 4 }}>
                       <button 
-                          onClick={(e) => { e.stopPropagation(); moveCard(i, 'up') }} 
+                          onClick={(e) => { e.stopPropagation(); moveCard(i, 'prev') }} 
                           disabled={i === 0} 
                           style={{ 
                               display: 'flex', 
@@ -452,12 +477,12 @@ export default function SeguimientoVentasPage() {
                               cursor: i === 0 ? 'not-allowed' : 'pointer',
                               boxShadow: i === 0 ? 'none' : '0 1px 3px rgba(0,0,0,0.05)'
                           }}
-                          title="Subir"
+                          title="Anterior"
                       >
-                        <ArrowUp size={14} />
+                        <ChevronLeft size={16} />
                       </button>
                       <button 
-                          onClick={(e) => { e.stopPropagation(); moveCard(i, 'down') }} 
+                          onClick={(e) => { e.stopPropagation(); moveCard(i, 'next') }} 
                           disabled={i === sortedCards.length - 1} 
                           style={{ 
                               display: 'flex', 
@@ -472,9 +497,9 @@ export default function SeguimientoVentasPage() {
                               cursor: i === sortedCards.length - 1 ? 'not-allowed' : 'pointer',
                               boxShadow: i === sortedCards.length - 1 ? 'none' : '0 1px 3px rgba(0,0,0,0.05)'
                           }}
-                          title="Bajar"
+                          title="Siguiente"
                       >
-                        <ArrowDown size={14} />
+                        <ChevronRight size={16} />
                       </button>
                     </div>
                   </div>
