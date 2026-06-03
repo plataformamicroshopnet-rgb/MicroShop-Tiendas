@@ -50,6 +50,14 @@ export default function ComisionesEquipoPage() {
 
     const combinedRuleStats = [...ruleStats, ...extrasStats].filter(r => r.totalVentas > 0 || r.totalComision > 0).sort((a, b) => b.totalComision - a.totalComision);
 
+    const totalVentasSum = sellerStats.reduce((acc, s) => acc + s.totalSales, 0);
+    const totalPendientesSum = sellerStats.reduce((acc, s) => acc + s.pendientes, 0);
+    const totalBaseComSum = sellerStats.reduce((acc, s) => acc + (s.totalComision - s.totalExtras), 0);
+    const totalExtrasSum = sellerStats.reduce((acc, s) => acc + s.totalExtras, 0);
+    const totalComisionSum = teamTotalComisiones;
+
+    const totalRuleVentas = combinedRuleStats.reduce((acc, r) => acc + r.totalVentas, 0);
+    const totalRuleComision = combinedRuleStats.reduce((acc, r) => acc + r.totalComision, 0);
 
     return (
         <div style={{ padding: '24px 32px', backgroundColor: 'var(--bg-app)', minHeight: '100vh' }}>
@@ -159,20 +167,22 @@ export default function ComisionesEquipoPage() {
                                                         <span style={{ color: 'var(--border-strong)' }}>-</span>
                                                     )}
                                                 </td>
-                                                <td style={{ padding: '6px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)' }}>
-                                                    {baseCom.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                                                <td style={{ padding: '6px 12px', textAlign: 'right' }}>
+                                                    <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-main)' }}>
+                                                        {baseCom.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                                                    </div>
                                                 </td>
                                                 <td style={{ padding: '6px 12px', textAlign: 'right' }}>
                                                     {s.totalExtras > 0 ? (
-                                                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#a855f7', fontWeight: 700, background: 'rgba(168, 85, 247, 0.1)', padding: '2px 8px', borderRadius: 6, fontSize: 11 }}>
-                                                            <Star size={12} fill="#a855f7" /> +{s.totalExtras.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                                                        <div style={{ fontSize: 15, fontWeight: 800, color: '#a855f7' }}>
+                                                            +{s.totalExtras.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
                                                         </div>
                                                     ) : (
-                                                        <span style={{ color: 'var(--border-strong)' }}>-</span>
+                                                        <div style={{ color: 'var(--border-strong)', fontSize: 15, fontWeight: 800 }}>-</div>
                                                     )}
                                                 </td>
                                                 <td style={{ padding: '6px 12px', textAlign: 'right' }}>
-                                                    <div style={{ fontSize: 16, fontWeight: 900, color: '#10b981', textShadow: '0 0 20px rgba(16, 185, 129, 0.2)' }}>
+                                                    <div style={{ fontSize: 15, fontWeight: 800, color: '#10b981', textShadow: '0 0 20px rgba(16, 185, 129, 0.2)' }}>
                                                         {s.totalComision.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
                                                     </div>
                                                 </td>
@@ -180,6 +190,18 @@ export default function ComisionesEquipoPage() {
                                         );
                                     })}
                                 </tbody>
+                                <tfoot>
+                                    <tr style={{ background: 'rgba(255,255,255,0.05)', borderTop: '2px solid var(--border-strong)', fontWeight: 'bold' }}>
+                                        <td style={{ padding: '6px 12px', textAlign: 'center', color: 'var(--text-muted)' }}>-</td>
+                                        <td style={{ padding: '6px 12px', color: 'var(--text-main)', fontWeight: 800 }}>TOTALES</td>
+                                        <td style={{ padding: '6px 12px', textAlign: 'center', color: 'var(--text-muted)' }}>-</td>
+                                        <td style={{ padding: '6px 12px', textAlign: 'center', fontSize: 15, fontWeight: 800, color: 'var(--text-main)' }}>{totalVentasSum}</td>
+                                        <td style={{ padding: '6px 12px', textAlign: 'center', color: '#f59e0b', fontSize: 15, fontWeight: 800 }}>{totalPendientesSum > 0 ? totalPendientesSum : '-'}</td>
+                                        <td style={{ padding: '6px 12px', textAlign: 'right', fontSize: 15, fontWeight: 800, color: 'var(--text-main)' }}>{totalBaseComSum.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</td>
+                                        <td style={{ padding: '6px 12px', textAlign: 'right', fontSize: 15, fontWeight: 800, color: '#a855f7' }}>{totalExtrasSum > 0 ? `+${totalExtrasSum.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : '-'}</td>
+                                        <td style={{ padding: '6px 12px', textAlign: 'right', fontSize: 15, fontWeight: 800, color: '#10b981' }}>{totalComisionSum.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</td>
+                                    </tr>
+                                </tfoot>
                             </>
                         ) : (
                             <>
@@ -222,7 +244,7 @@ export default function ComisionesEquipoPage() {
                                                     <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-main)' }}>{Math.round(r.totalVentas).toLocaleString('es-ES')}</div>
                                                 </td>
                                                 <td style={{ padding: '6px 12px', textAlign: 'right' }}>
-                                                    <div style={{ fontSize: 16, fontWeight: 900, color: r.isExtra ? '#a855f7' : '#10b981', textShadow: r.isExtra ? '0 0 20px rgba(168, 85, 247, 0.2)' : '0 0 20px rgba(16, 185, 129, 0.2)' }}>
+                                                    <div style={{ fontSize: 15, fontWeight: 800, color: r.isExtra ? '#a855f7' : '#10b981', textShadow: r.isExtra ? '0 0 20px rgba(168, 85, 247, 0.2)' : '0 0 20px rgba(16, 185, 129, 0.2)' }}>
                                                         {r.totalComision.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
                                                     </div>
                                                 </td>
@@ -230,6 +252,14 @@ export default function ComisionesEquipoPage() {
                                         )
                                     })}
                                 </tbody>
+                                <tfoot>
+                                    <tr style={{ background: 'rgba(255,255,255,0.05)', borderTop: '2px solid var(--border-strong)', fontWeight: 'bold' }}>
+                                        <td style={{ padding: '6px 12px', textAlign: 'center', color: 'var(--text-muted)' }}>-</td>
+                                        <td style={{ padding: '6px 12px', color: 'var(--text-main)', fontWeight: 800 }}>TOTALES</td>
+                                        <td style={{ padding: '6px 12px', textAlign: 'center', fontSize: 15, fontWeight: 800, color: 'var(--text-main)' }}>{Math.round(totalRuleVentas).toLocaleString('es-ES')}</td>
+                                        <td style={{ padding: '6px 12px', textAlign: 'right', fontSize: 15, fontWeight: 800, color: '#10b981' }}>{totalRuleComision.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</td>
+                                    </tr>
+                                </tfoot>
                             </>
                         )}
                     </table>
