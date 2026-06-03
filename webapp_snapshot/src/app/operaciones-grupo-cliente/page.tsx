@@ -106,8 +106,9 @@ function calcNifTramo(subtotal: number, units: number, info: TramoInfo): number 
 }
 
 // ── Section table ─────────────────────────────────────────────────────
+// ── Section table ─────────────────────────────────────────────────────
 function SectionTable({
-  label, badge, badgeColor, groups, tabColor, isRent, calcCommission, importeLabel = 'Importe', calcImporte
+  label, badge, badgeColor, groups, tabColor, isRent, calcCommission, importeLabel = 'Cuota Total (€)', calcImporte
 }: {
   label: string; badge: string; badgeColor: string
   groups: NifGroup[]; tabColor: string;
@@ -136,16 +137,8 @@ function SectionTable({
           <span style={{ fontSize: 12, color: 'var(--medium-gray)' }}>{groups.length} clientes · {totalUnits} uds.</span>
         </div>
         <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
-          {isRent ? (
-            <>
-              <span style={{ fontSize: 13, color: 'var(--medium-gray)' }}>{importeLabel}: <strong style={{ color: 'var(--light-text)' }}>{fmt(sectionTotal)}</strong></span>
-              {calcCommission && (
-                <span style={{ fontSize: 13, color: 'var(--medium-gray)' }}>Comisión: <strong style={{ color: 'var(--light-text)' }}>{fmt(groups.reduce((acc, g) => acc + g.sales.reduce((sum, s) => sum + calcCommission(s), 0), 0))}</strong></span>
-              )}
-            </>
-          ) : (
-            <span style={{ fontSize: 13, color: 'var(--medium-gray)' }}>Comisión: <strong style={{ color: 'var(--light-text)' }}>{fmt(sectionTotal)}</strong></span>
-          )}
+          <span style={{ fontSize: 13, color: 'var(--medium-gray)' }}>{importeLabel}: <strong style={{ color: 'var(--light-text)' }}>{fmt(sectionTotal)}</strong></span>
+          <span style={{ fontSize: 13, color: 'var(--medium-gray)' }}>Comisión: <strong style={{ color: 'var(--light-text)' }}>{fmt(groups.reduce((acc, g) => acc + g.sales.reduce((sum, s) => sum + (calcCommission ? calcCommission(s) : Number(s.cuota ?? 0)), 0), 0))}</strong></span>
         </div>
       </div>
 
@@ -181,9 +174,9 @@ function SectionTable({
                     <td style={{ padding: '12px 14px', textAlign: 'right' }}>
                       <span style={{ background: `${tabColor}22`, color: tabColor, borderRadius: 20, padding: '3px 11px', fontWeight: 800, fontSize: 13 }}>1</span>
                     </td>
-                    <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 600, color: 'var(--medium-gray)', fontSize: 13, whiteSpace: 'nowrap' }}>{isRent ? fmt(saleImporte) : '—'}</td>
+                    <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 600, color: 'var(--medium-gray)', fontSize: 13, whiteSpace: 'nowrap' }}>{fmt(saleImporte)}</td>
                     <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: 'var(--light-text)', fontSize: 13, whiteSpace: 'nowrap' }}>
-                      {isRent && calcCommission ? fmt(calcCommission(sale)) : (!isRent ? fmt(Number(sale.cuota ?? 0)) : '—')}
+                      {calcCommission ? fmt(calcCommission(sale)) : fmt(Number(sale.cuota ?? 0))}
                     </td>
                   </tr>
                 )
@@ -355,6 +348,34 @@ function GrupoClienteContent() {
     return acc + Number(sale.cuota || 0);
   }, 0)
 
+  // ── Global Totalizers Calculation ───────────────────────────────────
+  const { globalCuotaTotal, globalComisionTotal } = useMemo(() => {
+    let cuotaSum = 0
+    let comSum = 0
+
+    sales.forEach(s => {
+      let matchedTab = TABS.find(t => filterByTab(s, t.id))
+      if (!matchedTab) return
+      
+      if (matchedTab.id === 'rent') {
+        cuotaSum += Number(s.cuota || 0)
+        comSum += getRentCommission(s)
+      } else if (matchedTab.id === 'seguro') {
+        cuotaSum += getSeguroImporte(s)
+        comSum += Number(s.cuota || 0)
+      } else {
+        cuotaSum += Number(s.cuota || 0)
+        comSum += Number(s.cuota || 0)
+      }
+    })
+
+    extraAssignments.forEach(ea => {
+      comSum += Number(ea.telecomRewardAmount || 0)
+    })
+
+    return { globalCuotaTotal: cuotaSum, globalComisionTotal: comSum }
+  }, [sales, extraAssignments, catalogs])
+
   // ── Resolve extra channel code ──────────────────────────────────────
   const resolveExtraCode = (ea: any): string => {
     let code = ea.rule?.channelType || 'EXTRA'
@@ -414,7 +435,7 @@ function GrupoClienteContent() {
                     { label: 'CÓDIGO',           right: false },
                     { label: 'COMERCIAL',        right: false },
                     { label: 'CONCEPTO / REGLA', right: false },
-                    { label: 'IMPORTE',          right: true  },
+                    { label: 'CUOTA TOTAL (€)',  right: true  },
                     { label: 'COMISIÓN',         right: true  },
                     
                   ].map(h => (
@@ -691,28 +712,55 @@ function GrupoClienteContent() {
         }
       />
 
-      {/* ── Botones de exportación Excel ── */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
-        {[
-          { label: '📋 Hoja por Grupo', desc: 'Una pestaña por cada grupo', fn: exportByGroup, color: '#059669' },
-          { label: '📄 Todo en Una Hoja', desc: 'Todas las ventas juntas con columna Grupo', fn: exportAllInOne, color: '#2563eb' },
-          { label: '📊 Resumen', desc: 'Totales por grupo: ventas, cuota y tramo', fn: exportSummary, color: '#7C3AED' },
-        ].map((btn, i) => (
-          <button key={i} onClick={btn.fn} title={btn.desc} style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            padding: '9px 18px', borderRadius: 10, border: `1px solid ${btn.color}40`,
-            background: `${btn.color}12`, color: btn.color,
-            fontWeight: 700, fontSize: 13, cursor: 'pointer',
-            transition: 'all 0.15s' }}
-            onMouseEnter={e => { e.currentTarget.style.background = `${btn.color}22`; e.currentTarget.style.transform = 'translateY(-1px)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = `${btn.color}12`; e.currentTarget.style.transform = 'none' }}
-          >
-            {btn.label}
-          </button>
-        ))}
-        <span style={{ fontSize: 11, color: 'var(--medium-gray)', alignSelf: 'center', marginLeft: 4 }}>
-          Exportar todas las operaciones de {periodLabel}
-        </span>
+      {/* ── Botones de exportación Excel y Totalizadores Globales ── */}
+      <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          {[
+            { label: '📋 Hoja por Grupo', desc: 'Una pestaña por cada grupo', fn: exportByGroup, color: '#059669' },
+            { label: '📄 Todo en Una Hoja', desc: 'Todas las ventas juntas con columna Grupo', fn: exportAllInOne, color: '#2563eb' },
+            { label: '📊 Resumen', desc: 'Totales por grupo: ventas, cuota y tramo', fn: exportSummary, color: '#7C3AED' },
+          ].map((btn, i) => (
+            <button key={i} onClick={btn.fn} title={btn.desc} style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '9px 18px', borderRadius: 10, border: `1px solid ${btn.color}40`,
+              background: `${btn.color}12`, color: btn.color,
+              fontWeight: 700, fontSize: 13, cursor: 'pointer',
+              transition: 'all 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.background = `${btn.color}22`; e.currentTarget.style.transform = 'translateY(-1px)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = `${btn.color}12`; e.currentTarget.style.transform = 'none' }}
+            >
+              {btn.label}
+            </button>
+          ))}
+          <span style={{ fontSize: 11, color: 'var(--medium-gray)', marginLeft: 8 }}>
+            Exportar todas las operaciones de {periodLabel}
+          </span>
+        </div>
+
+        {/* Totalizadores Globales de la Página */}
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(37, 99, 235, 0.15) 100%)',
+            border: '1px solid rgba(37, 99, 235, 0.25)',
+            borderRadius: 12, padding: '8px 16px',
+            boxShadow: '0 4px 12px rgba(37, 99, 235, 0.04)',
+            display: 'flex', flexDirection: 'column', minWidth: 155
+          }}>
+            <span style={{ fontSize: 10, color: 'var(--medium-gray)', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700 }}>Cuota Total (€)</span>
+            <span style={{ fontSize: 18, fontWeight: 900, color: '#2563eb', marginTop: 2 }}>{fmt(globalCuotaTotal)}</span>
+          </div>
+
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.15) 100%)',
+            border: '1px solid rgba(16, 185, 129, 0.25)',
+            borderRadius: 12, padding: '8px 16px',
+            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.04)',
+            display: 'flex', flexDirection: 'column', minWidth: 155
+          }}>
+            <span style={{ fontSize: 10, color: 'var(--medium-gray)', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700 }}>Comisión Periodo</span>
+            <span style={{ fontSize: 18, fontWeight: 900, color: '#10b981', marginTop: 2 }}>{fmt(globalComisionTotal)}</span>
+          </div>
+        </div>
       </div>
 
       {/* ── Tabs ── */}
@@ -890,7 +938,6 @@ function GrupoClienteContent() {
             tabColor={tab.color} 
             isRent={tab.id === 'rent' || tab.id === 'seguro'} 
             calcCommission={tab.id === 'rent' ? getRentCommission : (tab.id === 'seguro' ? (s) => Number(s.cuota || 0) : undefined)}
-            importeLabel={tab.id === 'seguro' ? 'Cuota Total (€)' : 'Importe'}
             calcImporte={tab.id === 'seguro' ? getSeguroImporte : undefined}
           />
           <SectionTable 
@@ -901,7 +948,6 @@ function GrupoClienteContent() {
             tabColor={tab.color} 
             isRent={tab.id === 'rent' || tab.id === 'seguro'} 
             calcCommission={tab.id === 'rent' ? getRentCommission : (tab.id === 'seguro' ? (s) => Number(s.cuota || 0) : undefined)}
-            importeLabel={tab.id === 'seguro' ? 'Cuota Total (€)' : 'Importe'}
             calcImporte={tab.id === 'seguro' ? getSeguroImporte : undefined}
           />
           <SectionTable 
@@ -912,7 +958,6 @@ function GrupoClienteContent() {
             tabColor={tab.color} 
             isRent={tab.id === 'rent' || tab.id === 'seguro'} 
             calcCommission={tab.id === 'rent' ? getRentCommission : (tab.id === 'seguro' ? (s) => Number(s.cuota || 0) : undefined)}
-            importeLabel={tab.id === 'seguro' ? 'Cuota Total (€)' : 'Importe'}
             calcImporte={tab.id === 'seguro' ? getSeguroImporte : undefined}
           />
 
