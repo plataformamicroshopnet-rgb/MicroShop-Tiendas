@@ -383,7 +383,6 @@ function GrupoClienteContent() {
         cuotaSum += getSeguroImporte(s)
         comSum += Number(s.cuota || 0)
       } else {
-        cuotaSum += Number(s.cuota || 0)
         comSum += Number(s.cuota || 0)
       }
     })
