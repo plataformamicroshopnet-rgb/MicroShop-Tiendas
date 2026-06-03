@@ -41,6 +41,32 @@ const formatCurrency = (val: any) => {
   return new Intl.NumberFormat('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num) + '€';
 }
 
+const getCuotaTotal = (sale: any): number => {
+  const parse = (val: any): number => {
+    if (val === null || val === undefined) return 0;
+    if (typeof val === 'number') return isNaN(val) ? 0 : val;
+    const clean = String(val).replace('€', '').replace(/\s/g, '').replace(',', '.').trim();
+    const num = parseFloat(clean);
+    return isNaN(num) ? 0 : num;
+  };
+  const det = String(sale.detalle || '').toLowerCase();
+  const cat = String(sale.categoria || sale.sheet || '').toLowerCase();
+  const isRent = det === 'rent' || det === 'tma' || cat === 'rent';
+  const isSeguro = det === 'seguro' || cat === 'seguro';
+  
+  if (isSeguro) {
+    if (sale.seguroImporte) {
+      const v = parse(sale.seguroImporte);
+      if (v > 0) return v;
+    }
+    return parse(sale.cuota || sale.importe || 0);
+  }
+  if (isRent) {
+    return parse(sale.cuota || sale.importe || 0);
+  }
+  return 0;
+};
+
 function CommercialDashboard({ data, activeExtras = [], isComercial, isAdmin }: { data: any[], activeExtras?: any[], isComercial?: boolean, isAdmin?: boolean }) {
   const totalVentas = data.length + activeExtras.length;
   const pendientes = data.filter((d: any) => d.pendiente === 'Si' && d.anulado !== 'Si' && d.pendiente !== 'Anulado').length + activeExtras.filter((ex: any) => ex.status === 'PENDING').length;
@@ -241,6 +267,7 @@ function CommercialDashboard({ data, activeExtras = [], isComercial, isAdmin }: 
                 <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Pte.</th>
                 <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Anul.</th>
                 <th style={{ padding: '4px 6px', textAlign: 'left', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px', minWidth: 120, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Anotaciones</th>
+                <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Cuota Total</th>
                 {isAdmin && <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Comisión</th>}
                 <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Estado</th>
               </tr>
@@ -259,6 +286,9 @@ function CommercialDashboard({ data, activeExtras = [], isComercial, isAdmin }: 
                   <td style={{ padding: '4px 6px', textAlign: 'center' }}>{sale.pendiente}</td>
                   <td style={{ padding: '4px 6px', textAlign: 'center' }}>{sale.anulado}</td>
                   <td style={{ padding: '4px 6px', color: '#555555', fontSize: 12 }}>{sale.anotaciones}</td>
+                  <td style={{ padding: '4px 6px', textAlign: 'center', color: '#059669', fontWeight: 800 }}>
+                    {getCuotaTotal(sale) > 0 ? `${getCuotaTotal(sale).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : '—'}
+                  </td>
                   {isAdmin && <td style={{ padding: '4px 6px', textAlign: 'center', color: '#0078D4', fontWeight: 'bold' }}>{formatCurrency(sale.dynamicCommission !== undefined ? sale.dynamicCommission : (sale.importe || sale.cuota))}</td>}
                   <td style={{ padding: '4px 6px', textAlign: 'center' }}>
                     {(sale.anulado === 'Si' || sale.pendiente === 'Anulado') ? (
@@ -288,6 +318,7 @@ function CommercialDashboard({ data, activeExtras = [], isComercial, isAdmin }: 
                   <td style={{ padding: '4px 6px', textAlign: 'center', color: '#059669' }}>No</td>
                   <td style={{ padding: '4px 6px', textAlign: 'center', color: '#059669' }}>No</td>
                   <td style={{ padding: '4px 6px', color: '#059669', fontSize: 12 }}>EXTRA SISTEMA ({ex.rule?.channelType || 'MANUAL'})</td>
+                  <td style={{ padding: '4px 6px', textAlign: 'center', color: '#059669' }}>—</td>
                   {isAdmin && (
                     <td style={{ padding: '4px 6px', textAlign: 'center', color: '#10b981', fontWeight: 900 }}>
                       {formatCurrency(ex.telecomRewardAmount)}
@@ -302,7 +333,7 @@ function CommercialDashboard({ data, activeExtras = [], isComercial, isAdmin }: 
               ))}
               {data.length === 0 && activeExtras.length === 0 && (
                 <tr>
-                  <td colSpan={isAdmin ? 12 : 11} style={{ padding: '24px', textAlign: 'center', color: '#555555' }}>
+                  <td colSpan={isAdmin ? 13 : 12} style={{ padding: '24px', textAlign: 'center', color: '#555555' }}>
                     No hay operaciones registradas.
                   </td>
                 </tr>
@@ -857,13 +888,14 @@ function OperationsContent() {
                 <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Pte.</th>
                 <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Anul.</th>
                 <th style={{ padding: '4px 6px', textAlign: 'left', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px', minWidth: 120, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Anotaciones</th>
+                <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Cuota Total</th>
                 <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {displayedSales.length === 0 ? (
                 <tr>
-                  <td colSpan={12} style={{ padding: '24px', textAlign: 'center', color: '#555555' }}>
+                  <td colSpan={13} style={{ padding: '24px', textAlign: 'center', color: '#555555' }}>
                     {activeVendorFilter ? `No hay datos disponibles para ${activeVendorFilter}.` : 'No hay datos disponibles para tu rol o todavía no hay ventas registradas.'}
                   </td>
                 </tr>
@@ -923,6 +955,9 @@ function OperationsContent() {
                     <td style={{ padding: '4px 6px', color: '#555555', fontSize: 13, lineHeight: '1.4' }}>
                       {editingId === sale.id ? <textarea value={editForm.anotaciones} onChange={e => handleEditChange('anotaciones', e.target.value)} rows={2} style={{ width: '100%', minWidth: 120, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: 4 }} /> : sale.anotaciones}
                     </td>
+                    <td style={{ padding: '4px 6px', textAlign: 'center', color: '#059669', fontWeight: 800 }}>
+                      {getCuotaTotal(sale) > 0 ? `${getCuotaTotal(sale).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : '—'}
+                    </td>
 
                     <td style={{ padding: '4px 6px', textAlign: 'center' }}>
                       {editingId === sale.id ? (
@@ -971,6 +1006,7 @@ function OperationsContent() {
                   <td style={{ padding: '4px 6px', textAlign: 'center', color: '#059669' }}>No</td>
                   <td style={{ padding: '4px 6px', textAlign: 'center', color: '#059669' }}>No</td>
                   <td style={{ padding: '4px 6px', color: '#059669', fontSize: 12 }}>EXTRA TELEFÓNICA ({resolveRawCode(ex)})</td>
+                  <td style={{ padding: '4px 6px', textAlign: 'center', color: '#059669' }}>—</td>
 
                   <td style={{ padding: '4px 6px', textAlign: 'center' }}>
                      <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
