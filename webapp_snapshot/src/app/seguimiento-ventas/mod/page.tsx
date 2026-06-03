@@ -125,8 +125,19 @@ export default function ModPage() {
     }, [selectedYear, selectedMonth]);
 
     const calculateMetrics = (data: any, year: number, month: number) => {
-        // Filter sales (no anuladas)
-        const validSales = data.sales.map(sanitizeSale).filter((s: any) => s.anulado !== 'Si' && s.anulado !== 'Sí' && s.pendiente !== 'Anulado');
+        // Filter sales (no anuladas and exclude Solar360)
+        const validSales = data.sales.map(sanitizeSale).filter((s: any) => {
+            if (s.anulado === 'Si' || s.anulado === 'Sí' || s.pendiente === 'Anulado') return false;
+            const p = String(s.producto || '').toLowerCase();
+            const c = String(s.categoria || '').toLowerCase();
+            const d = String(s.detalle || '').toLowerCase();
+            if (p.includes('solar360') || p.includes('solar 360') ||
+                c.includes('solar360') || c.includes('solar 360') ||
+                d.includes('solar360') || d.includes('solar 360')) {
+                return false;
+            }
+            return true;
+        });
 
         // Group by day
         const daysInMonth = new Date(year, month, 0).getDate();
