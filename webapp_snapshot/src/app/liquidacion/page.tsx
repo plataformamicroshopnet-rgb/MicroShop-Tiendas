@@ -1611,6 +1611,7 @@ export default function LiquidacionesPage() {
         });
 
         const tableTotal = salesForTable.reduce((acc, sale) => acc + getCuotaTotal(sale), 0) + activeExtras.reduce((acc, ex) => acc + (esAdmin ? (ex.telecomRewardAmount || 0) : (ex.sellerRewardAmount || 0)), 0);
+        const totalComisiones = salesForTable.reduce((acc, sale) => acc + getCommission(sale), 0) + activeExtras.reduce((acc, ex) => acc + (esAdmin ? (ex.telecomRewardAmount || 0) : (ex.sellerRewardAmount || 0)), 0);
 
         return (
             <>
@@ -1637,8 +1638,8 @@ export default function LiquidacionesPage() {
                             {salesForTable.length} VENTAS
                         </span>
                         <div style={{ backgroundColor: '#111827', color: '#F9FAFB', padding: '2px 12px', borderRadius: '8px', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span>TOTAL OP.</span>
-                            <span>{formatEuro(tableTotal)}</span>
+                            <span>TOTAL COMISIONES</span>
+                            <span>{formatEuro(totalComisiones)}</span>
                         </div>
                     </div>
                 </div>
