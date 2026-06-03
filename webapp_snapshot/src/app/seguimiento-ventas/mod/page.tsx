@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { TrendingUp, RefreshCw } from 'lucide-react'
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, AreaChart, Area } from 'recharts'
 import { usePeriod } from '@/components/PeriodProvider'
-import { normalizeString } from '@/lib/salesUtils'
+import { normalizeString, renderDashboardData, calculateDynamicCommission, isVentaWithinDates, sanitizeSale, getCurrentMonthString } from '@/lib/salesUtils'
 
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
@@ -29,8 +29,24 @@ export default function ModPage() {
 
     const [loading, setLoading] = useState(false);
     
-    const [currentPeriodData, setCurrentPeriodData] = useState<{sales: any[], catalogs: any[]}>({sales: [], catalogs: []});
-    const [pastPeriodData, setPastPeriodData] = useState<{sales: any[], catalogs: any[]}>({sales: [], catalogs: []});
+    const [currentPeriodData, setCurrentPeriodData] = useState<any>({
+        sales: [],
+        catalogs: {},
+        objetivos: { Pyme: {}, Captador: {} },
+        objGrupos: { Pyme: {}, Captador: {} },
+        importesPyme: [],
+        importesPlus: [],
+        periodObj: null
+    });
+    const [pastPeriodData, setPastPeriodData] = useState<any>({
+        sales: [],
+        catalogs: {},
+        objetivos: { Pyme: {}, Captador: {} },
+        objGrupos: { Pyme: {}, Captador: {} },
+        importesPyme: [],
+        importesPlus: [],
+        periodObj: null
+    });
     
     const [manualPastMetrics, setManualPastMetrics] = useState<any>(null);
     const [pastEditMode, setPastEditMode] = useState(false);
@@ -49,26 +65,36 @@ export default function ModPage() {
                 const pastPeriod = periodsList.find((p: any) => p.year === selectedYear - 1 && p.month === selectedMonth);
 
                 const fetchPeriodFullData = async (period: any) => {
-                    if (!period) return { sales: [], catalogs: [] };
-                    const [sRes, cRes] = await Promise.all([
+                    if (!period) return { sales: [], catalogs: {}, objetivos: { Pyme: {}, Captador: {} }, objGrupos: { Pyme: {}, Captador: {} }, importesPyme: [], importesPlus: [], periodObj: null };
+                    
+                    const [sRes, cRes, objRes, pymeRes, plusRes] = await Promise.all([
                         fetch(`/api/sales?periodKey=${period.period_key}`),
-                        fetch(`/api/catalogs?periodKey=${period.period_key}&strictPeriod=1`)
+                        fetch(`/api/catalogs?periodKey=${period.period_key}&strictPeriod=1`),
+                        fetch(`/api/objetivos?periodKey=${period.period_key}&strictPeriod=1`),
+                        fetch(`/api/importes-pyme?periodKey=${period.period_key}&strictPeriod=1`),
+                        fetch(`/api/importes-plus?periodKey=${period.period_key}&strictPeriod=1`)
                     ]);
                     
                     const sData = sRes.ok ? await sRes.json().catch(()=>[]) : [];
-                    const cData = cRes.ok ? await cRes.json().catch(()=>[]) : [];
+                    const cData = cRes.ok ? await cRes.json().catch(()=>({})) : {};
+                    const objData = objRes.ok ? await objRes.json().catch(()=>({})) : {};
+                    const pymeData = pymeRes.ok ? await pymeRes.json().catch(()=>({})) : {};
+                    const plusData = plusRes.ok ? await plusRes.json().catch(()=>({})) : {};
 
-                    const extractedCat = cData.catalogs || cData.data || cData;
-                    let flatCatalogs: any[] = [];
-                    if (Array.isArray(extractedCat)) {
-                        flatCatalogs = extractedCat;
-                    } else if (typeof extractedCat === 'object' && extractedCat !== null) {
-                        flatCatalogs = Object.values(extractedCat).flat();
+                    const extractedCat = cData.catalogs || cData.data || cData || {};
+                    let finalCatalogs: Record<string, any[]> = {};
+                    if (extractedCat && typeof extractedCat === 'object' && !Array.isArray(extractedCat)) {
+                        finalCatalogs = extractedCat;
                     }
 
                     return {
                         sales: Array.isArray(sData) ? sData : (sData.logs || sData.sales || sData.data || []),
-                        catalogs: flatCatalogs
+                        catalogs: finalCatalogs,
+                        objetivos: objData.objetivos || { Pyme: {}, Captador: {} },
+                        objGrupos: objData.grupos || { Pyme: {}, Captador: {} },
+                        importesPyme: pymeData.importes || pymeData.data || [],
+                        importesPlus: plusData.importes || plusData.data || [],
+                        periodObj: period
                     };
                 };
 
@@ -98,15 +124,9 @@ export default function ModPage() {
         loadData();
     }, [selectedYear, selectedMonth]);
 
-    const calculateMetrics = (data: {sales: any[], catalogs: any[]}, year: number, month: number) => {
-        // Build catalog map with normalization
-        const catalogMap: Record<string, any> = {};
-        data.catalogs.forEach(c => {
-            catalogMap[normalizeString(c.producto)] = c;
-        });
-
+    const calculateMetrics = (data: any, year: number, month: number) => {
         // Filter sales (no anuladas)
-        const validSales = data.sales.filter(s => s.anulado !== 'Si' && s.anulado !== 'Sí' && s.pendiente !== 'Anulado');
+        const validSales = data.sales.map(sanitizeSale).filter((s: any) => s.anulado !== 'Si' && s.anulado !== 'Sí' && s.pendiente !== 'Anulado');
 
         // Group by day
         const daysInMonth = new Date(year, month, 0).getDate();
@@ -130,7 +150,127 @@ export default function ModPage() {
             };
         });
 
-        validSales.forEach(sale => {
+        // Split by channel
+        const plusSales = validSales.filter((s: any) => {
+            const codigoLower = String(s.codigo || '').trim().toLowerCase();
+            return ['plus 1ks', 'plus 1sk', 'plus nfg', 'plus n7d', 'plus k2z', 'plus zf7'].some(c => codigoLower.includes(c));
+        });
+        const basicoSales = validSales.filter((s: any) => {
+            const codigoLower = String(s.codigo || '').trim().toLowerCase();
+            return codigoLower.includes('básico xcu') || codigoLower.includes('basico xcu');
+        });
+
+        // Dashboard calculations for tramo rates
+        const activeMonthStr = `${year}${String(month).padStart(2, '0')}`;
+        const pymeObjMonth = data.objetivos?.Pyme?.[activeMonthStr] || {};
+        const captObjMonth = data.objetivos?.Captador?.[activeMonthStr] || {};
+
+        const plusDash = (data.importesPyme?.length && plusSales.length)
+            ? renderDashboardData('Pyme', data.importesPyme, pymeObjMonth, plusSales, data.objGrupos, data.periodObj)
+            : null;
+
+        const basicoDash = (data.importesPlus?.length && basicoSales.length)
+            ? renderDashboardData('Captador', data.importesPlus, captObjMonth, basicoSales, data.objGrupos, data.periodObj)
+            : null;
+
+        const parseSafeFloat = (v: any) => {
+            if (v === undefined || v === null) return 0;
+            if (typeof v === 'number') return v;
+            const str = String(v).replace('€', '').replace(/\s/g, '').replace(',', '.');
+            return parseFloat(str) || 0;
+        };
+
+        const getCommission = (sale: any) => {
+            if (sale.anulado === 'Si' || sale.anulado === 'Sí' || sale.pendiente === 'Anulado') return 0;
+
+            const det = (sale.detalle || '').toLowerCase().trim();
+            const codigoLower = String(sale.codigo || '').trim().toLowerCase();
+            
+            const isBasicoVal = codigoLower.includes('básico xcu') || codigoLower.includes('basico xcu');
+            const plusCodesExact = ['plus 1ks', 'plus 1sk', 'plus nfg', 'plus n7d', 'plus k2z', 'plus zf7'];
+            const isPlusVal = plusCodesExact.some(c => codigoLower.includes(c));
+
+            if (!isPlusVal && !isBasicoVal) return 0;
+
+            let saleMonth = '';
+            if (sale.fecha) {
+               const parts = sale.fecha.split('/');
+               if (parts.length === 3) saleMonth = `${parts[2]}${parts[1]}`;
+               else if (sale.fecha.includes('-')) {
+                   const p = sale.fecha.split('-');
+                   if (p.length >= 2) saleMonth = `${p[0]}${p[1]}`;
+               }
+            }
+
+            const getFallbackValue = () => {
+                 let val = sale.importe || sale.cuota || 0;
+                 if (!val && (det === 'ti' || det === 'tma' || det === 'rent' || det === 'micro')) {
+                     let catalogKey = '';
+                     if (det === 'ti') catalogKey = 'Ti';
+                     if (det === 'tma' || det === 'rent') catalogKey = 'Rent';
+                     if (det === 'micro') catalogKey = 'Micro';
+                     
+                     const list = data.catalogs[catalogKey] || [];
+                     const found = list.find((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
+                     if (found) {
+                         val = Number(String(found.anual || 0).replace(',','.'));
+                     }
+                 }
+                 return parseSafeFloat(val);
+            }
+
+            if (!saleMonth) return getFallbackValue();
+
+            const viewingPeriod = activePeriodKey ? activePeriodKey.replace('_', '') : getCurrentMonthString();
+            if (saleMonth !== viewingPeriod) return getFallbackValue();
+            
+            const dashboardRows = isPlusVal ? (plusDash?.rows || []) : (basicoDash?.rows || []);
+
+            const isTV = det === 'suscripciones tv' || det === 'suscripcion tv';
+            if (det === 'o2' || det === 'seguro' || det === 'mimovistar' || det === 'repos' || det === 'varios' || isTV || det === 'prepago' || det === 'resto baf' || det === 'traslado mimovistar') {
+                return parseSafeFloat(sale.importe || sale.cuota || 0);
+            }
+            
+            let overrideBaseValue: number | undefined = undefined;
+            if (det === 'ti' || det === 'tma' || det === 'rent' || det === 'micro') {
+                let catalogKey = '';
+                if (det === 'ti') catalogKey = 'Ti';
+                if (det === 'tma' || det === 'rent') catalogKey = 'Rent';
+                if (det === 'micro') catalogKey = 'Micro';
+                
+                const list = data.catalogs[catalogKey] || [];
+                const matchingProducts = list.filter((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
+                
+                let found = matchingProducts[0];
+                if (matchingProducts.length > 1) {
+                    const correctlyDated = matchingProducts.find((c: any) => isVentaWithinDates(sale.fecha, c.validFrom, c.validTo));
+                    if (correctlyDated) {
+                        found = correctlyDated;
+                    }
+                }
+
+                if (found) {
+                    overrideBaseValue = Number(String(found.anual || 0).replace(',','.'));
+                    
+                    if (det === 'ti') {
+                        return overrideBaseValue;
+                    }
+                    
+                    if (det === 'tma' || det === 'rent') {
+                        const isConCoste = sale.rentConCoste && (sale.rentConCoste.toLowerCase() === 'sí' || sale.rentConCoste.toLowerCase() === 'si');
+                        if (isConCoste) {
+                            return Number(String(found.comisionConCoste || 0).replace(',','.'));
+                        } else {
+                            return Number(String(found.comision || 0).replace(',','.'));
+                        }
+                    }
+                }
+            }
+
+            return calculateDynamicCommission(sale, dashboardRows, overrideBaseValue);
+        };
+
+        validSales.forEach((sale: any) => {
             if (!sale.fecha) return;
             
             let day = -1;
@@ -146,24 +286,11 @@ export default function ModPage() {
 
             if (day >= 1 && day <= daysInMonth) {
                 dailyStats[day - 1].ops += 1;
-                const cat = catalogMap[normalizeString(sale.producto)];
-                if (cat) {
-                    let val = 0;
-                    const prodLower = String(sale.producto || '').toLowerCase();
-                    if (prodLower.includes('solar360')) {
-                        val = 0;
-                    } else {
-                        const isConCoste = sale.rentConCoste && (sale.rentConCoste.toLowerCase() === 'sí' || sale.rentConCoste.toLowerCase() === 'si');
-                        const comStr = isConCoste ? (cat.comisionConCoste || cat.comision || '0') : (cat.comision || '0');
-                        val = Number(String(comStr).replace(',', '.'));
-                    }
-                    dailyStats[day - 1].importe += val;
-                }
+                dailyStats[day - 1].importe += getCommission(sale);
             }
         });
 
         let accum = 0;
-        let daysWorked = 0;
         let totalImporte = 0;
         
         const now = new Date();
@@ -225,8 +352,8 @@ export default function ModPage() {
         };
     };
 
-    const currMetrics = useMemo(() => calculateMetrics(currentPeriodData, selectedYear, selectedMonth), [currentPeriodData, selectedYear, selectedMonth]);
-    const pastMetricsRaw = useMemo(() => calculateMetrics(pastPeriodData, selectedYear - 1, selectedMonth), [pastPeriodData, selectedYear, selectedMonth]);
+    const currMetrics = useMemo(() => calculateMetrics(currentPeriodData, selectedYear, selectedMonth), [currentPeriodData, selectedYear, selectedMonth, activePeriodKey]);
+    const pastMetricsRaw = useMemo(() => calculateMetrics(pastPeriodData, selectedYear - 1, selectedMonth), [pastPeriodData, selectedYear, selectedMonth, activePeriodKey]);
 
     const pastMetrics = useMemo(() => {
         if (manualPastMetrics) {

@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo, Suspense } from 'react'
 import { PageHeader } from '@/components/PageHeader'
 import { usePeriod } from '@/components/PeriodProvider'
 import { useGuard } from '@/hooks/useGuard'
-import { renderDashboardData, calculateDynamicCommission, isVentaWithinDates, normalizeString } from '@/lib/salesUtils'
+import { renderDashboardData, calculateDynamicCommission, isVentaWithinDates, normalizeString, getCurrentMonthString } from '@/lib/salesUtils'
 import * as XLSX from 'xlsx'
 
 // ── Tabs ────────────────────────────────────────────────────────────
@@ -327,6 +327,114 @@ function GrupoClienteContent() {
     return Number(sale.cuota || 0); // Fallback
   }
 
+  const getSaleCuotaTotal = (s: any): number => {
+    const d = (s.detalle || '').toLowerCase().trim()
+    const c = (s.categoria || '').toLowerCase().trim()
+    if (d === 'rent' || d === 'tma' || c === 'rent') {
+      return Number(s.cuota || 0)
+    }
+    if (d === 'seguro' || c === 'seguro') {
+      return getSeguroImporte(s)
+    }
+    return 0
+  }
+
+  const getCommission = (sale: any): number => {
+    const parseSafeFloat = (val: any): number => {
+        if (val === null || val === undefined) return 0;
+        if (typeof val === 'number') return isNaN(val) ? 0 : val;
+        const clean = String(val).replace('€', '').replace(/\s/g, '').replace(',', '.').trim();
+        const num = parseFloat(clean);
+        return isNaN(num) ? 0 : num;
+    };
+
+    if (sale.anulado === 'Si' || sale.pendiente === 'Anulado') return 0;
+
+    const det = (sale.detalle || '').toLowerCase();
+    const codigoLower = String(sale.codigo || '').trim().toLowerCase();
+
+    const isBasicoVal = codigoLower.includes('básico xcu') || codigoLower.includes('basico xcu');
+    const plusCodesExact = ['plus 1ks', 'plus 1sk', 'plus nfg', 'plus n7d', 'plus k2z', 'plus zf7'];
+    const isPlusVal = plusCodesExact.some(c => codigoLower.includes(c));
+    
+    let saleMonth = ''
+    if (sale.fecha) {
+       const parts = sale.fecha.split('/')
+       if (parts.length === 3) saleMonth = `${parts[2]}${parts[1]}`
+       else if (sale.fecha.includes('-')) {
+           const p = sale.fecha.split('-')
+           if (p.length >= 2) saleMonth = `${p[0]}${p[1]}`
+       }
+    }
+    
+    const getFallbackValue = () => {
+         let val = sale.importe || sale.cuota || 0;
+         if (!val && (det === 'ti' || det === 'tma' || det === 'rent' || det === 'micro')) {
+             let catalogKey = '';
+             if (det === 'ti') catalogKey = 'Ti';
+             if (det === 'tma' || det === 'rent') catalogKey = 'Rent';
+             if (det === 'micro') catalogKey = 'Micro';
+             
+             const list = catalogs[catalogKey] || [];
+             const found = list.find((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
+             if (found) {
+                 val = parseSafeFloat(found.anual);
+             }
+         }
+         return parseSafeFloat(val);
+    }
+
+    if (!saleMonth) return getFallbackValue();
+
+    const viewingPeriod = activePeriodKey ? activePeriodKey.replace('_', '') : getCurrentMonthString();
+    if (saleMonth !== viewingPeriod) return getFallbackValue();
+    
+    const dashboardRows = isPlusVal ? (plusDash?.rows || []) : (basicoDash?.rows || []);
+
+    const isTV = det === 'suscripciones tv' || det === 'suscripcion tv';
+    if (det === 'o2' || det === 'seguro' || det === 'mimovistar' || det === 'repos' || det === 'varios' || isTV || det === 'prepago' || det === 'resto baf' || det === 'traslado mimovistar') {
+        return parseSafeFloat(sale.importe || sale.cuota || 0);
+    }
+    
+    let overrideBaseValue: number | undefined = undefined;
+    if (det === 'ti' || det === 'tma' || det === 'rent' || det === 'micro') {
+        let catalogKey = '';
+        if (det === 'ti') catalogKey = 'Ti';
+        if (det === 'tma' || det === 'rent') catalogKey = 'Rent';
+        if (det === 'micro') catalogKey = 'Micro';
+        
+        const list = catalogs[catalogKey] || [];
+        const matchingProducts = list.filter((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
+        
+        let found = matchingProducts[0];
+        if (matchingProducts.length > 1) {
+            const correctlyDated = matchingProducts.find((c: any) => isVentaWithinDates(sale.fecha, c.validFrom, c.validTo));
+            if (correctlyDated) {
+                found = correctlyDated;
+            }
+        }
+
+        if (found) {
+            overrideBaseValue = Number(String(found.anual || 0).replace(',','.'));
+            
+            if (det === 'ti') {
+                return overrideBaseValue;
+            }
+            
+            if (det === 'tma' || det === 'rent') {
+                const isConCoste = sale.rentConCoste && (sale.rentConCoste.toLowerCase() === 'sí' || sale.rentConCoste.toLowerCase() === 'si');
+                if (isConCoste) {
+                    return Number(String(found.comisionConCoste || 0).replace(',','.'));
+                } else {
+                    return Number(String(found.comision || 0).replace(',','.'));
+                }
+            }
+        }
+    }
+
+    return calculateDynamicCommission(sale, dashboardRows, overrideBaseValue);
+  }
+
   const allBasicoSales = useMemo(() => sales.filter(s => isBasico(s.codigo)), [sales])
 
   const plusDash  = useMemo(() => {
@@ -363,8 +471,7 @@ function GrupoClienteContent() {
 
   // Total comisiones (dinámico según pestaña)
   const grandComisionesTotal = tabSales.reduce((acc, sale) => {
-    if (tab.id === 'rent') return acc + getRentCommission(sale);
-    return acc + Number(sale.cuota || 0);
+    return acc + getCommission(sale);
   }, 0)
 
   // ── Global Totalizers Calculation ───────────────────────────────────
@@ -376,15 +483,8 @@ function GrupoClienteContent() {
       let matchedTab = TABS.find(t => filterByTab(s, t.id))
       if (!matchedTab) return
       
-      if (matchedTab.id === 'rent') {
-        cuotaSum += Number(s.cuota || 0)
-        comSum += getRentCommission(s)
-      } else if (matchedTab.id === 'seguro') {
-        cuotaSum += getSeguroImporte(s)
-        comSum += Number(s.cuota || 0)
-      } else {
-        comSum += Number(s.cuota || 0)
-      }
+      cuotaSum += getSaleCuotaTotal(s)
+      comSum += getCommission(s)
     })
 
     extraAssignments.forEach(ea => {
@@ -392,7 +492,7 @@ function GrupoClienteContent() {
     })
 
     return { globalCuotaTotal: cuotaSum, globalComisionTotal: comSum }
-  }, [sales, extraAssignments, catalogs])
+  }, [sales, extraAssignments, catalogs, plusDash, basicoDash])
 
   // ── Resolve extra channel code ──────────────────────────────────────
   const resolveExtraCode = (ea: any): string => {
@@ -547,15 +647,12 @@ function GrupoClienteContent() {
     const exportRows: any[] = []
     const nifGroups = groupSalesByNif(tabSales)
 
-    const getSaleCuotaTotal = (s: any) => {
-      if (tab.id === 'rent') return Number(s.cuota || 0)
-      if (tab.id === 'seguro') return getSeguroImporte(s)
-      return 0
+    const getSaleCuotaTotalLocal = (s: any) => {
+      return getSaleCuotaTotal(s)
     }
 
-    const getSaleComision = (s: any) => {
-      if (tab.id === 'rent') return getRentCommission(s)
-      return Number(s.cuota || 0)
+    const getSaleComisionLocal = (s: any) => {
+      return getCommission(s)
     }
 
     nifGroups.forEach(group => {
@@ -571,8 +668,8 @@ function GrupoClienteContent() {
             Comercial: s.vendedor || '—',
             Producto: s.producto || '—',
             Uds: 1,
-            'Cuota Total (€)': fmtN(getSaleCuotaTotal(s)),
-            Comisión: fmtN(getSaleComision(s))
+            'Cuota Total (€)': fmtN(getSaleCuotaTotalLocal(s)),
+            Comisión: fmtN(getSaleComisionLocal(s))
           })
         })
       } else {
@@ -595,8 +692,8 @@ function GrupoClienteContent() {
             fechas = Array.from(new Set(fechas))
           }
 
-          const cuotaSum = pg.sales.reduce((acc, s) => acc + getSaleCuotaTotal(s), 0)
-          const comisionSum = pg.sales.reduce((acc, s) => acc + getSaleComision(s), 0)
+          const cuotaSum = pg.sales.reduce((acc, s) => acc + getSaleCuotaTotalLocal(s), 0)
+          const comisionSum = pg.sales.reduce((acc, s) => acc + getSaleComisionLocal(s), 0)
 
           exportRows.push({
             Grupo: `${tab.emoji} ${tab.label}`,
@@ -698,16 +795,8 @@ function GrupoClienteContent() {
     const summaryRows = TABS.filter(t => t.id !== 'extras').map(t => {
       const tabSls = sales.filter((s: any) => filterByTab(s, t.id))
       
-      const cuotaSum = tabSls.reduce((acc, s) => {
-        if (t.id === 'rent') return acc + Number(s.cuota || 0)
-        if (t.id === 'seguro') return acc + getSeguroImporte(s)
-        return 0
-      }, 0)
-
-      const comisionSum = tabSls.reduce((acc, s) => {
-        if (t.id === 'rent') return acc + getRentCommission(s)
-        return acc + Number(s.cuota || 0)
-      }, 0)
+      const cuotaSum = tabSls.reduce((acc, s) => acc + getSaleCuotaTotal(s), 0)
+      const comisionSum = tabSls.reduce((acc, s) => acc + getCommission(s), 0)
 
       return {
         Grupo:             `${t.emoji} ${t.label}`,
@@ -978,8 +1067,8 @@ function GrupoClienteContent() {
             groups={plusGroups} 
             tabColor={tab.color} 
             isRent={tab.id === 'rent' || tab.id === 'seguro'} 
-            calcCommission={tab.id === 'rent' ? getRentCommission : (tab.id === 'seguro' ? (s) => Number(s.cuota || 0) : undefined)}
-            calcImporte={tab.id === 'seguro' ? getSeguroImporte : undefined}
+            calcCommission={getCommission}
+            calcImporte={getSaleCuotaTotal}
             showCuotaTotal={showCuotaTotal}
           />
           <SectionTable 
@@ -989,8 +1078,8 @@ function GrupoClienteContent() {
             groups={basicoGroups} 
             tabColor={tab.color} 
             isRent={tab.id === 'rent' || tab.id === 'seguro'} 
-            calcCommission={tab.id === 'rent' ? getRentCommission : (tab.id === 'seguro' ? (s) => Number(s.cuota || 0) : undefined)}
-            calcImporte={tab.id === 'seguro' ? getSeguroImporte : undefined}
+            calcCommission={getCommission}
+            calcImporte={getSaleCuotaTotal}
             showCuotaTotal={showCuotaTotal}
           />
           <SectionTable 
@@ -1000,8 +1089,8 @@ function GrupoClienteContent() {
             groups={otrosGroups} 
             tabColor={tab.color} 
             isRent={tab.id === 'rent' || tab.id === 'seguro'} 
-            calcCommission={tab.id === 'rent' ? getRentCommission : (tab.id === 'seguro' ? (s) => Number(s.cuota || 0) : undefined)}
-            calcImporte={tab.id === 'seguro' ? getSeguroImporte : undefined}
+            calcCommission={getCommission}
+            calcImporte={getSaleCuotaTotal}
             showCuotaTotal={showCuotaTotal}
           />
 

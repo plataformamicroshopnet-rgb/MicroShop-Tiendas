@@ -1509,11 +1509,21 @@ export default function LiquidacionesPage() {
                 return isNaN(num) ? 0 : num;
             };
             const det = String(sale.detalle || '').toLowerCase();
-            if (det === 'seguro' && sale.seguroImporte) {
-                const v = parse(sale.seguroImporte);
-                if (v > 0) return v;
+            const cat = String(sale.categoria || sale.sheet || '').toLowerCase();
+            const isRent = det === 'rent' || det === 'tma' || cat === 'rent';
+            const isSeguro = det === 'seguro' || cat === 'seguro';
+            
+            if (isSeguro) {
+                if (sale.seguroImporte) {
+                    const v = parse(sale.seguroImporte);
+                    if (v > 0) return v;
+                }
+                return parse(sale.cuota || sale.importe || 0);
             }
-            return parse(sale.cuota || sale.importe || 0);
+            if (isRent) {
+                return parse(sale.cuota || sale.importe || 0);
+            }
+            return 0;
         };
 
         const activeExtras = extraAssignments.filter(ea => ea.status !== 'CANCELLED')
@@ -1539,7 +1549,7 @@ export default function LiquidacionesPage() {
             // Header styling
             worksheet.getRow(1).font = { bold: true };
 
-            filteredSalesGlobal.forEach(sale => {
+            salesForTable.forEach(sale => {
                 const comisionEuros = getCommission(sale);
                 const cuotaTotalEuros = getCuotaTotal(sale);
                 // Status Mapping identical to table
@@ -1553,7 +1563,7 @@ export default function LiquidacionesPage() {
                     codigo: sale.codigo || '-',
                     tipoVenta: sale.detalle === 'Ti' ? 'Contratos Móvil' : sale.detalle === 'O2' ? 'O2 MovilFree' : (sale.detalle || '-'),
                     producto: sale.producto || 'Sin especificar',
-                    cuotaTotal: Number(cuotaTotalEuros),
+                    cuotaTotal: cuotaTotalEuros > 0 ? Number(cuotaTotalEuros) : null,
                     comision: Number(comisionEuros),
                     varios: sale.anotaciones || '-',
                     estado: estadoText
@@ -1682,7 +1692,7 @@ export default function LiquidacionesPage() {
                                             )}
                                         </td>
                                         <td className="col-importe" style={{ textAlign: 'center', color: '#059669', fontWeight: 800 }}>
-                                            {`${getCuotaTotal(s).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`}
+                                            {getCuotaTotal(s) > 0 ? `${getCuotaTotal(s).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : '—'}
                                         </td>
                                         <td className="col-importe" style={{ textAlign: 'center', color: '#0000FF' }}>
                                             {isEditing ? <input className="form-input" style={{ padding: '0 4px', width: 70, textAlign: 'center', color: '#0000FF' }} value={editForm.importe || editForm.cuota || ''} onChange={e => setEditForm({ ...editForm, importe: e.target.value })} /> : `${getCommission(s).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`}
