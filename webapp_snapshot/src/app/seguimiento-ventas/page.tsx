@@ -46,7 +46,7 @@ export default function SeguimientoVentasPage() {
       textColor: 'rgb(255, 149, 0)'
     },
     {
-      title: 'Comisiones de todo el equipo',
+      title: 'Comisiones Tiendas Reducidas',
       description: 'Vista unificada de alto impacto con el ranking de ventas y comisiones totales de todos los comerciales.',
       icon: Target,
       action: () => router.push('/seguimiento-ventas/comisiones-equipo'),
