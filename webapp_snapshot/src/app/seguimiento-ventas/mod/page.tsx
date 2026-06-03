@@ -365,11 +365,11 @@ export default function ModPage() {
             const prevMetrics = processMetrics(prevSalesRaw, prevConfigs, year - 1, month, prevYearKey);
 
             const pctOps = prevMetrics.totalOps > 0
-                ? ((currMetrics.totalOps - prevMetrics.totalOps) / prevMetrics.totalOps) * 100
+                ? ((currMetrics.estOps - prevMetrics.totalOps) / prevMetrics.totalOps) * 100
                 : 0;
 
             const pctImporte = prevMetrics.totalImporte > 0
-                ? ((currMetrics.totalImporte - prevMetrics.totalImporte) / prevMetrics.totalImporte) * 100
+                ? ((currMetrics.estRentabilidad - prevMetrics.totalImporte) / prevMetrics.totalImporte) * 100
                 : 0;
 
             const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -408,11 +408,11 @@ export default function ModPage() {
     const overriddenPrevMediaImporteDiario = overriddenPrevDays > 0 ? overriddenPrevImporte / overriddenPrevDays : 0;
 
     const overriddenPctOps = overriddenPrevOps > 0
-        ? ((currMetrics.totalOps - overriddenPrevOps) / overriddenPrevOps) * 100
+        ? ((currMetrics.estOps - overriddenPrevOps) / overriddenPrevOps) * 100
         : 0;
 
     const overriddenPctImporte = overriddenPrevImporte > 0
-        ? ((currMetrics.totalImporte - overriddenPrevImporte) / overriddenPrevImporte) * 100
+        ? ((currMetrics.estRentabilidad - overriddenPrevImporte) / overriddenPrevImporte) * 100
         : 0;
 
     const num = (n: number) => new Intl.NumberFormat('es-ES', { maximumFractionDigits: 2, minimumFractionDigits: 2 }).format(n);
@@ -458,19 +458,19 @@ export default function ModPage() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center' }}>
                     <thead>
                         <tr style={{ backgroundColor: '#0ea5e9', color: 'white' }}>
-                            <th style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700 }}>Año y Mes</th>
-                            <th style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700 }}>Operaciones Realizadas</th>
-                            <th style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700 }}>Días Trabajados</th>
-                            <th style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700 }}>Media de Operaciones Diaria</th>
-                            <th style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700 }}>Media por Operación</th>
-                            <th style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700 }}>Importe Mensual</th>
-                            <th style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700 }}>Media Importe Diario</th>
+                            <th style={{ padding: '6px 8px', fontSize: '12px', fontWeight: 700 }}>Año y Mes</th>
+                            <th style={{ padding: '6px 8px', fontSize: '12px', fontWeight: 700 }}>Operaciones Realizadas</th>
+                            <th style={{ padding: '6px 8px', fontSize: '12px', fontWeight: 700 }}>Días Trabajados</th>
+                            <th style={{ padding: '6px 8px', fontSize: '12px', fontWeight: 700 }}>Media de Operaciones Diaria</th>
+                            <th style={{ padding: '6px 8px', fontSize: '12px', fontWeight: 700 }}>Media por Operación</th>
+                            <th style={{ padding: '6px 8px', fontSize: '12px', fontWeight: 700 }}>Importe Mensual</th>
+                            <th style={{ padding: '6px 8px', fontSize: '12px', fontWeight: 700 }}>Media Importe Diario</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: '#ffffff', height: '36px' }}>
-                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>{monthName} {year - 1} 🚀</td>
-                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>
+                        <tr style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: '#ffffff' }}>
+                            <td style={{ padding: '6px 8px', fontSize: '12px', fontWeight: 700, color: '#1e293b' }}>{monthName} {year - 1} 🚀</td>
+                            <td style={{ padding: '6px 8px', fontSize: '12px', fontWeight: 700, color: '#1e293b' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                     <input
                                         type="text"
@@ -485,7 +485,7 @@ export default function ModPage() {
                                             textAlign: 'center',
                                             border: '1px solid #cbd5e1',
                                             borderRadius: '4px',
-                                            padding: '4px 6px',
+                                            padding: '2px 4px',
                                             fontWeight: 700,
                                             fontSize: '12px',
                                             color: '#1e293b',
@@ -495,7 +495,7 @@ export default function ModPage() {
                                     />
                                 </div>
                             </td>
-                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>
+                            <td style={{ padding: '6px 8px', fontSize: '12px', fontWeight: 700, color: '#1e293b' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                     <input
                                         type="text"
@@ -510,7 +510,7 @@ export default function ModPage() {
                                             textAlign: 'center',
                                             border: '1px solid #cbd5e1',
                                             borderRadius: '4px',
-                                            padding: '4px 6px',
+                                            padding: '2px 4px',
                                             fontWeight: 700,
                                             fontSize: '12px',
                                             color: '#1e293b',
@@ -520,9 +520,9 @@ export default function ModPage() {
                                     />
                                 </div>
                             </td>
-                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>{num(overriddenPrevMediaOpsDiaria)}</td>
-                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>{num(overriddenPrevMediaPorOp)} €</td>
-                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>
+                            <td style={{ padding: '6px 8px', fontSize: '12px', fontWeight: 700, color: '#1e293b' }}>{num(overriddenPrevMediaOpsDiaria)}</td>
+                            <td style={{ padding: '6px 8px', fontSize: '12px', fontWeight: 700, color: '#1e293b' }}>{num(overriddenPrevMediaPorOp)} €</td>
+                            <td style={{ padding: '6px 8px', fontSize: '12px', fontWeight: 700, color: '#1e293b' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
                                     <input
                                         type="text"
@@ -538,7 +538,7 @@ export default function ModPage() {
                                             textAlign: 'center',
                                             border: '1px solid #cbd5e1',
                                             borderRadius: '4px',
-                                            padding: '4px 6px',
+                                            padding: '2px 4px',
                                             fontWeight: 700,
                                             fontSize: '12px',
                                             color: '#1e293b',
@@ -549,25 +549,25 @@ export default function ModPage() {
                                     <span>€</span>
                                 </div>
                             </td>
-                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>{num(overriddenPrevMediaImporteDiario)} €</td>
+                            <td style={{ padding: '6px 8px', fontSize: '12px', fontWeight: 700, color: '#1e293b' }}>{num(overriddenPrevMediaImporteDiario)} €</td>
                         </tr>
-                        <tr style={{ backgroundColor: '#84cc16', color: 'white', height: '36px' }}>
-                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 800 }}>{monthName} {year}</td>
-                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 800 }}>{currMetrics.totalOps}</td>
-                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 800 }}>{currMetrics.workingDaysElapsed}</td>
-                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 800 }}>{num(currMetrics.mediaOpsDiaria)}</td>
-                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 800 }}>{num(currMetrics.mediaPorOp)} €</td>
-                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 800 }}>{num(currMetrics.totalImporte)} €</td>
-                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 800 }}>{num(currMetrics.mediaImporteDiario)} €</td>
+                        <tr style={{ backgroundColor: '#84cc16', color: 'white' }}>
+                            <td style={{ padding: '6px 8px', fontSize: '12px', fontWeight: 800 }}>{monthName} {year}</td>
+                            <td style={{ padding: '6px 8px', fontSize: '12px', fontWeight: 800 }}>{currMetrics.totalOps}</td>
+                            <td style={{ padding: '6px 8px', fontSize: '12px', fontWeight: 800 }}>{currMetrics.workingDaysElapsed}</td>
+                            <td style={{ padding: '6px 8px', fontSize: '12px', fontWeight: 800 }}>{num(currMetrics.mediaOpsDiaria)}</td>
+                            <td style={{ padding: '6px 8px', fontSize: '12px', fontWeight: 800 }}>{num(currMetrics.mediaPorOp)} €</td>
+                            <td style={{ padding: '6px 8px', fontSize: '12px', fontWeight: 800 }}>{num(currMetrics.totalImporte)} €</td>
+                            <td style={{ padding: '6px 8px', fontSize: '12px', fontWeight: 800 }}>{num(currMetrics.mediaImporteDiario)} €</td>
                         </tr>
-                        <tr style={{ backgroundColor: '#0284c7', color: 'white', height: '36px' }}>
-                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 600 }}>Estimación Operaciones</td>
-                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 800 }}>{Math.round(currMetrics.estOps)}</td>
-                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 600 }}>Operaciones en %</td>
-                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 800, color: overriddenPctOps >= 0 ? '#bbf7d0' : '#fecdd3' }}>{overriddenPctOps > 0 ? '+' : ''}{overriddenPctOps.toFixed(2)}%</td>
-                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 600 }}>Estimación Rentabilidad</td>
-                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 800 }}>{num(currMetrics.estRentabilidad)} €</td>
-                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 800, color: overriddenPctImporte >= 0 ? '#bbf7d0' : '#fecdd3' }}>{overriddenPctImporte > 0 ? '+' : ''}{overriddenPctImporte.toFixed(2)}%</td>
+                        <tr style={{ backgroundColor: '#0284c7', color: 'white' }}>
+                            <td style={{ padding: '6px 8px', fontSize: '12px', fontWeight: 600 }}>Estimación Operaciones</td>
+                            <td style={{ padding: '6px 8px', fontSize: '12px', fontWeight: 800 }}>{Math.round(currMetrics.estOps)}</td>
+                            <td style={{ padding: '6px 8px', fontSize: '12px', fontWeight: 600 }}>Operaciones en %</td>
+                            <td style={{ padding: '6px 8px', fontSize: '12px', fontWeight: 800, color: overriddenPctOps >= 0 ? '#bbf7d0' : '#fecdd3' }}>{overriddenPctOps > 0 ? '+' : ''}{overriddenPctOps.toFixed(2)}%</td>
+                            <td style={{ padding: '6px 8px', fontSize: '12px', fontWeight: 600 }}>Estimación Rentabilidad</td>
+                            <td style={{ padding: '6px 8px', fontSize: '12px', fontWeight: 800 }}>{num(currMetrics.estRentabilidad)} €</td>
+                            <td style={{ padding: '6px 8px', fontSize: '12px', fontWeight: 800, color: overriddenPctImporte >= 0 ? '#bbf7d0' : '#fecdd3' }}>{overriddenPctImporte > 0 ? '+' : ''}{overriddenPctImporte.toFixed(2)}%</td>
                         </tr>
                     </tbody>
                 </table>
