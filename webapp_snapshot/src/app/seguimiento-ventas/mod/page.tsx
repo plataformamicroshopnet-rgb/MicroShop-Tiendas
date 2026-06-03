@@ -17,11 +17,17 @@ export default function ModPage() {
     const [loading, setLoading] = useState(true)
     const [data, setData] = useState<any>(null)
     const [manualImportePrev, setManualImportePrev] = useState<string>('')
+    const [manualOpsPrev, setManualOpsPrev] = useState<string>('')
+    const [manualDaysPrev, setManualDaysPrev] = useState<string>('')
 
     useEffect(() => {
         if (!activePeriodKey) return;
-        const saved = localStorage.getItem(`mod_manual_importe_prev_${activePeriodKey}`);
-        setManualImportePrev(saved || '');
+        const savedImporte = localStorage.getItem(`mod_manual_importe_prev_${activePeriodKey}`);
+        const savedOps = localStorage.getItem(`mod_manual_ops_prev_${activePeriodKey}`);
+        const savedDays = localStorage.getItem(`mod_manual_days_prev_${activePeriodKey}`);
+        setManualImportePrev(savedImporte || '');
+        setManualOpsPrev(savedOps || '');
+        setManualDaysPrev(savedDays || '');
     }, [activePeriodKey]);
 
     const handleManualImporteChange = (val: string) => {
@@ -30,6 +36,24 @@ export default function ModPage() {
             localStorage.removeItem(`mod_manual_importe_prev_${activePeriodKey}`);
         } else {
             localStorage.setItem(`mod_manual_importe_prev_${activePeriodKey}`, val);
+        }
+    };
+
+    const handleManualOpsChange = (val: string) => {
+        setManualOpsPrev(val);
+        if (val.trim() === '') {
+            localStorage.removeItem(`mod_manual_ops_prev_${activePeriodKey}`);
+        } else {
+            localStorage.setItem(`mod_manual_ops_prev_${activePeriodKey}`, val);
+        }
+    };
+
+    const handleManualDaysChange = (val: string) => {
+        setManualDaysPrev(val);
+        if (val.trim() === '') {
+            localStorage.removeItem(`mod_manual_days_prev_${activePeriodKey}`);
+        } else {
+            localStorage.setItem(`mod_manual_days_prev_${activePeriodKey}`, val);
         }
     };
 
@@ -64,12 +88,35 @@ export default function ModPage() {
             const prevSalesRaw = prevSalesRes.logs || [];
             const catalogs = catRes.catalogs || {};
 
+            // Helper for Salamanca holidays (excluding Saturdays, Sundays and local/regional holidays)
+            const isHoliday = (y: number, m: number, d: number) => {
+                if (m === 1 && (d === 1 || d === 6)) return true;
+                if (m === 4 && d === 23) return true;
+                if (m === 5 && d === 1) return true;
+                if (m === 6 && d === 12) return true; // San Juan de Sahagún (Salamanca local)
+                if (m === 8 && d === 15) return true;
+                if (m === 9 && d === 8) return true;  // Virgen de la Vega (Salamanca local)
+                if (m === 10 && d === 12) return true;
+                if (m === 11 && d === 1) return true;
+                if (y === 2026 && m === 11 && d === 2) return true;
+                if (y === 2025 && m === 10 && d === 13) return true;
+                if (m === 12 && (d === 6 || d === 8 || d === 25)) return true;
+                if (y === 2026 && m === 12 && d === 7) return true;
+                if (y === 2025 && m === 4 && (d === 17 || d === 18)) return true;
+                if (y === 2026 && m === 4 && (d === 2 || d === 3)) return true;
+                return false;
+            };
+
             // Función Base: Días laborables en el mes
             const getWorkingDaysInMonth = (y: number, m: number) => {
                 let days = 0;
                 const date = new Date(y, m - 1, 1);
                 while (date.getMonth() === m - 1) {
-                    if (date.getDay() !== 0 && date.getDay() !== 6) days++;
+                    const dayOfWeek = date.getDay();
+                    const dayOfMonth = date.getDate();
+                    if (dayOfWeek !== 0 && dayOfWeek !== 6 && !isHoliday(y, m, dayOfMonth)) {
+                        days++;
+                    }
                     date.setDate(date.getDate() + 1);
                 }
                 return days;
@@ -88,7 +135,10 @@ export default function ModPage() {
                 let elapsed = 0;
                 for (let d = 1; d <= lastDayToCount; d++) {
                     const dt = new Date(y, m - 1, d);
-                    if (dt.getDay() !== 0 && dt.getDay() !== 6) elapsed++;
+                    const dayOfWeek = dt.getDay();
+                    if (dayOfWeek !== 0 && dayOfWeek !== 6 && !isHoliday(y, m, d)) {
+                        elapsed++;
+                    }
                 }
                 return elapsed;
             };
@@ -349,9 +399,17 @@ export default function ModPage() {
 
     const { currMetrics, prevMetrics, pctOps, pctImporte, year, monthName } = data;
 
+    const overriddenPrevOps = manualOpsPrev !== '' ? parseInt(manualOpsPrev, 10) : prevMetrics.totalOps;
+    const overriddenPrevDays = manualDaysPrev !== '' ? parseInt(manualDaysPrev, 10) : prevMetrics.workingDaysElapsed;
     const overriddenPrevImporte = manualImportePrev !== '' ? parseFloat(manualImportePrev) : prevMetrics.totalImporte;
-    const overriddenPrevMediaImporteDiario = prevMetrics.workingDaysElapsed > 0 ? overriddenPrevImporte / prevMetrics.workingDaysElapsed : 0;
-    const overriddenPrevMediaPorOp = prevMetrics.totalOps > 0 ? overriddenPrevImporte / prevMetrics.totalOps : 0;
+
+    const overriddenPrevMediaOpsDiaria = overriddenPrevDays > 0 ? overriddenPrevOps / overriddenPrevDays : 0;
+    const overriddenPrevMediaPorOp = overriddenPrevOps > 0 ? overriddenPrevImporte / overriddenPrevOps : 0;
+    const overriddenPrevMediaImporteDiario = overriddenPrevDays > 0 ? overriddenPrevImporte / overriddenPrevDays : 0;
+
+    const overriddenPctOps = overriddenPrevOps > 0
+        ? ((currMetrics.totalOps - overriddenPrevOps) / overriddenPrevOps) * 100
+        : 0;
 
     const overriddenPctImporte = overriddenPrevImporte > 0
         ? ((currMetrics.totalImporte - overriddenPrevImporte) / overriddenPrevImporte) * 100
@@ -412,9 +470,57 @@ export default function ModPage() {
                     <tbody>
                         <tr style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: '#ffffff', height: '36px' }}>
                             <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>{monthName} {year - 1} 🚀</td>
-                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>{prevMetrics.totalOps}</td>
-                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>{prevMetrics.workingDaysElapsed}</td>
-                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>{num(prevMetrics.mediaOpsDiaria)}</td>
+                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <input
+                                        type="text"
+                                        value={manualOpsPrev}
+                                        placeholder={String(prevMetrics.totalOps)}
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/[^0-9]/g, '');
+                                            handleManualOpsChange(val);
+                                        }}
+                                        style={{
+                                            width: '65px',
+                                            textAlign: 'center',
+                                            border: '1px solid #cbd5e1',
+                                            borderRadius: '4px',
+                                            padding: '4px 6px',
+                                            fontWeight: 700,
+                                            fontSize: '12px',
+                                            color: '#1e293b',
+                                            outline: 'none',
+                                            backgroundColor: '#f8fafc'
+                                        }}
+                                    />
+                                </div>
+                            </td>
+                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <input
+                                        type="text"
+                                        value={manualDaysPrev}
+                                        placeholder={String(prevMetrics.workingDaysElapsed)}
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/[^0-9]/g, '');
+                                            handleManualDaysChange(val);
+                                        }}
+                                        style={{
+                                            width: '60px',
+                                            textAlign: 'center',
+                                            border: '1px solid #cbd5e1',
+                                            borderRadius: '4px',
+                                            padding: '4px 6px',
+                                            fontWeight: 700,
+                                            fontSize: '12px',
+                                            color: '#1e293b',
+                                            outline: 'none',
+                                            backgroundColor: '#f8fafc'
+                                        }}
+                                    />
+                                </div>
+                            </td>
+                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>{num(overriddenPrevMediaOpsDiaria)}</td>
                             <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>{num(overriddenPrevMediaPorOp)} €</td>
                             <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
@@ -458,7 +564,7 @@ export default function ModPage() {
                             <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 600 }}>Estimación Operaciones</td>
                             <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 800 }}>{Math.round(currMetrics.estOps)}</td>
                             <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 600 }}>Operaciones en %</td>
-                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 800, color: pctOps >= 0 ? '#bbf7d0' : '#fecdd3' }}>{pctOps > 0 ? '+' : ''}{pctOps.toFixed(2)}%</td>
+                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 800, color: overriddenPctOps >= 0 ? '#bbf7d0' : '#fecdd3' }}>{overriddenPctOps > 0 ? '+' : ''}{overriddenPctOps.toFixed(2)}%</td>
                             <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 600 }}>Estimación Rentabilidad</td>
                             <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 800 }}>{num(currMetrics.estRentabilidad)} €</td>
                             <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 800, color: overriddenPctImporte >= 0 ? '#bbf7d0' : '#fecdd3' }}>{overriddenPctImporte > 0 ? '+' : ''}{overriddenPctImporte.toFixed(2)}%</td>
@@ -472,7 +578,7 @@ export default function ModPage() {
                     __html: `
                 @media (min-width: 1024px) {
                     .mod-grid {
-                        grid-template-columns: 280px 1fr !important;
+                        grid-template-columns: 340px 1fr !important;
                     }
                 }
              `}} />
@@ -486,6 +592,7 @@ export default function ModPage() {
                                     <th style={{ padding: '3px 4px', fontWeight: 700, fontSize: '11px' }}>Día</th>
                                     <th style={{ padding: '3px 4px', fontWeight: 700, fontSize: '11px' }}>Acumulado</th>
                                     <th style={{ padding: '3px 4px', fontWeight: 700, fontSize: '11px' }}>Diarias</th>
+                                    <th style={{ padding: '3px 4px', fontWeight: 700, fontSize: '11px' }}>Importe</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -498,6 +605,7 @@ export default function ModPage() {
                                             <td style={{ padding: '2px 4px', color: '#64748b', fontSize: '11px' }}>{row.dayOfWeek}</td>
                                             <td style={{ padding: '2px 4px', fontWeight: row.accumOps > 0 ? 800 : 400, color: row.accumOps > 0 ? '#0f172a' : '#cbd5e1', fontSize: '11px' }}>{(row.accumOps > 0 && row.ops > 0) ? row.accumOps : ''}</td>
                                             <td style={{ padding: '2px 4px', fontWeight: row.ops > 0 ? 700 : 400, color: '#64748b', fontSize: '11px' }}>{row.ops > 0 ? row.ops : ''}</td>
+                                            <td style={{ padding: '2px 4px', fontWeight: row.ops > 0 ? 700 : 400, color: '#64748b', fontSize: '11px' }}>{row.ops > 0 ? num(row.importe) + ' €' : ''}</td>
                                         </tr>
                                     )
                                 })}
