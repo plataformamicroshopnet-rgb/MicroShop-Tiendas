@@ -264,6 +264,32 @@ const FinancialSpeedometer = ({ currentAmount, sellerName }: { currentAmount: nu
     );
 }
 
+const getCuotaTotal = (sale: any): number => {
+    const parse = (val: any): number => {
+        if (val === null || val === undefined) return 0;
+        if (typeof val === 'number') return isNaN(val) ? 0 : val;
+        const clean = String(val).replace('€', '').replace(/\s/g, '').replace(',', '.').trim();
+        const num = parseFloat(clean);
+        return isNaN(num) ? 0 : num;
+    };
+    const det = String(sale.detalle || '').toLowerCase();
+    const cat = String(sale.categoria || sale.sheet || '').toLowerCase();
+    const isRent = det === 'rent' || det === 'tma' || cat === 'rent';
+    const isSeguro = det === 'seguro' || cat === 'seguro';
+    
+    if (isSeguro) {
+        if (sale.seguroImporte) {
+            const v = parse(sale.seguroImporte);
+            if (v > 0) return v;
+        }
+        return parse(sale.cuota || sale.importe || 0);
+    }
+    if (isRent) {
+        return parse(sale.cuota || sale.importe || 0);
+    }
+    return 0;
+};
+
 export default function ComisionesDashboardPage() {
     const router = useRouter()
     const { authorized, user } = useGuard('MODULE_COMISIONES')
@@ -833,32 +859,65 @@ export default function ComisionesDashboardPage() {
                                             <ListFilter size={18} /> Registro Operativo de {s.name}
                                         </h3>
                                         <div style={{ overflowX: 'auto', border: '1px solid rgba(0, 173, 239, 0.2)' }}>
-                                        <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse', fontSize: 13 }}>
-                                            <thead>
-                                                <tr style={{ backgroundColor: '#00ADEF', color: 'var(--bg-card)' }}>
-                                                    <th style={{ padding: '12px 16px' }}>Producto</th>
-                                                    <th style={{ padding: '12px 16px' }}>Cliente</th>
-                                                    <th style={{ padding: '12px 16px' }}>CIF</th>
-                                                    <th style={{ padding: '12px 16px' }}>Tipo de Venta</th>
-                                                    <th style={{ padding: '12px 16px' }}>Fecha</th>
-                                                    <th style={{ padding: '12px 16px' }}>Pendiente</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {s.rawSales.map((venta: any, i: number) => {
-                                                    const isPending = String(venta.pendiente).toLowerCase() === 'sí' || String(venta.pendiente).toLowerCase() === 'si'
-                                                    const isAnnulled = String(venta.anulado).toLowerCase() === 'sí' || String(venta.anulado).toLowerCase() === 'si'
-                                                    const badgeColor = isAnnulled ? '#FF453A' : (isPending ? '#FF9500' : '#34d399')
-                                                    const badgeText = isAnnulled ? 'Anulado' : (isPending ? 'Pendiente' : 'Aprobado')
-                                                    const badgeBg = isAnnulled ? 'rgba(255, 69, 58, 0.15)' : (isPending ? 'rgba(255, 149, 0, 0.15)' : 'rgba(52, 211, 153, 0.15)')
-                                                    
-                                                    return (
-                                                        <tr key={venta.id || i} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
-                                                            <td style={{ padding: '12px 16px', color: 'var(--light-text)', fontWeight: 600 }}>{venta.producto || '-'}</td>
-                                                            <td style={{ padding: '12px 16px', color: 'var(--light-text)' }}>{venta.nombreCliente || '-'}</td>
-                                                            <td style={{ padding: '12px 16px', color: 'var(--light-text)' }}>{venta.nif || '-'}</td>
-                                                            <td style={{ padding: '12px 16px', color: 'var(--light-text)' }}>{venta.categoria || venta.detalle || venta.sheet || '-'}</td>
-                                                            <td style={{ padding: '12px 16px', color: 'var(--light-text)' }}>{venta.fecha || '-'}</td>
+                                            <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse', fontSize: 13 }}>
+                                                <thead>
+                                                    <tr style={{ backgroundColor: '#00ADEF', color: 'var(--bg-card)' }}>
+                                                        <th style={{ padding: '12px 16px' }}>Producto</th>
+                                                        <th style={{ padding: '12px 16px' }}>Cliente</th>
+                                                        <th style={{ padding: '12px 16px' }}>CIF</th>
+                                                        <th style={{ padding: '12px 16px' }}>Tipo de Venta</th>
+                                                        <th style={{ padding: '12px 16px' }}>Fecha</th>
+                                                        <th style={{ padding: '12px 16px', textAlign: 'center' }}>Cuota Total</th>
+                                                        <th style={{ padding: '12px 16px' }}>Pendiente</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {s.rawSales.map((venta: any, i: number) => {
+                                                        const isPending = String(venta.pendiente).toLowerCase() === 'sí' || String(venta.pendiente).toLowerCase() === 'si'
+                                                        const isAnnulled = String(venta.anulado).toLowerCase() === 'sí' || String(venta.anulado).toLowerCase() === 'si'
+                                                        const badgeColor = isAnnulled ? '#FF453A' : (isPending ? '#FF9500' : '#34d399')
+                                                        const badgeText = isAnnulled ? 'Anulado' : (isPending ? 'Pendiente' : 'Aprobado')
+                                                        const badgeBg = isAnnulled ? 'rgba(255, 69, 58, 0.15)' : (isPending ? 'rgba(255, 149, 0, 0.15)' : 'rgba(52, 211, 153, 0.15)')
+                                                        
+                                                        const cuotaVal = getCuotaTotal(venta);
+                                                        const formattedCuota = cuotaVal > 0 ? `${cuotaVal.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : '—';
+                                                        
+                                                        return (
+                                                            <tr key={venta.id || i} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
+                                                                <td style={{ padding: '12px 16px', color: 'var(--light-text)', fontWeight: 600 }}>{venta.producto || '-'}</td>
+                                                                <td style={{ padding: '12px 16px', color: 'var(--light-text)' }}>{venta.nombreCliente || '-'}</td>
+                                                                <td style={{ padding: '12px 16px', color: 'var(--light-text)' }}>{venta.nif || '-'}</td>
+                                                                <td style={{ padding: '12px 16px', color: 'var(--light-text)' }}>{venta.categoria || venta.detalle || venta.sheet || '-'}</td>
+                                                                <td style={{ padding: '12px 16px', color: 'var(--light-text)' }}>{venta.fecha || '-'}</td>
+                                                                <td style={{ padding: '12px 16px', color: 'var(--light-text)', textAlign: 'center', fontWeight: cuotaVal > 0 ? 800 : 'normal' }}>{formattedCuota}</td>
+                                                                <td style={{ padding: '12px 16px' }}>
+                                                                    <span style={{ 
+                                                                        display: 'inline-block', 
+                                                                        padding: '4px 10px', 
+                                                                        borderRadius: '12px', 
+                                                                        fontSize: '11px', 
+                                                                        fontWeight: 600, 
+                                                                        color: badgeColor, 
+                                                                        backgroundColor: badgeBg 
+                                                                    }}>
+                                                                        {badgeText}
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                        )
+                                                    })}
+                                                    {s.rawExtras?.length > 0 && s.rawExtras.map((ex: any, i: number) => (
+                                                        <tr key={`extra-${ex.id || i}`} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'rgba(16, 185, 129, 0.05)' }}>
+                                                            <td style={{ padding: '12px 16px', color: '#059669', fontWeight: 600 }}>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                                    ⚡ {ex.rule?.name || 'Incentivo Manual'}
+                                                                </div>
+                                                            </td>
+                                                            <td style={{ padding: '12px 16px', color: '#059669' }}>{ex.customerName || '-'}</td>
+                                                            <td style={{ padding: '12px 16px', color: '#059669' }}>{ex.customerNif || '-'}</td>
+                                                            <td style={{ padding: '12px 16px', color: '#059669' }}>EXTRA TELEFÓNICA</td>
+                                                            <td style={{ padding: '12px 16px', color: '#059669' }}>{new Date(ex.createdAt).toLocaleDateString()}</td>
+                                                            <td style={{ padding: '12px 16px', color: '#059669', textAlign: 'center' }}>—</td>
                                                             <td style={{ padding: '12px 16px' }}>
                                                                 <span style={{ 
                                                                     display: 'inline-block', 
@@ -866,51 +925,24 @@ export default function ComisionesDashboardPage() {
                                                                     borderRadius: '12px', 
                                                                     fontSize: '11px', 
                                                                     fontWeight: 600, 
-                                                                    color: badgeColor, 
-                                                                    backgroundColor: badgeBg 
+                                                                    color: ex.status === 'PENDING' ? '#FF9500' : '#059669', 
+                                                                    backgroundColor: ex.status === 'PENDING' ? 'rgba(255, 149, 0, 0.15)' : 'rgba(16, 185, 129, 0.15)' 
                                                                 }}>
-                                                                    {badgeText}
+                                                                    {ex.status === 'PENDING' ? 'Pendiente' : 'Aprobado'}
                                                                 </span>
                                                             </td>
                                                         </tr>
-                                                    )
-                                                })}
-                                                {s.rawExtras?.length > 0 && s.rawExtras.map((ex: any, i: number) => (
-                                                    <tr key={`extra-${ex.id || i}`} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'rgba(16, 185, 129, 0.05)' }}>
-                                                        <td style={{ padding: '12px 16px', color: '#059669', fontWeight: 600 }}>
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                                ⚡ {ex.rule?.name || 'Incentivo Manual'}
-                                                            </div>
-                                                        </td>
-                                                        <td style={{ padding: '12px 16px', color: '#059669' }}>{ex.customerName || '-'}</td>
-                                                        <td style={{ padding: '12px 16px', color: '#059669' }}>{ex.customerNif || '-'}</td>
-                                                        <td style={{ padding: '12px 16px', color: '#059669' }}>EXTRA TELEFÓNICA</td>
-                                                        <td style={{ padding: '12px 16px', color: '#059669' }}>{new Date(ex.createdAt).toLocaleDateString()}</td>
-                                                        <td style={{ padding: '12px 16px' }}>
-                                                            <span style={{ 
-                                                                display: 'inline-block', 
-                                                                padding: '4px 10px', 
-                                                                borderRadius: '12px', 
-                                                                fontSize: '11px', 
-                                                                fontWeight: 600, 
-                                                                color: ex.status === 'PENDING' ? '#FF9500' : '#059669', 
-                                                                backgroundColor: ex.status === 'PENDING' ? 'rgba(255, 149, 0, 0.15)' : 'rgba(16, 185, 129, 0.15)' 
-                                                            }}>
-                                                                {ex.status === 'PENDING' ? 'Pendiente' : 'Aprobado'}
-                                                            </span>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                                {s.rawSales.length === 0 && (!s.rawExtras || s.rawExtras.length === 0) && (
-                                                    <tr>
-                                                        <td colSpan={6} style={{ padding: 40, textAlign: 'center', color: 'var(--medium-gray)' }}>
-                                                            No hay registro operativo en este mes.
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                                    ))}
+                                                    {s.rawSales.length === 0 && (!s.rawExtras || s.rawExtras.length === 0) && (
+                                                        <tr>
+                                                            <td colSpan={7} style={{ padding: 40, textAlign: 'center', color: 'var(--medium-gray)' }}>
+                                                                No hay registro operativo en este mes.
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     </>
                                     )}
                                 </div>
