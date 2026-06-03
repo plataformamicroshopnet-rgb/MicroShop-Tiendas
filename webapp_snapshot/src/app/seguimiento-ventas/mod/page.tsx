@@ -351,17 +351,17 @@ export default function ModPage() {
     };
 
     return (
-        <div style={{ padding: '6px 12px', backgroundColor: 'var(--bg-app)', minHeight: '100vh', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <button onClick={() => router.back()} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: '50%', background: 'white', border: '1px solid var(--border-strong)', color: 'var(--text-muted)', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-                        <ArrowLeft size={18} />
+        <div style={{ padding: '24px 32px', backgroundColor: 'var(--bg-app)', minHeight: '100vh', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <button onClick={() => router.back()} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: '50%', background: 'white', border: '1px solid var(--border-strong)', color: 'var(--text-muted)', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', transition: 'all 0.2s' }}>
+                        <ArrowLeft size={20} />
                     </button>
                     <div>
-                        <h1 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <TrendingUp size={20} color="#22c55e" /> MOD (Media Operaciones Diaria)
+                        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <TrendingUp size={24} color="#22c55e" /> MOD (Media Operaciones Diaria)
                         </h1>
-                        <p style={{ margin: '0', color: 'var(--text-muted)', fontSize: 11 }}>
+                        <p style={{ margin: '4px 0 0 0', color: 'var(--text-muted)', fontSize: 13 }}>
                             Monitorización avanzada de rentabilidad y promedios diarios ({monthName} {year}).
                         </p>
                     </div>
@@ -372,71 +372,70 @@ export default function ModPage() {
             </div>
 
             {/* TABLA COMPARATIVA PRINCIPAL */}
-            <div style={{ backgroundColor: 'white', borderRadius: '6px', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', marginBottom: '4px' }}>
+            <div style={{ backgroundColor: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', marginBottom: '32px' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center' }}>
                     <thead>
                         <tr style={{ backgroundColor: '#0ea5e9', color: 'white' }}>
-                            <th style={{ padding: '2px 4px', fontSize: '11px', fontWeight: 700 }}>Año y Mes</th>
-                            <th style={{ padding: '2px 4px', fontSize: '11px', fontWeight: 700 }}>Operaciones Realizadas</th>
-                            <th style={{ padding: '2px 4px', fontSize: '11px', fontWeight: 700 }}>Días Trabajados</th>
-                            <th style={{ padding: '2px 4px', fontSize: '11px', fontWeight: 700 }}>Media de Operaciones Diaria</th>
-                            <th style={{ padding: '2px 4px', fontSize: '11px', fontWeight: 700 }}>Media por Operación</th>
-                            <th style={{ padding: '2px 4px', fontSize: '11px', fontWeight: 700 }}>Importe Mensual</th>
-                            <th style={{ padding: '2px 4px', fontSize: '11px', fontWeight: 700 }}>Media Importe Diario</th>
+                            <th style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700 }}>Año y Mes</th>
+                            <th style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700 }}>Operaciones Realizadas</th>
+                            <th style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700 }}>Días Trabajados</th>
+                            <th style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700 }}>Media de Operaciones Diaria</th>
+                            <th style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700 }}>Media por Operación</th>
+                            <th style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700 }}>Importe Mensual</th>
+                            <th style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700 }}>Media Importe Diario</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: '#ffffff', height: '24px' }}>
-                            <td style={{ padding: '0px 4px', fontSize: '11px', fontWeight: 700, color: '#1e293b' }}>{monthName} {year - 1} 🚀</td>
-                            <td style={{ padding: '0px 4px', fontSize: '11px', fontWeight: 700, color: '#1e293b' }}>{prevMetrics.totalOps}</td>
-                            <td style={{ padding: '0px 4px', fontSize: '11px', fontWeight: 700, color: '#1e293b' }}>{prevMetrics.workingDaysElapsed}</td>
-                            <td style={{ padding: '0px 4px', fontSize: '11px', fontWeight: 700, color: '#1e293b' }}>{num(prevMetrics.mediaOpsDiaria)}</td>
-                            <td style={{ padding: '0px 4px', fontSize: '11px', fontWeight: 700, color: '#1e293b' }}>{num(prevMetrics.mediaPorOp)} €</td>
-                            <td style={{ padding: '0px 4px', fontSize: '11px', fontWeight: 700, color: '#1e293b' }}>{num(prevMetrics.totalImporte)} €</td>
-                            <td style={{ padding: '0px 4px', fontSize: '11px', fontWeight: 700, color: '#1e293b' }}>{num(prevMetrics.mediaImporteDiario)} €</td>
+                        <tr style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: '#ffffff', height: '36px' }}>
+                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>{monthName} {year - 1} 🚀</td>
+                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>{prevMetrics.totalOps}</td>
+                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>{prevMetrics.workingDaysElapsed}</td>
+                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>{num(prevMetrics.mediaOpsDiaria)}</td>
+                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>{num(prevMetrics.mediaPorOp)} €</td>
+                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>{num(prevMetrics.totalImporte)} €</td>
+                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>{num(prevMetrics.mediaImporteDiario)} €</td>
                         </tr>
-                        <tr style={{ backgroundColor: '#84cc16', color: 'white', height: '24px' }}>
-                            <td style={{ padding: '0px 4px', fontSize: '11px', fontWeight: 800 }}>{monthName} {year}</td>
-                            <td style={{ padding: '0px 4px', fontSize: '11px', fontWeight: 800 }}>{currMetrics.totalOps}</td>
-                            <td style={{ padding: '0px 4px', fontSize: '11px', fontWeight: 800 }}>{currMetrics.workingDaysElapsed}</td>
-                            <td style={{ padding: '0px 4px', fontSize: '11px', fontWeight: 800 }}>{num(currMetrics.mediaOpsDiaria)}</td>
-                            <td style={{ padding: '0px 4px', fontSize: '11px', fontWeight: 800 }}>{num(currMetrics.mediaPorOp)} €</td>
-                            <td style={{ padding: '0px 4px', fontSize: '11px', fontWeight: 800 }}>{num(currMetrics.totalImporte)} €</td>
-                            <td style={{ padding: '0px 4px', fontSize: '11px', fontWeight: 800 }}>{num(currMetrics.mediaImporteDiario)} €</td>
+                        <tr style={{ backgroundColor: '#84cc16', color: 'white', height: '36px' }}>
+                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 800 }}>{monthName} {year}</td>
+                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 800 }}>{currMetrics.totalOps}</td>
+                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 800 }}>{currMetrics.workingDaysElapsed}</td>
+                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 800 }}>{num(currMetrics.mediaOpsDiaria)}</td>
+                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 800 }}>{num(currMetrics.mediaPorOp)} €</td>
+                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 800 }}>{num(currMetrics.totalImporte)} €</td>
+                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 800 }}>{num(currMetrics.mediaImporteDiario)} €</td>
                         </tr>
-                        <tr style={{ backgroundColor: '#0284c7', color: 'white', height: '24px' }}>
-                            <td style={{ padding: '0px 4px', fontSize: '11px', fontWeight: 600 }}>Estimación Operaciones</td>
-                            <td style={{ padding: '0px 4px', fontSize: '11px', fontWeight: 800 }}>{Math.round(currMetrics.estOps)}</td>
-                            <td style={{ padding: '0px 4px', fontSize: '11px', fontWeight: 600 }}>Operaciones en %</td>
-                            <td style={{ padding: '0px 4px', fontSize: '11px', fontWeight: 800, color: pctOps >= 0 ? '#bbf7d0' : '#fecdd3' }}>{pctOps > 0 ? '+' : ''}{pctOps.toFixed(2)}%</td>
-                            <td style={{ padding: '0px 4px', fontSize: '11px', fontWeight: 600 }}>Estimación Rentabilidad</td>
-                            <td style={{ padding: '0px 4px', fontSize: '11px', fontWeight: 800 }}>{num(currMetrics.estRentabilidad)} €</td>
-                            <td style={{ padding: '0px 4px', fontSize: '11px', fontWeight: 800, color: pctImporte >= 0 ? '#bbf7d0' : '#fecdd3' }}>{pctImporte > 0 ? '+' : ''}{pctImporte.toFixed(2)}%</td>
+                        <tr style={{ backgroundColor: '#0284c7', color: 'white', height: '36px' }}>
+                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 600 }}>Estimación Operaciones</td>
+                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 800 }}>{Math.round(currMetrics.estOps)}</td>
+                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 600 }}>Operaciones en %</td>
+                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 800, color: pctOps >= 0 ? '#bbf7d0' : '#fecdd3' }}>{pctOps > 0 ? '+' : ''}{pctOps.toFixed(2)}%</td>
+                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 600 }}>Estimación Rentabilidad</td>
+                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 800 }}>{num(currMetrics.estRentabilidad)} €</td>
+                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 800, color: pctImporte >= 0 ? '#bbf7d0' : '#fecdd3' }}>{pctImporte > 0 ? '+' : ''}{pctImporte.toFixed(2)}%</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
                 <style dangerouslySetInnerHTML={{
                     __html: `
                 @media (min-width: 1024px) {
                     .mod-grid {
-                        grid-template-columns: 240px minmax(0, 720px) !important;
-                        justify-content: start;
+                        grid-template-columns: 280px 1fr !important;
                     }
                 }
              `}} />
-                <div className="mod-grid" style={{ display: 'grid', gap: '2px' }}>
+                <div className="mod-grid" style={{ display: 'grid', gap: '24px' }}>
                     {/* COLUMNA IZQUIERDA: DESGLOSE DIARIO */}
-                    <div style={{ backgroundColor: 'white', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', alignSelf: 'start' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', fontSize: '13px' }}>
+                    <div style={{ backgroundColor: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', alignSelf: 'start' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', fontSize: '12px' }}>
                             <thead>
-                                <tr style={{ backgroundColor: '#0ea5e9', color: 'white', height: '24px' }}>
-                                    <th style={{ padding: '0px 2px', fontWeight: 700, fontSize: '11px' }}>Día</th>
-                                    <th style={{ padding: '0px 2px', fontWeight: 700, fontSize: '11px' }}>Día</th>
-                                    <th style={{ padding: '0px 2px', fontWeight: 700, fontSize: '11px' }}>Operac.</th>
-                                    <th style={{ padding: '0px 2px', fontWeight: 700, fontSize: '11px' }}>Media</th>
+                                <tr style={{ backgroundColor: '#0ea5e9', color: 'white' }}>
+                                    <th style={{ padding: '10px 8px', fontWeight: 700, fontSize: '12px' }}>Nº</th>
+                                    <th style={{ padding: '10px 8px', fontWeight: 700, fontSize: '12px' }}>Día</th>
+                                    <th style={{ padding: '10px 8px', fontWeight: 700, fontSize: '12px' }}>Acumulado</th>
+                                    <th style={{ padding: '10px 8px', fontWeight: 700, fontSize: '12px' }}>Diarias</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -444,11 +443,11 @@ export default function ModPage() {
                                     if (row.isWeekend) return null;
 
                                     return (
-                                        <tr key={i} style={{ borderBottom: '1px solid #f1f5f9', height: '20px' }}>
-                                            <td style={{ padding: '0px 2px', fontWeight: 700, color: '#475569', fontSize: '11px' }}>{row.day}</td>
-                                            <td style={{ padding: '0px 2px', color: '#64748b', fontSize: '11px' }}>{row.dayOfWeek}</td>
-                                            <td style={{ padding: '0px 2px', fontWeight: row.accumOps > 0 ? 800 : 400, color: row.accumOps > 0 ? '#0f172a' : '#cbd5e1', fontSize: '11px' }}>{(row.accumOps > 0 && row.ops > 0) ? row.accumOps : ''}</td>
-                                            <td style={{ padding: '0px 2px', fontWeight: row.ops > 0 ? 700 : 400, color: '#64748b', fontSize: '11px' }}>{row.ops > 0 ? row.ops : ''}</td>
+                                        <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                            <td style={{ padding: '8px 10px', fontWeight: 700, color: '#475569', fontSize: '12px' }}>{row.day}</td>
+                                            <td style={{ padding: '8px 10px', color: '#64748b', fontSize: '12px' }}>{row.dayOfWeek}</td>
+                                            <td style={{ padding: '8px 10px', fontWeight: row.accumOps > 0 ? 800 : 400, color: row.accumOps > 0 ? '#0f172a' : '#cbd5e1', fontSize: '12px' }}>{(row.accumOps > 0 && row.ops > 0) ? row.accumOps : ''}</td>
+                                            <td style={{ padding: '8px 10px', fontWeight: row.ops > 0 ? 700 : 400, color: '#64748b', fontSize: '12px' }}>{row.ops > 0 ? row.ops : ''}</td>
                                         </tr>
                                     )
                                 })}
@@ -457,11 +456,11 @@ export default function ModPage() {
                     </div>
 
                     {/* COLUMNA DERECHA: GRAFICOS RECHARTS */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        <div style={{ backgroundColor: 'white', borderRadius: '6px', padding: '4px 8px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', height: '160px' }}>
-                            <h3 style={{ margin: '0 0 2px 0', color: '#3b82f6', fontSize: '12px', fontWeight: 800 }}>Media Operaciones Diarias (Evolución Acumulada)</h3>
-                            <ResponsiveContainer width="100%" height="85%">
-                                <AreaChart data={currMetrics.stats.filter((r: any) => !r.isWeekend)} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '16px 20px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', height: '240px' }}>
+                            <h3 style={{ margin: '0 0 12px 0', color: '#1e3a8a', fontSize: '14px', fontWeight: 800 }}>Media Operaciones Diarias (Evolución Acumulada)</h3>
+                            <ResponsiveContainer width="100%" height="80%">
+                                <AreaChart data={currMetrics.stats.filter((r: any) => !r.isWeekend)} margin={{ top: 10, right: 20, left: -20, bottom: 0 }}>
                                     <defs>
                                         <linearGradient id="colorOps" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
@@ -477,18 +476,18 @@ export default function ModPage() {
                             </ResponsiveContainer>
                         </div>
 
-                        <div style={{ backgroundColor: 'white', borderRadius: '6px', padding: '4px 8px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', height: '160px' }}>
-                            <h3 style={{ margin: '0 0 2px 0', color: '#d97706', fontSize: '12px', fontWeight: 800 }}>Media Importe Diario</h3>
-                            <ResponsiveContainer width="100%" height="85%">
-                                <AreaChart data={currMetrics.stats.filter((r: any) => !r.isWeekend)} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                        <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '16px 20px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', height: '240px' }}>
+                            <h3 style={{ margin: '0 0 12px 0', color: '#b45309', fontSize: '14px', fontWeight: 800 }}>Media Importe Diario</h3>
+                            <ResponsiveContainer width="100%" height="80%">
+                                <AreaChart data={currMetrics.stats.filter((r: any) => !r.isWeekend)} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
                                     <defs>
                                         <linearGradient id="colorImp" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
                                             <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
                                         </linearGradient>
                                     </defs>
-                                    <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(1)}k` : val} />
+                                    <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(1)}k` : val} />
                                     <CartesianGrid vertical={false} stroke="#f1f5f9" />
                                     <Tooltip content={<CustomTooltip />} />
                                     <Area type="monotone" dataKey="accumImporte" name="accumImporte" stroke="#f59e0b" strokeWidth={3} fillOpacity={1} fill="url(#colorImp)" />
