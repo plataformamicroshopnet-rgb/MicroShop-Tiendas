@@ -131,6 +131,7 @@ export function sanitizeSale(sale: any): any {
  */
 export function calculateDynamicCommission(sale: any, dashboardDataRows: any[], overrideBaseValue?: number): number {
     if (sale.anulado === 'Si' || sale.pendiente === 'Anulado') return 0;
+    if (sale.producto && String(sale.producto).toLowerCase().includes('solar360')) return 0;
     
     // If we have no dashboard data to compare against, we can't calculate blue commission
     if (!dashboardDataRows || dashboardDataRows.length === 0) return 0;

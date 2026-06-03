@@ -106,9 +106,8 @@ function calcNifTramo(subtotal: number, units: number, info: TramoInfo): number 
 }
 
 // ── Section table ─────────────────────────────────────────────────────
-// ── Section table ─────────────────────────────────────────────────────
 function SectionTable({
-  label, badge, badgeColor, groups, tabColor, isRent, calcCommission, importeLabel = 'Cuota Total (€)', calcImporte
+  label, badge, badgeColor, groups, tabColor, isRent, calcCommission, importeLabel = 'Cuota Total (€)', calcImporte, showCuotaTotal = false
 }: {
   label: string; badge: string; badgeColor: string
   groups: NifGroup[]; tabColor: string;
@@ -116,6 +115,7 @@ function SectionTable({
   calcCommission?: (sale: any) => number;
   importeLabel?: string;
   calcImporte?: (sale: any) => number;
+  showCuotaTotal?: boolean;
 }) {
   if (groups.length === 0) return null
 
@@ -137,7 +137,9 @@ function SectionTable({
           <span style={{ fontSize: 12, color: 'var(--medium-gray)' }}>{groups.length} clientes · {totalUnits} uds.</span>
         </div>
         <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
-          <span style={{ fontSize: 13, color: 'var(--medium-gray)' }}>{importeLabel}: <strong style={{ color: 'var(--light-text)' }}>{fmt(sectionTotal)}</strong></span>
+          {showCuotaTotal && (
+            <span style={{ fontSize: 13, color: 'var(--medium-gray)' }}>{importeLabel}: <strong style={{ color: 'var(--light-text)' }}>{fmt(sectionTotal)}</strong></span>
+          )}
           <span style={{ fontSize: 13, color: 'var(--medium-gray)' }}>Comisión: <strong style={{ color: 'var(--light-text)' }}>{fmt(groups.reduce((acc, g) => acc + g.sales.reduce((sum, s) => sum + (calcCommission ? calcCommission(s) : Number(s.cuota ?? 0)), 0), 0))}</strong></span>
         </div>
       </div>
@@ -147,13 +149,18 @@ function SectionTable({
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 800 }}>
           <thead>
             <tr style={{ background: 'var(--active-bg)' }}>
-              {['Cliente (NIF)', 'Nombre del Cliente', 'Fecha Tram.', 'Teléfono', 'Código', 'Comercial', 'Productos', 'Uds.', importeLabel, 'Comisión'].map((h, i) => (
-                <th key={i} style={{
-                  padding: '10px 14px', textAlign: i >= 7 ? 'right' : 'left',
-                  whiteSpace: 'nowrap', color: 'var(--medium-gray)', fontWeight: 600, fontSize: 11,
-                  textTransform: 'uppercase', letterSpacing: 0.5,
-                  borderBottom: `2px solid ${badgeColor}60` }}>{h}</th>
-              ))}
+              {(() => {
+                const headers = ['Cliente (NIF)', 'Nombre del Cliente', 'Fecha Tram.', 'Teléfono', 'Código', 'Comercial', 'Productos', 'Uds.'];
+                if (showCuotaTotal) headers.push(importeLabel);
+                headers.push('Comisión');
+                return headers.map((h, i) => (
+                  <th key={i} style={{
+                    padding: '10px 14px', textAlign: (h === importeLabel || h === 'Comisión' || h === 'Uds.') ? 'right' : 'left',
+                    whiteSpace: 'nowrap', color: 'var(--medium-gray)', fontWeight: 600, fontSize: 11,
+                    textTransform: 'uppercase', letterSpacing: 0.5,
+                    borderBottom: `2px solid ${badgeColor}60` }}>{h}</th>
+                ));
+              })()}
             </tr>
           </thead>
           <tbody>
@@ -174,7 +181,9 @@ function SectionTable({
                     <td style={{ padding: '12px 14px', textAlign: 'right' }}>
                       <span style={{ background: `${tabColor}22`, color: tabColor, borderRadius: 20, padding: '3px 11px', fontWeight: 800, fontSize: 13 }}>1</span>
                     </td>
-                    <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 600, color: 'var(--medium-gray)', fontSize: 13, whiteSpace: 'nowrap' }}>{fmt(saleImporte)}</td>
+                    {showCuotaTotal && (
+                      <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 600, color: 'var(--medium-gray)', fontSize: 13, whiteSpace: 'nowrap' }}>{fmt(saleImporte)}</td>
+                    )}
                     <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: 'var(--light-text)', fontSize: 13, whiteSpace: 'nowrap' }}>
                       {calcCommission ? fmt(calcCommission(sale)) : fmt(Number(sale.cuota ?? 0))}
                     </td>
@@ -219,7 +228,15 @@ function GrupoClienteContent() {
       fetch(`/api/catalogs?periodKey=${activePeriodKey}`).then(r => r.json()).catch(() => ({})),
     ]).then(([sData, pymeData, plusData, objData, extrasData, catData]) => {
       if (sData?.success) {
-        setSales((sData.logs || []).filter((s: any) => s.anulado !== 'Si' && s.pendiente !== 'Anulado'))
+        const rawSales = sData.logs || [];
+        const mappedSales = rawSales.map((s: any) => {
+          const prodLower = String(s.producto || '').toLowerCase();
+          if (prodLower.includes('solar360')) {
+            return { ...s, cuota: 0, importe: 0 };
+          }
+          return s;
+        });
+        setSales(mappedSales.filter((s: any) => s.anulado !== 'Si' && s.pendiente !== 'Anulado'))
       }
       if (pymeData?.success) setImportesPyme(pymeData.importes || pymeData.data || [])
       if (plusData?.success) setImportesPlus(plusData.importes || plusData.data || [])
@@ -341,6 +358,8 @@ function GrupoClienteContent() {
   const basicoTramoProyectado = basicoDash ? basicoDash.totalImporteProyectado : 0
   const grandTramo          = plusTramoAmt + basicoTramoAmt
   const uniqueNifs          = new Set(tabSales.map(s => (s.nif || 'SIN NIF').toUpperCase())).size
+
+  const showCuotaTotal = activeTab === 'rent' || activeTab === 'seguro';
 
   // Total comisiones (dinámico según pestaña)
   const grandComisionesTotal = tabSales.reduce((acc, sale) => {
@@ -939,6 +958,7 @@ function GrupoClienteContent() {
             isRent={tab.id === 'rent' || tab.id === 'seguro'} 
             calcCommission={tab.id === 'rent' ? getRentCommission : (tab.id === 'seguro' ? (s) => Number(s.cuota || 0) : undefined)}
             calcImporte={tab.id === 'seguro' ? getSeguroImporte : undefined}
+            showCuotaTotal={showCuotaTotal}
           />
           <SectionTable 
             label="Código Básico" 
@@ -949,6 +969,7 @@ function GrupoClienteContent() {
             isRent={tab.id === 'rent' || tab.id === 'seguro'} 
             calcCommission={tab.id === 'rent' ? getRentCommission : (tab.id === 'seguro' ? (s) => Number(s.cuota || 0) : undefined)}
             calcImporte={tab.id === 'seguro' ? getSeguroImporte : undefined}
+            showCuotaTotal={showCuotaTotal}
           />
           <SectionTable 
             label="Otros Códigos" 
@@ -959,6 +980,7 @@ function GrupoClienteContent() {
             isRent={tab.id === 'rent' || tab.id === 'seguro'} 
             calcCommission={tab.id === 'rent' ? getRentCommission : (tab.id === 'seguro' ? (s) => Number(s.cuota || 0) : undefined)}
             calcImporte={tab.id === 'seguro' ? getSeguroImporte : undefined}
+            showCuotaTotal={showCuotaTotal}
           />
 
           {/* ── Grand total ── */}
