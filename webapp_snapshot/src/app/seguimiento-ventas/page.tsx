@@ -29,14 +29,6 @@ export default function SeguimientoVentasPage() {
       textColor: 'var(--mercedes-cyan)'
     },
     {
-      title: 'Seguimiento Diario',
-      description: 'Panel avanzado de seguimiento grupal. Proyecciones en tiempo real.',
-      icon: LineChart,
-      action: () => router.push('/seguimiento-ventas/diario'),
-      color: 'rgba(59, 130, 246, 0.1)',
-      textColor: '#3b82f6'
-    },
-    {
       title: 'Agenda Comercial Salva',
       description: 'Tracking diario visual de la Fuerza de Ventas y asistencia.',
       icon: Calendar,
@@ -84,14 +76,6 @@ export default function SeguimientoVentasPage() {
       action: () => router.push('/seguimiento-ventas/mod'),
       color: 'rgba(34, 197, 94, 0.1)',
       textColor: '#22c55e'
-    },
-    {
-      title: 'Seguimiento de Tramitación',
-      description: 'Monitorización y analítica de los productos vendidos y pendientes agrupados por tienda física.',
-      icon: Building2,
-      action: () => router.push('/seguimiento-ventas/tramitacion'),
-      color: 'rgba(236, 72, 153, 0.1)',
-      textColor: '#ec4899'
     },
     {
       title: 'Comisiones del Mes (Jefe)',
