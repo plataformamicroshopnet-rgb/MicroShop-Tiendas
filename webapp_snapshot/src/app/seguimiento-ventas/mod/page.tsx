@@ -584,8 +584,8 @@ export default function ModPage() {
              `}} />
                 <div className="mod-grid" style={{ display: 'grid', gap: '24px' }}>
                     {/* COLUMNA IZQUIERDA: DESGLOSE DIARIO */}
-                    <div style={{ backgroundColor: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', alignSelf: 'start' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', fontSize: '11px' }}>
+                    <div style={{ backgroundColor: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', height: '100%' }}>
+                        <table style={{ width: '100%', height: '100%', borderCollapse: 'collapse', textAlign: 'center', fontSize: '11px' }}>
                             <thead>
                                 <tr style={{ backgroundColor: '#0ea5e9', color: 'white' }}>
                                     <th style={{ padding: '3px 4px', fontWeight: 700, fontSize: '11px' }}>Nº</th>
