@@ -548,16 +548,20 @@ function GrupoClienteContent() {
     const exportRows: any[] = []
     const nifGroups = groupSalesByNif(tabSales)
 
+    const getSaleCuotaTotal = (s: any) => {
+      if (tab.id === 'rent') return Number(s.cuota || 0)
+      if (tab.id === 'seguro') return getSeguroImporte(s)
+      return 0
+    }
+
+    const getSaleComision = (s: any) => {
+      if (tab.id === 'rent') return getRentCommission(s)
+      return Number(s.cuota || 0)
+    }
+
     nifGroups.forEach(group => {
       if (flatMode) {
         group.sales.forEach((s: any) => {
-          let tramo = 0
-          if (isPlus(s.codigo)) {
-            tramo = calculateDynamicCommission(s, plusRows)
-          } else if (isBasico(s.codigo)) {
-            tramo = calculateDynamicCommission(s, basicoRows)
-          }
-          
           exportRows.push({
             Grupo: `${tab.emoji} ${tab.label}`,
             NIF: group.nif || '—',
@@ -568,7 +572,9 @@ function GrupoClienteContent() {
             Comercial: s.vendedor || '—',
             Producto: s.producto || '—',
             Uds: 1,
-            'Cuota Bruta': fmtN(Number(s.cuota ?? 0)) })
+            'Cuota Total (€)': fmtN(getSaleCuotaTotal(s)),
+            Comisión: fmtN(getSaleComision(s))
+          })
         })
       } else {
         const prodMap = new Map<string, { sales: any[]; subtotal: number }>()
@@ -590,11 +596,8 @@ function GrupoClienteContent() {
             fechas = Array.from(new Set(fechas))
           }
 
-          const tramo = pg.sales.reduce((sum, s) => {
-            if (isPlus(s.codigo)) return sum + calculateDynamicCommission(s, plusRows)
-            if (isBasico(s.codigo)) return sum + calculateDynamicCommission(s, basicoRows)
-            return sum
-          }, 0)
+          const cuotaSum = pg.sales.reduce((acc, s) => acc + getSaleCuotaTotal(s), 0)
+          const comisionSum = pg.sales.reduce((acc, s) => acc + getSaleComision(s), 0)
 
           exportRows.push({
             Grupo: `${tab.emoji} ${tab.label}`,
@@ -606,7 +609,9 @@ function GrupoClienteContent() {
             Comercial: first.vendedor || '—',
             Producto: first.producto || '—',
             Uds: pg.sales.length,
-            'Cuota Bruta': fmtN(pg.subtotal) })
+            'Cuota Total (€)': fmtN(cuotaSum),
+            Comisión: fmtN(comisionSum)
+          })
         })
       }
     })
@@ -676,7 +681,9 @@ function GrupoClienteContent() {
         Comercial: ea.seller || '—',
         Producto: ea.rule?.name || 'Extra Manual',
         Uds: 1,
-        'Cuota Bruta': 0 })
+        'Cuota Total (€)': 0,
+        Comisión: fmtN(ea.telecomRewardAmount || 0)
+      })
     })
 
     const ws = XLSX.utils.json_to_sheet(allRows.length ? allRows : [{ Info: 'Sin operaciones' }])
@@ -691,23 +698,39 @@ function GrupoClienteContent() {
     const basicoRows = basicoDash?.rows || []
     const summaryRows = TABS.filter(t => t.id !== 'extras').map(t => {
       const tabSls = sales.filter((s: any) => filterByTab(s, t.id))
-      const plusSls   = tabSls.filter((s: any) => isPlus(s.codigo))
-      const basicoSls = tabSls.filter((s: any) => isBasico(s.codigo))
-      const plusTramo   = plusRows.length   ? plusSls.reduce((a: number, s: any)   => a + calculateDynamicCommission(s, plusRows), 0)   : 0
-      const basicoTramo = basicoRows.length ? basicoSls.reduce((a: number, s: any) => a + calculateDynamicCommission(s, basicoRows), 0) : 0
+      
+      const cuotaSum = tabSls.reduce((acc, s) => {
+        if (t.id === 'rent') return acc + Number(s.cuota || 0)
+        if (t.id === 'seguro') return acc + getSeguroImporte(s)
+        return 0
+      }, 0)
+
+      const comisionSum = tabSls.reduce((acc, s) => {
+        if (t.id === 'rent') return acc + getRentCommission(s)
+        return acc + Number(s.cuota || 0)
+      }, 0)
+
       return {
         Grupo:             `${t.emoji} ${t.label}`,
         'Nº Ventas':       tabSls.length,
-        'Cuota Bruta':     fmtN(tabSls.reduce((a: number, s: any) => a + Number(s.cuota ?? 0), 0)) }
+        'Cuota Total (€)': fmtN(cuotaSum),
+        'Comisión':        fmtN(comisionSum)
+      }
     })
     // Extras row
     const extrasTotal = extraAssignments.reduce((a: number, e: any) => a + (e.telecomRewardAmount || 0), 0)
-    summaryRows.push({ Grupo: '⚡ Extras', 'Nº Ventas': extraAssignments.length, 'Cuota Bruta': 0 })
+    summaryRows.push({ 
+      Grupo: '⚡ Extras', 
+      'Nº Ventas': extraAssignments.length, 
+      'Cuota Total (€)': 0,
+      'Comisión': fmtN(extrasTotal)
+    })
     // Grand total
     summaryRows.push({
       Grupo: 'TOTAL',
       'Nº Ventas':       summaryRows.reduce((a, r) => a + (r['Nº Ventas'] as number), 0),
-      'Cuota Bruta':     fmtN(summaryRows.reduce((a, r) => a + (r['Cuota Bruta'] as number), 0))
+      'Cuota Total (€)': fmtN(summaryRows.reduce((a, r) => a + (r['Cuota Total (€)'] as number), 0)),
+      'Comisión':        fmtN(summaryRows.reduce((a, r) => a + (r['Comisión'] as number), 0))
     })
     const ws = XLSX.utils.json_to_sheet(summaryRows)
     const wb = XLSX.utils.book_new()
