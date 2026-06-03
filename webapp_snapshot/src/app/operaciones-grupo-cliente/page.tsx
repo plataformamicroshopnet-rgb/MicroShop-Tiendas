@@ -6,10 +6,11 @@ import { usePeriod } from '@/components/PeriodProvider'
 import { useGuard } from '@/hooks/useGuard'
 import { renderDashboardData, calculateDynamicCommission, isVentaWithinDates, normalizeString, getCurrentMonthString } from '@/lib/salesUtils'
 import * as XLSX from 'xlsx'
+import ExcelJS from 'exceljs'
 
 // ── Tabs ────────────────────────────────────────────────────────────
 const TABS = [
-  { id: 'contratos_movil', label: 'Contratos Móvil', emoji: '📱', color: '#059669', grupo: 'TI' },
+  { id: 'contratos_movil', label: 'Contratos Móvil', emoji: '📋', color: '#059669', grupo: 'TI' },
   { id: 'rent',            label: 'Rent',            emoji: '🔄', color: '#BE185D', grupo: 'REN' },
   { id: 'o2',              label: 'O2 MovilFree',    emoji: '🔵', color: '#005D82', grupo: 'O2' },
   { id: 'seguro',          label: 'Seguro',          emoji: '🛡️', color: '#10B981', grupo: 'SEGURO' },
@@ -715,40 +716,308 @@ function GrupoClienteContent() {
     return exportRows
   }
 
-  // Opción A — Una hoja por grupo
-  const exportByGroup = () => {
-    // Excel sheet names: max 31 chars, no /\*?:[]
-    const safeSheet = (name: string) =>
-      name.replace(/[\/\\*?\:\[\]]/g, '-').replace(/[^\x20-\x7E]/g, '').slice(0, 31).trim() || 'Hoja'
+  // Excel sheet names helper
+  const safeSheet = (name: string) =>
+    name.replace(/[\/\\*?\:\[\]]/g, '-').replace(/[^\x20-\x7E]/g, '').slice(0, 31).trim() || 'Hoja'
 
+  // Helper para generar una pestaña de operaciones estilizada
+  const addStyledSalesSheet = (workbook: ExcelJS.Workbook, sheetName: string, rows: any[], tabLabel: string) => {
+    const sheet = workbook.addWorksheet(sheetName)
+    sheet.views = [{ showGridLines: true }]
+
+    // Definir columnas
+    sheet.columns = [
+      { header: 'Grupo', key: 'Grupo', width: 22 },
+      { header: 'NIF', key: 'NIF', width: 14 },
+      { header: 'Empresa', key: 'Empresa', width: 28 },
+      { header: 'Fecha Tram.', key: 'Fecha Tram.', width: 15 },
+      { header: 'Teléfono', key: 'Telefono', width: 16 },
+      { header: 'Código', key: 'Codigo', width: 12 },
+      { header: 'Comercial', key: 'Comercial', width: 20 },
+      { header: 'Producto', key: 'Producto', width: 26 },
+      { header: 'Uds', key: 'Uds', width: 8 },
+      { header: 'Cuota Total (€)', key: 'Cuota Total (€)', width: 18 },
+      { header: 'Comisión', key: 'Comisión', width: 18 }
+    ]
+
+    // Formato de cabecera
+    const headerRow = sheet.getRow(1)
+    headerRow.height = 30
+    headerRow.eachCell(cell => {
+      cell.font = { name: 'Segoe UI', size: 11, bold: true, color: { argb: 'FFFFFFFF' } }
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00ADEF' } }
+      const rightAlign = ['Uds', 'Cuota Total (€)', 'Comisión'].includes(cell.value as string)
+      const centerAlign = ['NIF', 'Fecha Tram.', 'Teléfono', 'Código'].includes(cell.value as string)
+      cell.alignment = {
+        vertical: 'middle',
+        horizontal: rightAlign ? 'right' : (centerAlign ? 'center' : 'left')
+      }
+    })
+
+    if (rows.length === 0) {
+      const dataRow = sheet.addRow({
+        Grupo: tabLabel,
+        NIF: 'Sin operaciones',
+        Empresa: '',
+        'Fecha Tram.': '',
+        Telefono: '',
+        Codigo: '',
+        Comercial: '',
+        Producto: '',
+        Uds: 0,
+        'Cuota Total (€)': 0,
+        Comisión: 0
+      })
+      dataRow.height = 22
+      dataRow.eachCell((cell, colNumber) => {
+        cell.font = { name: 'Segoe UI', size: 10 }
+        cell.alignment = { vertical: 'middle', horizontal: colNumber === 1 ? 'left' : (colNumber === 2 ? 'center' : 'left') }
+      })
+      return
+    }
+
+    let totalUds = 0
+    let totalCuota = 0
+    let totalComision = 0
+
+    // Agregar filas de datos
+    rows.forEach(r => {
+      totalUds += Number(r.Uds || 0)
+      totalCuota += Number(r['Cuota Total (€)'] || 0)
+      totalComision += Number(r['Comisión'] || 0)
+      sheet.addRow(r)
+    })
+
+    // Estilos de filas
+    const currencyFmt = '#,##0.00" €";-#,##0.00" €";"-   €"'
+    sheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+      if (rowNumber === 1) return
+
+      row.height = 22
+      const isEven = rowNumber % 2 === 0
+
+      row.eachCell((cell, colNumber) => {
+        cell.font = { name: 'Segoe UI', size: 10 }
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: isEven ? 'FFF9FAFB' : 'FFFFFFFF' }
+        }
+        cell.border = {
+          bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          top: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+        }
+        
+        const rightAlign = colNumber >= 9
+        const centerAlign = [2, 4, 5, 6].includes(colNumber)
+        cell.alignment = {
+          vertical: 'middle',
+          horizontal: rightAlign ? 'right' : (centerAlign ? 'center' : 'left')
+        }
+
+        if (colNumber === 9) {
+          cell.numFmt = '#,##0'
+        }
+        if (colNumber === 10 || colNumber === 11) {
+          cell.numFmt = currencyFmt
+        }
+      })
+    })
+
+    // Fila TOTAL de cierre
+    const totalRow = sheet.addRow({
+      Grupo: 'TOTAL',
+      NIF: '',
+      Empresa: '',
+      'Fecha Tram.': '',
+      Telefono: '',
+      Codigo: '',
+      Comercial: '',
+      Producto: '',
+      Uds: totalUds,
+      'Cuota Total (€)': totalCuota,
+      Comisión: totalComision
+    })
+    totalRow.height = 24
+    totalRow.eachCell((cell, colNumber) => {
+      cell.font = { name: 'Segoe UI', size: 10, bold: true }
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE0F2FE' }
+      }
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FF94A3B8' } },
+        bottom: { style: 'double', color: { argb: 'FF94A3B8' } }
+      }
+      
+      const rightAlign = colNumber >= 9
+      const centerAlign = [2, 4, 5, 6].includes(colNumber)
+      cell.alignment = {
+        vertical: 'middle',
+        horizontal: rightAlign ? 'right' : (centerAlign ? 'center' : 'left')
+      }
+
+      if (colNumber === 9) {
+        cell.numFmt = '#,##0'
+      }
+      if (colNumber === 10 || colNumber === 11) {
+        cell.numFmt = currencyFmt
+      }
+    })
+  }
+
+  // Helper para generar pestaña de Extras estilizada
+  const addStyledExtrasSheet = (workbook: ExcelJS.Workbook, sheetName: string, rows: any[]) => {
+    const sheet = workbook.addWorksheet(sheetName)
+    sheet.views = [{ showGridLines: true }]
+
+    sheet.columns = [
+      { header: 'Grupo', key: 'Grupo', width: 16 },
+      { header: 'Comercial', key: 'Comercial', width: 20 },
+      { header: 'Cliente', key: 'Cliente', width: 28 },
+      { header: 'Regla', key: 'Regla', width: 24 },
+      { header: 'Canal', key: 'Canal', width: 15 },
+      { header: 'Importe Comercial', key: 'Importe Comercial', width: 20 }
+    ]
+
+    const headerRow = sheet.getRow(1)
+    headerRow.height = 30
+    headerRow.eachCell(cell => {
+      cell.font = { name: 'Segoe UI', size: 11, bold: true, color: { argb: 'FFFFFFFF' } }
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00ADEF' } }
+      const rightAlign = cell.value === 'Importe Comercial'
+      cell.alignment = {
+        vertical: 'middle',
+        horizontal: rightAlign ? 'right' : 'left'
+      }
+    })
+
+    if (rows.length === 0) {
+      const dataRow = sheet.addRow({ Grupo: 'Extras', Comercial: 'Sin extras' })
+      dataRow.height = 22
+      dataRow.eachCell(cell => {
+        cell.font = { name: 'Segoe UI', size: 10 }
+        cell.alignment = { vertical: 'middle', horizontal: 'left' }
+      })
+      return
+    }
+
+    let totalImporte = 0
+    rows.forEach(r => {
+      totalImporte += Number(r['Importe Comercial'] || 0)
+      sheet.addRow(r)
+    })
+
+    const currencyFmt = '#,##0.00" €";-#,##0.00" €";"-   €"'
+    sheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+      if (rowNumber === 1) return
+
+      row.height = 22
+      const isEven = rowNumber % 2 === 0
+
+      row.eachCell((cell, colNumber) => {
+        cell.font = { name: 'Segoe UI', size: 10 }
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: isEven ? 'FFF9FAFB' : 'FFFFFFFF' }
+        }
+        cell.border = {
+          bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          top: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+        }
+        
+        const rightAlign = colNumber === 6
+        cell.alignment = {
+          vertical: 'middle',
+          horizontal: rightAlign ? 'right' : 'left'
+        }
+
+        if (colNumber === 6) {
+          cell.numFmt = currencyFmt
+        }
+      })
+    })
+
+    const totalRow = sheet.addRow({
+      Grupo: 'TOTAL',
+      Comercial: '',
+      Cliente: '',
+      Regla: '',
+      Canal: '',
+      'Importe Comercial': totalImporte
+    })
+    totalRow.height = 24
+    totalRow.eachCell((cell, colNumber) => {
+      cell.font = { name: 'Segoe UI', size: 10, bold: true }
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE0F2FE' }
+      }
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FF94A3B8' } },
+        bottom: { style: 'double', color: { argb: 'FF94A3B8' } }
+      }
+      
+      const rightAlign = colNumber === 6
+      cell.alignment = {
+        vertical: 'middle',
+        horizontal: rightAlign ? 'right' : 'left'
+      }
+
+      if (colNumber === 6) {
+        cell.numFmt = currencyFmt
+      }
+    })
+  }
+
+  // Opción A — Una hoja por grupo
+  const exportByGroup = async () => {
     const plusRows   = plusDash?.rows   || []
     const basicoRows = basicoDash?.rows || []
-    const wb = XLSX.utils.book_new()
+    const wb = new ExcelJS.Workbook()
     
     TABS.filter(t => t.id !== 'extras').forEach(t => {
       const rows = getTabExportRows(t, plusRows, basicoRows)
-      const ws = XLSX.utils.json_to_sheet(rows.length ? rows : [{ Grupo: t.label, Info: 'Sin operaciones' }])
-      XLSX.utils.book_append_sheet(wb, ws, safeSheet(t.label))
+      addStyledSalesSheet(wb, safeSheet(t.label), rows, t.label)
     })
     
-    // Extras sheet
+    // Pestaña de extras
     const extrasRows = extraAssignments.map((ea: any) => ({
       Grupo:    'Extras',
       Comercial: ea.seller || '—',
       Cliente:   ea.customerName || '—',
       Regla:     ea.rule?.name || 'Extra Manual',
       Canal:     ea.rule?.channelType || '—',
-      
-      'Importe Comercial': fmtN(ea.sellerRewardAmount || 0) }))
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(extrasRows.length ? extrasRows : [{ Info: 'Sin extras' }]), 'Extras')
-    XLSX.writeFile(wb, `OGC_PorGrupo_${periodLabel}.xlsx`)
+      'Importe Comercial': ea.sellerRewardAmount || 0
+    }))
+    addStyledExtrasSheet(wb, 'Extras', extrasRows)
+
+    try {
+      const buffer = await wb.xlsx.writeBuffer()
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `OGC_PorGrupo_${periodLabel}.xlsx`
+      a.click()
+      window.URL.revokeObjectURL(url)
+    } catch(e) {
+      console.error(e)
+      alert("Error al exportar Excel")
+    }
   }
 
   // Opción B — Todo en una sola hoja
-  const exportAllInOne = () => {
+  const exportAllInOne = async () => {
     const plusRows   = plusDash?.rows   || []
     const basicoRows = basicoDash?.rows || []
-
     const allRows = TABS.filter(t => t.id !== 'extras').flatMap(t => getTabExportRows(t, plusRows, basicoRows))
 
     // Añadir Extras a la hoja unificada
@@ -778,52 +1047,164 @@ function GrupoClienteContent() {
         Producto: ea.rule?.name || 'Extra Manual',
         Uds: 1,
         'Cuota Total (€)': 0,
-        Comisión: fmtN(ea.telecomRewardAmount || 0)
+        Comisión: ea.telecomRewardAmount || 0
       })
     })
 
-    const ws = XLSX.utils.json_to_sheet(allRows.length ? allRows : [{ Info: 'Sin operaciones' }])
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'Todas las Operaciones')
-    XLSX.writeFile(wb, `OGC_TodoJunto_${periodLabel}.xlsx`)
+    const wb = new ExcelJS.Workbook()
+    addStyledSalesSheet(wb, 'Todas las Operaciones', allRows, 'Todas')
+
+    try {
+      const buffer = await wb.xlsx.writeBuffer()
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `OGC_TodoJunto_${periodLabel}.xlsx`
+      a.click()
+      window.URL.revokeObjectURL(url)
+    } catch(e) {
+      console.error(e)
+      alert("Error al exportar Excel")
+    }
   }
 
-  // Opción C — Resumen por grupo
-  const exportSummary = () => {
-    const plusRows   = plusDash?.rows   || []
-    const basicoRows = basicoDash?.rows || []
-    const summaryRows = TABS.filter(t => t.id !== 'extras').map(t => {
+  // Opción C — Resumen por grupo (Hoja de Resumen Estilizada Premium)
+  const exportSummary = async () => {
+    const wb = new ExcelJS.Workbook()
+    const sheet = wb.addWorksheet('Resumen')
+    sheet.views = [{ showGridLines: true }]
+
+    // Configurar columnas y anchos premium
+    sheet.columns = [
+      { header: 'Grupo', key: 'grupo', width: 30 },
+      { header: 'Nº Ventas', key: 'ventas', width: 15 },
+      { header: 'Cuota Total (€)', key: 'cuota', width: 22 },
+      { header: 'Comisión', key: 'comision', width: 22 }
+    ]
+
+    // Formato de la cabecera
+    const headerRow = sheet.getRow(1)
+    headerRow.height = 30
+    headerRow.eachCell((cell, colNumber) => {
+      cell.font = { name: 'Segoe UI', size: 11, bold: true, color: { argb: 'FFFFFFFF' } }
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00ADEF' } }
+      cell.alignment = {
+        vertical: 'middle',
+        horizontal: colNumber === 1 ? 'left' : (colNumber === 2 ? 'center' : 'right')
+      }
+    })
+
+    let totalVentas = 0
+    let totalCuotas = 0
+    let totalComisiones = 0
+
+    // Cargar datos
+    TABS.filter(t => t.id !== 'extras').forEach(t => {
       const tabSls = sales.filter((s: any) => filterByTab(s, t.id))
-      
       const cuotaSum = tabSls.reduce((acc, s) => acc + getSaleCuotaTotal(s), 0)
       const comisionSum = tabSls.reduce((acc, s) => acc + getCommission(s), 0)
 
-      return {
-        Grupo:             `${t.emoji} ${t.label}`,
-        'Nº Ventas':       tabSls.length,
-        'Cuota Total (€)': fmtN(cuotaSum),
-        'Comisión':        fmtN(comisionSum)
+      totalVentas += tabSls.length
+      totalCuotas += cuotaSum
+      totalComisiones += comisionSum
+
+      sheet.addRow({
+        grupo: `${t.emoji} ${t.label}`,
+        ventas: tabSls.length,
+        cuota: cuotaSum,
+        comision: comisionSum
+      })
+    })
+
+    // Fila de Extras
+    const extrasVentas = extraAssignments.length
+    const extrasTotal = extraAssignments.reduce((a: number, e: any) => a + (e.telecomRewardAmount || 0), 0)
+
+    totalVentas += extrasVentas
+    totalComisiones += extrasTotal
+
+    sheet.addRow({
+      grupo: '⚡ Extras',
+      ventas: extrasVentas,
+      cuota: 0,
+      comision: extrasTotal
+    })
+
+    // Dar estilo a las filas de datos
+    const currencyFmt = '#,##0.00" €";-#,##0.00" €";"-   €"'
+    sheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+      if (rowNumber === 1) return
+
+      row.height = 22
+      const isEven = rowNumber % 2 === 0
+
+      row.eachCell((cell, colNumber) => {
+        cell.font = { name: 'Segoe UI', size: 10 }
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: isEven ? 'FFF9FAFB' : 'FFFFFFFF' }
+        }
+        cell.border = {
+          bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          top: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+        }
+        cell.alignment = {
+          vertical: 'middle',
+          horizontal: colNumber === 1 ? 'left' : (colNumber === 2 ? 'center' : 'right')
+        }
+
+        if (colNumber === 3 || colNumber === 4) {
+          cell.numFmt = currencyFmt
+        }
+      })
+    })
+
+    // Fila de TOTALES
+    const totalRow = sheet.addRow({
+      grupo: 'TOTAL',
+      ventas: totalVentas,
+      cuota: totalCuotas,
+      comision: totalComisiones
+    })
+    totalRow.height = 24
+    totalRow.eachCell((cell, colNumber) => {
+      cell.font = { name: 'Segoe UI', size: 10, bold: true }
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE0F2FE' }
+      }
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FF94A3B8' } },
+        bottom: { style: 'double', color: { argb: 'FF94A3B8' } }
+      }
+      cell.alignment = {
+        vertical: 'middle',
+        horizontal: colNumber === 1 ? 'left' : (colNumber === 2 ? 'center' : 'right')
+      }
+
+      if (colNumber === 3 || colNumber === 4) {
+        cell.numFmt = currencyFmt
       }
     })
-    // Extras row
-    const extrasTotal = extraAssignments.reduce((a: number, e: any) => a + (e.telecomRewardAmount || 0), 0)
-    summaryRows.push({ 
-      Grupo: '⚡ Extras', 
-      'Nº Ventas': extraAssignments.length, 
-      'Cuota Total (€)': 0,
-      'Comisión': fmtN(extrasTotal)
-    })
-    // Grand total
-    summaryRows.push({
-      Grupo: 'TOTAL',
-      'Nº Ventas':       summaryRows.reduce((a, r) => a + (r['Nº Ventas'] as number), 0),
-      'Cuota Total (€)': fmtN(summaryRows.reduce((a, r) => a + (r['Cuota Total (€)'] as number), 0)),
-      'Comisión':        fmtN(summaryRows.reduce((a, r) => a + (r['Comisión'] as number), 0))
-    })
-    const ws = XLSX.utils.json_to_sheet(summaryRows)
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'Resumen')
-    XLSX.writeFile(wb, `OGC_Resumen_${periodLabel}.xlsx`)
+
+    try {
+      const buffer = await wb.xlsx.writeBuffer()
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `OGC_Resumen_${periodLabel}.xlsx`
+      a.click()
+      window.URL.revokeObjectURL(url)
+    } catch(e) {
+      console.error(e)
+      alert("Error al exportar Excel")
+    }
   }
 
   return (
