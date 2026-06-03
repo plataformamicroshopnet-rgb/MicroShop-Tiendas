@@ -42,6 +42,33 @@ export async function GET(request: Request) {
           orderBy: { createdAt: 'asc' }
         });
       }
+      
+      // Fallback si no se encuentran registros para este periodo
+      if (importes.length === 0) {
+        const activeWp = await prisma.workPeriod.findFirst({ where: { status: 'ACTIVE' } });
+        if (activeWp) {
+          importes = await prisma.importePyme.findMany({
+            where: { periodId: activeWp.id },
+            orderBy: { createdAt: 'asc' }
+          });
+        }
+        if (importes.length === 0) {
+          const allPeriods = await prisma.workPeriod.findMany({ orderBy: { period_key: 'desc' } });
+          for (const p of allPeriods) {
+            importes = await prisma.importePyme.findMany({
+              where: { periodId: p.id },
+              orderBy: { createdAt: 'asc' }
+            });
+            if (importes.length > 0) break;
+          }
+        }
+        if (importes.length === 0) {
+          importes = await prisma.importePyme.findMany({
+            where: { periodId: null },
+            orderBy: { createdAt: 'asc' }
+          });
+        }
+      }
     } else {
       // Fallback para las dashboards viejas
       importes = await prisma.importePyme.findMany({

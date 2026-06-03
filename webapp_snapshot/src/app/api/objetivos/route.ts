@@ -45,6 +45,27 @@ export async function GET(request: Request) {
         orderBy: { createdAt: 'asc' }
       })
     }
+    
+    // Fallback si no se encuentran objetivos para el periodo
+    if (records.length === 0) {
+      const activeWp = await prisma.workPeriod.findFirst({ where: { status: 'ACTIVE' } });
+      if (activeWp) {
+        records = await prisma.objective.findMany({
+          where: { periodId: activeWp.id },
+          orderBy: { createdAt: 'asc' }
+        });
+      }
+      if (records.length === 0) {
+        const allPeriods = await prisma.workPeriod.findMany({ orderBy: { period_key: 'desc' } });
+        for (const p of allPeriods) {
+          records = await prisma.objective.findMany({
+            where: { periodId: p.id },
+            orderBy: { createdAt: 'asc' }
+          });
+          if (records.length > 0) break;
+        }
+      }
+    }
   } else {
     // Si la UI NO usa strictPeriod (Legacy: Liquidaciones, Ventas...)
     records = await prisma.objective.findMany({
@@ -61,15 +82,18 @@ export async function GET(request: Request) {
     "Pyme": {}, "Captador": {}
   }
 
+  const targetMonth = queryPeriodKey ? queryPeriodKey.replace('_', '') : null;
+
   for (const record of records) {
-    const r = record as any
-    if (!objetivos[r.profile]) objetivos[r.profile] = {}
-    if (!objetivos[r.profile][r.month]) objetivos[r.profile][r.month] = {}
-    objetivos[r.profile][r.month][r.objKey] = r.value
+    const r = record as any;
+    const recordMonth = targetMonth ? targetMonth : r.month;
+    if (!objetivos[r.profile]) objetivos[r.profile] = {};
+    if (!objetivos[r.profile][recordMonth]) objetivos[r.profile][recordMonth] = {};
+    objetivos[r.profile][recordMonth][r.objKey] = r.value;
     
     if (r.grupo) {
-       if (!grupos[r.profile]) grupos[r.profile] = {}
-       grupos[r.profile][r.objKey] = r.grupo
+       if (!grupos[r.profile]) grupos[r.profile] = {};
+       grupos[r.profile][r.objKey] = r.grupo;
     }
   }
 

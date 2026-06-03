@@ -61,7 +61,17 @@ export async function GET(request: Request) {
           ]
         }
       } else {
-        return NextResponse.json({ success: true, stats: [], logs: [] }) // Period requested doesn't exist
+        // Fallback: Si no existe el WorkPeriod, buscamos por formato de fecha parseando periodKey (ej. 2026_06)
+        const parts = periodKey.split('_')
+        if (parts.length === 2) {
+          const targetYearStr = parts[0]
+          const targetMonthStr = parts[1]
+          temporalWhere = {
+            fecha: { contains: `/${targetMonthStr}/${targetYearStr}` }
+          }
+        } else {
+          return NextResponse.json({ success: true, stats: [], logs: [] })
+        }
       }
     }
 
