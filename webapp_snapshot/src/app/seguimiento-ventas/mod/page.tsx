@@ -5,6 +5,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { TrendingUp, RefreshCw } from 'lucide-react'
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, AreaChart, Area } from 'recharts'
 import { usePeriod } from '@/components/PeriodProvider'
+import { normalizeString } from '@/lib/salesUtils'
 
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
@@ -98,10 +99,10 @@ export default function ModPage() {
     }, [selectedYear, selectedMonth]);
 
     const calculateMetrics = (data: {sales: any[], catalogs: any[]}, year: number, month: number) => {
-        // Build catalog map
+        // Build catalog map with normalization
         const catalogMap: Record<string, any> = {};
         data.catalogs.forEach(c => {
-            catalogMap[c.producto] = c;
+            catalogMap[normalizeString(c.producto)] = c;
         });
 
         // Filter sales (no anuladas)
@@ -139,16 +140,23 @@ export default function ModPage() {
             } else if (sale.fecha.includes('-')) {
                 const parts = sale.fecha.split('-');
                 if (parts.length >= 3) {
-                    // Usually YYYY-MM-DD
                     day = parseInt(parts[2], 10);
                 }
             }
 
             if (day >= 1 && day <= daysInMonth) {
                 dailyStats[day - 1].ops += 1;
-                const cat = catalogMap[sale.producto];
+                const cat = catalogMap[normalizeString(sale.producto)];
                 if (cat) {
-                    const val = Number(cat.comisionConCoste || cat.comision || 0);
+                    let val = 0;
+                    const prodLower = String(sale.producto || '').toLowerCase();
+                    if (prodLower.includes('solar360')) {
+                        val = 0;
+                    } else {
+                        const isConCoste = sale.rentConCoste && (sale.rentConCoste.toLowerCase() === 'sí' || sale.rentConCoste.toLowerCase() === 'si');
+                        const comStr = isConCoste ? (cat.comisionConCoste || cat.comision || '0') : (cat.comision || '0');
+                        val = Number(String(comStr).replace(',', '.'));
+                    }
                     dailyStats[day - 1].importe += val;
                 }
             }
@@ -167,7 +175,8 @@ export default function ModPage() {
             return dDay <= now.getDate();
         };
 
-        const workingDailyStats = dailyStats.filter(d => d.weekday !== 'S' && d.weekday !== 'D');
+        // We include Monday-Friday, and Saturday & Sunday only if they contain operations (sales made).
+        const workingDailyStats = dailyStats.filter(d => d.weekday !== 'S' && d.weekday !== 'D' || d.ops > 0);
 
         workingDailyStats.forEach(d => {
             accum += d.ops;
