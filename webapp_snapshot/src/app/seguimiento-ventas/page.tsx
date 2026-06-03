@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
-import { Package, LineChart, ChevronLeft, Calendar, Globe, Calculator, Building2, Target, Briefcase, Settings2, ArrowUp, ArrowDown, Save, X, Trophy, TrendingUp } from 'lucide-react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
+import { Package, LineChart, ChevronLeft, Calendar, Globe, Calculator, Building2, Target, Briefcase, Settings2, ArrowUp, ArrowDown, Save, X, Trophy, TrendingUp, GripVertical } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useGuard } from '@/hooks/useGuard'
 import { PageHeader } from '@/components/PageHeader'
@@ -11,6 +11,10 @@ export default function SeguimientoVentasPage() {
 
   const [isEditMode, setIsEditMode] = useState(false)
   const [cardOrder, setCardOrder] = useState<string[]>([])
+
+  const longPressTimeout = useRef<NodeJS.Timeout | null>(null)
+  const isLongPressActive = useRef<boolean>(false)
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
 
   useEffect(() => {
     const savedOrder = localStorage.getItem('seguimiento_ventas_card_order')
@@ -123,9 +127,84 @@ export default function SeguimientoVentasPage() {
     setIsEditMode(false)
   }
 
-  if (authorized === null) {
-      return <div style={{ padding: 40, color: 'var(--mercedes-cyan)', fontWeight: 600 }}>Verificando credenciales del módulo...</div>;
+  const resetOrder = () => {
+    setCardOrder([]);
+    localStorage.removeItem('seguimiento_ventas_card_order');
+    setIsEditMode(false);
   }
+
+  const handleStartPress = (e: React.MouseEvent | React.TouchEvent, index: number) => {
+    if (isEditMode) return;
+    
+    if (longPressTimeout.current) return;
+    
+    isLongPressActive.current = false;
+    longPressTimeout.current = setTimeout(() => {
+      isLongPressActive.current = true;
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate(60);
+      }
+      if (cardOrder.length === 0) {
+        setCardOrder(cards.map(c => c.title));
+      }
+      setIsEditMode(true);
+    }, 550);
+  };
+
+  const handleReleasePress = (e: React.MouseEvent | React.TouchEvent, action: () => void) => {
+    if (longPressTimeout.current) {
+      clearTimeout(longPressTimeout.current);
+      longPressTimeout.current = null;
+    }
+
+    if (isEditMode) return;
+
+    if (!isLongPressActive.current) {
+      action();
+    }
+    isLongPressActive.current = false;
+  };
+
+  const handleMovePress = () => {
+    if (longPressTimeout.current) {
+      clearTimeout(longPressTimeout.current);
+      longPressTimeout.current = null;
+    }
+  };
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    if (!isEditMode) {
+      e.preventDefault();
+      return;
+    }
+    setDraggedIndex(index);
+    e.dataTransfer.setData('text/plain', String(index));
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) return;
+
+    const currentOrder = cardOrder.length > 0 ? [...cardOrder] : cards.map(c => c.title);
+    const draggedTitle = sortedCards[draggedIndex].title;
+    const targetTitle = sortedCards[index].title;
+
+    const newOrder = [...currentOrder];
+    const idxA = newOrder.indexOf(draggedTitle);
+    const idxB = newOrder.indexOf(targetTitle);
+
+    if (idxA !== -1 && idxB !== -1) {
+      newOrder[idxA] = targetTitle;
+      newOrder[idxB] = draggedTitle;
+      setCardOrder(newOrder);
+      setDraggedIndex(index);
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+  };
 
   return (
     <div className="w-full" style={{ padding: '24px 32px', backgroundColor: 'var(--bg-app)', minHeight: '100vh' }}>
@@ -167,25 +246,37 @@ export default function SeguimientoVentasPage() {
             align-items: center;
             gap: 16px;
             background: linear-gradient(to right, var(--bg-card), var(--active-bg));
+            transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s, border-color 0.2s;
         }
         @media (max-width: 768px) {
             .hub-card-main {
-                flex-direction: column;
-                align-items: flex-start;
+                flex-direction: row;
+                align-items: center;
                 gap: 16px;
             }
         }
 
-        @keyframes wiggle {
-            0% { transform: rotate(0deg); }
-            25% { transform: rotate(-0.5deg); }
-            50% { transform: rotate(0deg); }
-            75% { transform: rotate(0.5deg); }
-            100% { transform: rotate(0deg); }
+        .edit-mode-card {
+            border: 2px dashed rgba(37, 99, 235, 0.4) !important;
+            background-color: var(--bg-input) !important;
+            box-shadow: none !important;
+            cursor: grab !important;
         }
-        .wiggle-mode {
-            animation: wiggle 0.4s infinite;
-            border: 2px dashed #3b82f6 !important;
+        .edit-mode-card:hover {
+            transform: none !important;
+            border-color: rgba(37, 99, 235, 0.8) !important;
+            background-color: var(--bg-card) !important;
+        }
+        .edit-mode-card:active {
+            cursor: grabbing !important;
+            transform: scale(0.97);
+        }
+
+        .dragging {
+            opacity: 0.4 !important;
+            border: 2px dashed #2563eb !important;
+            transform: scale(0.98) !important;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
         }
       `}} />
 
@@ -202,6 +293,28 @@ export default function SeguimientoVentasPage() {
           headerActions={
             isEditMode ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button 
+                    onClick={resetOrder} 
+                    title="Restablecer orden predeterminado" 
+                    style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 6, 
+                        padding: '0 14px', 
+                        height: 40, 
+                        borderRadius: 20, 
+                        background: 'transparent', 
+                        border: '1px solid #f97316', 
+                        color: '#f97316', 
+                        fontWeight: 600, 
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = '#f97316'; e.currentTarget.style.color = '#fff' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#f97316' }}
+                >
+                    Restablecer
+                </button>
                 <button onClick={cancelEdit} title="Cancelar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: '50%', background: 'transparent', border: '1px solid var(--border-strong)', color: 'var(--text-muted)', cursor: 'pointer' }}>
                     <X size={20} />
                 </button>
@@ -217,28 +330,69 @@ export default function SeguimientoVentasPage() {
           }
         />
 
+      {isEditMode && (
+        <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 12, 
+            backgroundColor: 'rgba(59, 130, 246, 0.08)', 
+            border: '1px solid rgba(59, 130, 246, 0.2)', 
+            borderRadius: 12, 
+            padding: '12px 20px', 
+            marginTop: 16,
+            color: 'var(--text-main)',
+            fontSize: 14,
+            fontWeight: 500,
+        }}>
+          <div style={{ 
+              backgroundColor: '#2563eb', 
+              color: '#fff', 
+              borderRadius: '50%', 
+              width: 22, 
+              height: 22, 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              fontWeight: 800,
+              fontSize: 12,
+              flexShrink: 0
+          }}>!</div>
+          <div style={{ flex: 1 }}>
+            <strong>Modo reorganización activo:</strong> Mantén pulsado y arrastra cualquier tarjeta para moverla, o utiliza las flechas laterales. Haz clic en <strong>Guardar Orden</strong> para aplicar.
+          </div>
+        </div>
+      )}
+
       <div className="hub-grid" style={{ marginTop: '24px' }}>
         {sortedCards.map((c, i) => {
           const Icon = c.icon
           const iconColor = c.textColor || '#3b82f6';
           
           return (
-            <div key={c.title} style={{ position: 'relative' }}>
-              {isEditMode && (
-                <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 10, display: 'flex', gap: 4, background: 'var(--bg-card)', padding: 4, borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.1)', border: '1px solid var(--border-light)' }}>
-                  <button onClick={(e) => { e.stopPropagation(); moveCard(i, 'up') }} disabled={i === 0} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 8, border: 'none', background: i === 0 ? 'transparent' : 'var(--bg-input)', color: i === 0 ? 'var(--border-strong)' : 'var(--text-main)', cursor: i === 0 ? 'not-allowed' : 'pointer' }}>
-                    <ArrowUp size={16} />
-                  </button>
-                  <button onClick={(e) => { e.stopPropagation(); moveCard(i, 'down') }} disabled={i === sortedCards.length - 1} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 8, border: 'none', background: i === sortedCards.length - 1 ? 'transparent' : 'var(--bg-input)', color: i === sortedCards.length - 1 ? 'var(--border-strong)' : 'var(--text-main)', cursor: i === sortedCards.length - 1 ? 'not-allowed' : 'pointer' }}>
-                    <ArrowDown size={16} />
-                  </button>
-                </div>
-              )}
-              
+            <div 
+              key={c.title} 
+              style={{ position: 'relative' }}
+              draggable={isEditMode}
+              onDragStart={(e) => handleDragStart(e, i)}
+              onDragOver={(e) => handleDragOver(e, i)}
+              onDragEnd={handleDragEnd}
+            >
               <div 
-                  className={`hub-card hub-card-main ${isEditMode ? 'wiggle-mode' : ''}`} 
-                  onClick={isEditMode ? undefined : c.action} 
-                  style={{ cursor: isEditMode ? 'default' : 'pointer', borderLeft: `6px solid ${iconColor}` }}
+                  className={`hub-card hub-card-main ${isEditMode ? 'edit-mode-card' : ''} ${draggedIndex === i ? 'dragging' : ''}`} 
+                  onMouseDown={(e) => handleStartPress(e, i)}
+                  onMouseUp={(e) => handleReleasePress(e, c.action)}
+                  onMouseMove={handleMovePress}
+                  onTouchStart={(e) => handleStartPress(e, i)}
+                  onTouchEnd={(e) => handleReleasePress(e, c.action)}
+                  onTouchMove={handleMovePress}
+                  style={{ 
+                      cursor: isEditMode ? 'grab' : 'pointer', 
+                      borderLeft: `6px solid ${iconColor}`,
+                      display: 'flex',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: '16px'
+                  }}
               >
                 <div style={{ 
                     background: c.color || 'rgba(59, 130, 246, 0.1)', 
@@ -262,6 +416,69 @@ export default function SeguimientoVentasPage() {
                     {c.description}
                   </p>
                 </div>
+
+                {isEditMode && (
+                  <div style={{ 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      alignItems: 'center', 
+                      justifyContent: 'space-between',
+                      height: '100%', 
+                      paddingLeft: 12, 
+                      borderLeft: '1px solid var(--border-light)',
+                      gap: 8,
+                      flexShrink: 0
+                  }} onClick={e => e.stopPropagation()}>
+                    <div 
+                        style={{ cursor: 'grab', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2px 4px' }}
+                        title="Arrastra para reordenar"
+                    >
+                      <GripVertical size={20} />
+                    </div>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      <button 
+                          onClick={(e) => { e.stopPropagation(); moveCard(i, 'up') }} 
+                          disabled={i === 0} 
+                          style={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center', 
+                              width: 26, 
+                              height: 26, 
+                              borderRadius: 6, 
+                              border: 'none', 
+                              background: i === 0 ? 'transparent' : 'var(--bg-input)', 
+                              color: i === 0 ? 'var(--border-strong)' : 'var(--text-main)', 
+                              cursor: i === 0 ? 'not-allowed' : 'pointer',
+                              boxShadow: i === 0 ? 'none' : '0 1px 3px rgba(0,0,0,0.05)'
+                          }}
+                          title="Subir"
+                      >
+                        <ArrowUp size={14} />
+                      </button>
+                      <button 
+                          onClick={(e) => { e.stopPropagation(); moveCard(i, 'down') }} 
+                          disabled={i === sortedCards.length - 1} 
+                          style={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center', 
+                              width: 26, 
+                              height: 26, 
+                              borderRadius: 6, 
+                              border: 'none', 
+                              background: i === sortedCards.length - 1 ? 'transparent' : 'var(--bg-input)', 
+                              color: i === sortedCards.length - 1 ? 'var(--border-strong)' : 'var(--text-main)', 
+                              cursor: i === sortedCards.length - 1 ? 'not-allowed' : 'pointer',
+                              boxShadow: i === sortedCards.length - 1 ? 'none' : '0 1px 3px rgba(0,0,0,0.05)'
+                          }}
+                          title="Bajar"
+                      >
+                        <ArrowDown size={14} />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )
