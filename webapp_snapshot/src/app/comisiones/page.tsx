@@ -379,59 +379,59 @@ export default function ComisionesDashboardPage() {
             </div>
 
             {/* 1. PRIMERA FILA (KPIs SUPERIORES - ANCHURA TOTAL x 4) */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 15, marginTop: 20, marginBottom: 20 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 19, marginTop: 25, marginBottom: 25 }}>
                 
                 {/* Mayor Comisión */}
-                <div className="card" style={{ padding: '14px 15px', display: 'flex', flexDirection: 'column', gap: 4, borderLeft: '4px solid #FFD700', backgroundColor: 'rgba(255, 215, 0, 0.05)' }}>
-                    <div style={{ color: 'var(--medium-gray)', fontSize: 8.5, textTransform: 'uppercase', letterSpacing: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <Trophy size={10} color="#FFD700" /> Mayor Comisión
+                <div className="card" style={{ padding: '18px 19px', display: 'flex', flexDirection: 'column', gap: 5, borderLeft: '4px solid #FFD700', backgroundColor: 'rgba(255, 215, 0, 0.05)' }}>
+                    <div style={{ color: 'var(--medium-gray)', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: 1, display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <Trophy size={13} color="#FFD700" /> Mayor Comisión
                     </div>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--light-text)' }}>
+                    <div style={{ fontSize: 19, fontWeight: 700, color: 'var(--light-text)' }}>
                         {maxComisionSeller ? maxComisionSeller.name : '-'}
                     </div>
-                    <div style={{ color: '#D97706', fontSize: 11.5, fontWeight: 800 }}>
+                    <div style={{ color: '#D97706', fontSize: 14.5, fontWeight: 800 }}>
                         {maxComisionSeller ? `${maxComisionSeller.totalComision.toFixed(2)} €` : '0.00 €'}
                     </div>
                 </div>
 
                 {/* Más Ventas */}
-                <div className="card" style={{ padding: '14px 15px', display: 'flex', flexDirection: 'column', gap: 4, borderLeft: '4px solid var(--mercedes-cyan)', backgroundColor: 'rgba(0, 173, 239, 0.05)' }}>
-                    <div style={{ color: 'var(--medium-gray)', fontSize: 8.5, textTransform: 'uppercase', letterSpacing: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <Target size={10} color="var(--mercedes-cyan)" /> Más Ventas
+                <div className="card" style={{ padding: '18px 19px', display: 'flex', flexDirection: 'column', gap: 5, borderLeft: '4px solid var(--mercedes-cyan)', backgroundColor: 'rgba(0, 173, 239, 0.05)' }}>
+                    <div style={{ color: 'var(--medium-gray)', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: 1, display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <Target size={13} color="var(--mercedes-cyan)" /> Más Ventas
                     </div>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--light-text)' }}>
+                    <div style={{ fontSize: 19, fontWeight: 700, color: 'var(--light-text)' }}>
                         {maxSalesSeller ? maxSalesSeller.name : '-'}
                     </div>
-                    <div style={{ color: 'var(--mercedes-cyan)', fontSize: 11.5, fontWeight: 800 }}>
+                    <div style={{ color: 'var(--mercedes-cyan)', fontSize: 14.5, fontWeight: 800 }}>
                         {maxSalesSeller ? `${maxSalesSeller.totalSales} operaciones` : '0'}
                     </div>
                 </div>
 
                 {/* Total Equipo */}
-                <div className="card" style={{ padding: '14px 15px', display: 'flex', flexDirection: 'column', gap: 4, borderLeft: '4px solid #34d399', backgroundColor: 'rgba(52, 211, 153, 0.05)' }}>
-                    <div style={{ color: 'var(--medium-gray)', fontSize: 8.5, textTransform: 'uppercase', letterSpacing: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <Euro size={10} color="#34d399" /> Total Comisiones
+                <div className="card" style={{ padding: '18px 19px', display: 'flex', flexDirection: 'column', gap: 5, borderLeft: '4px solid #34d399', backgroundColor: 'rgba(52, 211, 153, 0.05)' }}>
+                    <div style={{ color: 'var(--medium-gray)', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <Euro size={13} color="#34d399" /> Total Comisiones
                         </div>
                     </div>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: '#34d399' }}>
+                    <div style={{ fontSize: 25, fontWeight: 800, color: '#34d399' }}>
                         {teamTotalComisiones.toFixed(2)} €
                     </div>
-                    <div style={{ fontSize: 8.5, color: 'var(--medium-gray)' }}>Volumen total: <strong style={{color: 'var(--light-text)'}}>{teamTotalSales} op.</strong></div>
+                    <div style={{ fontSize: 10.5, color: 'var(--medium-gray)' }}>Volumen total: <strong style={{color: 'var(--light-text)'}}>{teamTotalSales} op.</strong></div>
                 </div>
 
                 {/* RANKING TOP 3 */}
-                <div className="card" style={{ padding: '14px 15px', display: 'flex', flexDirection: 'column', gap: 5, borderLeft: '4px solid #A855F7', backgroundColor: 'rgba(168, 85, 247, 0.05)', boxShadow: '0 4px 20px rgba(0,0,0,0.4)', position: 'relative', overflow: 'hidden' }}>
-                    <div style={{ color: 'var(--medium-gray)', fontSize: 8.5, textTransform: 'uppercase', letterSpacing: 1, display: 'flex', alignItems: 'center', gap: 4, zIndex: 2 }}>
-                        <BadgeCheck size={10} color="#A855F7" /> Ranking del Mes
+                <div className="card" style={{ padding: '18px 19px', display: 'flex', flexDirection: 'column', gap: 6, borderLeft: '4px solid #A855F7', backgroundColor: 'rgba(168, 85, 247, 0.05)', boxShadow: '0 4px 20px rgba(0,0,0,0.4)', position: 'relative', overflow: 'hidden' }}>
+                    <div style={{ color: 'var(--medium-gray)', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: 1, display: 'flex', alignItems: 'center', gap: 5, zIndex: 2 }}>
+                        <BadgeCheck size={13} color="#A855F7" /> Ranking del Mes
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, zIndex: 2 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5, zIndex: 2 }}>
                         {top3.map((t, index) => {
                             const icon = index === 0 ? '🥇' : (index === 1 ? '🥈' : '🥉')
                             const rankColor = index === 0 ? '#FBBF24' : (index === 1 ? '#CBD5E1' : '#D97706')
                             return (
-                                <div key={t.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 9.5, fontWeight: index === 0 ? 800 : 600, color: rankColor }}>
-                                    <div style={{ display: 'flex', gap: 4 }}><span>{icon}</span> {t.name}</div>
+                                <div key={t.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, fontWeight: index === 0 ? 800 : 600, color: rankColor }}>
+                                    <div style={{ display: 'flex', gap: 6 }}><span>{icon}</span> {t.name}</div>
                                     <div style={{ fontWeight: 800 }}>{t.totalComision.toFixed(2)} €</div>
                                 </div>
                             )
@@ -488,11 +488,11 @@ export default function ComisionesDashboardPage() {
                                 className="card" 
                                 onClick={() => setSelectedSellerFilter(isSelected ? null : s.name)}
                                 style={{ 
-                                    padding: '6px 10px', 
+                                    padding: '8px 12px', 
                                     display: 'flex', 
                                     flexDirection: 'column', 
                                     minHeight: 'auto',
-                                    gap: 4,
+                                    gap: 6,
                                     cursor: 'pointer',
                                     transition: 'all 0.2s',
                                     border: isSelected ? '2px solid var(--mercedes-cyan)' : '1px solid var(--border-color)',
@@ -506,19 +506,19 @@ export default function ComisionesDashboardPage() {
                             {/* CABECERA ULTRA COMPACTA Y KPIS */}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 {/* IZQUIERDA: Info del Asesor */}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
                                     <div style={{ 
-                                        width: 18, height: 18, borderRadius: '50%', 
+                                        width: 22, height: 22, borderRadius: '50%', 
                                         backgroundColor: isPlus ? 'rgba(0,173,239,0.1)' : 'rgba(255,149,0,0.1)', 
                                         color: isPlus ? 'var(--mercedes-cyan)' : '#FF9500',
                                         display: 'flex', justifyContent: 'center', alignItems: 'center', 
-                                        fontSize: 9, fontWeight: 700 
+                                        fontSize: 11, fontWeight: 700 
                                     }}>
                                         {s.name.charAt(0).toUpperCase()}
                                     </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--light-text)' }}>{s.name}</div>
-                                        <div style={{ width: 19, height: 19, borderRadius: '50%', overflow: 'hidden', border: '1px solid rgba(0,0,0,0.05)', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--light-text)' }}>{s.name}</div>
+                                        <div style={{ width: 24, height: 24, borderRadius: '50%', overflow: 'hidden', border: '1.5px solid rgba(0,0,0,0.05)', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
                                             <img 
                                                 src={`/${s.name}.jpg`} 
                                                 alt={s.name} 
@@ -537,7 +537,7 @@ export default function ComisionesDashboardPage() {
                                 </div>
 
                                 {/* CENTRO: Herramientas (Modo Dios y Telemetría) */}
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                                     <div className="no-print">
                                         <AspirationalSimulatorButton s={s} />
                                     </div>
@@ -547,21 +547,21 @@ export default function ComisionesDashboardPage() {
                                 </div>
                                 
                                 {/* DERECHA: Totales Desglosados */}
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flex: 1 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                        <div style={{ fontSize: 8, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Importe Consolidado:</div>
-                                        <div style={{ fontSize: 10.5, fontWeight: 800, color: '#10b981' }}>{s.totalConsolidada.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</div>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3, flex: 1 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                        <div style={{ fontSize: 9.5, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Importe Consolidado:</div>
+                                        <div style={{ fontSize: 13, fontWeight: 800, color: '#10b981' }}>{s.totalConsolidada.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</div>
                                     </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                        <div style={{ fontSize: 8, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Importe por Consolidar:</div>
-                                        <div style={{ fontSize: 10, fontWeight: 700, color: '#f59e0b' }}>{s.totalPendiente.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                        <div style={{ fontSize: 9.5, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Importe por Consolidar:</div>
+                                        <div style={{ fontSize: 12, fontWeight: 700, color: '#f59e0b' }}>{s.totalPendiente.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</div>
                                     </div>
                                     <div style={{ width: '100%', height: 1, backgroundColor: 'var(--border-color)', margin: '1px 0' }}></div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                        <div style={{ fontSize: 8, fontWeight: 700, color: 'var(--light-text)', textTransform: 'uppercase' }}>Total (Fin + Pte):</div>
-                                        <div style={{ fontSize: 11.5, fontWeight: 900, color: '#3b82f6' }}>{s.totalComision.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                        <div style={{ fontSize: 9.5, fontWeight: 700, color: 'var(--light-text)', textTransform: 'uppercase' }}>Total (Fin + Pte):</div>
+                                        <div style={{ fontSize: 14.5, fontWeight: 900, color: '#3b82f6' }}>{s.totalComision.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</div>
                                     </div>
-                                    {s.totalExtras > 0 && <div style={{ fontSize: 7, color: '#a855f7', fontWeight: 700 }}>(Base: {Math.round(s.totalComision - s.totalExtras).toLocaleString()} + Ext: {Math.round(s.totalExtras).toLocaleString()})</div>}
+                                    {s.totalExtras > 0 && <div style={{ fontSize: 8, color: '#a855f7', fontWeight: 700 }}>(Base: {Math.round(s.totalComision - s.totalExtras).toLocaleString()} + Ext: {Math.round(s.totalExtras).toLocaleString()})</div>}
                                 </div>
                             </div>
                             
