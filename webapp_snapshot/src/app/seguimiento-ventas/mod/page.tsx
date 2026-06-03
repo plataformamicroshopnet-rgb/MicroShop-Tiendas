@@ -16,6 +16,22 @@ export default function ModPage() {
 
     const [loading, setLoading] = useState(true)
     const [data, setData] = useState<any>(null)
+    const [manualImportePrev, setManualImportePrev] = useState<string>('')
+
+    useEffect(() => {
+        if (!activePeriodKey) return;
+        const saved = localStorage.getItem(`mod_manual_importe_prev_${activePeriodKey}`);
+        setManualImportePrev(saved || '');
+    }, [activePeriodKey]);
+
+    const handleManualImporteChange = (val: string) => {
+        setManualImportePrev(val);
+        if (val.trim() === '') {
+            localStorage.removeItem(`mod_manual_importe_prev_${activePeriodKey}`);
+        } else {
+            localStorage.setItem(`mod_manual_importe_prev_${activePeriodKey}`, val);
+        }
+    };
 
     useEffect(() => {
         if (!activePeriodKey) return;
@@ -333,6 +349,14 @@ export default function ModPage() {
 
     const { currMetrics, prevMetrics, pctOps, pctImporte, year, monthName } = data;
 
+    const overriddenPrevImporte = manualImportePrev !== '' ? parseFloat(manualImportePrev) : prevMetrics.totalImporte;
+    const overriddenPrevMediaImporteDiario = prevMetrics.workingDaysElapsed > 0 ? overriddenPrevImporte / prevMetrics.workingDaysElapsed : 0;
+    const overriddenPrevMediaPorOp = prevMetrics.totalOps > 0 ? overriddenPrevImporte / prevMetrics.totalOps : 0;
+
+    const overriddenPctImporte = overriddenPrevImporte > 0
+        ? ((currMetrics.totalImporte - overriddenPrevImporte) / overriddenPrevImporte) * 100
+        : 0;
+
     const num = (n: number) => new Intl.NumberFormat('es-ES', { maximumFractionDigits: 2, minimumFractionDigits: 2 }).format(n);
 
     // Custom tooltip formating for charts
@@ -391,9 +415,35 @@ export default function ModPage() {
                             <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>{prevMetrics.totalOps}</td>
                             <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>{prevMetrics.workingDaysElapsed}</td>
                             <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>{num(prevMetrics.mediaOpsDiaria)}</td>
-                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>{num(prevMetrics.mediaPorOp)} €</td>
-                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>{num(prevMetrics.totalImporte)} €</td>
-                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>{num(prevMetrics.mediaImporteDiario)} €</td>
+                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>{num(overriddenPrevMediaPorOp)} €</td>
+                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                                    <input
+                                        type="text"
+                                        value={manualImportePrev}
+                                        placeholder={num(prevMetrics.totalImporte)}
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/[^0-9.,]/g, '');
+                                            const parsedVal = val.replace(',', '.');
+                                            handleManualImporteChange(parsedVal);
+                                        }}
+                                        style={{
+                                            width: '95px',
+                                            textAlign: 'center',
+                                            border: '1px solid #cbd5e1',
+                                            borderRadius: '4px',
+                                            padding: '4px 6px',
+                                            fontWeight: 700,
+                                            fontSize: '12px',
+                                            color: '#1e293b',
+                                            outline: 'none',
+                                            backgroundColor: '#f8fafc'
+                                        }}
+                                    />
+                                    <span>€</span>
+                                </div>
+                            </td>
+                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>{num(overriddenPrevMediaImporteDiario)} €</td>
                         </tr>
                         <tr style={{ backgroundColor: '#84cc16', color: 'white', height: '36px' }}>
                             <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 800 }}>{monthName} {year}</td>
@@ -411,7 +461,7 @@ export default function ModPage() {
                             <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 800, color: pctOps >= 0 ? '#bbf7d0' : '#fecdd3' }}>{pctOps > 0 ? '+' : ''}{pctOps.toFixed(2)}%</td>
                             <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 600 }}>Estimación Rentabilidad</td>
                             <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 800 }}>{num(currMetrics.estRentabilidad)} €</td>
-                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 800, color: pctImporte >= 0 ? '#bbf7d0' : '#fecdd3' }}>{pctImporte > 0 ? '+' : ''}{pctImporte.toFixed(2)}%</td>
+                            <td style={{ padding: '12px 8px', fontSize: '13px', fontWeight: 800, color: overriddenPctImporte >= 0 ? '#bbf7d0' : '#fecdd3' }}>{overriddenPctImporte > 0 ? '+' : ''}{overriddenPctImporte.toFixed(2)}%</td>
                         </tr>
                     </tbody>
                 </table>
@@ -429,13 +479,13 @@ export default function ModPage() {
                 <div className="mod-grid" style={{ display: 'grid', gap: '24px' }}>
                     {/* COLUMNA IZQUIERDA: DESGLOSE DIARIO */}
                     <div style={{ backgroundColor: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', alignSelf: 'start' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', fontSize: '12px' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', fontSize: '11px' }}>
                             <thead>
                                 <tr style={{ backgroundColor: '#0ea5e9', color: 'white' }}>
-                                    <th style={{ padding: '10px 8px', fontWeight: 700, fontSize: '12px' }}>Nº</th>
-                                    <th style={{ padding: '10px 8px', fontWeight: 700, fontSize: '12px' }}>Día</th>
-                                    <th style={{ padding: '10px 8px', fontWeight: 700, fontSize: '12px' }}>Acumulado</th>
-                                    <th style={{ padding: '10px 8px', fontWeight: 700, fontSize: '12px' }}>Diarias</th>
+                                    <th style={{ padding: '3px 4px', fontWeight: 700, fontSize: '11px' }}>Nº</th>
+                                    <th style={{ padding: '3px 4px', fontWeight: 700, fontSize: '11px' }}>Día</th>
+                                    <th style={{ padding: '3px 4px', fontWeight: 700, fontSize: '11px' }}>Acumulado</th>
+                                    <th style={{ padding: '3px 4px', fontWeight: 700, fontSize: '11px' }}>Diarias</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -444,10 +494,10 @@ export default function ModPage() {
 
                                     return (
                                         <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                            <td style={{ padding: '8px 10px', fontWeight: 700, color: '#475569', fontSize: '12px' }}>{row.day}</td>
-                                            <td style={{ padding: '8px 10px', color: '#64748b', fontSize: '12px' }}>{row.dayOfWeek}</td>
-                                            <td style={{ padding: '8px 10px', fontWeight: row.accumOps > 0 ? 800 : 400, color: row.accumOps > 0 ? '#0f172a' : '#cbd5e1', fontSize: '12px' }}>{(row.accumOps > 0 && row.ops > 0) ? row.accumOps : ''}</td>
-                                            <td style={{ padding: '8px 10px', fontWeight: row.ops > 0 ? 700 : 400, color: '#64748b', fontSize: '12px' }}>{row.ops > 0 ? row.ops : ''}</td>
+                                            <td style={{ padding: '2px 4px', fontWeight: 700, color: '#475569', fontSize: '11px' }}>{row.day}</td>
+                                            <td style={{ padding: '2px 4px', color: '#64748b', fontSize: '11px' }}>{row.dayOfWeek}</td>
+                                            <td style={{ padding: '2px 4px', fontWeight: row.accumOps > 0 ? 800 : 400, color: row.accumOps > 0 ? '#0f172a' : '#cbd5e1', fontSize: '11px' }}>{(row.accumOps > 0 && row.ops > 0) ? row.accumOps : ''}</td>
+                                            <td style={{ padding: '2px 4px', fontWeight: row.ops > 0 ? 700 : 400, color: '#64748b', fontSize: '11px' }}>{row.ops > 0 ? row.ops : ''}</td>
                                         </tr>
                                     )
                                 })}
