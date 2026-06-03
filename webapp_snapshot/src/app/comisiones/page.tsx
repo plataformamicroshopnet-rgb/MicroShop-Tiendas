@@ -382,7 +382,7 @@ export default function ComisionesDashboardPage() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24, marginTop: 32, marginBottom: 32 }}>
                 
                 {/* Mayor Comisión */}
-                <div className="card" style={{ padding: 28, display: 'flex', flexDirection: 'column', gap: 8, borderLeft: '4px solid #FFD700', backgroundColor: 'rgba(255, 215, 0, 0.05)' }}>
+                <div className="card" style={{ padding: '22px 24px', display: 'flex', flexDirection: 'column', gap: 6, borderLeft: '4px solid #FFD700', backgroundColor: 'rgba(255, 215, 0, 0.05)' }}>
                     <div style={{ color: 'var(--medium-gray)', fontSize: 13, textTransform: 'uppercase', letterSpacing: 1, display: 'flex', alignItems: 'center', gap: 6 }}>
                         <Trophy size={16} color="#FFD700" /> Mayor Comisión
                     </div>
@@ -395,7 +395,7 @@ export default function ComisionesDashboardPage() {
                 </div>
 
                 {/* Más Ventas */}
-                <div className="card" style={{ padding: 28, display: 'flex', flexDirection: 'column', gap: 8, borderLeft: '4px solid var(--mercedes-cyan)', backgroundColor: 'rgba(0, 173, 239, 0.05)' }}>
+                <div className="card" style={{ padding: '22px 24px', display: 'flex', flexDirection: 'column', gap: 6, borderLeft: '4px solid var(--mercedes-cyan)', backgroundColor: 'rgba(0, 173, 239, 0.05)' }}>
                     <div style={{ color: 'var(--medium-gray)', fontSize: 13, textTransform: 'uppercase', letterSpacing: 1, display: 'flex', alignItems: 'center', gap: 6 }}>
                         <Target size={16} color="var(--mercedes-cyan)" /> Más Ventas
                     </div>
@@ -408,7 +408,7 @@ export default function ComisionesDashboardPage() {
                 </div>
 
                 {/* Total Equipo */}
-                <div className="card" style={{ padding: 28, display: 'flex', flexDirection: 'column', gap: 8, borderLeft: '4px solid #34d399', backgroundColor: 'rgba(52, 211, 153, 0.05)' }}>
+                <div className="card" style={{ padding: '22px 24px', display: 'flex', flexDirection: 'column', gap: 6, borderLeft: '4px solid #34d399', backgroundColor: 'rgba(52, 211, 153, 0.05)' }}>
                     <div style={{ color: 'var(--medium-gray)', fontSize: 13, textTransform: 'uppercase', letterSpacing: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             <Euro size={16} color="#34d399" /> Total Comisiones
@@ -421,7 +421,7 @@ export default function ComisionesDashboardPage() {
                 </div>
 
                 {/* RANKING TOP 3 */}
-                <div className="card" style={{ padding: 28, display: 'flex', flexDirection: 'column', gap: 10, borderLeft: '4px solid #A855F7', backgroundColor: 'rgba(168, 85, 247, 0.05)', boxShadow: '0 4px 20px rgba(0,0,0,0.4)', position: 'relative', overflow: 'hidden' }}>
+                <div className="card" style={{ padding: '22px 24px', display: 'flex', flexDirection: 'column', gap: 8, borderLeft: '4px solid #A855F7', backgroundColor: 'rgba(168, 85, 247, 0.05)', boxShadow: '0 4px 20px rgba(0,0,0,0.4)', position: 'relative', overflow: 'hidden' }}>
                     <div style={{ color: 'var(--medium-gray)', fontSize: 13, textTransform: 'uppercase', letterSpacing: 1, display: 'flex', alignItems: 'center', gap: 6, zIndex: 2 }}>
                         <BadgeCheck size={16} color="#A855F7" /> Ranking del Mes
                     </div>
@@ -488,11 +488,11 @@ export default function ComisionesDashboardPage() {
                                 className="card" 
                                 onClick={() => setSelectedSellerFilter(isSelected ? null : s.name)}
                                 style={{ 
-                                    padding: '16px 20px', 
+                                    padding: '13px 20px', 
                                     display: 'flex', 
                                     flexDirection: 'column', 
                                     minHeight: 'auto',
-                                    gap: 12,
+                                    gap: 10,
                                     cursor: 'pointer',
                                     transition: 'all 0.2s',
                                     border: isSelected ? '2px solid var(--mercedes-cyan)' : '1px solid var(--border-color)',
@@ -577,16 +577,16 @@ export default function ComisionesDashboardPage() {
                                                 fontSize: 11,
                                                 borderBottom: 'none'
                                             }}>
-                                                <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700 }}>Nombre Comisión</th>
-                                                <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700 }}><AuditableCell metricKey="COMISION_INDIVIDUAL_TRAMO">Importe<br/>Primer Tramo</AuditableCell></th>
-                                                <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700 }}><AuditableCell metricKey="COMISION_INDIVIDUAL_TRAMO">Importe<br/>Segundo Tramo</AuditableCell></th>
-                                                <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700 }}>Ventas</th>
-                                                <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700 }}>Pte.</th>
-                                                <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700 }}>Obj. 1</th>
-                                                <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700 }}>Obj. 2</th>
-                                                <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700 }}>Falta 1</th>
-                                                <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700 }}>Falta 2</th>
-                                                <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700 }}>Comisión</th>
+                                                <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 700 }}>Nombre Comisión</th>
+                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700 }}><AuditableCell metricKey="COMISION_INDIVIDUAL_TRAMO">Importe<br/>Primer Tramo</AuditableCell></th>
+                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700 }}><AuditableCell metricKey="COMISION_INDIVIDUAL_TRAMO">Importe<br/>Segundo Tramo</AuditableCell></th>
+                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700 }}>Ventas</th>
+                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700 }}>Pte.</th>
+                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700 }}>Obj. 1</th>
+                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700 }}>Obj. 2</th>
+                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700 }}>Falta 1</th>
+                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700 }}>Falta 2</th>
+                                                <th style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700 }}>Comisión</th>
                                             </tr>
                                         </thead>
                                         <tbody style={{ backgroundColor: '#ffffff' }}>
@@ -656,7 +656,7 @@ export default function ComisionesDashboardPage() {
                                                 return (
                                                     <React.Fragment key={gName}>
                                                     <tr style={{ backgroundColor: rowBg, borderBottom: '1px solid #e2e8f0', transition: 'background 0.2s', color: '#334155' }}>
-                                                        <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
+                                                        <td style={{ padding: '8px 12px', fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
                                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                                                 <AuditableCell 
                                                                     metricKey={gName === 'ARPU' ? 'ARPU_VENTAS' : 'DISP_SEG_VENTAS'}
@@ -686,32 +686,32 @@ export default function ComisionesDashboardPage() {
                                                                 )}
                                                             </div>
                                                         </td>
-                                                        <td style={{ padding: '10px 8px', textAlign: 'center', fontSize: 13, color: '#334155' }}>
+                                                        <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 13, color: '#334155' }}>
                                                             {formatImporteTramo(rule.importePrimerTramo)}
                                                         </td>
-                                                        <td style={{ padding: '10px 8px', textAlign: 'center', fontSize: 13, color: '#334155' }}>
+                                                        <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 13, color: '#334155' }}>
                                                             {formatImporteTramo(rule.importeSegundoTramo)}
                                                         </td>
-                                                        <td style={{ padding: '10px 8px', textAlign: 'center', fontSize: 14, fontWeight: 800, color: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.05)' }}>
+                                                        <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 14, fontWeight: 800, color: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.05)' }}>
                                                             {formatQtty(qtty)}
                                                         </td>
-                                                        <td style={{ padding: '10px 8px', textAlign: 'center', fontSize: 13, fontWeight: 700, color: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.05)' }}>
+                                                        <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 13, fontWeight: 700, color: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.05)' }}>
                                                             {pendingQtty > 0 ? formatQtty(pendingQtty) : '-'}
                                                         </td>
-                                                        <td style={{ padding: '10px 8px', textAlign: 'center', fontSize: 13 }}>
+                                                        <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 13 }}>
                                                             {obj1 === 0 ? '-' : format(obj1)}
                                                         </td>
-                                                        <td style={{ padding: '10px 8px', textAlign: 'center', fontSize: 13 }}>
+                                                        <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 13 }}>
                                                             {displayObj2 === 0 ? '-' : <>{format(displayObj2)} {isTeamObj2 && <span style={{ fontSize: 10, color: 'var(--medium-gray)' }}>(Eq)</span>}</>}
                                                         </td>
-                                                        <td style={{ padding: '10px 8px', textAlign: 'center', fontSize: 13, fontWeight: 600 }}>
+                                                        <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 13, fontWeight: 600 }}>
                                                             {obj1 === 0 ? '-' : (falt1 > 0 ? <span style={{ color: '#ef4444' }}>{format(falt1)}</span> : <span style={{ color: '#10b981' }}>✓</span>)}
                                                         </td>
-                                                        <td style={{ padding: '10px 8px', textAlign: 'center', fontSize: 13, fontWeight: 600 }}>
+                                                        <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 13, fontWeight: 600 }}>
                                                             {displayObj2 === 0 ? '-' : (falt2 > 0 ? <span style={{ color: '#ef4444' }}>{format(falt2)} {isTeamObj2 ? 'entre todo el Equipo' : ''}</span> : <span style={{ color: '#10b981' }}>✓</span>)}
                                                         </td>
                                                         <td style={{ 
-                                                            padding: '10px 12px', 
+                                                            padding: '8px 12px', 
                                                             textAlign: 'right', 
                                                             fontSize: 14, 
                                                             fontWeight: 800, 
@@ -777,28 +777,28 @@ export default function ComisionesDashboardPage() {
                                                                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                                                             <thead>
                                                                                 <tr style={{ backgroundColor: '#0284c7', color: 'white', fontSize: '12px', fontWeight: 700 }}>
-                                                                                    {TRAMOS_MES.map(t => <th key={t.key} style={{ padding: '10px 4px', textAlign: 'center', width: '9%' }}>{t.label}</th>)}
-                                                                                    {TRAMOS_TRIM.map(t => <th key={t.key} style={{ padding: '10px 4px', textAlign: 'center', width: '9%' }}>{t.label}</th>)}
-                                                                                    <th style={{ padding: '10px 4px', textAlign: 'center', width: '9%' }}>Conect.</th>
-                                                                                    <th style={{ padding: '10px 4px', textAlign: 'center', width: '19%' }}>VENTAS TOTAL O2</th>
+                                                                                    {TRAMOS_MES.map(t => <th key={t.key} style={{ padding: '8px 4px', textAlign: 'center', width: '9%' }}>{t.label}</th>)}
+                                                                                    {TRAMOS_TRIM.map(t => <th key={t.key} style={{ padding: '8px 4px', textAlign: 'center', width: '9%' }}>{t.label}</th>)}
+                                                                                    <th style={{ padding: '8px 4px', textAlign: 'center', width: '9%' }}>Conect.</th>
+                                                                                    <th style={{ padding: '8px 4px', textAlign: 'center', width: '19%' }}>VENTAS TOTAL O2</th>
                                                                                 </tr>
                                                                             </thead>
                                                                             <tbody>
                                                                                 <tr style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: '#ffffff' }}>
                                                                                     {TRAMOS_MES.map(t => (
-                                                                                        <td key={t.key} style={{ padding: '12px 4px', textAlign: 'center', fontSize: '14px' }}>
+                                                                                        <td key={t.key} style={{ padding: '9px 4px', textAlign: 'center', fontSize: '14px' }}>
                                                                                             {renderCell(tm[t.key], checkAchievedMes(t.min, t.max))}
                                                                                         </td>
                                                                                     ))}
                                                                                     {TRAMOS_TRIM.map(t => (
-                                                                                        <td key={t.key} style={{ padding: '12px 4px', textAlign: 'center', fontSize: '14px' }}>
+                                                                                        <td key={t.key} style={{ padding: '9px 4px', textAlign: 'center', fontSize: '14px' }}>
                                                                                             {renderCell(tt[t.key], checkAchievedTrim(t.min, t.max))}
                                                                                         </td>
                                                                                     ))}
-                                                                                    <td style={{ padding: '12px 4px', textAlign: 'center', fontSize: '14px' }}>
+                                                                                    <td style={{ padding: '9px 4px', textAlign: 'center', fontSize: '14px' }}>
                                                                                         {renderCell(rule.conectividad, totalSales > 0 && !!rule.conectividad)}
                                                                                     </td>
-                                                                                    <td style={{ padding: '12px 4px', textAlign: 'center', fontSize: '16px', fontWeight: 800, color: '#0284c7' }}>
+                                                                                    <td style={{ padding: '9px 4px', textAlign: 'center', fontSize: '16px', fontWeight: 800, color: '#0284c7' }}>
                                                                                         <span style={{ borderBottom: '2px solid #0284c7', paddingBottom: '2px' }}>{totalSales}</span>
                                                                                     </td>
                                                                                 </tr>
@@ -811,22 +811,22 @@ export default function ComisionesDashboardPage() {
                                                     })}
                                                     </React.Fragment>
                                                 )
-                                            }) : <tr><td colSpan={10} style={{padding: 20, textAlign: 'center', color: '#64748b'}}>No hay reglas de comisión configuradas para este mes.</td></tr>
+                                            }) : <tr><td colSpan={10} style={{padding: 16, textAlign: 'center', color: '#64748b'}}>No hay reglas de comisión configuradas para este mes.</td></tr>
                                             })()}
                                             {s.extraGroups && s.extraGroups.length > 0 && s.extraGroups.filter((eg: any) => !String(eg.name).includes('TERRITORIAL O2 MOVILFREE')).map((eg: any, idx: number) => {
                                                 const safeName = eg.name || 'Bono Extra';
                                                 return (
                                                 <tr key={`extra-${idx}`} style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: '#ecfdf5', transition: 'background 0.2s', color: '#065f46' }}>
-                                                    <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                    <td style={{ padding: '8px 10px', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
                                                         <Trophy size={14} color="#10b981" /> {safeName}
                                                     </td>
-                                                    <td style={{ padding: '10px 8px', textAlign: 'center', fontSize: 14, fontWeight: 800, color: '#10b981' }}>
+                                                    <td style={{ padding: '8px 6px', textAlign: 'center', fontSize: 14, fontWeight: 800, color: '#10b981' }}>
                                                         {eg.count}
                                                     </td>
-                                                    <td colSpan={7} style={{ padding: '10px 8px', textAlign: 'center', fontSize: 13, color: '#a7f3d0' }}>
+                                                    <td colSpan={7} style={{ padding: '8px 6px', textAlign: 'center', fontSize: 13, color: '#a7f3d0' }}>
                                                         N/A
                                                     </td>
-                                                    <td style={{ padding: '10px 12px', textAlign: 'right', fontSize: 14, fontWeight: 800, color: '#10b981' }}>
+                                                    <td style={{ padding: '8px 10px', textAlign: 'right', fontSize: 14, fontWeight: 800, color: '#10b981' }}>
                                                         {Math.round(eg.totalAmount).toLocaleString('es-ES')} €
                                                     </td>
                                                 </tr>
@@ -841,9 +841,9 @@ export default function ComisionesDashboardPage() {
                             {isSelected && (
                                 <div style={{ 
                                     marginTop: -3, 
-                                    marginLeft: 16, 
-                                    marginRight: 16,
-                                    padding: '24px 32px',
+                                    marginLeft: 13, 
+                                    marginRight: 13,
+                                    padding: '19px 26px',
                                     backgroundColor: 'var(--card-bg)',
                                     borderLeft: '2px solid var(--mercedes-cyan)',
                                     borderRight: '2px solid var(--mercedes-cyan)',
@@ -855,20 +855,20 @@ export default function ComisionesDashboardPage() {
                                 }}>
                                     {(normalizeRole(user?.role) !== 'COMERCIAL' || String(s.name).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === String(user?.username).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()) && (
                                     <>
-                                        <h3 style={{ fontSize: 16, color: 'var(--mercedes-cyan)', margin: '0 0 16px 0', display:'flex', gap: 10, alignItems: 'center', textTransform: 'uppercase', letterSpacing: 1 }}>
+                                        <h3 style={{ fontSize: 16, color: 'var(--mercedes-cyan)', margin: '0 0 13px 0', display:'flex', gap: 8, alignItems: 'center', textTransform: 'uppercase', letterSpacing: 1 }}>
                                             <ListFilter size={18} /> Registro Operativo de {s.name}
                                         </h3>
                                         <div style={{ overflowX: 'auto', border: '1px solid rgba(0, 173, 239, 0.2)' }}>
                                             <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse', fontSize: 13 }}>
                                                 <thead>
                                                     <tr style={{ backgroundColor: '#00ADEF', color: 'var(--bg-card)' }}>
-                                                        <th style={{ padding: '12px 16px' }}>Producto</th>
-                                                        <th style={{ padding: '12px 16px' }}>Cliente</th>
-                                                        <th style={{ padding: '12px 16px' }}>CIF</th>
-                                                        <th style={{ padding: '12px 16px' }}>Tipo de Venta</th>
-                                                        <th style={{ padding: '12px 16px' }}>Fecha</th>
-                                                        <th style={{ padding: '12px 16px', textAlign: 'center' }}>Cuota Total</th>
-                                                        <th style={{ padding: '12px 16px' }}>Pendiente</th>
+                                                        <th style={{ padding: '10px 13px' }}>Producto</th>
+                                                        <th style={{ padding: '10px 13px' }}>Cliente</th>
+                                                        <th style={{ padding: '10px 13px' }}>CIF</th>
+                                                        <th style={{ padding: '10px 13px' }}>Tipo de Venta</th>
+                                                        <th style={{ padding: '10px 13px' }}>Fecha</th>
+                                                        <th style={{ padding: '10px 13px', textAlign: 'center' }}>Cuota Total</th>
+                                                        <th style={{ padding: '10px 13px' }}>Pendiente</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -884,16 +884,16 @@ export default function ComisionesDashboardPage() {
                                                         
                                                         return (
                                                             <tr key={venta.id || i} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
-                                                                <td style={{ padding: '12px 16px', color: 'var(--light-text)', fontWeight: 600 }}>{venta.producto || '-'}</td>
-                                                                <td style={{ padding: '12px 16px', color: 'var(--light-text)' }}>{venta.nombreCliente || '-'}</td>
-                                                                <td style={{ padding: '12px 16px', color: 'var(--light-text)' }}>{venta.nif || '-'}</td>
-                                                                <td style={{ padding: '12px 16px', color: 'var(--light-text)' }}>{venta.categoria || venta.detalle || venta.sheet || '-'}</td>
-                                                                <td style={{ padding: '12px 16px', color: 'var(--light-text)' }}>{venta.fecha || '-'}</td>
-                                                                <td style={{ padding: '12px 16px', color: 'var(--light-text)', textAlign: 'center', fontWeight: cuotaVal > 0 ? 800 : 'normal' }}>{formattedCuota}</td>
-                                                                <td style={{ padding: '12px 16px' }}>
+                                                                <td style={{ padding: '10px 13px', color: 'var(--light-text)', fontWeight: 600 }}>{venta.producto || '-'}</td>
+                                                                <td style={{ padding: '10px 13px', color: 'var(--light-text)' }}>{venta.nombreCliente || '-'}</td>
+                                                                <td style={{ padding: '10px 13px', color: 'var(--light-text)' }}>{venta.nif || '-'}</td>
+                                                                <td style={{ padding: '10px 13px', color: 'var(--light-text)' }}>{venta.categoria || venta.detalle || venta.sheet || '-'}</td>
+                                                                <td style={{ padding: '10px 13px', color: 'var(--light-text)' }}>{venta.fecha || '-'}</td>
+                                                                <td style={{ padding: '10px 13px', color: 'var(--light-text)', textAlign: 'center', fontWeight: cuotaVal > 0 ? 800 : 'normal' }}>{formattedCuota}</td>
+                                                                <td style={{ padding: '10px 13px' }}>
                                                                     <span style={{ 
                                                                         display: 'inline-block', 
-                                                                        padding: '4px 10px', 
+                                                                        padding: '3px 8px', 
                                                                         borderRadius: '12px', 
                                                                         fontSize: '11px', 
                                                                         fontWeight: 600, 
@@ -908,20 +908,20 @@ export default function ComisionesDashboardPage() {
                                                     })}
                                                     {s.rawExtras?.length > 0 && s.rawExtras.map((ex: any, i: number) => (
                                                         <tr key={`extra-${ex.id || i}`} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'rgba(16, 185, 129, 0.05)' }}>
-                                                            <td style={{ padding: '12px 16px', color: '#059669', fontWeight: 600 }}>
-                                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                            <td style={{ padding: '10px 13px', color: '#059669', fontWeight: 600 }}>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                                                                     ⚡ {ex.rule?.name || 'Incentivo Manual'}
                                                                 </div>
                                                             </td>
-                                                            <td style={{ padding: '12px 16px', color: '#059669' }}>{ex.customerName || '-'}</td>
-                                                            <td style={{ padding: '12px 16px', color: '#059669' }}>{ex.customerNif || '-'}</td>
-                                                            <td style={{ padding: '12px 16px', color: '#059669' }}>EXTRA TELEFÓNICA</td>
-                                                            <td style={{ padding: '12px 16px', color: '#059669' }}>{new Date(ex.createdAt).toLocaleDateString()}</td>
-                                                            <td style={{ padding: '12px 16px', color: '#059669', textAlign: 'center' }}>—</td>
-                                                            <td style={{ padding: '12px 16px' }}>
+                                                            <td style={{ padding: '10px 13px', color: '#059669' }}>{ex.customerName || '-'}</td>
+                                                            <td style={{ padding: '10px 13px', color: '#059669' }}>{ex.customerNif || '-'}</td>
+                                                            <td style={{ padding: '10px 13px', color: '#059669' }}>EXTRA TELEFÓNICA</td>
+                                                            <td style={{ padding: '10px 13px', color: '#059669' }}>{new Date(ex.createdAt).toLocaleDateString()}</td>
+                                                            <td style={{ padding: '10px 13px', color: '#059669', textAlign: 'center' }}>—</td>
+                                                            <td style={{ padding: '10px 13px' }}>
                                                                 <span style={{ 
                                                                     display: 'inline-block', 
-                                                                    padding: '4px 10px', 
+                                                                    padding: '3px 8px', 
                                                                     borderRadius: '12px', 
                                                                     fontSize: '11px', 
                                                                     fontWeight: 600, 
