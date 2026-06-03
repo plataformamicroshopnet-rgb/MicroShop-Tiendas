@@ -128,24 +128,136 @@ export default function ModPage() {
                     }
                 });
 
-                // Obtener el total global del mes a través de renderDashboardData
+                // Obtener el total global del mes a través de renderDashboardData o tubería de liquidación para Junio 2026
                 let globalImporte = 0;
                 const saleMonth = `${y}${m.toString().padStart(2, '0')}`;
 
-                if (importesPyme.length > 0) {
-                    const dashPyme = renderDashboardData('Pyme', importesPyme, objetivos.Pyme?.[saleMonth] || {}, salesList, objGrupos, periodData);
-                    globalImporte += dashPyme.totalImporte;
-                }
-                if (importesPlus.length > 0) {
-                    const dashCaptador = renderDashboardData('Captador', importesPlus, objetivos.Captador?.[saleMonth] || {}, salesList, objGrupos, periodData);
-                    globalImporte += dashCaptador.totalImporte;
-                }
+                if (y === 2026 && m === 6) {
+                    // --- TUBERÍA DE COMISIONES REALES PARA JUNIO 2026 ---
+                    const parseSafeFloat = (val: any): number => {
+                        if (val === null || val === undefined) return 0;
+                        if (typeof val === 'number') return isNaN(val) ? 0 : val;
+                        const clean = String(val).replace('€', '').replace(/\s/g, '').replace(',', '.').trim();
+                        const num = parseFloat(clean);
+                        return isNaN(num) ? 0 : num;
+                    };
 
-                // Añadir extras al total global
-                activeExtras.forEach((ex: any) => {
-                    const amount = Number(ex.amount || ex.telecomRewardAmount) || 0;
-                    globalImporte += amount;
-                });
+                    const pymeMonthObj = objetivos.Pyme?.[saleMonth] || {};
+                    const captadorMonthObj = objetivos.Captador?.[saleMonth] || {};
+                    const pymeData = renderDashboardData('Pyme', importesPyme, pymeMonthObj, salesList, objGrupos, periodData);
+                    const captadorData = renderDashboardData('Captador', importesPlus, captadorMonthObj, salesList, objGrupos, periodData);
+
+                    const getCommission = (sale: any) => {
+                        if (sale.anulado === 'Si' || sale.pendiente === 'Anulado') return 0;
+
+                        let sMonth = ''
+                        if (sale.fecha) {
+                           const parts = sale.fecha.split('/')
+                           if (parts.length === 3) sMonth = `${parts[2]}${parts[1]}`
+                           else if (sale.fecha.includes('-')) {
+                               const p = sale.fecha.split('-')
+                               if (p.length >= 2) sMonth = `${p[0]}${p[1]}`
+                           }
+                        }
+                        
+                        const getFallbackValue = () => {
+                             let val = sale.importe || sale.cuota || 0;
+                             const det = (sale.detalle || '').toLowerCase();
+                             if (!val && (det === 'ti' || det === 'tma' || det === 'rent' || det === 'micro')) {
+                                 let catalogKey = '';
+                                 if (det === 'ti') catalogKey = 'Ti';
+                                 if (det === 'tma' || det === 'rent') catalogKey = 'Rent';
+                                 if (det === 'micro') catalogKey = 'Micro';
+                                 
+                                 const list = catalogs[catalogKey] || [];
+                                 const found = list.find((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
+                                 if (found) {
+                                     val = parseSafeFloat(found.anual);
+                                 }
+                             }
+                             return parseSafeFloat(val);
+                        }
+
+                        if (!sMonth) return getFallbackValue();
+                        if (sMonth !== saleMonth) return getFallbackValue();
+                        
+                        const det = (sale.detalle || '').toLowerCase();
+                        const isTV = det === 'suscripciones tv' || det === 'suscripcion tv';
+                        
+                        if (det === 'o2' || det === 'seguro' || det === 'mimovistar' || det === 'repos' || det === 'varios' || isTV || det === 'prepago' || det === 'resto baf' || det === 'traslado mimovistar') {
+                            return parseSafeFloat(sale.importe || sale.cuota || 0);
+                        }
+                        
+                        let overrideBaseValue: number | undefined = undefined;
+                        if (det === 'ti' || det === 'tma' || det === 'rent' || det === 'micro') {
+                            let catalogKey = '';
+                            if (det === 'ti') catalogKey = 'Ti';
+                            if (det === 'tma' || det === 'rent') catalogKey = 'Rent';
+                            if (det === 'micro') catalogKey = 'Micro';
+                            
+                            const list = catalogs[catalogKey] || [];
+                            const matchingProducts = list.filter((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
+                            
+                            let found = matchingProducts[0];
+                            if (matchingProducts.length > 1) {
+                                const correctlyDated = matchingProducts.find((c: any) => isVentaWithinDates(sale.fecha, c.validFrom, c.validTo));
+                                if (correctlyDated) found = correctlyDated;
+                            }
+
+                            if (found) {
+                                overrideBaseValue = Number(String(found.anual || 0).replace(',','.'));
+                                
+                                if (det === 'ti') {
+                                    return overrideBaseValue;
+                                }
+                                
+                                if (det === 'tma' || det === 'rent') {
+                                    const isConCoste = sale.rentConCoste && (sale.rentConCoste.toLowerCase() === 'sí' || sale.rentConCoste.toLowerCase() === 'si');
+                                    if (isConCoste) {
+                                        return Number(String(found.comisionConCoste || 0).replace(',','.'));
+                                    } else {
+                                        return Number(String(found.comision || 0).replace(',','.'));
+                                    }
+                                }
+                            }
+                        }
+
+                        const plusCodesExact = ['plus 1ks', 'plus 1sk', 'plus nfg', 'plus n7d', 'plus k2z', 'plus zf7'];
+                        const isPlus = plusCodesExact.some(c => String(sale.codigo || '').toLowerCase().includes(c));
+                        const dashboardRows = isPlus ? pymeData.rows : captadorData.rows;
+                        return calculateDynamicCommission(sale, dashboardRows, overrideBaseValue);
+                    };
+
+                    // Filter out Solar360 sales as done in the screen table of liquidacion
+                    const salesForTable = salesList.filter((s: any) => {
+                        const p = String(s.producto || '').toLowerCase()
+                        const c = String(s.categoria || '').toLowerCase()
+                        const d = String(s.detalle || '').toLowerCase()
+                        return !p.includes('solar360') && !p.includes('solar 360') && 
+                               !c.includes('solar360') && !c.includes('solar 360') && 
+                               !d.includes('solar360') && !d.includes('solar 360')
+                    });
+
+                    const salesCommissions = salesForTable.reduce((acc: number, s: any) => acc + getCommission(s), 0);
+                    const telecomExtras = activeExtras.reduce((acc: number, ex: any) => acc + Number(ex.telecomRewardAmount || 0), 0);
+                    globalImporte = salesCommissions + telecomExtras;
+                } else {
+                    // --- CÁLCULO ESTÁNDAR ORIGINAL ---
+                    if (importesPyme.length > 0) {
+                        const dashPyme = renderDashboardData('Pyme', importesPyme, objetivos.Pyme?.[saleMonth] || {}, salesList, objGrupos, periodData);
+                        globalImporte += dashPyme.totalImporte;
+                    }
+                    if (importesPlus.length > 0) {
+                        const dashCaptador = renderDashboardData('Captador', importesPlus, objetivos.Captador?.[saleMonth] || {}, salesList, objGrupos, periodData);
+                        globalImporte += dashCaptador.totalImporte;
+                    }
+
+                    // Añadir extras al total global
+                    activeExtras.forEach((ex: any) => {
+                        const amount = Number(ex.amount || ex.telecomRewardAmount) || 0;
+                        globalImporte += amount;
+                    });
+                }
 
                 // Prorratear el importe global sobre el número total de operaciones
                 let totalOpsGlobal = stats.reduce((acc, d) => acc + d.ops, 0);
