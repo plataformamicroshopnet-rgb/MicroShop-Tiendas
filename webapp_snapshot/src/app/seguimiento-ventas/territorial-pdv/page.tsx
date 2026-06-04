@@ -508,56 +508,39 @@ export default function TerritorialPdvPage() {
         </div>
       </div>
 
-      {/* MANUAL/INFORMACIÓN SUTIL */}
-      <div style={{ 
-        backgroundColor: 'rgba(0, 173, 239, 0.05)', 
-        border: '1px solid rgba(0, 173, 239, 0.2)', 
-        borderRadius: '12px', 
-        padding: '16px 20px', 
-        marginBottom: '24px', 
-        display: 'flex', 
-        gap: '12px', 
-        alignItems: 'flex-start' 
-      }}>
-        <Info size={20} color="var(--mercedes-cyan)" style={{ flexShrink: 0, marginTop: '2px' }} />
-        <div style={{ fontSize: '13px', lineHeight: 1.5, color: 'var(--text-muted)' }}>
-          <strong style={{ color: 'var(--text-main)' }}>Funcionamiento de la tabla:</strong> Los <strong style={{ color: 'var(--text-main)' }}>Objetivos</strong> proceden de la configuración activa en <em>Entrada de Datos {'>'} Comisiones para Tiendas</em>. Las <strong style={{ color: 'var(--text-main)' }}>Ventas</strong> suman las operaciones de todas las tiendas físicas consolidadas. El <strong style={{ color: 'var(--text-main)' }}>Porcentaje</strong> y el <strong style={{ color: 'var(--text-main)' }}>Importe</strong> se calculan de acuerdo a los tramos de cumplimiento territorial homologados.
-        </div>
-      </div>
-
-      {/* CONTENEDOR DE TABLA PREMIUM (GLASSMORPHISM DARK) */}
+      {/* CONTENEDOR DE TABLA PREMIUM (GLASSMORPHISM DARK COMPRESSED) */}
       <div style={{ 
         backgroundColor: 'var(--bg-card)', 
-        borderRadius: '16px', 
+        borderRadius: '12px', 
         border: '1px solid var(--border-light)', 
         overflow: 'hidden', 
-        boxShadow: '0 10px 30px rgba(0,0,0,0.2)', 
+        boxShadow: '0 8px 24px rgba(0,0,0,0.2)', 
         backdropFilter: 'blur(10px)' 
       }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12px' }}>
           <thead>
             <tr style={{ 
               background: 'linear-gradient(90deg, #0ea5e9, #0284c7)', 
               color: 'white',
               borderBottom: '1px solid var(--border-strong)'
             }}>
-              <th style={{ padding: '16px 20px', fontWeight: 700 }}>Negocio</th>
-              <th style={{ padding: '16px 20px', fontWeight: 700 }}>Palanca</th>
-              <th style={{ padding: '16px 20px', fontWeight: 700, textAlign: 'center' }}>Objetivos</th>
-              <th style={{ padding: '16px 20px', fontWeight: 600, textAlign: 'center', fontSize: '11px', whiteSpace: 'normal', lineHeight: 1.2 }}>Tramo 1<br/>(&gt;=100% y &lt;115%)</th>
-              <th style={{ padding: '16px 20px', fontWeight: 600, textAlign: 'center', fontSize: '11px', whiteSpace: 'normal', lineHeight: 1.2 }}>Tramo 2<br/>(&gt;=115% y &lt;130%)</th>
-              <th style={{ padding: '16px 20px', fontWeight: 600, textAlign: 'center', fontSize: '11px', whiteSpace: 'normal', lineHeight: 1.2 }}>Tramo 3<br/>(&gt;=130%)</th>
-              <th style={{ padding: '16px 20px', fontWeight: 600, textAlign: 'center', fontSize: '11px', whiteSpace: 'normal', lineHeight: 1.2 }}>Bonificación<br/>(&gt;=100%)</th>
-              <th style={{ padding: '16px 20px', fontWeight: 700, textAlign: 'center' }}>Ventas</th>
-              <th style={{ padding: '16px 20px', fontWeight: 700, textAlign: 'center' }}>Porcentaje Ventas</th>
-              <th style={{ padding: '16px 20px', fontWeight: 700, textAlign: 'right' }}>Importe</th>
+              <th style={{ padding: '8px 12px', fontWeight: 700 }}>Negocio</th>
+              <th style={{ padding: '8px 12px', fontWeight: 700 }}>Palanca</th>
+              <th style={{ padding: '8px 12px', fontWeight: 700, textAlign: 'center' }}>Objetivos</th>
+              <th style={{ padding: '8px 12px', fontWeight: 600, textAlign: 'center', fontSize: '10px', whiteSpace: 'normal', lineHeight: 1.1 }}>Tramo 1<br/>(&gt;=100% y &lt;115%)</th>
+              <th style={{ padding: '8px 12px', fontWeight: 600, textAlign: 'center', fontSize: '10px', whiteSpace: 'normal', lineHeight: 1.1 }}>Tramo 2<br/>(&gt;=115% y &lt;130%)</th>
+              <th style={{ padding: '8px 12px', fontWeight: 600, textAlign: 'center', fontSize: '10px', whiteSpace: 'normal', lineHeight: 1.1 }}>Tramo 3<br/>(&gt;=130%)</th>
+              <th style={{ padding: '8px 12px', fontWeight: 600, textAlign: 'center', fontSize: '10px', whiteSpace: 'normal', lineHeight: 1.1 }}>Bonificación<br/>(&gt;=100%)</th>
+              <th style={{ padding: '8px 12px', fontWeight: 700, textAlign: 'center' }}>Ventas</th>
+              <th style={{ padding: '8px 12px', fontWeight: 700, textAlign: 'center' }}>Porcentaje Ventas</th>
+              <th style={{ padding: '8px 12px', fontWeight: 700, textAlign: 'right' }}>Importe</th>
             </tr>
           </thead>
           <tbody>
             <style dangerouslySetInnerHTML={{
               __html: `
                 .row-hover {
-                  transition: background-color 0.2s ease, transform 0.2s ease;
+                  transition: background-color 0.15s ease;
                 }
                 .row-hover:hover {
                   background-color: rgba(255,255,255,0.02) !important;
@@ -592,34 +575,34 @@ export default function TerritorialPdvPage() {
                     backgroundColor: 'transparent'
                   }}
                 >
-                  <td style={{ padding: '14px 20px', fontWeight: 600, color: 'var(--text-muted)' }}>{row.negocio}</td>
-                  <td style={{ padding: '14px 20px', fontWeight: 700, color: 'var(--text-main)' }}>{row.palanca}</td>
+                  <td style={{ padding: '6px 12px', fontWeight: 600, color: 'var(--text-muted)' }}>{row.negocio}</td>
+                  <td style={{ padding: '6px 12px', fontWeight: 700, color: 'var(--text-main)' }}>{row.palanca}</td>
                   
-                  <td style={{ padding: '14px 20px', textAlign: 'center', fontWeight: 600, color: 'var(--text-main)', backgroundColor: 'rgba(255,255,255,0.01)' }}>
+                  <td style={{ padding: '6px 12px', textAlign: 'center', fontWeight: 600, color: 'var(--text-main)', backgroundColor: 'rgba(255,255,255,0.01)' }}>
                     {displayObj}
                   </td>
                   
                   {/* Tramos */}
-                  <td style={{ padding: '14px 20px', textAlign: 'center', color: row.tramoAplicado.includes('Tramo 1') ? '#34c759' : 'var(--text-muted)', fontWeight: row.tramoAplicado.includes('Tramo 1') ? 700 : 400 }}>
+                  <td style={{ padding: '6px 12px', textAlign: 'center', color: row.tramoAplicado.includes('Tramo 1') ? '#34c759' : 'var(--text-muted)', fontWeight: row.tramoAplicado.includes('Tramo 1') ? 700 : 400 }}>
                     {row.t1Raw}
                   </td>
-                  <td style={{ padding: '14px 20px', textAlign: 'center', color: row.tramoAplicado.includes('Tramo 2') ? '#34c759' : 'var(--text-muted)', fontWeight: row.tramoAplicado.includes('Tramo 2') ? 700 : 400 }}>
+                  <td style={{ padding: '6px 12px', textAlign: 'center', color: row.tramoAplicado.includes('Tramo 2') ? '#34c759' : 'var(--text-muted)', fontWeight: row.tramoAplicado.includes('Tramo 2') ? 700 : 400 }}>
                     {row.t2Raw}
                   </td>
-                  <td style={{ padding: '14px 20px', textAlign: 'center', color: row.tramoAplicado.includes('Tramo 3') ? '#34c759' : 'var(--text-muted)', fontWeight: row.tramoAplicado.includes('Tramo 3') ? 700 : 400 }}>
+                  <td style={{ padding: '6px 12px', textAlign: 'center', color: row.tramoAplicado.includes('Tramo 3') ? '#34c759' : 'var(--text-muted)', fontWeight: row.tramoAplicado.includes('Tramo 3') ? 700 : 400 }}>
                     {row.t3Raw}
                   </td>
-                  <td style={{ padding: '14px 20px', textAlign: 'center', color: row.tramoAplicado.includes('Bonif') ? '#34c759' : 'var(--text-muted)', fontWeight: row.tramoAplicado.includes('Bonif') ? 700 : 400 }}>
+                  <td style={{ padding: '6px 12px', textAlign: 'center', color: row.tramoAplicado.includes('Bonif') ? '#34c759' : 'var(--text-muted)', fontWeight: row.tramoAplicado.includes('Bonif') ? 700 : 400 }}>
                     {row.bonifRaw}
                   </td>
 
                   {/* Resultados */}
-                  <td style={{ padding: '14px 20px', textAlign: 'center', fontWeight: 700, color: 'var(--mercedes-cyan)' }}>
+                  <td style={{ padding: '6px 12px', textAlign: 'center', fontWeight: 700, color: 'var(--mercedes-cyan)' }}>
                     {displaySales}
                   </td>
                   
                   <td style={{ 
-                    padding: '14px 20px', 
+                    padding: '6px 12px', 
                     textAlign: 'center', 
                     fontWeight: 800, 
                     color: row.pct >= 100 ? '#34c759' : (row.pct > 0 ? '#ff9500' : 'var(--text-muted)')
@@ -628,11 +611,11 @@ export default function TerritorialPdvPage() {
                   </td>
                   
                   <td style={{ 
-                    padding: '14px 20px', 
+                    padding: '6px 12px', 
                     textAlign: 'right', 
                     fontWeight: 900, 
                     color: hasEarned ? '#34c759' : 'var(--text-muted)',
-                    fontSize: '14px',
+                    fontSize: '13px',
                     backgroundColor: hasEarned ? 'rgba(52, 199, 89, 0.05)' : 'transparent'
                   }}>
                     {formatCurrency(row.importe)}
@@ -647,9 +630,9 @@ export default function TerritorialPdvPage() {
               borderTop: '2px solid var(--border-strong)',
               fontWeight: 800
             }}>
-              <td colSpan={2} style={{ padding: '18px 20px', fontSize: '14px', color: 'var(--text-main)' }}>Total Consolidado Tiendas</td>
+              <td colSpan={2} style={{ padding: '10px 12px', fontSize: '13px', color: 'var(--text-main)' }}>Total Consolidado Tiendas</td>
               <td colSpan={7}></td>
-              <td style={{ padding: '18px 20px', textAlign: 'right', fontSize: '16px', color: '#34c759', fontWeight: 900 }}>
+              <td style={{ padding: '10px 12px', textAlign: 'right', fontSize: '14px', color: '#34c759', fontWeight: 900 }}>
                 {formatCurrency(totalImporteTerritorial)}
               </td>
             </tr>
@@ -657,36 +640,36 @@ export default function TerritorialPdvPage() {
         </table>
       </div>
 
-      {/* SECCIÓN COMPARATIVA Y DATOS ADICIONALES (AÑO ANTERIOR Y MOD ACTUAL) */}
+      {/* SECCIÓN COMPARATIVA Y DATOS ADICIONALES (AÑO ANTERIOR Y MOD ACTUAL - COMPRESSED) */}
       <div style={{ 
         backgroundColor: 'var(--bg-card)', 
-        borderRadius: '16px', 
+        borderRadius: '12px', 
         border: '1px solid var(--border-light)', 
-        padding: '24px', 
-        marginTop: '32px',
-        boxShadow: '0 10px 30px rgba(0,0,0,0.2)', 
+        padding: '14px 18px', 
+        marginTop: '16px',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.2)', 
         backdropFilter: 'blur(10px)'
       }}>
-        <h3 style={{ margin: '0 0 20px 0', fontSize: '15px', fontWeight: 800, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Percent size={18} color="var(--mercedes-cyan)" /> Datos Comparativos de Rentabilidad
+        <h3 style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: 800, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Percent size={16} color="var(--mercedes-cyan)" /> Datos Comparativos de Rentabilidad
         </h3>
         
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {/* Fila Año Anterior - Editable */}
           <div style={{ 
             display: 'flex', 
             justifyContent: 'space-between', 
             alignItems: 'center', 
-            padding: '16px 20px', 
+            padding: '10px 14px', 
             backgroundColor: 'rgba(255, 255, 255, 0.01)', 
-            borderRadius: '10px', 
+            borderRadius: '8px', 
             border: '1px solid var(--border-light)' 
           }}>
             <div>
-              <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '13px' }}>
+              <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '12px' }}>
                 Importe Año Anterior ({prevYearLabel})
               </div>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+              <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
                 Valor de referencia editable manualmente para el mismo mes del año anterior.
               </div>
             </div>
@@ -702,20 +685,20 @@ export default function TerritorialPdvPage() {
                   handleManualImportePrevYearChange(parsedVal);
                 }}
                 style={{
-                  width: '140px',
+                  width: '120px',
                   textAlign: 'right',
                   border: '1px solid var(--border-strong)',
-                  borderRadius: '6px',
-                  padding: '8px 12px',
+                  borderRadius: '5px',
+                  padding: '5px 8px',
                   fontWeight: 800,
-                  fontSize: '14px',
+                  fontSize: '13px',
                   color: 'var(--text-main)',
                   backgroundColor: 'rgba(0,0,0,0.2)',
                   outline: 'none',
-                  boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)'
+                  boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.2)'
                 }}
               />
-              <span style={{ fontWeight: 700, color: 'var(--text-muted)', fontSize: '14px' }}>€</span>
+              <span style={{ fontWeight: 700, color: 'var(--text-muted)', fontSize: '13px' }}>€</span>
             </div>
           </div>
 
@@ -724,16 +707,16 @@ export default function TerritorialPdvPage() {
             display: 'flex', 
             justifyContent: 'space-between', 
             alignItems: 'center', 
-            padding: '16px 20px', 
+            padding: '10px 14px', 
             backgroundColor: 'rgba(255, 255, 255, 0.01)', 
-            borderRadius: '10px', 
+            borderRadius: '8px', 
             border: '1px solid var(--border-light)' 
           }}>
             <div>
-              <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '13px' }}>
+              <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '12px' }}>
                 Importe Mensual MOD ({currYearLabel})
               </div>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+              <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
                 Importe mensual calculado para el mes en vigor según la pantalla MOD.
               </div>
             </div>
@@ -741,7 +724,7 @@ export default function TerritorialPdvPage() {
             <div style={{ 
               fontWeight: 900, 
               color: '#34c759', 
-              fontSize: '18px', 
+              fontSize: '16px', 
               paddingRight: '18px'
             }}>
               {formatCurrency(modImporte)}
