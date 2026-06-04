@@ -100,7 +100,7 @@ export function canView(user: any, moduleName: string): boolean {
   if (moduleName === 'VIEW_DASHBOARD') return true;
   if (moduleName === 'MODULE_TIENDAS') return activePerms.includes('HUB_TIENDAS');
   if (moduleName === 'MODULE_MOVILFREE') return activePerms.includes('HUB_MOVILFREE');
-  if (moduleName === 'MODULE_JEFE_TIENDAS') return activePerms.includes('HUB_SEGUIMIENTO');
+  if (moduleName === 'MODULE_JEFE_TIENDAS') return activePerms.includes('HUB_SEGUIMIENTO') || activePerms.includes('MODULE_DIRECCION');
   if (moduleName === 'MODULE_BACK_OFFICE') return activePerms.includes('HUB_BACKOFFICE');
   if (moduleName === 'MODULE_LIQUIDACION') return activePerms.includes('HUB_LIQUIDACIONES');
   if (moduleName === 'MODULE_CRISTINA') return activePerms.includes('HUB_CRISTINA');

@@ -11,7 +11,7 @@ import { renderDashboardData, calculateDynamicCommission, sanitizeSale, normaliz
 
 export default function ModPage() {
     const router = useRouter()
-    const { authorized } = useGuard('MODULE_JEFE_FFVV')
+    const { authorized } = useGuard('MODULE_JEFE_TIENDAS')
     const { activePeriodKey } = usePeriod()
 
     const [loading, setLoading] = useState(true)

@@ -61,14 +61,6 @@ export default function DireccionTiendasPage() {
       action: () => router.push('/liquidacion/rentabilidad-tiendas'),
       color: 'rgba(168, 85, 247, 0.1)',
       textColor: '#a855f7'
-    },
-    {
-      title: 'Caja',
-      description: 'Gestión de entradas, salidas y trazabilidad de efectivo entre tiendas y Central.',
-      icon: Wallet,
-      action: () => router.push('/tiendas/caja'),
-      color: 'rgba(59, 130, 246, 0.1)',
-      textColor: '#3b82f6'
     }
   ]
 
