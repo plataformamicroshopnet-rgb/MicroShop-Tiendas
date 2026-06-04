@@ -41,7 +41,7 @@ const formatCurrency = (val: any) => {
   return new Intl.NumberFormat('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num) + '€';
 }
 
-const getCuotaTotal = (sale: any): number => {
+const getCuotaTotal = (sale: any, catalogs?: Record<string, any[]>): number => {
   const parse = (val: any): number => {
     if (val === null || val === undefined) return 0;
     if (typeof val === 'number') return isNaN(val) ? 0 : val;
@@ -55,6 +55,13 @@ const getCuotaTotal = (sale: any): number => {
   const isSeguro = det === 'seguro' || cat === 'seguro';
   
   if (isSeguro) {
+    if (catalogs) {
+      const list = catalogs['Seguro'] || [];
+      const found = list.find((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
+      if (found && found.anual) {
+        return parse(found.anual);
+      }
+    }
     if (sale.seguroImporte) {
       const v = parse(sale.seguroImporte);
       if (v > 0) return v;
@@ -67,10 +74,83 @@ const getCuotaTotal = (sale: any): number => {
   return 0;
 };
 
-function CommercialDashboard({ data, activeExtras = [], isComercial, isAdmin }: { data: any[], activeExtras?: any[], isComercial?: boolean, isAdmin?: boolean }) {
+function CommercialDashboard({ data, activeExtras = [], isComercial, isAdmin, catalogs }: { data: any[], activeExtras?: any[], isComercial?: boolean, isAdmin?: boolean, catalogs?: Record<string, any[]> }) {
   const totalVentas = data.length + activeExtras.length;
   const pendientes = data.filter((d: any) => d.pendiente === 'Si' && d.anulado !== 'Si' && d.pendiente !== 'Anulado').length + activeExtras.filter((ex: any) => ex.status === 'PENDING').length;
   const anuladas = data.filter((d: any) => d.anulado === 'Si' || d.pendiente === 'Anulado').length + activeExtras.filter((ex: any) => ex.status === 'CANCELLED').length;
+
+  const getSaleGroupId = (sale: any) => {
+    const det = String(sale.detalle || '').toLowerCase().trim();
+    const cat = String(sale.categoria || sale.sheet || '').toLowerCase().trim();
+    
+    if (det === 'ti' || det === 'contratos movil') return 'ti';
+    if (det === 'tma' || det === 'rent' || cat === 'rent') return 'rent';
+    if (det === 'o2' || det === 'o2 movilfree') return 'o2';
+    if (det === 'seguro' || cat === 'seguro') return 'seguro';
+    if (det === 'mimovistar') return 'mimovistar';
+    if (det === 'suscripciones tv' || det === 'suscripcion tv') return 'tv';
+    if (det === 'prepago') return 'prepago';
+    if (det === 'varios') return 'varios';
+    if (det === 'repos') return 'repos';
+    if (det === 'resto baf') return 'resto_baf';
+    if (det === 'traslado mimovistar') return 'traslado_mimovistar';
+    if (det === 'extra' || sale.sheet === 'EXTRA TELEFÓNICA' || det === 'extra telefónica' || det === 'extra telefonica') return 'extras';
+    return 'varios';
+  };
+
+  const groupsConfig = [
+    { id: 'ti', label: 'Contratos Móvil', icon: '📋' },
+    { id: 'rent', label: 'Rent', icon: '🔄' },
+    { id: 'o2', label: 'O2 MovilFree', icon: '🌐' },
+    { id: 'seguro', label: 'Seguro', icon: '🛡️' },
+    { id: 'mimovistar', label: 'miMovistar', icon: '🏠' },
+    { id: 'tv', label: 'Suscripciones TV', icon: '📺' },
+    { id: 'prepago', label: 'Prepago', icon: '💳' },
+    { id: 'varios', label: 'Varios', icon: '📦' },
+    { id: 'repos', label: 'Repos', icon: '🔁' },
+    { id: 'resto_baf', label: 'Resto BAF', icon: '📡' },
+    { id: 'traslado_mimovistar', label: 'Traslado miMovistar', icon: '🚚' },
+    { id: 'extras', label: 'Extras', icon: '⚡' }
+  ];
+
+  const summaryMap = new Map<string, { count: number, cuota: number, comision: number }>();
+  groupsConfig.forEach(g => {
+    summaryMap.set(g.id, { count: 0, cuota: 0, comision: 0 });
+  });
+
+  data.forEach((sale: any) => {
+    if (sale.anulado === 'Si' || sale.pendiente === 'Anulado') return;
+    
+    const groupId = getSaleGroupId(sale);
+    const stats = summaryMap.get(groupId) || { count: 0, cuota: 0, comision: 0 };
+    
+    stats.count += 1;
+    stats.cuota += getCuotaTotal(sale, catalogs);
+    
+    const com = sale.dynamicCommission !== undefined ? sale.dynamicCommission : (sale.importe || sale.cuota || 0);
+    stats.comision += Number(com || 0);
+    
+    summaryMap.set(groupId, stats);
+  });
+
+  activeExtras.forEach((ex: any) => {
+    if (ex.status === 'CANCELLED') return;
+    
+    const stats = summaryMap.get('extras') || { count: 0, cuota: 0, comision: 0 };
+    stats.count += 1;
+    stats.comision += Number(ex.telecomRewardAmount || 0);
+    summaryMap.set('extras', stats);
+  });
+
+  let totalSummarySales = 0;
+  let totalSummaryCuota = 0;
+  let totalSummaryComision = 0;
+  groupsConfig.forEach(g => {
+    const stats = summaryMap.get(g.id) || { count: 0, cuota: 0, comision: 0 };
+    totalSummarySales += stats.count;
+    totalSummaryCuota += stats.cuota;
+    totalSummaryComision += stats.comision;
+  });
   const finalizadas = totalVentas - pendientes - anuladas;
 
   const getTrend = (arr: any[]) => {
@@ -247,6 +327,62 @@ function CommercialDashboard({ data, activeExtras = [], isComercial, isAdmin }: 
         </div>
       </div>
 
+      {/* Resumen por Grupo Table */}
+      <div className="card" style={{ padding: 0, overflow: 'hidden', marginTop: 8, border: '1px solid var(--border-color)' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)' }}>
+          <h3 style={{ fontSize: 16, color: '#333333', margin: 0 }}>Resumen por Grupo</h3>
+        </div>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+            <thead>
+              <tr style={{ backgroundColor: '#00ADEF', color: '#FFFFFF' }}>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 'bold' }}>Grupo</th>
+                <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 'bold' }}>Nº Ventas</th>
+                <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 'bold' }}>Cuota Total (€)</th>
+                {isAdmin && <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 'bold' }}>Comisión</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {groupsConfig.map((group, idx) => {
+                const stats = summaryMap.get(group.id) || { count: 0, cuota: 0, comision: 0 };
+                const isEven = idx % 2 !== 0;
+                return (
+                  <tr key={group.id} style={{ backgroundColor: isEven ? '#F4F9FD' : '#FFFFFF', borderBottom: '1px solid #E2E8F0', color: '#333333' }}>
+                    <td style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
+                      <span style={{ fontSize: '16px' }}>{group.icon}</span>
+                      {group.label}
+                    </td>
+                    <td style={{ padding: '10px 16px', textAlign: 'center' }}>{stats.count}</td>
+                    <td style={{ padding: '10px 16px', textAlign: 'right' }}>
+                      {stats.cuota > 0 ? `${stats.cuota.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : '-  €'}
+                    </td>
+                    {isAdmin && (
+                      <td style={{ padding: '10px 16px', textAlign: 'right', color: '#0078D4', fontWeight: 'bold' }}>
+                        {stats.comision > 0 ? `${stats.comision.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : '-  €'}
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr style={{ backgroundColor: '#E1F0FA', fontWeight: 'bold', color: '#333333' }}>
+                <td style={{ padding: '12px 16px', textTransform: 'uppercase' }}>TOTAL</td>
+                <td style={{ padding: '12px 16px', textAlign: 'center' }}>{totalSummarySales}</td>
+                <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                  {totalSummaryCuota > 0 ? `${totalSummaryCuota.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : '-  €'}
+                </td>
+                {isAdmin && (
+                  <td style={{ padding: '12px 16px', textAlign: 'right', color: '#0078D4' }}>
+                    {totalSummaryComision > 0 ? `${totalSummaryComision.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : '-  €'}
+                  </td>
+                )}
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
       {/* Compact Operations Table */}
       <div className="card" style={{ padding: 0, overflow: 'hidden', marginTop: 8 }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)' }}>
@@ -287,7 +423,7 @@ function CommercialDashboard({ data, activeExtras = [], isComercial, isAdmin }: 
                   <td style={{ padding: '4px 6px', textAlign: 'center' }}>{sale.anulado}</td>
                   <td style={{ padding: '4px 6px', color: '#555555', fontSize: 12 }}>{sale.anotaciones}</td>
                   <td style={{ padding: '4px 6px', textAlign: 'center', color: '#059669', fontWeight: 800 }}>
-                    {getCuotaTotal(sale) > 0 ? `${getCuotaTotal(sale).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : '—'}
+                    {getCuotaTotal(sale, catalogs) > 0 ? `${getCuotaTotal(sale, catalogs).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : '—'}
                   </td>
                   {isAdmin && <td style={{ padding: '4px 6px', textAlign: 'center', color: '#0078D4', fontWeight: 'bold' }}>{formatCurrency(sale.dynamicCommission !== undefined ? sale.dynamicCommission : (sale.importe || sale.cuota))}</td>}
                   <td style={{ padding: '4px 6px', textAlign: 'center' }}>
@@ -631,7 +767,17 @@ function OperationsContent() {
       
       if (det === 'O2' || det === 'Seguro' || det === 'miMovistar') {
          bypassCommissionCalc = true;
-         finalImporte = Number(sale.importe || sale.cuota || 0);
+         if (det === 'Seguro') {
+            const list = catalogs['Seguro'] || [];
+            const found = list.find((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
+            if (found && found.comision) {
+                finalImporte = parseFloat(String(found.comision).replace('€', '').replace(/\s/g, '').replace(',', '.').trim()) || 0;
+            } else {
+                finalImporte = Number(sale.importe || sale.cuota || 0);
+            }
+         } else {
+            finalImporte = Number(sale.importe || sale.cuota || 0);
+         }
       } else if (det === 'Ti' || det === 'TMA' || det === 'Micro' || det === 'Rent') {
          bypassCommissionCalc = true;
          const catalogKey = det === 'TMA' ? 'Rent' : det;
@@ -684,6 +830,179 @@ function OperationsContent() {
     try {
       const ExcelJS = await import('exceljs');
       const workbook = new ExcelJS.Workbook();
+      
+      // 1. Resumen Worksheet
+      const summarySheet = workbook.addWorksheet('Resumen');
+      summarySheet.views = [{ showGridLines: true }];
+
+      const summaryColumns = [
+        { header: 'Grupo', key: 'Grupo', width: 30 },
+        { header: 'Nº Ventas', key: 'Ventas', width: 15 },
+        { header: 'Cuota Total (€)', key: 'Cuota', width: 22 }
+      ];
+      if (isAdmin) {
+        summaryColumns.push({ header: 'Comisión', key: 'Comision', width: 22 });
+      }
+      summarySheet.columns = summaryColumns;
+
+      // Format header row
+      const summaryHeader = summarySheet.getRow(1);
+      summaryHeader.height = 28;
+      summaryHeader.eachCell(cell => {
+        cell.font = { name: 'Segoe UI', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00ADEF' } }; // `#00ADEF`
+        cell.alignment = {
+          vertical: 'middle',
+          horizontal: cell.value === 'Grupo' ? 'left' : (cell.value === 'Nº Ventas' ? 'center' : 'right')
+        };
+      });
+
+      const getSaleGroupId = (sale: any) => {
+        const det = String(sale.detalle || '').toLowerCase().trim();
+        const cat = String(sale.categoria || sale.sheet || '').toLowerCase().trim();
+        
+        if (det === 'ti' || det === 'contratos movil') return 'ti';
+        if (det === 'tma' || det === 'rent' || cat === 'rent') return 'rent';
+        if (det === 'o2' || det === 'o2 movilfree') return 'o2';
+        if (det === 'seguro' || cat === 'seguro') return 'seguro';
+        if (det === 'mimovistar') return 'mimovistar';
+        if (det === 'suscripciones tv' || det === 'suscripcion tv') return 'tv';
+        if (det === 'prepago') return 'prepago';
+        if (det === 'varios') return 'varios';
+        if (det === 'repos') return 'repos';
+        if (det === 'resto baf') return 'resto_baf';
+        if (det === 'traslado mimovistar') return 'traslado_mimovistar';
+        if (det === 'extra' || sale.sheet === 'EXTRA TELEFÓNICA' || det === 'extra telefónica' || det === 'extra telefonica') return 'extras';
+        return 'varios';
+      };
+
+      const groupsConfig = [
+        { id: 'ti', label: 'Contratos Móvil', icon: '📋' },
+        { id: 'rent', label: 'Rent', icon: '🔄' },
+        { id: 'o2', label: 'O2 MovilFree', icon: '🌐' },
+        { id: 'seguro', label: 'Seguro', icon: '🛡️' },
+        { id: 'mimovistar', label: 'miMovistar', icon: '🏠' },
+        { id: 'tv', label: 'Suscripciones TV', icon: '📺' },
+        { id: 'prepago', label: 'Prepago', icon: '💳' },
+        { id: 'varios', label: 'Varios', icon: '📦' },
+        { id: 'repos', label: 'Repos', icon: '🔁' },
+        { id: 'resto_baf', label: 'Resto BAF', icon: '📡' },
+        { id: 'traslado_mimovistar', label: 'Traslado miMovistar', icon: '🚚' },
+        { id: 'extras', label: 'Extras', icon: '⚡' }
+      ];
+
+      const summaryMap = new Map<string, { count: number, cuota: number, comision: number }>();
+      groupsConfig.forEach(g => {
+        summaryMap.set(g.id, { count: 0, cuota: 0, comision: 0 });
+      });
+
+      displayedSales.forEach((sale: any) => {
+        if (sale.anulado === 'Si' || sale.pendiente === 'Anulado') return;
+        
+        const groupId = getSaleGroupId(sale);
+        const stats = summaryMap.get(groupId) || { count: 0, cuota: 0, comision: 0 };
+        
+        stats.count += 1;
+        stats.cuota += getCuotaTotal(sale, catalogs);
+        
+        const com = sale.dynamicCommission !== undefined ? sale.dynamicCommission : (sale.importe || sale.cuota || 0);
+        stats.comision += Number(com || 0);
+        
+        summaryMap.set(groupId, stats);
+      });
+
+      activeExtras.forEach((ex: any) => {
+        if (ex.status === 'CANCELLED') return;
+        
+        const stats = summaryMap.get('extras') || { count: 0, cuota: 0, comision: 0 };
+        stats.count += 1;
+        stats.comision += Number(ex.telecomRewardAmount || 0);
+        summaryMap.set('extras', stats);
+      });
+
+      let totalVentasSummary = 0;
+      let totalCuotaSummary = 0;
+      let totalComisionSummary = 0;
+
+      // Add data rows to summary sheet
+      groupsConfig.forEach((g) => {
+        const stats = summaryMap.get(g.id) || { count: 0, cuota: 0, comision: 0 };
+        totalVentasSummary += stats.count;
+        totalCuotaSummary += stats.cuota;
+        totalComisionSummary += stats.comision;
+
+        summarySheet.addRow({
+          Grupo: `${g.icon} ${g.label}`,
+          Ventas: stats.count,
+          Cuota: stats.cuota > 0 ? stats.cuota : null,
+          Comision: stats.comision > 0 ? stats.comision : null
+        });
+      });
+
+      // Style summary rows
+      const currencyFmt = '#,##0.00" €";-#,##0.00" €";"-   €"';
+      summarySheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+        if (rowNumber === 1) return;
+        
+        row.height = 22;
+        const isEven = rowNumber % 2 === 1; // rowNumber is 1-indexed, row 2 is the first data row (even)
+        
+        row.eachCell((cell, colNumber) => {
+          cell.font = { name: 'Segoe UI', size: 10 };
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: isEven ? 'FFFFFFFF' : 'FFF4F9FD' }
+          };
+          cell.border = {
+            bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            top: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+          };
+
+          cell.alignment = {
+            vertical: 'middle',
+            horizontal: colNumber === 1 ? 'left' : (colNumber === 2 ? 'center' : 'right')
+          };
+
+          if (colNumber === 2) {
+            cell.numFmt = '#,##0';
+          }
+          if (colNumber === 3 || colNumber === 4) {
+            cell.numFmt = currencyFmt;
+          }
+        });
+      });
+
+      // Add TOTAL row to summary sheet
+      const totalRow = summarySheet.addRow({
+        Grupo: 'TOTAL',
+        Ventas: totalVentasSummary,
+        Cuota: totalCuotaSummary > 0 ? totalCuotaSummary : null,
+        Comision: totalComisionSummary > 0 ? totalComisionSummary : null
+      });
+      totalRow.height = 26;
+      totalRow.eachCell((cell, colNumber) => {
+        cell.font = { name: 'Segoe UI', size: 10, bold: true };
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFE1F0FA' }
+        };
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FF94A3B8' } },
+          bottom: { style: 'double', color: { argb: 'FF94A3B8' } }
+        };
+        cell.alignment = {
+          vertical: 'middle',
+          horizontal: colNumber === 1 ? 'left' : (colNumber === 2 ? 'center' : 'right')
+        };
+        if (colNumber === 2) cell.numFmt = '#,##0';
+        if (colNumber === 3 || colNumber === 4) cell.numFmt = currencyFmt;
+      });
+
+      // 2. Detailed Worksheet
       const sheet = workbook.addWorksheet('Operaciones');
 
       const mData: any[] = [];
@@ -871,7 +1190,7 @@ function OperationsContent() {
       
 
       {activeVendorFilter ? (
-        <CommercialDashboard data={displayedSales} activeExtras={activeExtras} isComercial={isComercial} isAdmin={isAdmin} />
+        <CommercialDashboard data={displayedSales} activeExtras={activeExtras} isComercial={isComercial} isAdmin={isAdmin} catalogs={catalogs} />
       ) : (
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 280px)' }}>
@@ -959,7 +1278,7 @@ function OperationsContent() {
                       {editingId === sale.id ? <textarea value={editForm.anotaciones} onChange={e => handleEditChange('anotaciones', e.target.value)} rows={2} style={{ width: '100%', minWidth: 120, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: 4 }} /> : sale.anotaciones}
                     </td>
                     <td style={{ padding: '4px 6px', textAlign: 'center', color: '#059669', fontWeight: 800 }}>
-                      {getCuotaTotal(sale) > 0 ? `${getCuotaTotal(sale).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : '—'}
+                      {getCuotaTotal(sale, catalogs) > 0 ? `${getCuotaTotal(sale, catalogs).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : '—'}
                     </td>
 
                     <td style={{ padding: '4px 6px', textAlign: 'center' }}>

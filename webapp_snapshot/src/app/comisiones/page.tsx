@@ -12,6 +12,7 @@ import { normalizeRole } from '@/lib/appConfig'
 import { useEffect } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts'
 import { AuditableCell } from '@/components/AuditableCell'
+import { normalizeString } from '@/lib/salesUtils'
 
 
 
@@ -264,7 +265,7 @@ const FinancialSpeedometer = ({ currentAmount, sellerName }: { currentAmount: nu
     );
 }
 
-const getCuotaTotal = (sale: any): number => {
+const getCuotaTotal = (sale: any, catalogs?: Record<string, any[]>): number => {
     const parse = (val: any): number => {
         if (val === null || val === undefined) return 0;
         if (typeof val === 'number') return isNaN(val) ? 0 : val;
@@ -278,6 +279,13 @@ const getCuotaTotal = (sale: any): number => {
     const isSeguro = det === 'seguro' || cat === 'seguro';
     
     if (isSeguro) {
+        if (catalogs) {
+            const list = catalogs['Seguro'] || [];
+            const found = list.find((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
+            if (found && found.anual) {
+                return parse(found.anual);
+            }
+        }
         if (sale.seguroImporte) {
             const v = parse(sale.seguroImporte);
             if (v > 0) return v;
@@ -310,7 +318,8 @@ export default function ComisionesDashboardPage() {
         setTiendaRules,
         o2Rules,
         territorialO2Rules,
-        activePeriodKey
+        activePeriodKey,
+        catalogs
     } = useComisionesData(user)
 
     const handleReorderTiendaRule = async (index: number, direction: 'up' | 'down') => {
@@ -880,7 +889,7 @@ export default function ComisionesDashboardPage() {
                                                         const badgeText = isAnnulled ? 'Anulado' : (isPending ? 'Pendiente' : 'Aprobado')
                                                         const badgeBg = isAnnulled ? 'rgba(255, 69, 58, 0.15)' : (isPending ? 'rgba(255, 149, 0, 0.15)' : 'rgba(52, 211, 153, 0.15)')
                                                         
-                                                        const cuotaVal = getCuotaTotal(venta);
+                                                        const cuotaVal = getCuotaTotal(venta, catalogs);
                                                         const formattedCuota = cuotaVal > 0 ? `${cuotaVal.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : '—';
                                                         
                                                         return (

@@ -1445,6 +1445,13 @@ export default function LiquidacionesPage() {
             const isTV = det === 'suscripciones tv' || det === 'suscripcion tv';
             // O2, Seguro, miMovistar and new standalone categories store their commission directly in importe/cuota
             if (det === 'o2' || det === 'seguro' || det === 'mimovistar' || det === 'repos' || det === 'varios' || isTV || det === 'prepago' || det === 'resto baf' || det === 'traslado mimovistar') {
+                if (det === 'seguro') {
+                    const seguroList = catalogs['Seguro'] || [];
+                    const foundSeguro = seguroList.find((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
+                    if (foundSeguro && foundSeguro.comision) {
+                        return parseSafeFloat(foundSeguro.comision);
+                    }
+                }
                 return parseSafeFloat(sale.importe || sale.cuota || 0);
             }
             
@@ -1514,6 +1521,11 @@ export default function LiquidacionesPage() {
             const isSeguro = det === 'seguro' || cat === 'seguro';
             
             if (isSeguro) {
+                const seguroList = catalogs['Seguro'] || [];
+                const foundSeguro = seguroList.find((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
+                if (foundSeguro && foundSeguro.anual) {
+                    return parse(foundSeguro.anual);
+                }
                 if (sale.seguroImporte) {
                     const v = parse(sale.seguroImporte);
                     if (v > 0) return v;

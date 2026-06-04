@@ -251,6 +251,13 @@ export default function ModPage() {
                         const isTV = det === 'suscripciones tv' || det === 'suscripcion tv';
                         
                         if (det === 'o2' || det === 'seguro' || det === 'mimovistar' || det === 'repos' || det === 'varios' || isTV || det === 'prepago' || det === 'resto baf' || det === 'traslado mimovistar') {
+                            if (det === 'seguro') {
+                                const list = catalogs['Seguro'] || [];
+                                const found = list.find((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
+                                if (found && found.comision) {
+                                    return parseSafeFloat(found.comision);
+                                }
+                            }
                             return parseSafeFloat(sale.importe || sale.cuota || 0);
                         }
                         

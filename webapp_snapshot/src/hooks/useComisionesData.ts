@@ -118,10 +118,20 @@ export const matchesRule = (s: any, ruleName: string, ruleProductosCuentan: stri
     return matchTipoVenta(s, ruleProductosCuentan);
 };
 
-export const getValueForRule = (s: any, ruleName: string) => {
+export const getValueForRule = (s: any, ruleName: string, catalogs?: Record<string, any[]>) => {
     let cuotaValue = parseSafeFloat(s.cuota);
-    if (String(s.categoria || s.detalle || s.sheet).toLowerCase() === 'seguro' && s.seguroImporte) {
-        cuotaValue = parseSafeFloat(s.seguroImporte);
+    if (String(s.categoria || s.detalle || s.sheet).toLowerCase() === 'seguro') {
+        if (catalogs) {
+            const list = catalogs['Seguro'] || [];
+            const norm = (str: string) => String(str || '').toLowerCase().normalize("NFD").replace(/[^a-zA-Z0-9]/g, "").trim();
+            const found = list.find((c: any) => norm(c.producto) === norm(s.producto));
+            if (found && found.anual) {
+                return parseSafeFloat(found.anual);
+            }
+        }
+        if (s.seguroImporte) {
+            cuotaValue = parseSafeFloat(s.seguroImporte);
+        }
     }
 
     if (ruleName === 'ARPU') {
@@ -144,6 +154,7 @@ export function useComisionesData(user?: any) {
     const [o2Rules, setO2Rules] = useState<any[]>([]);
     const [o2Hours, setO2Hours] = useState<any[]>([]);
     const [territorialO2Rules, setTerritorialO2Rules] = useState<any[]>([]);
+    const [catalogs, setCatalogs] = useState<Record<string, any[]>>({});
     
     const [selectedSellerFilter, setSelectedSellerFilter] = useState<string | null>(null);
 
@@ -157,9 +168,10 @@ export function useComisionesData(user?: any) {
             fetch('/api/extras/rules').then(res => res.json()).catch(() => ({ rules: [] })),
             fetch(`/api/tiendas-comisiones?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({ success: false, rules: [], hours: [] })),
             fetch(`/api/settings?key=o2_rules_v2_${activePeriodKey}`).then(res => res.json()).catch(() => ({ value: null })),
-            fetch(`/api/territorial?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({ success: false, tiendas: [], o2: [] }))
+            fetch(`/api/territorial?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({ success: false, tiendas: [], o2: [] })),
+            fetch('/api/catalogs').then(res => res.json()).catch(() => ({ success: false, catalogs: {} }))
         ])
-        .then(([data, condData, extrasData, rulesData, tiendasData, o2Data, territorialData]) => {
+        .then(([data, condData, extrasData, rulesData, tiendasData, o2Data, territorialData, catalogsData]) => {
             if (data.success && data.logs) {
                 setAllSales(data.logs);
             }
@@ -190,6 +202,9 @@ export function useComisionesData(user?: any) {
             if (territorialData && territorialData.success) {
                 setTerritorialO2Rules(territorialData.o2 || []);
             }
+            if (catalogsData && catalogsData.success) {
+                setCatalogs(catalogsData.catalogs || {});
+            }
             setLoading(false);
         })
         .catch(err => {
@@ -216,7 +231,7 @@ export function useComisionesData(user?: any) {
             tiendaRules.forEach(rule => {
                 if (matchesRule(s, rule.nombre, rule.productosCuentan)) {
                     const isPercentage = String(rule.importePrimerTramo || '').includes('%');
-                    const val = getValueForRule(s, rule.nombre);
+                    const val = getValueForRule(s, rule.nombre, catalogs);
                     if (isPercentage) {
                         teamGroupCounts[rule.nombre] += val;
                         if (isPending) teamGroupPending[rule.nombre] += val;
@@ -229,7 +244,7 @@ export function useComisionesData(user?: any) {
                     const virtualSeguro = { ...s, categoria: 'seguro', detalle: 'seguro', cuota: Number(s.seguroImporte) };
                     if (matchesRule(virtualSeguro, rule.nombre, rule.productosCuentan)) {
                         const isPercentage = String(rule.importePrimerTramo || '').includes('%');
-                        const val = getValueForRule(virtualSeguro, rule.nombre);
+                        const val = getValueForRule(virtualSeguro, rule.nombre, catalogs);
                         if (isPercentage) {
                             teamGroupCounts[rule.nombre] += val;
                             if (isPending) teamGroupPending[rule.nombre] += val;
@@ -247,7 +262,7 @@ export function useComisionesData(user?: any) {
             o2Rules.forEach(rule => {
                 if (matchesRule(s, rule.nombre, rule.productosCuentan)) {
                     const isPercentage = String(rule.importePrimerTramo || '').includes('%');
-                    const val = getValueForRule(s, rule.nombre);
+                    const val = getValueForRule(s, rule.nombre, catalogs);
                     if (isPercentage) {
                         o2TeamGroupCounts[rule.nombre] += val;
                         if (isPending) o2TeamGroupPending[rule.nombre] += val;
@@ -260,7 +275,7 @@ export function useComisionesData(user?: any) {
                     const virtualSeguro = { ...s, categoria: 'seguro', detalle: 'seguro', cuota: Number(s.seguroImporte) };
                     if (matchesRule(virtualSeguro, rule.nombre, rule.productosCuentan)) {
                         const isPercentage = String(rule.importePrimerTramo || '').includes('%');
-                        const val = getValueForRule(virtualSeguro, rule.nombre);
+                        const val = getValueForRule(virtualSeguro, rule.nombre, catalogs);
                         if (isPercentage) {
                             o2TeamGroupCounts[rule.nombre] += val;
                             if (isPending) o2TeamGroupPending[rule.nombre] += val;
@@ -366,7 +381,7 @@ export function useComisionesData(user?: any) {
                     // Determinar si el tramo pide % o Euros (heuristic)
                     const isPercentage = String(rule.importePrimerTramo || '').includes('%');
                     const isPending = String(s.pendiente || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === 'si';
-                    const val = getValueForRule(s, rule.nombre);
+                    const val = getValueForRule(s, rule.nombre, catalogs);
                     if (isPercentage) {
                         groupCounts[rule.nombre] += val;
                         if (isPending) groupPending[rule.nombre] += val;
@@ -383,7 +398,7 @@ export function useComisionesData(user?: any) {
                     if (matchesRule(virtualSeguro, rule.nombre, rule.productosCuentan)) {
                         const isPercentage = String(rule.importePrimerTramo || '').includes('%');
                         const isPending = String(s.pendiente || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === 'si';
-                        const val = getValueForRule(virtualSeguro, rule.nombre);
+                        const val = getValueForRule(virtualSeguro, rule.nombre, catalogs);
                         if (isPercentage) {
                             groupCounts[rule.nombre] += val;
                             if (isPending) groupPending[rule.nombre] += val;
@@ -938,6 +953,7 @@ export function useComisionesData(user?: any) {
         setTiendaRules,
         o2Rules,
         territorialO2Rules,
-        activePeriodKey
+        activePeriodKey,
+        catalogs
     };
 }
