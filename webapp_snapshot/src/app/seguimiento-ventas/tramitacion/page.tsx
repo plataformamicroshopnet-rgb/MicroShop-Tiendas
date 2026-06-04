@@ -359,7 +359,7 @@ export default function TramitacionPage() {
         return (
             <td 
                 onClick={() => setIsEditing(true)}
-                style={{ padding: '8px 4px', textAlign: 'center', backgroundColor: '#f0f9ff', cursor: 'pointer', border: '1px dashed #0ea5e9', fontWeight: 700, color: '#0284c7' }}
+                style={{ padding: '4px 2px', textAlign: 'center', backgroundColor: '#f0f9ff', cursor: 'pointer', border: '1px dashed #0ea5e9', fontWeight: 700, color: '#0284c7' }}
                 title="Haz clic para editar objetivo"
             >
                 {value}
@@ -424,9 +424,9 @@ export default function TramitacionPage() {
     };
 
     return (
-        <div style={{ padding: '24px 32px', backgroundColor: 'var(--bg-app)', minHeight: '100vh', paddingBottom: 100 }}>
+        <div style={{ padding: '8px 12px', backgroundColor: 'var(--bg-app)', minHeight: '100vh', paddingBottom: 80 }}>
             <PageHeader 
-                title={<div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><Building2 size={28} color="var(--mercedes-cyan)" /> Seguimiento de Tramitación</div>}
+                title={<div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><Building2 size={24} color="var(--mercedes-cyan)" /> Seguimiento de Tramitación</div>}
                 subtitle="Monitorización y analítica de los productos vendidos y pendientes"
                 showBack={true}
                 backFallback="/seguimiento-ventas"
@@ -436,12 +436,12 @@ export default function TramitacionPage() {
                             onClick={() => setShowPasteModal(true)}
                             style={{
                                 background: 'var(--mercedes-cyan)', border: 'none', borderRadius: 8,
-                                padding: '8px 16px', color: '#fff', display: 'flex', alignItems: 'center', gap: 8,
-                                fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
+                                padding: '6px 12px', color: '#fff', display: 'flex', alignItems: 'center', gap: 6,
+                                fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
                                 boxShadow: '0 4px 12px rgba(0, 173, 239, 0.3)'
                             }}
                         >
-                            <ClipboardPaste size={18} />
+                            <ClipboardPaste size={16} />
                             Pegar Objetivos
                         </button>
                     </div>
@@ -452,182 +452,174 @@ export default function TramitacionPage() {
                 background: 'var(--bg-card)',
                 borderRadius: 16,
                 border: '1px solid var(--border-color)',
-                marginTop: 24,
+                marginTop: 16,
                 overflowX: 'auto',
                 boxShadow: '0 4px 24px rgba(0,0,0,0.02)'
             }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, whiteSpace: 'nowrap' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10, whiteSpace: 'nowrap' }}>
                     <thead>
-                        <tr style={{ backgroundColor: '#0ea5e9', color: 'white' }}>
-                            <th colSpan={3} style={{ borderBottom: '1px solid rgba(255,255,255,0.2)', borderRight: '2px solid rgba(255,255,255,0.2)', padding: '12px 8px', textAlign: 'center', fontWeight: 600, color: 'white' }}>
+                        <tr style={{ backgroundColor: '#0ea5e9', color: 'white', fontSize: 9.5 }}>
+                            <th colSpan={3} style={{ borderBottom: '1px solid rgba(255,255,255,0.2)', borderRight: '2px solid rgba(255,255,255,0.2)', padding: '4px 2px', textAlign: 'center', fontWeight: 600, color: 'white' }}>
                                 {String(new Date().getDate()).padStart(2, '0')}/{String(selectedMonth).padStart(2, '0')}/{selectedYear}
                             </th>
-                            <th colSpan={5} style={{ borderBottom: '1px solid rgba(255,255,255,0.2)', borderRight: '2px solid rgba(255,255,255,0.2)', padding: '8px', textAlign: 'center', fontWeight: 600, color: 'white', width: 140, whiteSpace: 'normal', lineHeight: 1.2 }}>Total Altas BAF (No trasladados)</th>
-                            <th colSpan={5} style={{ borderBottom: '1px solid rgba(255,255,255,0.2)', borderRight: '2px solid rgba(255,255,255,0.2)', padding: '8px', textAlign: 'center', fontWeight: 600, color: 'white', width: 140, whiteSpace: 'normal', lineHeight: 1.2 }}>Altas BAF Movistar Convergente</th>
-                            <th colSpan={4} style={{ borderBottom: '1px solid rgba(255,255,255,0.2)', borderRight: '2px solid rgba(255,255,255,0.2)', padding: '8px', textAlign: 'center', fontWeight: 600, color: 'white', width: 140, whiteSpace: 'normal', lineHeight: 1.2 }}>DESARROLLO TV + Altas Futbol</th>
-                            <th colSpan={4} style={{ borderBottom: '1px solid rgba(255,255,255,0.2)', borderRight: '2px solid rgba(255,255,255,0.2)', padding: '8px', textAlign: 'center', fontWeight: 600, color: 'white', width: 140, whiteSpace: 'normal', lineHeight: 1.2 }}>Ingresos Dispositivos + Seguro Móvil</th>
-                            <th colSpan={4} style={{ borderBottom: '1px solid rgba(255,255,255,0.2)', borderRight: '2px solid rgba(255,255,255,0.2)', padding: '8px', textAlign: 'center', fontWeight: 600, color: 'white', width: 140, whiteSpace: 'normal', lineHeight: 1.2 }}>REPOS BAF ARPU&gt;0</th>
-                            <th colSpan={4} style={{ borderBottom: '1px solid rgba(255,255,255,0.2)', borderRight: '2px solid rgba(255,255,255,0.2)', padding: '8px', textAlign: 'center', fontWeight: 600, color: 'white', width: 140, whiteSpace: 'normal', lineHeight: 1.2 }}>FTTR</th>
-                            <th colSpan={4} style={{ borderBottom: '1px solid rgba(255,255,255,0.2)', padding: '8px', textAlign: 'center', fontWeight: 600, color: 'white', width: 140, whiteSpace: 'normal', lineHeight: 1.2 }}>MOVISTAR PROSEGUR ALARMAS</th>
+                            <th colSpan={5} style={{ borderBottom: '1px solid rgba(255,255,255,0.2)', borderRight: '2px solid rgba(255,255,255,0.2)', padding: '4px 2px', textAlign: 'center', fontWeight: 600, color: 'white', whiteSpace: 'normal', lineHeight: 1.1 }}>Total Altas BAF (No trasl.)</th>
+                            <th colSpan={5} style={{ borderBottom: '1px solid rgba(255,255,255,0.2)', borderRight: '2px solid rgba(255,255,255,0.2)', padding: '4px 2px', textAlign: 'center', fontWeight: 600, color: 'white', whiteSpace: 'normal', lineHeight: 1.1 }}>Altas BAF Movistar Conv.</th>
+                            <th colSpan={4} style={{ borderBottom: '1px solid rgba(255,255,255,0.2)', borderRight: '2px solid rgba(255,255,255,0.2)', padding: '4px 2px', textAlign: 'center', fontWeight: 600, color: 'white', whiteSpace: 'normal', lineHeight: 1.1 }}>TV + Altas Futbol</th>
+                            <th colSpan={4} style={{ borderBottom: '1px solid rgba(255,255,255,0.2)', borderRight: '2px solid rgba(255,255,255,0.2)', padding: '4px 2px', textAlign: 'center', fontWeight: 600, color: 'white', whiteSpace: 'normal', lineHeight: 1.1 }}>Disp. + Seguro Móvil</th>
+                            <th colSpan={4} style={{ borderBottom: '1px solid rgba(255,255,255,0.2)', borderRight: '2px solid rgba(255,255,255,0.2)', padding: '4px 2px', textAlign: 'center', fontWeight: 600, color: 'white', whiteSpace: 'normal', lineHeight: 1.1 }}>REPOS BAF ARPU&gt;0</th>
+                            <th colSpan={4} style={{ borderBottom: '1px solid rgba(255,255,255,0.2)', borderRight: '2px solid rgba(255,255,255,0.2)', padding: '4px 2px', textAlign: 'center', fontWeight: 600, color: 'white', whiteSpace: 'normal', lineHeight: 1.1 }}>FTTR</th>
+                            <th colSpan={4} style={{ borderBottom: '1px solid rgba(255,255,255,0.2)', padding: '4px 2px', textAlign: 'center', fontWeight: 600, color: 'white', whiteSpace: 'normal', lineHeight: 1.1 }}>ALARMAS MPA</th>
                         </tr>
-                        <tr style={{ backgroundColor: 'var(--bg-app)', fontSize: 11, color: 'var(--medium-gray)' }}>
-                            <th style={{ padding: '6px 8px', textAlign: 'left', borderRight: '1px solid var(--border-color)' }}>Tiendas</th>
-                            <th style={{ padding: '6px 4px', textAlign: 'center', borderRight: '1px solid var(--border-color)' }}>Pers.</th>
-                            <th style={{ padding: '6px 4px', textAlign: 'center', borderRight: '2px solid var(--border-color)' }}>Altas</th>
+                        <tr style={{ backgroundColor: 'var(--bg-app)', fontSize: 9, color: 'var(--medium-gray)' }}>
+                                <th style={{ padding: '4px 4px', textAlign: 'left', borderRight: '1px solid var(--border-color)' }}>Tiendas</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center', borderRight: '1px solid var(--border-color)' }}>Pers.</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center', borderRight: '2px solid var(--border-color)' }}>Altas</th>
                             
                             {/* BAF */}
-                            <th style={{ padding: '6px 4px', textAlign: 'center' }}>Obj</th>
-                            <th style={{ padding: '6px 4px', textAlign: 'center' }}>Vent</th>
-                            <th style={{ padding: '6px 4px', textAlign: 'center', color: '#ec4899' }}>Tram</th>
-                            <th style={{ padding: '6px 4px', textAlign: 'center' }}>Proy</th>
-                            <th style={{ padding: '6px 4px', textAlign: 'center', borderRight: '2px solid var(--border-color)' }}>%</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center' }}>Obj</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center' }}>Vent</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center', color: '#ec4899' }}>Tram</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center' }}>Proy</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center', borderRight: '2px solid var(--border-color)' }}>%</th>
 
                             {/* BAF Conv MS */}
-                            <th style={{ padding: '6px 4px', textAlign: 'center' }}>Obj</th>
-                            <th style={{ padding: '6px 4px', textAlign: 'center' }}>Vent</th>
-                            <th style={{ padding: '6px 4px', textAlign: 'center', color: '#ec4899' }}>Tram</th>
-                            <th style={{ padding: '6px 4px', textAlign: 'center' }}>Proy</th>
-                            <th style={{ padding: '6px 4px', textAlign: 'center', borderRight: '2px solid var(--border-color)' }}>%</th>
-
-
+                            <th style={{ padding: '4px 2px', textAlign: 'center' }}>Obj</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center' }}>Vent</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center', color: '#ec4899' }}>Tram</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center' }}>Proy</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center', borderRight: '2px solid var(--border-color)' }}>%</th>
 
                             {/* TV Futbol */}
-                            <th style={{ padding: '6px 4px', textAlign: 'center' }}>Obj</th>
-                            <th style={{ padding: '6px 4px', textAlign: 'center' }}>Vent</th>
-                            <th style={{ padding: '6px 4px', textAlign: 'center' }}>Proy</th>
-                            <th style={{ padding: '6px 4px', textAlign: 'center', borderRight: '2px solid var(--border-color)' }}>%</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center' }}>Obj</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center' }}>Vent</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center' }}>Proy</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center', borderRight: '2px solid var(--border-color)' }}>%</th>
 
                             {/* Dispositivos € */}
-                            <th style={{ padding: '6px 4px', textAlign: 'center' }}>Obj</th>
-                            <th style={{ padding: '6px 4px', textAlign: 'center' }}>Vent</th>
-                            <th style={{ padding: '6px 4px', textAlign: 'center' }}>Proy</th>
-                            <th style={{ padding: '6px 4px', textAlign: 'center', borderRight: '2px solid var(--border-color)' }}>%</th>
-
-
-
+                            <th style={{ padding: '4px 2px', textAlign: 'center' }}>Obj</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center' }}>Vent</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center' }}>Proy</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center', borderRight: '2px solid var(--border-color)' }}>%</th>
 
                             {/* Repos */}
-                            <th style={{ padding: '6px 4px', textAlign: 'center' }}>Obj</th>
-                            <th style={{ padding: '6px 4px', textAlign: 'center' }}>Vent</th>
-                            <th style={{ padding: '6px 4px', textAlign: 'center' }}>Proy</th>
-                            <th style={{ padding: '6px 4px', textAlign: 'center', borderRight: '2px solid var(--border-color)' }}>%</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center' }}>Obj</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center' }}>Vent</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center' }}>Proy</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center', borderRight: '2px solid var(--border-color)' }}>%</th>
 
                             {/* FTTR */}
-                            <th style={{ padding: '6px 4px', textAlign: 'center' }}>Obj</th>
-                            <th style={{ padding: '6px 4px', textAlign: 'center' }}>Vent</th>
-                            <th style={{ padding: '6px 4px', textAlign: 'center' }}>Proy</th>
-                            <th style={{ padding: '6px 4px', textAlign: 'center', borderRight: '2px solid var(--border-color)' }}>%</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center' }}>Obj</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center' }}>Vent</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center' }}>Proy</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center', borderRight: '2px solid var(--border-color)' }}>%</th>
 
                             {/* Alarmas */}
-                            <th style={{ padding: '6px 4px', textAlign: 'center' }}>Obj</th>
-                            <th style={{ padding: '6px 4px', textAlign: 'center' }}>Vent</th>
-                            <th style={{ padding: '6px 4px', textAlign: 'center' }}>Proy</th>
-                            <th style={{ padding: '6px 4px', textAlign: 'center' }}>%</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center' }}>Obj</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center' }}>Vent</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center' }}>Proy</th>
+                            <th style={{ padding: '4px 2px', textAlign: 'center' }}>%</th>
                         </tr>
                     </thead>
                     <tbody>
                         {movistarRows.map((r, i) => (
                             <tr key={r.store} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: i % 2 === 0 ? 'var(--bg-card)' : 'rgba(0,0,0,0.01)' }}>
-                                <td style={{ padding: '8px 12px', fontWeight: 600, color: 'var(--light-text)', borderRight: '1px solid var(--border-color)' }}>{r.store}</td>
-                                <td style={{ padding: '8px 4px', textAlign: 'center', color: 'var(--medium-gray)', borderRight: '1px solid var(--border-color)' }}>{r.pers}</td>
-                                <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: 700, borderRight: '2px solid var(--border-color)' }}>{r.altasTotales}</td>
+                                <td style={{ padding: '4px 4px', fontWeight: 600, color: 'var(--light-text)', borderRight: '1px solid var(--border-color)' }}>{r.store}</td>
+                                <td style={{ padding: '4px 2px', textAlign: 'center', color: 'var(--medium-gray)', borderRight: '1px solid var(--border-color)' }}>{r.pers}</td>
+                                <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 700, borderRight: '2px solid var(--border-color)' }}>{r.altasTotales}</td>
 
                                 {/* BAF */}
-                                <td style={{ padding: '8px 4px', textAlign: 'center', backgroundColor: '#f3f4f6' }}>{formatNum(r.bafNoTrasl_obj)}</td>
-                                <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: 600 }}>{formatNum(r.bafNoTrasl_vent)}</td>
-                                <td style={{ padding: '8px 4px', textAlign: 'center', color: '#ec4899', fontWeight: 600 }}>{formatNum(r.bafNoTrasl_tram)}</td>
-                                <td style={{ padding: '8px 4px', textAlign: 'center', backgroundColor: '#e5e7eb', color: '#374151' }}>{formatNum(r.bafNoTrasl_proj)}</td>
+                                <td style={{ padding: '4px 2px', textAlign: 'center', backgroundColor: '#f3f4f6' }}>{formatNum(r.bafNoTrasl_obj)}</td>
+                                <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 600 }}>{formatNum(r.bafNoTrasl_vent)}</td>
+                                <td style={{ padding: '4px 2px', textAlign: 'center', color: '#ec4899', fontWeight: 600 }}>{formatNum(r.bafNoTrasl_tram)}</td>
+                                <td style={{ padding: '4px 2px', textAlign: 'center', backgroundColor: '#e5e7eb', color: '#374151' }}>{formatNum(r.bafNoTrasl_proj)}</td>
                                 <CellProjPct obj={r.bafNoTrasl_obj} proj={r.bafNoTrasl_proj} />
 
                                 {/* BAF Conv MS */}
-                                <td style={{ padding: '8px 4px', textAlign: 'center', backgroundColor: '#f3f4f6' }}>{formatNum(r.bafConvMS_obj)}</td>
-                                <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: 600 }}>{formatNum(r.bafConvMS_vent)}</td>
-                                <td style={{ padding: '8px 4px', textAlign: 'center', color: '#ec4899', fontWeight: 600 }}>{formatNum(r.bafConvMS_tram)}</td>
-                                <td style={{ padding: '8px 4px', textAlign: 'center', backgroundColor: '#e5e7eb', color: '#374151' }}>{formatNum(r.bafConvMS_proj)}</td>
+                                <td style={{ padding: '4px 2px', textAlign: 'center', backgroundColor: '#f3f4f6' }}>{formatNum(r.bafConvMS_obj)}</td>
+                                <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 600 }}>{formatNum(r.bafConvMS_vent)}</td>
+                                <td style={{ padding: '4px 2px', textAlign: 'center', color: '#ec4899', fontWeight: 600 }}>{formatNum(r.bafConvMS_tram)}</td>
+                                <td style={{ padding: '4px 2px', textAlign: 'center', backgroundColor: '#e5e7eb', color: '#374151' }}>{formatNum(r.bafConvMS_proj)}</td>
                                 <CellProjPct obj={r.bafConvMS_obj} proj={r.bafConvMS_proj} />
 
-
                                 {/* TV */}
-                                <td style={{ padding: '8px 4px', textAlign: 'center', backgroundColor: '#f3f4f6' }}>{formatNum(r.tvFutbol_obj)}</td>
-                                <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: 600 }}>{formatNum(r.tvFutbol_vent)}</td>
-                                <td style={{ padding: '8px 4px', textAlign: 'center', backgroundColor: '#e5e7eb', color: '#374151' }}>{formatNum(r.tvFutbol_proj)}</td>
+                                <td style={{ padding: '4px 2px', textAlign: 'center', backgroundColor: '#f3f4f6' }}>{formatNum(r.tvFutbol_obj)}</td>
+                                <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 600 }}>{formatNum(r.tvFutbol_vent)}</td>
+                                <td style={{ padding: '4px 2px', textAlign: 'center', backgroundColor: '#e5e7eb', color: '#374151' }}>{formatNum(r.tvFutbol_proj)}</td>
                                 <CellProjPct obj={r.tvFutbol_obj} proj={r.tvFutbol_proj} />
 
                                 {/* Disp € */}
-                                <td style={{ padding: '8px 4px', textAlign: 'center', backgroundColor: '#f3f4f6' }}>{formatNum(r.dispSegEuros_obj, true)}</td>
-                                <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: 600 }}>{formatNum(r.dispSegEuros_vent, true)}</td>
-                                <td style={{ padding: '8px 4px', textAlign: 'center', backgroundColor: '#e5e7eb', color: '#374151' }}>{formatNum(r.dispSegEuros_proj, true)}</td>
+                                <td style={{ padding: '4px 2px', textAlign: 'center', backgroundColor: '#f3f4f6' }}>{formatNum(r.dispSegEuros_obj, true)}</td>
+                                <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 600 }}>{formatNum(r.dispSegEuros_vent, true)}</td>
+                                <td style={{ padding: '4px 2px', textAlign: 'center', backgroundColor: '#e5e7eb', color: '#374151' }}>{formatNum(r.dispSegEuros_proj, true)}</td>
                                 <CellProjPct obj={r.dispSegEuros_obj} proj={r.dispSegEuros_proj} />
 
-
                                 {/* Repos */}
-                                <td style={{ padding: '8px 4px', textAlign: 'center', backgroundColor: '#f3f4f6' }}>{formatNum(r.repos_obj)}</td>
-                                <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: 600 }}>{formatNum(r.repos_vent)}</td>
-                                <td style={{ padding: '8px 4px', textAlign: 'center', backgroundColor: '#e5e7eb', color: '#374151' }}>{formatNum(r.repos_proj)}</td>
+                                <td style={{ padding: '4px 2px', textAlign: 'center', backgroundColor: '#f3f4f6' }}>{formatNum(r.repos_obj)}</td>
+                                <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 600 }}>{formatNum(r.repos_vent)}</td>
+                                <td style={{ padding: '4px 2px', textAlign: 'center', backgroundColor: '#e5e7eb', color: '#374151' }}>{formatNum(r.repos_proj)}</td>
                                 <CellProjPct obj={r.repos_obj} proj={r.repos_proj} />
 
                                 {/* FTTR */}
-                                <td style={{ padding: '8px 4px', textAlign: 'center', backgroundColor: '#f3f4f6' }}>{formatNum(r.fttr_obj)}</td>
-                                <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: 600 }}>{formatNum(r.fttr_vent)}</td>
-                                <td style={{ padding: '8px 4px', textAlign: 'center', backgroundColor: '#e5e7eb', color: '#374151' }}>{formatNum(r.fttr_proj)}</td>
+                                <td style={{ padding: '4px 2px', textAlign: 'center', backgroundColor: '#f3f4f6' }}>{formatNum(r.fttr_obj)}</td>
+                                <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 600 }}>{formatNum(r.fttr_vent)}</td>
+                                <td style={{ padding: '4px 2px', textAlign: 'center', backgroundColor: '#e5e7eb', color: '#374151' }}>{formatNum(r.fttr_proj)}</td>
                                 <CellProjPct obj={r.fttr_obj} proj={r.fttr_proj} />
 
                                 {/* Alarmas */}
-                                <td style={{ padding: '8px 4px', textAlign: 'center', backgroundColor: '#f3f4f6' }}>{formatNum(r.alarmas_obj)}</td>
-                                <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: 600 }}>{formatNum(r.alarmas_vent)}</td>
-                                <td style={{ padding: '8px 4px', textAlign: 'center', backgroundColor: '#e5e7eb', color: '#374151' }}>{formatNum(r.alarmas_proj)}</td>
+                                <td style={{ padding: '4px 2px', textAlign: 'center', backgroundColor: '#f3f4f6' }}>{formatNum(r.alarmas_obj)}</td>
+                                <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 600 }}>{formatNum(r.alarmas_vent)}</td>
+                                <td style={{ padding: '4px 2px', textAlign: 'center', backgroundColor: '#e5e7eb', color: '#374151' }}>{formatNum(r.alarmas_proj)}</td>
                                 <CellProjPct obj={r.alarmas_obj} proj={r.alarmas_proj} />
                             </tr>
                         ))}
 
                         {/* TOTALS ROW */}
                         <tr style={{ backgroundColor: '#f8fafc', borderTop: '2px solid var(--border-color)', borderBottom: '2px solid var(--border-color)' }}>
-                            <td style={{ padding: '8px 12px', fontWeight: 700, color: '#0f172a', borderRight: '1px solid var(--border-color)' }}>{totals.store}</td>
-                            <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: 700, color: '#0f172a', borderRight: '1px solid var(--border-color)' }}>{totals.pers}</td>
-                            <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: 700, color: '#0f172a', borderRight: '2px solid var(--border-color)' }}>{totals.altasTotales}</td>
+                            <td style={{ padding: '4px 4px', fontWeight: 700, color: '#0f172a', borderRight: '1px solid var(--border-color)' }}>{totals.store}</td>
+                            <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 700, color: '#0f172a', borderRight: '1px solid var(--border-color)' }}>{totals.pers}</td>
+                            <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 700, color: '#0f172a', borderRight: '2px solid var(--border-color)' }}>{totals.altasTotales}</td>
 
-                            <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.bafNoTrasl_obj)}</td>
-                            <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.bafNoTrasl_vent)}</td>
-                            <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: 700, color: '#ec4899' }}>{formatNum(totals.bafNoTrasl_tram)}</td>
-                            <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.bafNoTrasl_proj)}</td>
+                            <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.bafNoTrasl_obj)}</td>
+                            <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.bafNoTrasl_vent)}</td>
+                            <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 700, color: '#ec4899' }}>{formatNum(totals.bafNoTrasl_tram)}</td>
+                            <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.bafNoTrasl_proj)}</td>
                             <td style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}></td>
 
-                            <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.bafConvMS_obj)}</td>
-                            <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.bafConvMS_vent)}</td>
-                            <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: 700, color: '#ec4899' }}>{formatNum(totals.bafConvMS_tram)}</td>
-                            <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.bafConvMS_proj)}</td>
+                            <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.bafConvMS_obj)}</td>
+                            <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.bafConvMS_vent)}</td>
+                            <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 700, color: '#ec4899' }}>{formatNum(totals.bafConvMS_tram)}</td>
+                            <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.bafConvMS_proj)}</td>
                             <td style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}></td>
 
-
-                            <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.tvFutbol_obj)}</td>
-                            <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.tvFutbol_vent)}</td>
-                            <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.tvFutbol_proj)}</td>
+                            <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.tvFutbol_obj)}</td>
+                            <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.tvFutbol_vent)}</td>
+                            <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.tvFutbol_proj)}</td>
                             <td style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}></td>
 
-                            <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.dispSegEuros_obj, true)}</td>
-                            <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.dispSegEuros_vent, true)}</td>
-                            <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.dispSegEuros_proj, true)}</td>
+                            <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.dispSegEuros_obj, true)}</td>
+                            <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.dispSegEuros_vent, true)}</td>
+                            <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.dispSegEuros_proj, true)}</td>
                             <td style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}></td>
 
-                            <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.repos_obj)}</td>
-                            <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.repos_vent)}</td>
-                            <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.repos_proj)}</td>
+                            <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.repos_obj)}</td>
+                            <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.repos_vent)}</td>
+                            <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.repos_proj)}</td>
                             <td style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}></td>
 
-                            <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.fttr_obj)}</td>
-                            <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.fttr_vent)}</td>
-                            <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.fttr_proj)}</td>
+                            <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.fttr_obj)}</td>
+                            <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.fttr_vent)}</td>
+                            <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.fttr_proj)}</td>
                             <td style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}></td>
 
-                            <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.alarmas_obj)}</td>
-                            <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.alarmas_vent)}</td>
-                            <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.alarmas_proj)}</td>
+                            <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.alarmas_obj)}</td>
+                            <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.alarmas_vent)}</td>
+                            <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.alarmas_proj)}</td>
                             <td style={{ padding: '0' }}></td>
                         </tr>
 
                         {/* Deficit Row */}
                         <tr style={{ backgroundColor: '#e0f2fe', color: '#0369a1' }}>
-                            <td colSpan={3} style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, borderRight: '2px solid var(--border-color)', color: '#0369a1' }}>Necesitamos Hoy Deficit</td>
+                            <td colSpan={3} style={{ padding: '4px 4px', textAlign: 'right', fontWeight: 700, borderRight: '2px solid var(--border-color)', color: '#0369a1' }}>Necesitamos Hoy Deficit</td>
                             <td colSpan={5} style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}><DeficitRow obj={totals.bafNoTrasl_obj} vent={totals.bafNoTrasl_vent} tram={totals.bafNoTrasl_tram} /></td>
                             <td colSpan={5} style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}><DeficitRow obj={totals.bafConvMS_obj} vent={totals.bafConvMS_vent} tram={totals.bafConvMS_tram} /></td>
                             <td colSpan={4} style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}><DeficitRow obj={totals.tvFutbol_obj} vent={totals.tvFutbol_vent} /></td>
@@ -639,7 +631,7 @@ export default function TramitacionPage() {
 
                         {/* Pct Row */}
                         <tr style={{ backgroundColor: '#f8fafc', color: '#0f172a' }}>
-                            <td colSpan={3} style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, borderRight: '2px solid var(--border-color)' }}>Proyect Porcentaje</td>
+                            <td colSpan={3} style={{ padding: '4px 4px', textAlign: 'right', fontWeight: 700, borderRight: '2px solid var(--border-color)' }}>Proyect Porcentaje</td>
                             <td colSpan={5} style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}><PctRow obj={totals.bafNoTrasl_obj} proj={totals.bafNoTrasl_proj} /></td>
                             <td colSpan={5} style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}><PctRow obj={totals.bafConvMS_obj} proj={totals.bafConvMS_proj} /></td>
                             <td colSpan={4} style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}><PctRow obj={totals.tvFutbol_obj} proj={totals.tvFutbol_proj} /></td>
@@ -651,7 +643,7 @@ export default function TramitacionPage() {
 
                         {/* Media Row */}
                         <tr style={{ backgroundColor: 'var(--bg-app)', color: 'var(--light-text)' }}>
-                            <td colSpan={3} style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, borderRight: '2px solid var(--border-color)' }}>Proyect una Media de</td>
+                            <td colSpan={3} style={{ padding: '4px 4px', textAlign: 'right', fontWeight: 700, borderRight: '2px solid var(--border-color)' }}>Proyect una Media de</td>
                             <td colSpan={5} style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}><MediaRow proj={totals.bafNoTrasl_proj} /></td>
                             <td colSpan={5} style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}><MediaRow proj={totals.bafConvMS_proj} /></td>
                             <td colSpan={4} style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}><MediaRow proj={totals.tvFutbol_proj} /></td>
@@ -665,68 +657,68 @@ export default function TramitacionPage() {
                         {o2Rows.length > 0 && (
                             <>
                                 <tr>
-                                    <td colSpan={50} style={{ height: '32px' }}></td>
+                                    <td colSpan={50} style={{ height: '16px' }}></td>
                                 </tr>
                                 <tr>
-                                    <th colSpan={3} style={{ backgroundColor: '#0ea5e9', color: 'white', borderBottom: '1px solid rgba(255,255,255,0.2)', borderRight: '2px solid rgba(255,255,255,0.2)', padding: '8px', textAlign: 'center', fontWeight: 600 }}>Tiendas O2</th>
-                                    <th colSpan={5} style={{ backgroundColor: '#0ea5e9', color: 'white', borderBottom: '1px solid rgba(255,255,255,0.2)', borderRight: '2px solid rgba(255,255,255,0.2)', padding: '8px', textAlign: 'center', fontWeight: 600 }}>Altas/Portas Fibra</th>
-                                    <th colSpan={5} style={{ backgroundColor: '#0ea5e9', color: 'white', borderBottom: '1px solid rgba(255,255,255,0.2)', borderRight: '2px solid rgba(255,255,255,0.2)', padding: '8px', textAlign: 'center', fontWeight: 600 }}>Internas Fibra</th>
+                                    <th colSpan={3} style={{ backgroundColor: '#0ea5e9', color: 'white', borderBottom: '1px solid rgba(255,255,255,0.2)', borderRight: '2px solid rgba(255,255,255,0.2)', padding: '4px 2px', textAlign: 'center', fontWeight: 600 }}>Tiendas O2</th>
+                                    <th colSpan={5} style={{ backgroundColor: '#0ea5e9', color: 'white', borderBottom: '1px solid rgba(255,255,255,0.2)', borderRight: '2px solid rgba(255,255,255,0.2)', padding: '4px 2px', textAlign: 'center', fontWeight: 600 }}>Altas/Portas Fibra</th>
+                                    <th colSpan={5} style={{ backgroundColor: '#0ea5e9', color: 'white', borderBottom: '1px solid rgba(255,255,255,0.2)', padding: '4px 2px', textAlign: 'center', fontWeight: 600 }}>Internas Fibra</th>
                                 </tr>
-                                <tr style={{ fontSize: 11 }}>
-                                    <th style={{ backgroundColor: 'var(--bg-app)', color: 'var(--medium-gray)', padding: '6px 8px', textAlign: 'left', borderRight: '1px solid var(--border-color)' }}>Nombre Comercial PdV</th>
-                                    <th style={{ backgroundColor: 'var(--bg-app)', color: 'var(--medium-gray)', padding: '6px 4px', textAlign: 'center', borderRight: '1px solid var(--border-color)' }}>Pers</th>
-                                    <th style={{ backgroundColor: 'var(--bg-app)', color: 'var(--medium-gray)', padding: '6px 4px', textAlign: 'center', borderRight: '2px solid var(--border-color)' }}>Total Altas</th>
+                                <tr style={{ fontSize: 9, color: 'var(--medium-gray)' }}>
+                                    <th style={{ backgroundColor: 'var(--bg-app)', padding: '4px 4px', textAlign: 'left', borderRight: '1px solid var(--border-color)' }}>Nombre Comercial PdV</th>
+                                    <th style={{ backgroundColor: 'var(--bg-app)', padding: '4px 2px', textAlign: 'center', borderRight: '1px solid var(--border-color)' }}>Pers</th>
+                                    <th style={{ backgroundColor: 'var(--bg-app)', padding: '4px 2px', textAlign: 'center', borderRight: '2px solid var(--border-color)' }}>Total Altas</th>
                                     
                                     {/* BAF -> Altas/Portas Fibra */}
-                                    <th style={{ backgroundColor: 'var(--bg-app)', color: 'var(--medium-gray)', padding: '6px 4px', textAlign: 'center' }}>Obj</th>
-                                    <th style={{ backgroundColor: 'var(--bg-app)', color: 'var(--medium-gray)', padding: '6px 4px', textAlign: 'center' }}>Vent</th>
-                                    <th style={{ backgroundColor: 'var(--bg-app)', color: '#ec4899', padding: '6px 4px', textAlign: 'center' }}>Tram</th>
-                                    <th style={{ backgroundColor: 'var(--bg-app)', color: 'var(--medium-gray)', padding: '6px 4px', textAlign: 'center' }}>Proy</th>
-                                    <th style={{ backgroundColor: 'var(--bg-app)', color: 'var(--medium-gray)', padding: '6px 4px', textAlign: 'center', borderRight: '2px solid var(--border-color)' }}>%</th>
+                                    <th style={{ backgroundColor: 'var(--bg-app)', padding: '4px 2px', textAlign: 'center' }}>Obj</th>
+                                    <th style={{ backgroundColor: 'var(--bg-app)', padding: '4px 2px', textAlign: 'center' }}>Vent</th>
+                                    <th style={{ backgroundColor: 'var(--bg-app)', color: '#ec4899', padding: '4px 2px', textAlign: 'center' }}>Tram</th>
+                                    <th style={{ backgroundColor: 'var(--bg-app)', padding: '4px 2px', textAlign: 'center' }}>Proy</th>
+                                    <th style={{ backgroundColor: 'var(--bg-app)', padding: '4px 2px', textAlign: 'center', borderRight: '2px solid var(--border-color)' }}>%</th>
 
                                     {/* BAF Conv MS -> Internas Fibra */}
-                                    <th style={{ backgroundColor: 'var(--bg-app)', color: 'var(--medium-gray)', padding: '6px 4px', textAlign: 'center' }}>Obj</th>
-                                    <th style={{ backgroundColor: 'var(--bg-app)', color: 'var(--medium-gray)', padding: '6px 4px', textAlign: 'center' }}>Vent</th>
-                                    <th style={{ backgroundColor: 'var(--bg-app)', color: '#ec4899', padding: '6px 4px', textAlign: 'center' }}>Tram</th>
-                                    <th style={{ backgroundColor: 'var(--bg-app)', color: 'var(--medium-gray)', padding: '6px 4px', textAlign: 'center' }}>Proy</th>
-                                    <th style={{ backgroundColor: 'var(--bg-app)', color: 'var(--medium-gray)', padding: '6px 4px', textAlign: 'center', borderRight: '2px solid var(--border-color)' }}>%</th>
+                                    <th style={{ backgroundColor: 'var(--bg-app)', padding: '4px 2px', textAlign: 'center' }}>Obj</th>
+                                    <th style={{ backgroundColor: 'var(--bg-app)', padding: '4px 2px', textAlign: 'center' }}>Vent</th>
+                                    <th style={{ backgroundColor: 'var(--bg-app)', color: '#ec4899', padding: '4px 2px', textAlign: 'center' }}>Tram</th>
+                                    <th style={{ backgroundColor: 'var(--bg-app)', padding: '4px 2px', textAlign: 'center' }}>Proy</th>
+                                    <th style={{ backgroundColor: 'var(--bg-app)', padding: '4px 2px', textAlign: 'center', borderRight: '2px solid var(--border-color)' }}>%</th>
                                 </tr>
                                 {o2Rows.map((r, i) => (
                                     <tr key={r.store}>
-                                        <td style={{ backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', padding: '8px 12px', fontWeight: 600, color: 'var(--light-text)', borderRight: '1px solid var(--border-color)' }}>{r.store}</td>
-                                        <td style={{ backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', padding: '8px 4px', textAlign: 'center', color: 'var(--medium-gray)', borderRight: '1px solid var(--border-color)' }}>{r.pers}</td>
-                                        <td style={{ backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', padding: '8px 4px', textAlign: 'center', fontWeight: 700, borderRight: '2px solid var(--border-color)' }}>{r.altasTotales}</td>
+                                        <td style={{ backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', padding: '4px 4px', fontWeight: 600, color: 'var(--light-text)', borderRight: '1px solid var(--border-color)' }}>{r.store}</td>
+                                        <td style={{ backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', padding: '4px 2px', textAlign: 'center', color: 'var(--medium-gray)', borderRight: '1px solid var(--border-color)' }}>{r.pers}</td>
+                                        <td style={{ backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', padding: '4px 2px', textAlign: 'center', fontWeight: 700, borderRight: '2px solid var(--border-color)' }}>{r.altasTotales}</td>
 
                                         {/* BAF */}
                                         <EditableObjectiveCell storeName={r.store} field="bafNoTrasl" value={r.bafNoTrasl_obj} periodKey={activePeriodKey} rowData={r} />
-                                        <td style={{ backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', padding: '8px 4px', textAlign: 'center', fontWeight: 600 }}>{formatNum(r.bafNoTrasl_vent)}</td>
-                                        <td style={{ backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', padding: '8px 4px', textAlign: 'center', color: '#ec4899', fontWeight: 600 }}>{formatNum(r.bafNoTrasl_tram)}</td>
-                                        <td style={{ backgroundColor: '#e5e7eb', borderBottom: '1px solid var(--border-color)', padding: '8px 4px', textAlign: 'center', color: '#374151' }}>{formatNum(r.bafNoTrasl_proj)}</td>
+                                        <td style={{ backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', padding: '4px 2px', textAlign: 'center', fontWeight: 600 }}>{formatNum(r.bafNoTrasl_vent)}</td>
+                                        <td style={{ backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', padding: '4px 2px', textAlign: 'center', color: '#ec4899', fontWeight: 600 }}>{formatNum(r.bafNoTrasl_tram)}</td>
+                                        <td style={{ backgroundColor: '#e5e7eb', borderBottom: '1px solid var(--border-color)', padding: '4px 2px', textAlign: 'center', color: '#374151' }}>{formatNum(r.bafNoTrasl_proj)}</td>
                                         <CellProjPct obj={r.bafNoTrasl_obj} proj={r.bafNoTrasl_proj} />
 
                                         {/* BAF Conv MS */}
                                         <EditableObjectiveCell storeName={r.store} field="bafConvMS" value={r.bafConvMS_obj} periodKey={activePeriodKey} rowData={r} />
-                                        <td style={{ backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', padding: '8px 4px', textAlign: 'center', fontWeight: 600 }}>{formatNum(r.bafConvMS_vent)}</td>
-                                        <td style={{ backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', padding: '8px 4px', textAlign: 'center', color: '#ec4899', fontWeight: 600 }}>{formatNum(r.bafConvMS_tram)}</td>
-                                        <td style={{ backgroundColor: '#e5e7eb', borderBottom: '1px solid var(--border-color)', padding: '8px 4px', textAlign: 'center', color: '#374151' }}>{formatNum(r.bafConvMS_proj)}</td>
+                                        <td style={{ backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', padding: '4px 2px', textAlign: 'center', fontWeight: 600 }}>{formatNum(r.bafConvMS_vent)}</td>
+                                        <td style={{ backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', padding: '4px 2px', textAlign: 'center', color: '#ec4899', fontWeight: 600 }}>{formatNum(r.bafConvMS_tram)}</td>
+                                        <td style={{ backgroundColor: '#e5e7eb', borderBottom: '1px solid var(--border-color)', padding: '4px 2px', textAlign: 'center', color: '#374151' }}>{formatNum(r.bafConvMS_proj)}</td>
                                         <CellProjPct obj={r.bafConvMS_obj} proj={r.bafConvMS_proj} />
                                     </tr>
                                 ))}
                                 <tr>
-                                    <td colSpan={13} style={{ borderTop: '2px solid var(--border-color)', height: '8px' }}></td>
+                                    <td colSpan={13} style={{ borderTop: '2px solid var(--border-color)', height: '6px' }}></td>
                                 </tr>
                                 <tr>
-                                    <td colSpan={3} style={{ backgroundColor: '#e0f2fe', color: '#0369a1', padding: '8px 12px', textAlign: 'right', fontWeight: 700, borderRight: '2px solid var(--border-color)' }}>Necesitamos Hoy Deficit</td>
+                                    <td colSpan={3} style={{ backgroundColor: '#e0f2fe', color: '#0369a1', padding: '4px 4px', textAlign: 'right', fontWeight: 700, borderRight: '2px solid var(--border-color)' }}>Necesitamos Hoy Deficit</td>
                                     <td colSpan={5} style={{ backgroundColor: '#e0f2fe', padding: '0', borderRight: '2px solid var(--border-color)' }}><DeficitRow obj={o2Totals.bafNoTrasl_obj} vent={o2Totals.bafNoTrasl_vent} tram={o2Totals.bafNoTrasl_tram} /></td>
                                     <td colSpan={5} style={{ backgroundColor: '#e0f2fe', padding: '0', borderRight: '2px solid var(--border-color)' }}><DeficitRow obj={o2Totals.bafConvMS_obj} vent={o2Totals.bafConvMS_vent} tram={o2Totals.bafConvMS_tram} /></td>
                                 </tr>
                                 <tr>
-                                    <td colSpan={3} style={{ backgroundColor: '#f8fafc', color: '#0f172a', padding: '8px 12px', textAlign: 'right', fontWeight: 700, borderRight: '2px solid var(--border-color)' }}>Proyect Porcentaje</td>
+                                    <td colSpan={3} style={{ backgroundColor: '#f8fafc', color: '#0f172a', padding: '4px 4px', textAlign: 'right', fontWeight: 700, borderRight: '2px solid var(--border-color)' }}>Proyect Porcentaje</td>
                                     <td colSpan={5} style={{ backgroundColor: '#f8fafc', padding: '0', borderRight: '2px solid var(--border-color)' }}><PctRow obj={o2Totals.bafNoTrasl_obj} proj={o2Totals.bafNoTrasl_proj} /></td>
                                     <td colSpan={5} style={{ backgroundColor: '#f8fafc', padding: '0', borderRight: '2px solid var(--border-color)' }}><PctRow obj={o2Totals.bafConvMS_obj} proj={o2Totals.bafConvMS_proj} /></td>
                                 </tr>
                                 <tr>
-                                    <td colSpan={3} style={{ backgroundColor: 'var(--bg-app)', color: 'var(--light-text)', padding: '8px 12px', textAlign: 'right', fontWeight: 700, borderRight: '2px solid var(--border-color)' }}>Proyect una Media de</td>
+                                    <td colSpan={3} style={{ backgroundColor: 'var(--bg-app)', color: 'var(--light-text)', padding: '4px 4px', textAlign: 'right', fontWeight: 700, borderRight: '2px solid var(--border-color)' }}>Proyect una Media de</td>
                                     <td colSpan={5} style={{ backgroundColor: 'var(--bg-app)', padding: '0', borderRight: '2px solid var(--border-color)' }}><MediaRow proj={o2Totals.bafNoTrasl_proj} /></td>
                                     <td colSpan={5} style={{ backgroundColor: 'var(--bg-app)', padding: '0', borderRight: '2px solid var(--border-color)' }}><MediaRow proj={o2Totals.bafConvMS_proj} /></td>
                                 </tr>
