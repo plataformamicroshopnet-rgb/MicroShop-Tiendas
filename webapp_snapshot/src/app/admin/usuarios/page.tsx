@@ -30,15 +30,25 @@ export const HUB_STRUCTURE_DEFS = [
     id: 'HUB_SEGUIMIENTO',
     label: '3. Jefe de Tiendas (Seguimiento)',
     cards: [
+      { id: 'CARD_AVANCE_PALANCAS', label: 'Avance de Palancas' },
       { id: 'CARD_AGENDA_DIARIO', label: 'Agenda Comercial (Diario)' },
+      { id: 'CARD_COMISIONES_COMPLETAS', label: 'Comisiones Tiendas Completas' },
+      { id: 'CARD_COMISIONES_EQUIPO', label: 'Comisiones de Equipo' },
+      { id: 'CARD_CONDICIONES_EXTRAS', label: 'Condiciones, Extras y Penalizaciones' },
       { id: 'CARD_COMBOS', label: 'Control de Combos y Productos' },
-      { id: 'CARD_COMISIONES_EQUIPO', label: 'Comisiones de Equipo' }
+      { id: 'CARD_COMISIONES_JEFE', label: 'Comisiones del Mes (Jefe)' }
     ]
   },
   {
     id: 'MODULE_DIRECCION',
     label: '4. Dirección Tiendas (Cuadro de Mando)',
-    cards: []
+    cards: [
+      { id: 'CARD_DIR_MOD', label: 'MOD (Media Operaciones Diaria)' },
+      { id: 'CARD_DIR_COMBOS', label: 'Comparativa Rápida de Ventas' },
+      { id: 'CARD_DIR_PRODUCTOS', label: 'Avance de Palancas' },
+      { id: 'CARD_DIR_TRAMITACION', label: 'Seguimiento de Tramitación' },
+      { id: 'CARD_DIR_RENTABILIDAD', label: 'Rentabilidad por Tiendas' }
+    ]
   },
   {
     id: 'HUB_BACKOFFICE',

@@ -5,12 +5,15 @@ import { Package, LineChart, ChevronLeft, ChevronRight, Calendar, Globe, Calcula
 import { useRouter } from 'next/navigation'
 import { useGuard } from '@/hooks/useGuard'
 import { PageHeader } from '@/components/PageHeader'
+import { can } from '@/lib/permissions'
+
 export default function SeguimientoVentasPage() {
   const { authorized } = useGuard('MODULE_JEFE_TIENDAS')
   const router = useRouter()
 
   const [isEditMode, setIsEditMode] = useState(false)
   const [cardOrder, setCardOrder] = useState<string[]>([])
+  const [currentUser, setCurrentUser] = useState<any>(null)
 
   const longPressTimeout = useRef<NodeJS.Timeout | null>(null)
   const isLongPressActive = useRef<boolean>(false)
@@ -22,6 +25,15 @@ export default function SeguimientoVentasPage() {
     if (savedOrder) {
       try { setCardOrder(JSON.parse(savedOrder)) } catch (e) {}
     }
+
+    // Fetch logged in user and permissions
+    fetch('/api/auth/me')
+      .then(res => res.json())
+      .then(data => {
+        if (data.authenticated) {
+          setCurrentUser(data.user)
+        }
+      })
   }, [])
 
   const cards = [
@@ -31,7 +43,8 @@ export default function SeguimientoVentasPage() {
       icon: Package,
       action: () => router.push('/seguimiento-ventas/productos'),
       color: 'rgba(0,173,239,0.1)',
-      textColor: 'var(--mercedes-cyan)'
+      textColor: 'var(--mercedes-cyan)',
+      permission: 'CARD_AVANCE_PALANCAS'
     },
     {
       title: 'Agenda Comercial Salva',
@@ -39,16 +52,17 @@ export default function SeguimientoVentasPage() {
       icon: Calendar,
       action: () => router.push('/seguimiento-ventas/agenda'),
       color: 'rgba(16,185,129,0.1)',
-      textColor: '#10b981'
+      textColor: '#10b981',
+      permission: 'CARD_AGENDA_DIARIO'
     },
-
     {
       title: 'Comisiones Tiendas Completas',
       description: 'Liquidación grupal y métricas completas de todas las comisiones.',
       icon: Calculator,
       action: () => router.push('/comisiones'),
       color: 'rgba(255, 149, 0, 0.1)',
-      textColor: 'rgb(255, 149, 0)'
+      textColor: 'rgb(255, 149, 0)',
+      permission: 'CARD_COMISIONES_COMPLETAS'
     },
     {
       title: 'Comisiones Tiendas Reducidas',
@@ -56,7 +70,8 @@ export default function SeguimientoVentasPage() {
       icon: Target,
       action: () => router.push('/seguimiento-ventas/comisiones-equipo'),
       color: 'rgba(168, 85, 247, 0.1)',
-      textColor: '#a855f7'
+      textColor: '#a855f7',
+      permission: 'CARD_COMISIONES_EQUIPO'
     },
     {
       title: 'Condiciones, Comisiones Extras del mes y Penalizaciones',
@@ -64,31 +79,25 @@ export default function SeguimientoVentasPage() {
       icon: Target,
       action: () => router.push('/seguimiento-ventas/condiciones-mensuales'),
       color: 'rgba(245, 158, 11, 0.1)',
+      permission: 'CARD_CONDICIONES_EXTRAS'
     },
-
     {
       title: 'Comparativa Rapida de Ventas',
       description: 'Cross-sell por comercial: Palancas principales de comisiones. Clic en cada cifra para ver clientes.',
       icon: Target,
       action: () => router.push('/seguimiento-ventas/combos'),
       color: 'rgba(30,58,95,0.08)',
-      textColor: '#1e3a5f'
-    },
-    {
-      title: 'MOD (Media Operaciones Diaria)',
-      description: 'Comparativa de operaciones, importe medio y rentabilidad diaria.',
-      icon: TrendingUp,
-      action: () => router.push('/seguimiento-ventas/mod'),
-      color: 'rgba(34, 197, 94, 0.1)',
-      textColor: '#22c55e'
+      textColor: '#1e3a5f',
+      permission: 'CARD_COMBOS'
     },
     {
       title: 'Comisiones del Mes (Jefe)',
       description: 'Cálculo dinámico de comisiones del Jefe Tiendas (media de equipo y bonos).',
       icon: Calculator,
       action: () => router.push('/seguimiento-ventas/comisiones-jefe'),
-      color: 'rgba(239, 68, 68, 0.1)', // Red tint
-      textColor: '#ef4444' // Red color for distinction
+      color: 'rgba(239, 68, 68, 0.1)',
+      textColor: '#ef4444',
+      permission: 'CARD_COMISIONES_JEFE'
     }
   ]
 
@@ -101,11 +110,19 @@ export default function SeguimientoVentasPage() {
     });
   }, [cards, cardOrder])
 
+  const visibleCards = useMemo(() => {
+    if (!currentUser) return [];
+    return sortedCards.filter(c => {
+      if (!c.permission) return true;
+      return can(currentUser, c.permission);
+    });
+  }, [sortedCards, currentUser]);
+
   const moveCard = (index: number, direction: 'prev' | 'next') => {
     if (direction === 'prev' && index === 0) return;
-    if (direction === 'next' && index === sortedCards.length - 1) return;
+    if (direction === 'next' && index === visibleCards.length - 1) return;
 
-    const newSorted = [...sortedCards];
+    const newSorted = [...visibleCards];
     const swapIndex = direction === 'prev' ? index - 1 : index + 1;
     
     const temp = newSorted[index];
@@ -204,8 +221,8 @@ export default function SeguimientoVentasPage() {
     }
 
     const currentOrder = cardOrder.length > 0 ? [...cardOrder] : cards.map(c => c.title);
-    const draggedTitle = sortedCards[draggedIndex].title;
-    const targetTitle = sortedCards[targetIndex].title;
+    const draggedTitle = visibleCards[draggedIndex].title;
+    const targetTitle = visibleCards[targetIndex].title;
 
     const filteredOrder = currentOrder.filter(title => title !== draggedTitle);
     const insertAt = filteredOrder.indexOf(targetTitle);
@@ -387,7 +404,7 @@ export default function SeguimientoVentasPage() {
       )}
 
       <div className="hub-grid" style={{ marginTop: '24px' }}>
-        {sortedCards.map((c, i) => {
+        {visibleCards.map((c, i) => {
           const Icon = c.icon
           const iconColor = c.textColor || '#3b82f6';
           
@@ -483,7 +500,7 @@ export default function SeguimientoVentasPage() {
                       </button>
                       <button 
                           onClick={(e) => { e.stopPropagation(); moveCard(i, 'next') }} 
-                          disabled={i === sortedCards.length - 1} 
+                          disabled={i === visibleCards.length - 1} 
                           style={{ 
                               display: 'flex', 
                               alignItems: 'center', 
@@ -492,10 +509,10 @@ export default function SeguimientoVentasPage() {
                               height: 26, 
                               borderRadius: 6, 
                               border: 'none', 
-                              background: i === sortedCards.length - 1 ? 'transparent' : 'var(--bg-input)', 
-                              color: i === sortedCards.length - 1 ? 'var(--border-strong)' : 'var(--text-main)', 
-                              cursor: i === sortedCards.length - 1 ? 'not-allowed' : 'pointer',
-                              boxShadow: i === sortedCards.length - 1 ? 'none' : '0 1px 3px rgba(0,0,0,0.05)'
+                              background: i === visibleCards.length - 1 ? 'transparent' : 'var(--bg-input)', 
+                              color: i === visibleCards.length - 1 ? 'var(--border-strong)' : 'var(--text-main)', 
+                              cursor: i === visibleCards.length - 1 ? 'not-allowed' : 'pointer',
+                              boxShadow: i === visibleCards.length - 1 ? 'none' : '0 1px 3px rgba(0,0,0,0.05)'
                           }}
                           title="Siguiente"
                       >

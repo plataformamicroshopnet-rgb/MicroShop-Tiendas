@@ -5,6 +5,7 @@ import { Package, LineChart, Building2, Target, TrendingUp, DollarSign, Wallet, 
 import { useRouter } from 'next/navigation'
 import { useGuard } from '@/hooks/useGuard'
 import { PageHeader } from '@/components/PageHeader'
+import { can } from '@/lib/permissions'
 
 export default function DireccionTiendasPage() {
   const { authorized } = useGuard('MODULE_DIRECCION')
@@ -12,12 +13,22 @@ export default function DireccionTiendasPage() {
 
   const [isEditMode, setIsEditMode] = useState(false)
   const [cardOrder, setCardOrder] = useState<string[]>([])
+  const [currentUser, setCurrentUser] = useState<any>(null)
 
   useEffect(() => {
     const savedOrder = localStorage.getItem('direccion_tiendas_card_order')
     if (savedOrder) {
       try { setCardOrder(JSON.parse(savedOrder)) } catch (e) {}
     }
+    
+    // Fetch logged in user and permissions
+    fetch('/api/auth/me')
+      .then(res => res.json())
+      .then(data => {
+        if (data.authenticated) {
+          setCurrentUser(data.user)
+        }
+      })
   }, [])
 
   const cards = [
@@ -27,7 +38,8 @@ export default function DireccionTiendasPage() {
       icon: TrendingUp,
       action: () => router.push('/seguimiento-ventas/mod'),
       color: 'rgba(34, 197, 94, 0.1)',
-      textColor: '#22c55e'
+      textColor: '#22c55e',
+      permission: 'CARD_DIR_MOD'
     },
     {
       title: 'Comparativa Rapida de Ventas',
@@ -35,7 +47,8 @@ export default function DireccionTiendasPage() {
       icon: Target,
       action: () => router.push('/seguimiento-ventas/combos'),
       color: 'rgba(30,58,95,0.08)',
-      textColor: '#1e3a5f'
+      textColor: '#1e3a5f',
+      permission: 'CARD_DIR_COMBOS'
     },
     {
       title: 'Avance de Palancas',
@@ -43,7 +56,8 @@ export default function DireccionTiendasPage() {
       icon: Package,
       action: () => router.push('/seguimiento-ventas/productos'),
       color: 'rgba(0,173,239,0.1)',
-      textColor: 'var(--mercedes-cyan)'
+      textColor: 'var(--mercedes-cyan)',
+      permission: 'CARD_DIR_PRODUCTOS'
     },
     {
       title: 'Seguimiento de Tramitación',
@@ -51,7 +65,8 @@ export default function DireccionTiendasPage() {
       icon: LineChart,
       action: () => router.push('/seguimiento-ventas/tramitacion'),
       color: 'rgba(236, 72, 153, 0.1)',
-      textColor: '#ec4899'
+      textColor: '#ec4899',
+      permission: 'CARD_DIR_TRAMITACION'
     },
 
     {
@@ -60,7 +75,8 @@ export default function DireccionTiendasPage() {
       icon: DollarSign,
       action: () => router.push('/liquidacion/rentabilidad-tiendas'),
       color: 'rgba(168, 85, 247, 0.1)',
-      textColor: '#a855f7'
+      textColor: '#a855f7',
+      permission: 'CARD_DIR_RENTABILIDAD'
     }
   ]
 
@@ -73,11 +89,19 @@ export default function DireccionTiendasPage() {
     });
   }, [cards, cardOrder])
 
+  const visibleCards = useMemo(() => {
+    if (!currentUser) return [];
+    return sortedCards.filter(c => {
+      if (!c.permission) return true;
+      return can(currentUser, c.permission);
+    });
+  }, [sortedCards, currentUser]);
+
   const moveCard = (index: number, direction: 'up' | 'down') => {
     if (direction === 'up' && index === 0) return;
-    if (direction === 'down' && index === sortedCards.length - 1) return;
+    if (direction === 'down' && index === visibleCards.length - 1) return;
 
-    const newSorted = [...sortedCards];
+    const newSorted = [...visibleCards];
     const swapIndex = direction === 'up' ? index - 1 : index + 1;
     
     const temp = newSorted[index];
@@ -189,7 +213,7 @@ export default function DireccionTiendasPage() {
         />
 
       <div className="hub-grid" style={{ marginTop: '24px' }}>
-        {sortedCards.map((c, i) => {
+        {visibleCards.map((c, i) => {
           const Icon = c.icon
           const iconColor = c.textColor || '#3b82f6';
           
@@ -200,7 +224,7 @@ export default function DireccionTiendasPage() {
                   <button onClick={(e) => { e.stopPropagation(); moveCard(i, 'up') }} disabled={i === 0} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 8, border: 'none', background: i === 0 ? 'transparent' : 'var(--bg-input)', color: i === 0 ? 'var(--border-strong)' : 'var(--text-main)', cursor: i === 0 ? 'not-allowed' : 'pointer' }}>
                     <ArrowUp size={16} />
                   </button>
-                  <button onClick={(e) => { e.stopPropagation(); moveCard(i, 'down') }} disabled={i === sortedCards.length - 1} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 8, border: 'none', background: i === sortedCards.length - 1 ? 'transparent' : 'var(--bg-input)', color: i === sortedCards.length - 1 ? 'var(--border-strong)' : 'var(--text-main)', cursor: i === sortedCards.length - 1 ? 'not-allowed' : 'pointer' }}>
+                  <button onClick={(e) => { e.stopPropagation(); moveCard(i, 'down') }} disabled={i === visibleCards.length - 1} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 8, border: 'none', background: i === visibleCards.length - 1 ? 'transparent' : 'var(--bg-input)', color: i === visibleCards.length - 1 ? 'var(--border-strong)' : 'var(--text-main)', cursor: i === visibleCards.length - 1 ? 'not-allowed' : 'pointer' }}>
                     <ArrowDown size={16} />
                   </button>
                 </div>
