@@ -11,6 +11,7 @@ export function getDefaultPermissions(role: string): string[] {
         'HUB_LIQUIDACIONES', 'CARD_LIQUIDACION_TELEFONICA', 'CARD_RENTABILIDAD_TIENDAS', 'CARD_IMPORTES_PLUS', 'CARD_IMPORTES_PYME',
         'HUB_CRISTINA', 'CARD_AGENDA_CRISTINA', 'CARD_CONTROL_STOCK', 'CARD_INFORMES_GASTOS', 'CARD_CONTROL_VENCIMIENTOS',
         'HUB_ADMINISTRADOR', 'CARD_PERIODOS_OPERATIVOS', 'CARD_GESTION_USUARIOS', 'CARD_CATALOGOS', 'CARD_BACKUPS', 'CARD_TRAZABILIDAD',
+        'MODULE_DIRECCION',
         'PRINT', 'EXPORT_EXCEL', 'CLOSE_MONTH'
       ]
     case 'JEFE DE VENTAS':
@@ -18,6 +19,7 @@ export function getDefaultPermissions(role: string): string[] {
         'HUB_TIENDAS', 'CARD_VENTAS_TIENDAS', 'CARD_COMISIONES_TIENDAS', 'CARD_CAJA',
         'HUB_SEGUIMIENTO', 'CARD_AGENDA_DIARIO', 'CARD_COMBOS', 'CARD_COMISIONES_EQUIPO',
         'HUB_LIQUIDACIONES', 'CARD_RENTABILIDAD_TIENDAS',
+        'MODULE_DIRECCION',
         'PRINT', 'EXPORT_EXCEL'
       ]
     case 'BACK OFFICE':
@@ -71,6 +73,7 @@ export function can(user: any, permission: string): boolean {
   if (permission === 'MODULE_LIQUIDACION') return activePerms.includes('HUB_LIQUIDACIONES');
   if (permission === 'MODULE_CRISTINA') return activePerms.includes('HUB_CRISTINA');
   if (permission === 'MODULE_ADMIN') return activePerms.includes('HUB_ADMINISTRADOR');
+  if (permission === 'MODULE_DIRECCION') return activePerms.includes('MODULE_DIRECCION');
 
   if (permission === 'CARD_CAJA') return activePerms.includes('CARD_CAJA') || activePerms.includes('HUB_CRISTINA');
   if (permission === 'VIEW_NUEVA_VENTA') return activePerms.includes('HUB_TIENDAS') || activePerms.includes('CARD_NUEVA_VENTA') || activePerms.includes('HUB_BACKOFFICE');
@@ -104,7 +107,7 @@ export function canView(user: any, moduleName: string): boolean {
   if (moduleName === 'MODULE_ADMIN') return activePerms.includes('HUB_ADMINISTRADOR');
   if (moduleName === 'MODULE_COMISIONES') return activePerms.includes('CARD_COMISIONES_TIENDAS');
   if (moduleName === 'MODULE_CUMPLIMIENTO') return activePerms.includes('HUB_TIENDAS'); // O lo que sea más lógico
-  if (moduleName === 'MODULE_DIRECCION') return activePerms.includes('HUB_SEGUIMIENTO');
+  if (moduleName === 'MODULE_DIRECCION') return activePerms.includes('MODULE_DIRECCION');
   if (moduleName === 'CREATE_SALES') return activePerms.includes('CARD_NUEVA_VENTA');
   if (moduleName === 'EDIT_SALES') return activePerms.includes('CARD_REGISTRO_OPERACIONES');
 

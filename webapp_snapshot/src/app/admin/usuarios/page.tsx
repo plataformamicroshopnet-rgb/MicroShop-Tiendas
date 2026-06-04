@@ -36,8 +36,13 @@ export const HUB_STRUCTURE_DEFS = [
     ]
   },
   {
+    id: 'MODULE_DIRECCION',
+    label: '4. Dirección Tiendas (Cuadro de Mando)',
+    cards: []
+  },
+  {
     id: 'HUB_BACKOFFICE',
-    label: '4. Back Office',
+    label: '5. Back Office',
     cards: [
       { id: 'CARD_NUEVA_VENTA', label: 'Nueva Venta' },
       { id: 'CARD_REGISTRO_OPERACIONES', label: 'Registro de Operaciones' },
@@ -46,7 +51,7 @@ export const HUB_STRUCTURE_DEFS = [
   },
   {
     id: 'HUB_LIQUIDACIONES',
-    label: '5. Liquidaciones (Cierres)',
+    label: '6. Liquidaciones (Cierres)',
     cards: [
       { id: 'CARD_LIQUIDACION_TELEFONICA', label: 'Liquidación Territorial Telefónica' },
       { id: 'CARD_RENTABILIDAD_TIENDAS', label: 'Rentabilidad de Tiendas' },
@@ -56,7 +61,7 @@ export const HUB_STRUCTURE_DEFS = [
   },
   {
     id: 'HUB_CRISTINA',
-    label: '6. Cristina Admin',
+    label: '7. Cristina Admin',
     cards: [
       { id: 'CARD_AGENDA_CRISTINA', label: 'Agenda de Llamadas' },
       { id: 'CARD_CONTROL_STOCK', label: 'Control de Stock (Correhuela)' },
@@ -66,7 +71,7 @@ export const HUB_STRUCTURE_DEFS = [
   },
   {
     id: 'HUB_ADMINISTRADOR',
-    label: '7. Administración Global',
+    label: '8. Administración Global',
     cards: [
       { id: 'CARD_PERIODOS_OPERATIVOS', label: 'Gestión de Periodos Operativos' },
       { id: 'CARD_GESTION_USUARIOS', label: 'Gestión de Usuarios' },
@@ -462,7 +467,7 @@ export default function AdminUsuariosPage() {
                                     <div style={{ borderTop: '2px solid #E2E8F0' }}>
                                         <div style={{ padding: '12px 16px', background: '#F8FAFC', display: 'flex', alignItems: 'center', gap: 8 }}>
                                             <Folder size={16} color="#A855F7" />
-                                            <span style={{ fontSize: 13, fontWeight: 700, color: '#334155' }}>8. Acciones Globales (Operativas)</span>
+                                            <span style={{ fontSize: 13, fontWeight: 700, color: '#334155' }}>9. Acciones Globales (Operativas)</span>
                                         </div>
                                         <div style={{ padding: '8px 0' }}>
                                             {EXTRA_ACTION_DEFS.map(permDef => (
