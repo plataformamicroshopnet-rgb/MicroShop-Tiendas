@@ -57,15 +57,31 @@ export default function TramitacionPage() {
         if (!activePeriodKey) return;
         setLoading(true);
         try {
-            const [sRes, tRes, objRes] = await Promise.all([
+            const [sRes, tRes, objRes, o2Res] = await Promise.all([
                 fetch(`/api/sales?periodKey=${activePeriodKey}`),
                 fetch(`/api/tiendas-comisiones?periodKey=${activePeriodKey}`),
-                fetch(`/api/tramitacion-objetivos?periodKey=${activePeriodKey}`)
+                fetch(`/api/tramitacion-objetivos?periodKey=${activePeriodKey}`),
+                fetch(`/api/settings?key=o2_rules_v2_${activePeriodKey}`).catch(() => null)
             ]);
             
             const sData = await sRes.json();
             const tData = await tRes.json();
             const objData = await objRes.json();
+
+            let o2Rules: any[] = [];
+            let o2Hours: any[] = [];
+            if (o2Res) {
+                const o2Data = await o2Res.json();
+                if (o2Data && o2Data.value) {
+                    try {
+                        const parsed = JSON.parse(o2Data.value);
+                        o2Rules = parsed.rules || [];
+                        o2Hours = parsed.hours || [];
+                    } catch(e) {
+                        console.error("Error parsing O2 rules in page.tsx", e);
+                    }
+                }
+            }
 
             const calculated = calculateTramitacion(
                 sData.logs || [],
@@ -73,7 +89,9 @@ export default function TramitacionPage() {
                 tData.hours || [],
                 objData.objectives || [],
                 workingDaysElapsed,
-                workingDaysInMonth
+                workingDaysInMonth,
+                o2Rules,
+                o2Hours
             );
             
             setDataRows(calculated);
