@@ -667,7 +667,7 @@ export default function TerritorialPdvPage() {
           }}>
             <div>
               <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '12px' }}>
-                Importe Año Anterior ({prevYearLabel})
+                TERRITORIAL PDV Importe Año Anterior ({prevYearLabel})
               </div>
               <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
                 Valor de referencia editable manualmente para el mismo mes del año anterior.
