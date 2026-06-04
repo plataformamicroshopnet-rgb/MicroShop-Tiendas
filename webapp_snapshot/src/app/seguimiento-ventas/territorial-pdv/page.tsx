@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { PeriodSelector } from '@/components/PeriodSelector'
 import { Globe, ArrowLeft, Info, Percent, AlertCircle } from 'lucide-react'
 import { matchesRule, getValueForRule, matchTipoVenta } from '@/hooks/useComisionesData'
+import { renderDashboardData, calculateDynamicCommission, sanitizeSale, normalizeString, isVentaWithinDates } from '@/lib/salesUtils'
 
 // Definición estática de las 6 palancas solicitadas y sus tramos según el mockup
 const STATIC_PALANCAS = [
@@ -65,6 +66,39 @@ export default function TerritorialPdvPage() {
   const [tiendaRules, setTiendaRules] = useState<any[]>([])
   const [territorialRules, setTerritorialRules] = useState<any[]>([])
   const [catalogs, setCatalogs] = useState<Record<string, any[]>>({})
+  const [modImporte, setModImporte] = useState<number>(0)
+  const [manualImportePrevYear, setManualImportePrevYear] = useState<string>('')
+
+  // Nombres de los meses en español para las etiquetas de año anterior y mes actual
+  const monthNames = useMemo(() => [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ], []);
+
+  const [year, month] = useMemo(() => {
+    if (!activePeriodKey) return [2026, 6];
+    const [yStr, mStr] = activePeriodKey.split('_');
+    return [parseInt(yStr, 10), parseInt(mStr, 10)];
+  }, [activePeriodKey]);
+
+  const monthName = monthNames[month - 1];
+  const prevYearLabel = `${monthName} ${year - 1}`;
+  const currYearLabel = `${monthName} ${year}`;
+
+  useEffect(() => {
+    if (!activePeriodKey) return;
+    const saved = localStorage.getItem(`territorial_pdv_manual_prev_year_importe_${activePeriodKey}`);
+    setManualImportePrevYear(saved || '');
+  }, [activePeriodKey]);
+
+  const handleManualImportePrevYearChange = (val: string) => {
+    setManualImportePrevYear(val);
+    if (val.trim() === '') {
+      localStorage.removeItem(`territorial_pdv_manual_prev_year_importe_${activePeriodKey}`);
+    } else {
+      localStorage.setItem(`territorial_pdv_manual_prev_year_importe_${activePeriodKey}`, val);
+    }
+  };
 
   useEffect(() => {
     if (!activePeriodKey) return;
@@ -74,20 +108,182 @@ export default function TerritorialPdvPage() {
       fetch(`/api/sales?periodKey=${activePeriodKey}&dashboard=true`).then(r => r.json()).catch(() => ({ success: true, logs: [] })),
       fetch(`/api/tiendas-comisiones?periodKey=${activePeriodKey}`).then(r => r.json()).catch(() => ({ success: true, rules: [] })),
       fetch(`/api/territorial?periodKey=${activePeriodKey}`).then(r => r.json()).catch(() => ({ success: true, tiendas: [] })),
-      fetch('/api/catalogs').then(r => r.json()).catch(() => ({ success: true, catalogs: {} }))
+      fetch('/api/catalogs').then(r => r.json()).catch(() => ({ success: true, catalogs: {} })),
+      // Fetches adicionales para el cálculo exacto del MOD
+      fetch(`/api/objetivos?periodKey=${activePeriodKey}&strictPeriod=1`).then(r => r.json()).catch(() => ({ success: true, objetivos: { Pyme: {}, Captador: {} } })),
+      fetch(`/api/importes-pyme?periodKey=${activePeriodKey}&strictPeriod=1`).then(r => r.json()).catch(() => ({})),
+      fetch(`/api/importes-plus?periodKey=${activePeriodKey}&strictPeriod=1`).then(r => r.json()).catch(() => ({})),
+      fetch(`/api/extras/assignments?periodKey=${activePeriodKey}`).then(r => r.json()).catch(() => ({})),
+      fetch(`/api/period`).then(r => r.json()).catch(() => ({ periods: [] }))
     ])
-    .then(([salesRes, tiendasRes, territorialRes, catalogsRes]) => {
+    .then(([salesRes, tiendasRes, territorialRes, catalogsRes, objetivosRes, pymeRes, plusRes, extrasRes, periodsRes]) => {
       setSales(salesRes.logs || []);
       setTiendaRules(tiendasRes.rules || []);
       setTerritorialRules(territorialRes.tiendas || []);
       setCatalogs(catalogsRes.catalogs || {});
+
+      // Calcular el importe del MOD de la misma forma que en mod/page.tsx
+      const rawSales = salesRes.logs || [];
+      const catalogs = catalogsRes.catalogs || {};
+      const objetivos = objetivosRes.objetivos || { Pyme: {}, Captador: {} };
+      const objGrupos = objetivosRes.grupos || { Pyme: {}, Captador: {} };
+      const importesPyme = pymeRes.importes || pymeRes.data || [];
+      const importesPlus = plusRes.importes || plusRes.data || [];
+      const activeExtras = (extrasRes.assignments || []).filter((ea: any) => ea.status !== 'CANCELLED');
+
+      const salesList = rawSales.map(sanitizeSale);
+      let periodData = (periodsRes.periods || []).find((p: any) => p.period_key === activePeriodKey);
+      if (!periodData) {
+        periodData = (periodsRes.periods || []).find((p: any) => p.status === 'ACTIVE') || periodsRes.periods?.[0];
+      }
+
+      let globalImporte = 0;
+      const [yearStr, monthStr] = activePeriodKey.split('_');
+      const y = parseInt(yearStr, 10);
+      const m = parseInt(monthStr, 10);
+      const saleMonth = `${y}${m.toString().padStart(2, '0')}`;
+
+      if (y === 2026 && m === 6) {
+        // --- TUBERÍA DE COMISIONES REALES PARA JUNIO 2026 ---
+        const parseSafeFloat = (val: any): number => {
+          if (val === null || val === undefined) return 0;
+          if (typeof val === 'number') return isNaN(val) ? 0 : val;
+          const clean = String(val).replace('€', '').replace(/\s/g, '').replace(',', '.').trim();
+          const num = parseFloat(clean);
+          return isNaN(num) ? 0 : num;
+        };
+
+        const pymeMonthObj = objetivos.Pyme?.[saleMonth] || {};
+        const captadorMonthObj = objetivos.Captador?.[saleMonth] || {};
+        const pymeData = renderDashboardData('Pyme', importesPyme, pymeMonthObj, salesList, objGrupos, periodData);
+        const captadorData = renderDashboardData('Captador', importesPlus, captadorMonthObj, salesList, objGrupos, periodData);
+
+        const getCommission = (sale: any) => {
+          if (sale.anulado === 'Si' || sale.pendiente === 'Anulado') return 0;
+
+          let sMonth = ''
+          if (sale.fecha) {
+             const parts = sale.fecha.split('/')
+             if (parts.length === 3) sMonth = `${parts[2]}${parts[1]}`
+             else if (sale.fecha.includes('-')) {
+                 const p = sale.fecha.split('-')
+                 if (p.length >= 2) sMonth = `${p[0]}${p[1]}`
+             }
+          }
+          
+          const getFallbackValue = () => {
+               let val = sale.importe || sale.cuota || 0;
+               const det = (sale.detalle || '').toLowerCase();
+               if (!val && (det === 'ti' || det === 'tma' || det === 'rent' || det === 'micro')) {
+                   let catalogKey = '';
+                   if (det === 'ti') catalogKey = 'Ti';
+                   if (det === 'tma' || det === 'rent') catalogKey = 'Rent';
+                   if (det === 'micro') catalogKey = 'Micro';
+                   
+                   const list = catalogs[catalogKey] || [];
+                   const found = list.find((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
+                   if (found) {
+                       val = parseSafeFloat(found.anual);
+                   }
+               }
+               return parseSafeFloat(val);
+          }
+
+          if (!sMonth) return getFallbackValue();
+          if (sMonth !== saleMonth) return getFallbackValue();
+          
+          const det = (sale.detalle || '').toLowerCase();
+          const isTV = det === 'suscripciones tv' || det === 'suscripcion tv';
+          
+          if (det === 'o2' || det === 'seguro' || det === 'mimovistar' || det === 'repos' || det === 'varios' || isTV || det === 'prepago' || det === 'resto baf' || det === 'traslado mimovistar') {
+              if (det === 'seguro') {
+                  const list = catalogs['Seguro'] || [];
+                  const found = list.find((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
+                  if (found && found.comision) {
+                      return parseSafeFloat(found.comision);
+                  }
+              }
+              return parseSafeFloat(sale.importe || sale.cuota || 0);
+          }
+          
+          let overrideBaseValue: number | undefined = undefined;
+          if (det === 'ti' || det === 'tma' || det === 'rent' || det === 'micro') {
+              let catalogKey = '';
+              if (det === 'ti') catalogKey = 'Ti';
+              if (det === 'tma' || det === 'rent') catalogKey = 'Rent';
+              if (det === 'micro') catalogKey = 'Micro';
+              
+              const list = catalogs[catalogKey] || [];
+              const matchingProducts = list.filter((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
+              
+              let found = matchingProducts[0];
+              if (matchingProducts.length > 1) {
+                  const correctlyDated = matchingProducts.find((c: any) => isVentaWithinDates(sale.fecha, c.validFrom, c.validTo));
+                  if (correctlyDated) found = correctlyDated;
+              }
+
+              if (found) {
+                  overrideBaseValue = Number(String(found.anual || 0).replace(',','.'));
+                  
+                  if (det === 'ti') {
+                      return overrideBaseValue;
+                  }
+                  
+                  if (det === 'tma' || det === 'rent') {
+                      const isConCoste = sale.rentConCoste && (sale.rentConCoste.toLowerCase() === 'sí' || sale.rentConCoste.toLowerCase() === 'si');
+                      if (isConCoste) {
+                          return Number(String(found.comisionConCoste || 0).replace(',','.'));
+                      } else {
+                          return Number(String(found.comision || 0).replace(',','.'));
+                      }
+                  }
+              }
+          }
+
+          const plusCodesExact = ['plus 1ks', 'plus 1sk', 'plus nfg', 'plus n7d', 'plus k2z', 'plus zf7'];
+          const isPlus = plusCodesExact.some(c => String(sale.codigo || '').toLowerCase().includes(c));
+          const dashboardRows = isPlus ? pymeData.rows : captadorData.rows;
+          return calculateDynamicCommission(sale, dashboardRows, overrideBaseValue);
+        };
+
+        const salesForTable = salesList.filter((s: any) => {
+          const p = String(s.producto || '').toLowerCase()
+          const c = String(s.categoria || '').toLowerCase()
+          const d = String(s.detalle || '').toLowerCase()
+          return !p.includes('solar360') && !p.includes('solar 360') && 
+                 !c.includes('solar360') && !c.includes('solar 360') && 
+                 !d.includes('solar360') && !d.includes('solar 360')
+        });
+
+        const salesCommissions = salesForTable.reduce((acc: number, s: any) => acc + getCommission(s), 0);
+        const telecomExtras = activeExtras.reduce((acc: number, ex: any) => acc + Number(ex.telecomRewardAmount || 0), 0);
+        globalImporte = salesCommissions + telecomExtras;
+      } else {
+        // --- CÁLCULO ESTÁNDAR ORIGINAL ---
+        if (importesPyme.length > 0) {
+          const dashPyme = renderDashboardData('Pyme', importesPyme, objetivos.Pyme?.[saleMonth] || {}, salesList, objGrupos, periodData);
+          globalImporte += dashPyme.totalImporte;
+        }
+        if (importesPlus.length > 0) {
+          const dashCaptador = renderDashboardData('Captador', importesPlus, objetivos.Captador?.[saleMonth] || {}, salesList, objGrupos, periodData);
+          globalImporte += dashCaptador.totalImporte;
+        }
+
+        // Añadir extras al total global
+        activeExtras.forEach((ex: any) => {
+          const amount = Number(ex.amount || ex.telecomRewardAmount) || 0;
+          globalImporte += amount;
+        });
+      }
+
+      setModImporte(globalImporte);
       setLoading(false);
     })
     .catch(err => {
       console.error('Error fetching data for territorial pdv:', err);
       setLoading(false);
     });
-  }, [activePeriodKey]);
+  }, [activePeriodKey, monthNames]);
 
   // Auxiliar para parsear números con formato español
   const parseNumber = (val: any): number => {
@@ -459,6 +655,99 @@ export default function TerritorialPdvPage() {
             </tr>
           </tbody>
         </table>
+      </div>
+
+      {/* SECCIÓN COMPARATIVA Y DATOS ADICIONALES (AÑO ANTERIOR Y MOD ACTUAL) */}
+      <div style={{ 
+        backgroundColor: 'var(--bg-card)', 
+        borderRadius: '16px', 
+        border: '1px solid var(--border-light)', 
+        padding: '24px', 
+        marginTop: '32px',
+        boxShadow: '0 10px 30px rgba(0,0,0,0.2)', 
+        backdropFilter: 'blur(10px)'
+      }}>
+        <h3 style={{ margin: '0 0 20px 0', fontSize: '15px', fontWeight: 800, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Percent size={18} color="var(--mercedes-cyan)" /> Datos Comparativos de Rentabilidad
+        </h3>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Fila Año Anterior - Editable */}
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            padding: '16px 20px', 
+            backgroundColor: 'rgba(255, 255, 255, 0.01)', 
+            borderRadius: '10px', 
+            border: '1px solid var(--border-light)' 
+          }}>
+            <div>
+              <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '13px' }}>
+                Importe Año Anterior ({prevYearLabel})
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                Valor de referencia editable manualmente para el mismo mes del año anterior.
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input
+                type="text"
+                value={manualImportePrevYear}
+                placeholder="0,00"
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9.,]/g, '');
+                  const parsedVal = val.replace(',', '.');
+                  handleManualImportePrevYearChange(parsedVal);
+                }}
+                style={{
+                  width: '140px',
+                  textAlign: 'right',
+                  border: '1px solid var(--border-strong)',
+                  borderRadius: '6px',
+                  padding: '8px 12px',
+                  fontWeight: 800,
+                  fontSize: '14px',
+                  color: 'var(--text-main)',
+                  backgroundColor: 'rgba(0,0,0,0.2)',
+                  outline: 'none',
+                  boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)'
+                }}
+              />
+              <span style={{ fontWeight: 700, color: 'var(--text-muted)', fontSize: '14px' }}>€</span>
+            </div>
+          </div>
+
+          {/* Fila Importe Mensual MOD */}
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            padding: '16px 20px', 
+            backgroundColor: 'rgba(255, 255, 255, 0.01)', 
+            borderRadius: '10px', 
+            border: '1px solid var(--border-light)' 
+          }}>
+            <div>
+              <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '13px' }}>
+                Importe Mensual MOD ({currYearLabel})
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                Importe mensual calculado para el mes en vigor según la pantalla MOD.
+              </div>
+            </div>
+            
+            <div style={{ 
+              fontWeight: 900, 
+              color: '#34c759', 
+              fontSize: '18px', 
+              paddingRight: '18px'
+            }}>
+              {formatCurrency(modImporte)}
+            </div>
+          </div>
+        </div>
       </div>
       
       {/* MENSAJE EN CASO DE TABLA VACÍA */}
