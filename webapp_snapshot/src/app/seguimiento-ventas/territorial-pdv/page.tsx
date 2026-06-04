@@ -524,16 +524,16 @@ export default function TerritorialPdvPage() {
               color: 'white',
               borderBottom: '1px solid var(--border-strong)'
             }}>
-              <th style={{ padding: '8px 12px', fontWeight: 700 }}>Negocio</th>
-              <th style={{ padding: '8px 12px', fontWeight: 700 }}>Palanca</th>
-              <th style={{ padding: '8px 12px', fontWeight: 700, textAlign: 'center' }}>Objetivos</th>
-              <th style={{ padding: '8px 12px', fontWeight: 600, textAlign: 'center', fontSize: '10px', whiteSpace: 'normal', lineHeight: 1.1 }}>Tramo 1<br/>(&gt;=100% y &lt;115%)</th>
-              <th style={{ padding: '8px 12px', fontWeight: 600, textAlign: 'center', fontSize: '10px', whiteSpace: 'normal', lineHeight: 1.1 }}>Tramo 2<br/>(&gt;=115% y &lt;130%)</th>
-              <th style={{ padding: '8px 12px', fontWeight: 600, textAlign: 'center', fontSize: '10px', whiteSpace: 'normal', lineHeight: 1.1 }}>Tramo 3<br/>(&gt;=130%)</th>
-              <th style={{ padding: '8px 12px', fontWeight: 600, textAlign: 'center', fontSize: '10px', whiteSpace: 'normal', lineHeight: 1.1 }}>Bonificación<br/>(&gt;=100%)</th>
-              <th style={{ padding: '8px 12px', fontWeight: 700, textAlign: 'center' }}>Ventas</th>
-              <th style={{ padding: '8px 12px', fontWeight: 700, textAlign: 'center' }}>Porcentaje Ventas</th>
-              <th style={{ padding: '8px 12px', fontWeight: 700, textAlign: 'right' }}>Importe</th>
+              <th style={{ padding: '10px 12px', fontWeight: 700 }}>Negocio</th>
+              <th style={{ padding: '10px 12px', fontWeight: 700 }}>Palanca</th>
+              <th style={{ padding: '10px 12px', fontWeight: 700, textAlign: 'center' }}>Objetivos</th>
+              <th style={{ padding: '10px 12px', fontWeight: 600, textAlign: 'center', fontSize: '10px', whiteSpace: 'normal', lineHeight: 1.1 }}>Tramo 1<br/>(&gt;=100% y &lt;115%)</th>
+              <th style={{ padding: '10px 12px', fontWeight: 600, textAlign: 'center', fontSize: '10px', whiteSpace: 'normal', lineHeight: 1.1 }}>Tramo 2<br/>(&gt;=115% y &lt;130%)</th>
+              <th style={{ padding: '10px 12px', fontWeight: 600, textAlign: 'center', fontSize: '10px', whiteSpace: 'normal', lineHeight: 1.1 }}>Tramo 3<br/>(&gt;=130%)</th>
+              <th style={{ padding: '10px 12px', fontWeight: 600, textAlign: 'center', fontSize: '10px', whiteSpace: 'normal', lineHeight: 1.1 }}>Bonificación<br/>(&gt;=100%)</th>
+              <th style={{ padding: '10px 12px', fontWeight: 700, textAlign: 'center' }}>Ventas</th>
+              <th style={{ padding: '10px 12px', fontWeight: 700, textAlign: 'center' }}>Porcentaje Ventas</th>
+              <th style={{ padding: '10px 12px', fontWeight: 700, textAlign: 'right' }}>Importe</th>
             </tr>
           </thead>
           <tbody>
@@ -575,34 +575,34 @@ export default function TerritorialPdvPage() {
                     backgroundColor: 'transparent'
                   }}
                 >
-                  <td style={{ padding: '6px 12px', fontWeight: 600, color: 'var(--text-muted)' }}>{row.negocio}</td>
-                  <td style={{ padding: '6px 12px', fontWeight: 700, color: 'var(--text-main)' }}>{row.palanca}</td>
+                  <td style={{ padding: '9px 12px', fontWeight: 600, color: 'var(--text-muted)' }}>{row.negocio}</td>
+                  <td style={{ padding: '9px 12px', fontWeight: 700, color: 'var(--text-main)' }}>{row.palanca}</td>
                   
-                  <td style={{ padding: '6px 12px', textAlign: 'center', fontWeight: 600, color: 'var(--text-main)', backgroundColor: 'rgba(255,255,255,0.01)' }}>
+                  <td style={{ padding: '9px 12px', textAlign: 'center', fontWeight: 600, color: 'var(--text-main)', backgroundColor: 'rgba(255,255,255,0.01)' }}>
                     {displayObj}
                   </td>
                   
                   {/* Tramos */}
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: row.tramoAplicado.includes('Tramo 1') ? '#34c759' : 'var(--text-muted)', fontWeight: row.tramoAplicado.includes('Tramo 1') ? 700 : 400 }}>
+                  <td style={{ padding: '9px 12px', textAlign: 'center', color: row.tramoAplicado.includes('Tramo 1') ? '#34c759' : 'var(--text-muted)', fontWeight: row.tramoAplicado.includes('Tramo 1') ? 700 : 400 }}>
                     {row.t1Raw}
                   </td>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: row.tramoAplicado.includes('Tramo 2') ? '#34c759' : 'var(--text-muted)', fontWeight: row.tramoAplicado.includes('Tramo 2') ? 700 : 400 }}>
+                  <td style={{ padding: '9px 12px', textAlign: 'center', color: row.tramoAplicado.includes('Tramo 2') ? '#34c759' : 'var(--text-muted)', fontWeight: row.tramoAplicado.includes('Tramo 2') ? 700 : 400 }}>
                     {row.t2Raw}
                   </td>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: row.tramoAplicado.includes('Tramo 3') ? '#34c759' : 'var(--text-muted)', fontWeight: row.tramoAplicado.includes('Tramo 3') ? 700 : 400 }}>
+                  <td style={{ padding: '9px 12px', textAlign: 'center', color: row.tramoAplicado.includes('Tramo 3') ? '#34c759' : 'var(--text-muted)', fontWeight: row.tramoAplicado.includes('Tramo 3') ? 700 : 400 }}>
                     {row.t3Raw}
                   </td>
-                  <td style={{ padding: '6px 12px', textAlign: 'center', color: row.tramoAplicado.includes('Bonif') ? '#34c759' : 'var(--text-muted)', fontWeight: row.tramoAplicado.includes('Bonif') ? 700 : 400 }}>
+                  <td style={{ padding: '9px 12px', textAlign: 'center', color: row.tramoAplicado.includes('Bonif') ? '#34c759' : 'var(--text-muted)', fontWeight: row.tramoAplicado.includes('Bonif') ? 700 : 400 }}>
                     {row.bonifRaw}
                   </td>
-
+ 
                   {/* Resultados */}
-                  <td style={{ padding: '6px 12px', textAlign: 'center', fontWeight: 700, color: 'var(--mercedes-cyan)' }}>
+                  <td style={{ padding: '9px 12px', textAlign: 'center', fontWeight: 700, color: 'var(--mercedes-cyan)' }}>
                     {displaySales}
                   </td>
                   
                   <td style={{ 
-                    padding: '6px 12px', 
+                    padding: '9px 12px', 
                     textAlign: 'center', 
                     fontWeight: 800, 
                     color: row.pct >= 100 ? '#34c759' : (row.pct > 0 ? '#ff9500' : 'var(--text-muted)')
@@ -611,7 +611,7 @@ export default function TerritorialPdvPage() {
                   </td>
                   
                   <td style={{ 
-                    padding: '6px 12px', 
+                    padding: '9px 12px', 
                     textAlign: 'right', 
                     fontWeight: 900, 
                     color: hasEarned ? '#34c759' : 'var(--text-muted)',
@@ -630,9 +630,9 @@ export default function TerritorialPdvPage() {
               borderTop: '2px solid var(--border-strong)',
               fontWeight: 800
             }}>
-              <td colSpan={2} style={{ padding: '10px 12px', fontSize: '13px', color: 'var(--text-main)' }}>Total Consolidado Tiendas</td>
+              <td colSpan={2} style={{ padding: '12px 12px', fontSize: '13px', color: 'var(--text-main)' }}>Total Consolidado Tiendas</td>
               <td colSpan={7}></td>
-              <td style={{ padding: '10px 12px', textAlign: 'right', fontSize: '14px', color: '#34c759', fontWeight: 900 }}>
+              <td style={{ padding: '12px 12px', textAlign: 'right', fontSize: '14px', color: '#34c759', fontWeight: 900 }}>
                 {formatCurrency(totalImporteTerritorial)}
               </td>
             </tr>
