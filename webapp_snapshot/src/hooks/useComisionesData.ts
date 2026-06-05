@@ -215,12 +215,35 @@ export function useComisionesData(user?: any) {
 
     const monthSales = allSales;
 
+    // Calcular ventas válidas de FTTR para vendedores de tiendas (excluyendo a Marta)
+    const totalStoreFttrSales = monthSales.filter(s => {
+        if (String(s.vendedor || '').toLowerCase().includes('marta')) return false;
+        
+        const prod = String(s.producto || '').toLowerCase();
+        const isAnul = String(s.anulado || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === 'si' || 
+                       String(s.pendiente || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === 'anulado';
+        if (isAnul) return false;
+        
+        return prod.includes('solución fttr') || prod.includes('solucion fttr') || prod.includes('fttr');
+    }).length;
+
+    // Crear una versión ajustada de tiendaRules con el objetivo global reducido
+    const adjustedTiendaRules = tiendaRules.map(rule => {
+        if (rule.nombre === 'Dispositivos + Seguros') {
+            return {
+                ...rule,
+                objSegundoTramo: Math.max(0, (rule.objSegundoTramo || 0) - 910 * totalStoreFttrSales)
+            };
+        }
+        return rule;
+    });
+
     const teamGroupCounts: Record<string, number> = {};
     const teamGroupPending: Record<string, number> = {};
     const o2TeamGroupCounts: Record<string, number> = {};
     const o2TeamGroupPending: Record<string, number> = {};
     
-    tiendaRules.forEach(rule => { teamGroupCounts[rule.nombre] = 0; teamGroupPending[rule.nombre] = 0; });
+    adjustedTiendaRules.forEach(rule => { teamGroupCounts[rule.nombre] = 0; teamGroupPending[rule.nombre] = 0; });
     o2Rules.forEach(rule => { o2TeamGroupCounts[rule.nombre] = 0; o2TeamGroupPending[rule.nombre] = 0; });
 
     monthSales.forEach(s => {
@@ -228,7 +251,7 @@ export function useComisionesData(user?: any) {
         
         // Movistar
         if (!String(s.vendedor).toLowerCase().includes('marta')) {
-            tiendaRules.forEach(rule => {
+            adjustedTiendaRules.forEach(rule => {
                 if (matchesRule(s, rule.nombre, rule.productosCuentan)) {
                     const isPercentage = String(rule.importePrimerTramo || '').includes('%');
                     const val = getValueForRule(s, rule.nombre, catalogs);
@@ -342,13 +365,25 @@ export function useComisionesData(user?: any) {
 
         // INICIALIZAR OBJETIVOS Y CONTADORES BASADOS EN REGLAS DINAMICAS
         const isO2 = String(name).toLowerCase().includes('marta');
-        const activeTiendaRules = isO2 ? o2Rules : tiendaRules;
+        const activeTiendaRules = isO2 ? o2Rules : adjustedTiendaRules;
         const activeTiendaHours = isO2 ? o2Hours : tiendaHours;
         
         const activeTeamGroupCounts = isO2 ? o2TeamGroupCounts : teamGroupCounts;
         const activeTeamGroupPending = isO2 ? o2TeamGroupPending : teamGroupPending;
         const comercialHour = activeTiendaHours.find(h => String(h.comercial).toLowerCase() === String(name).toLowerCase());
         const horario = comercialHour ? Number(comercialHour.horario) : 0;
+
+        // Contar ventas de FTTR para este vendedor (excluyendo a Marta O2)
+        let fttrCount = 0;
+        if (!isO2) {
+            fttrCount = sSales.filter(s => {
+                const prod = String(s.producto || '').toLowerCase();
+                const isAnul = String(s.anulado || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === 'si' || 
+                               String(s.pendiente || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === 'anulado';
+                if (isAnul) return false;
+                return prod.includes('solución fttr') || prod.includes('solucion fttr') || prod.includes('fttr');
+            }).length;
+        }
 
         activeTiendaRules.forEach(rule => {
             const ruleName = rule.nombre;
@@ -358,15 +393,24 @@ export function useComisionesData(user?: any) {
             groupSales[ruleName] = [];
             
             const totalHoras = rule.totalHoras || 0;
+            let valObj1 = 0;
+            let valObj2 = 0;
             if (totalHoras > 0 && horario > 0) {
-                groupObj1[ruleName] = (rule.objPrimerTramo / totalHoras) * horario;
-                groupObj2[ruleName] = (rule.objSegundoTramo / totalHoras) * horario;
+                valObj1 = (rule.objPrimerTramo / totalHoras) * horario;
+                valObj2 = (rule.objSegundoTramo / totalHoras) * horario;
             } else {
-                groupObj1[ruleName] = rule.objPrimerTramo || 0;
-                groupObj2[ruleName] = rule.objSegundoTramo || 0;
+                valObj1 = rule.objPrimerTramo || 0;
+                valObj2 = rule.objSegundoTramo || 0;
             }
-            
 
+            // Aplicar descuento de 910€ por cada venta de FTTR para Dispositivos + Seguros
+            if (!isO2 && ruleName === 'Dispositivos + Seguros') {
+                valObj1 = Math.max(0, valObj1 - 910 * fttrCount);
+                valObj2 = Math.max(0, valObj2 - 910 * fttrCount);
+            }
+
+            groupObj1[ruleName] = valObj1;
+            groupObj2[ruleName] = valObj2;
         });
 
 
@@ -949,7 +993,7 @@ export function useComisionesData(user?: any) {
         maxSalesSeller,
         monthSales,
         extraAssignments,
-        tiendaRules,
+        tiendaRules: adjustedTiendaRules,
         setTiendaRules,
         o2Rules,
         territorialO2Rules,
