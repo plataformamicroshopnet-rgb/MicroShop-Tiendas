@@ -157,6 +157,7 @@ export function useComisionesData(user?: any) {
     const [catalogs, setCatalogs] = useState<Record<string, any[]>>({});
     
     const [selectedSellerFilter, setSelectedSellerFilter] = useState<string | null>(null);
+    const [fttrDiscount, setFttrDiscount] = useState<number>(910);
 
     useEffect(() => {
         if (!activePeriodKey) return;
@@ -169,9 +170,10 @@ export function useComisionesData(user?: any) {
             fetch(`/api/tiendas-comisiones?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({ success: false, rules: [], hours: [] })),
             fetch(`/api/settings?key=o2_rules_v2_${activePeriodKey}`).then(res => res.json()).catch(() => ({ value: null })),
             fetch(`/api/territorial?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({ success: false, tiendas: [], o2: [] })),
-            fetch('/api/catalogs').then(res => res.json()).catch(() => ({ success: false, catalogs: {} }))
+            fetch('/api/catalogs').then(res => res.json()).catch(() => ({ success: false, catalogs: {} })),
+            fetch(`/api/settings?key=fttr_discount_${activePeriodKey}`).then(res => res.json()).catch(() => ({ value: null }))
         ])
-        .then(([data, condData, extrasData, rulesData, tiendasData, o2Data, territorialData, catalogsData]) => {
+        .then(([data, condData, extrasData, rulesData, tiendasData, o2Data, territorialData, catalogsData, fttrDiscountData]) => {
             if (data.success && data.logs) {
                 setAllSales(data.logs);
             }
@@ -205,6 +207,16 @@ export function useComisionesData(user?: any) {
             if (catalogsData && catalogsData.success) {
                 setCatalogs(catalogsData.catalogs || {});
             }
+            if (fttrDiscountData && fttrDiscountData.value !== null) {
+                const parsedVal = parseFloat(fttrDiscountData.value);
+                if (!isNaN(parsedVal)) {
+                    setFttrDiscount(parsedVal);
+                } else {
+                    setFttrDiscount(910);
+                }
+            } else {
+                setFttrDiscount(910);
+            }
             setLoading(false);
         })
         .catch(err => {
@@ -232,7 +244,7 @@ export function useComisionesData(user?: any) {
         if (rule.nombre === 'Dispositivos + Seguros') {
             return {
                 ...rule,
-                objSegundoTramo: Math.max(0, (rule.objSegundoTramo || 0) - 910 * totalStoreFttrSales)
+                objSegundoTramo: Math.max(0, (rule.objSegundoTramo || 0) - fttrDiscount * totalStoreFttrSales)
             };
         }
         return rule;
@@ -405,8 +417,8 @@ export function useComisionesData(user?: any) {
 
             // Aplicar descuento de 910€ por cada venta de FTTR para Dispositivos + Seguros
             if (!isO2 && ruleName === 'Dispositivos + Seguros') {
-                valObj1 = Math.max(0, valObj1 - 910 * fttrCount);
-                valObj2 = Math.max(0, valObj2 - 910 * fttrCount);
+                valObj1 = Math.max(0, valObj1 - fttrDiscount * fttrCount);
+                valObj2 = Math.max(0, valObj2 - fttrDiscount * fttrCount);
             }
 
             groupObj1[ruleName] = valObj1;
@@ -986,7 +998,7 @@ export function useComisionesData(user?: any) {
         selectedSellerFilter,
         setSelectedSellerFilter,
         sellerStats: displayedSellerStats,
-          teamTotalComisiones,
+        teamTotalComisiones,
         teamTotalSales,
         top3,
         maxComisionSeller,
@@ -998,6 +1010,7 @@ export function useComisionesData(user?: any) {
         o2Rules,
         territorialO2Rules,
         activePeriodKey,
-        catalogs
+        catalogs,
+        fttrDiscount
     };
 }

@@ -38,6 +38,7 @@ export default function TerritorialTab() {
 
   const [tiendasRules, setTiendasRules] = useState<any[]>([])
   const [o2Rules, setO2Rules] = useState<any[]>([])
+  const [fttrDiscount, setFttrDiscount] = useState<string>('910')
 
   // Modal para configurar "Por Tienda"
   const [modalStoreTargets, setModalStoreTargets] = useState<{ ruleId: string, tramo: 1 | 2 } | null>(null)
@@ -49,13 +50,19 @@ export default function TerritorialTab() {
     
     Promise.all([
       fetch(`/api/sales?periodKey=${activePeriodKey}`).then(r => r.json()),
-      fetch(`/api/territorial?periodKey=${activePeriodKey}`).then(r => r.json())
+      fetch(`/api/territorial?periodKey=${activePeriodKey}`).then(r => r.json()),
+      fetch(`/api/settings?key=fttr_discount_${activePeriodKey}`).then(r => r.json()).catch(() => ({ value: null }))
     ])
-    .then(([salesRes, rulesRes]) => {
+    .then(([salesRes, rulesRes, settingRes]) => {
       if (salesRes.success) setSales(salesRes.logs || [])
       if (rulesRes.success) {
         setTiendasRules(rulesRes.tiendas || [])
         setO2Rules(rulesRes.o2 || [])
+      }
+      if (settingRes && settingRes.success && settingRes.value !== null) {
+        setFttrDiscount(settingRes.value)
+      } else {
+        setFttrDiscount('910')
       }
       setLoading(false)
     })
@@ -68,16 +75,26 @@ export default function TerritorialTab() {
   const handleSave = async () => {
     setSaving(true)
     try {
-      const res = await fetch('/api/territorial', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ periodKey: activePeriodKey, tiendas: tiendasRules, o2: o2Rules })
-      })
-      const data = await res.json()
-      if (data.success) {
+      const [res1, res2] = await Promise.all([
+        fetch('/api/territorial', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ periodKey: activePeriodKey, tiendas: tiendasRules, o2: o2Rules })
+        }),
+        fetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: `fttr_discount_${activePeriodKey}`, value: String(fttrDiscount || '910') })
+        })
+      ]);
+      
+      const data1 = await res1.json()
+      const data2 = await res2.json()
+      
+      if (data1.success && data2.success) {
         alert('Configuración guardada correctamente.')
       } else {
-        alert('Error al guardar: ' + data.error)
+        alert('Error al guardar: ' + (data1.error || data2.error || 'error desconocido'))
       }
     } catch (e) {
       alert('Error de conexión.')
@@ -265,9 +282,25 @@ export default function TerritorialTab() {
       <div style={{ background: 'var(--bg-card)', padding: '16px 24px', borderRadius: 12, marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h2 style={{ margin: 0, fontSize: 18, color: 'var(--mercedes-cyan)' }}>Modo Edición</h2>
-          <p style={{ margin: '4px 0 0', fontSize: 14, color: 'var(--medium-gray)' }}>
-            Periodo Activo: <strong>{activePeriodKey}</strong>
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 4 }}>
+            <p style={{ margin: 0, fontSize: 14, color: 'var(--medium-gray)' }}>
+              Periodo Activo: <strong>{activePeriodKey}</strong>
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, borderLeft: '1px solid var(--border-color)', paddingLeft: 16 }}>
+              <label style={{ fontSize: 13, color: 'var(--medium-gray)' }}>Descuento por FTTR:</label>
+              <div style={{ position: 'relative', display: 'inline-block' }}>
+                <input 
+                  type="number" 
+                  className="form-input" 
+                  style={{ width: 80, paddingRight: 20, textAlign: 'center' }} 
+                  value={fttrDiscount} 
+                  onChange={e => setFttrDiscount(e.target.value)} 
+                  placeholder="910"
+                />
+                <span style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', color: 'var(--medium-gray)', fontSize: 12 }}>€</span>
+              </div>
+            </div>
+          </div>
         </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
             <div style={{ display: 'flex', gap: 24, borderRight: '1px solid var(--border-color)', paddingRight: 24 }}>
