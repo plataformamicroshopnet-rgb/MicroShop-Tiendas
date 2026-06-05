@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { useGuard } from '@/hooks/useGuard'
 import { usePeriod } from '@/components/PeriodProvider'
 import { PeriodSelector } from '@/components/PeriodSelector'
-import { TrendingUp, ArrowLeft, Globe } from 'lucide-react'
+import { TrendingUp, ArrowLeft, Globe, BarChart2 } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useRouter } from 'next/navigation'
 import { renderDashboardData, calculateDynamicCommission, sanitizeSale, normalizeString, isVentaWithinDates } from '@/lib/salesUtils'
@@ -456,6 +456,28 @@ export default function ModPage() {
                     </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <button 
+                        onClick={() => router.push('/seguimiento-ventas/mod-resumen')}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '8px 16px',
+                            borderRadius: '20px',
+                            background: 'var(--mercedes-cyan)',
+                            color: 'white',
+                            border: 'none',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            fontSize: '13px',
+                            boxShadow: '0 4px 12px rgba(0, 173, 239, 0.3)',
+                            transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+                        onMouseLeave={e => e.currentTarget.style.transform = 'none'}
+                    >
+                        <BarChart2 size={16} /> Resumen MOD
+                    </button>
                     <button 
                         onClick={() => router.push('/seguimiento-ventas/territorial-pdv')}
                         style={{
