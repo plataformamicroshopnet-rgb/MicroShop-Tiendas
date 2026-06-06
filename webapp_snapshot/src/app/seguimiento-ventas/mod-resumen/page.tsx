@@ -454,7 +454,12 @@ export default function ModResumenPage() {
     });
 
     const salesCommissions = salesForTable.reduce((acc: number, s: any) => acc + getCommission(s), 0);
-    const telecomExtras = activeExtras.reduce((acc: number, ex: any) => acc + Number(ex.telecomRewardAmount || 0), 0);
+    // Excluir extras TERRITORIAL (Bonos O2): ya se calculan en tiempo real en bonosO2Real
+    const nonTerritorialExtras = activeExtras.filter((ex: any) =>
+      String(ex.customerNif || '').toUpperCase() !== 'TERRITORIAL' &&
+      !String(ex.rule?.name || '').toUpperCase().includes('TERRITORIAL O2')
+    );
+    const telecomExtras = nonTerritorialExtras.reduce((acc: number, ex: any) => acc + Number(ex.telecomRewardAmount || 0), 0);
     const tiendasMovistarReal = salesCommissions + telecomExtras;
 
     // --- 5. PRV TERRITORIAL TIENDAS ---
