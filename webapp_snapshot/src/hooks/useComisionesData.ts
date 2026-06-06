@@ -976,8 +976,24 @@ export function useComisionesData(user?: any) {
 
                 if (bonus === 0 || totalSalesForRule === 0) {
                     const triggerKey = `TERRITORIAL_O2_${rule.id}_${activePeriodId}_LIQUIDATED`;
-                    const alreadyExists = extraAssignments.some(ea => ea.triggerKey === triggerKey);
-                    if (!alreadyExists) {
+                    virtualKpiExtras.push({
+                        ruleId: `TERRITORIAL_${rule.id}`,
+                        periodId: activePeriodId,
+                        seller: name,
+                        sourceType: 'AUTOMATIC',
+                        customerName: 'Bono Territorial O2',
+                        customerNif: 'TERRITORIAL',
+                        triggerKey: triggerKey,
+                        triggerSummary: `Territorial O2: ${rule.nombre} (0 ${isMoneyType ? '€' : 'ventas'})`,
+                        telecomRewardAmount: 0,
+                        sellerRewardAmount: 0,
+                        status: 'LIQUIDATED',
+                        rule: { name: `TERRITORIAL O2 MOVILFREE - ${rule.nombre}` }
+                    });
+                } else {
+                    // Si hay parte consolidada > 0
+                    if (completedBonus > 0) {
+                        const triggerKeyLiq = `TERRITORIAL_O2_${rule.id}_${activePeriodId}_LIQUIDATED`;
                         virtualKpiExtras.push({
                             ruleId: `TERRITORIAL_${rule.id}`,
                             periodId: activePeriodId,
@@ -985,57 +1001,32 @@ export function useComisionesData(user?: any) {
                             sourceType: 'AUTOMATIC',
                             customerName: 'Bono Territorial O2',
                             customerNif: 'TERRITORIAL',
-                            triggerKey: triggerKey,
-                            triggerSummary: `Territorial O2: ${rule.nombre} (0 ${isMoneyType ? '€' : 'ventas'})`,
-                            telecomRewardAmount: 0,
+                            triggerKey: triggerKeyLiq,
+                            triggerSummary: `Territorial O2: ${rule.nombre} (${totalSalesForRule} ${isMoneyType ? '€' : 'ventas'})`,
+                            telecomRewardAmount: completedBonus,
                             sellerRewardAmount: 0,
                             status: 'LIQUIDATED',
                             rule: { name: `TERRITORIAL O2 MOVILFREE - ${rule.nombre}` }
                         });
                     }
-                } else {
-                    // Si hay parte consolidada > 0
-                    if (completedBonus > 0) {
-                        const triggerKeyLiq = `TERRITORIAL_O2_${rule.id}_${activePeriodId}_LIQUIDATED`;
-                        const alreadyExistsLiq = extraAssignments.some(ea => ea.triggerKey === triggerKeyLiq);
-                        if (!alreadyExistsLiq) {
-                            virtualKpiExtras.push({
-                                ruleId: `TERRITORIAL_${rule.id}`,
-                                periodId: activePeriodId,
-                                seller: name,
-                                sourceType: 'AUTOMATIC',
-                                customerName: 'Bono Territorial O2',
-                                customerNif: 'TERRITORIAL',
-                                triggerKey: triggerKeyLiq,
-                                triggerSummary: `Territorial O2: ${rule.nombre} (${totalSalesForRule} ${isMoneyType ? '€' : 'ventas'})`,
-                                telecomRewardAmount: completedBonus,
-                                sellerRewardAmount: 0,
-                                status: 'LIQUIDATED',
-                                rule: { name: `TERRITORIAL O2 MOVILFREE - ${rule.nombre}` }
-                            });
-                        }
-                    }
 
                     // Si hay parte pendiente > 0
                     if (pendingBonus > 0) {
                         const triggerKeyPend = `TERRITORIAL_O2_${rule.id}_${activePeriodId}_PENDING`;
-                        const alreadyExistsPend = extraAssignments.some(ea => ea.triggerKey === triggerKeyPend);
-                        if (!alreadyExistsPend) {
-                            virtualKpiExtras.push({
-                                ruleId: `TERRITORIAL_${rule.id}`,
-                                periodId: activePeriodId,
-                                seller: name,
-                                sourceType: 'AUTOMATIC',
-                                customerName: 'Bono Territorial O2',
-                                customerNif: 'TERRITORIAL',
-                                triggerKey: triggerKeyPend,
-                                triggerSummary: `Territorial O2: ${rule.nombre} (${totalSalesForRule} ${isMoneyType ? '€' : 'ventas'})`,
-                                telecomRewardAmount: pendingBonus,
-                                sellerRewardAmount: 0,
-                                status: 'PENDING',
-                                rule: { name: `TERRITORIAL O2 MOVILFREE - ${rule.nombre}` }
-                            });
-                        }
+                        virtualKpiExtras.push({
+                            ruleId: `TERRITORIAL_${rule.id}`,
+                            periodId: activePeriodId,
+                            seller: name,
+                            sourceType: 'AUTOMATIC',
+                            customerName: 'Bono Territorial O2',
+                            customerNif: 'TERRITORIAL',
+                            triggerKey: triggerKeyPend,
+                            triggerSummary: `Territorial O2: ${rule.nombre} (${totalSalesForRule} ${isMoneyType ? '€' : 'ventas'})`,
+                            telecomRewardAmount: pendingBonus,
+                            sellerRewardAmount: 0,
+                            status: 'PENDING',
+                            rule: { name: `TERRITORIAL O2 MOVILFREE - ${rule.nombre}` }
+                        });
                     }
                 }
             });
