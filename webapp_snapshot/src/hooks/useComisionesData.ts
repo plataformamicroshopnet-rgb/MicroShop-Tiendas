@@ -42,47 +42,52 @@ export const matchTipoVenta = (sale: any, tipoVentaRaw: string) => {
         if (tipoVenta === 'FORMULA_LIBRE') continue;
         
         let matched = false;
-        switch(tipoVenta.toLowerCase().trim()) {
-            case 'alta baf total':
-                matched = cat === 'mimovistar' || cat === 'resto baf' || prod.includes('baf total') || (prod.includes('fibra') && !prod.includes('movil') && !prod.includes('móvil'));
-                break;
-            case 'alta baf convergente':
-                matched = cat === 'mimovistar' || prod.includes('baf convergente') || prod.includes('fd total') || prod.includes('fd flex') || (prod.includes('fibra') && (prod.includes('movil') || prod.includes('móvil')));
-                break;
-            case 'dispositivos + seguro':
-            case 'dispositivos + seguros':
-                matched = cat === 'rent' || cat === 'seguro';
-                break;
-            case 'dispositivos':
-                matched = cat === 'rent';
-                break;
-            case 'seguro':
-                matched = cat === 'seguro';
-                break;
-            case 'mpa':
-                matched = prod.includes('movistar prosegur alarmas') || prod.includes('mpa') || prod.includes('alarma');
-                break;
-            case 'fttr':
-                matched = prod.includes('solución fttr') || prod.includes('solucion fttr') || prod.includes('fttr');
-                break;
-            case 'señalización solar 360':
-                matched = prod.includes('solar360') || prod.includes('solar 360') || prod.includes('solar');
-                break;
-            case 'arpu':
-                matched = cat === 'repos' && !prod.includes('fútbol') && !prod.includes('futbol');
-                break;
-            case 'repo fútbol':
-            case 'repo futbol':
-                matched = prod.includes('fútbol') || prod.includes('futbol') || prod.includes('repo f');
-                break;
-            default:
-                if (tipoVenta.toLowerCase().trim() === cat) {
-                    matched = true;
-                } else {
-                    const searchString = `${prod} ${String(sale.detalle || '').toLowerCase()} ${String(sale.grupo || '').toLowerCase()}`;
-                    matched = matchProductFormula(searchString, tipoVenta);
-                }
-                break;
+        if (cat === 'o2') {
+            const target = String(tipoVenta).trim().toLowerCase();
+            matched = (prod === target);
+        } else {
+            switch(tipoVenta.toLowerCase().trim()) {
+                case 'alta baf total':
+                    matched = cat === 'mimovistar' || cat === 'resto baf' || prod.includes('baf total') || (prod.includes('fibra') && !prod.includes('movil') && !prod.includes('móvil'));
+                    break;
+                case 'alta baf convergente':
+                    matched = cat === 'mimovistar' || prod.includes('baf convergente') || prod.includes('fd total') || prod.includes('fd flex') || (prod.includes('fibra') && (prod.includes('movil') || prod.includes('móvil')));
+                    break;
+                case 'dispositivos + seguro':
+                case 'dispositivos + seguros':
+                    matched = cat === 'rent' || cat === 'seguro';
+                    break;
+                case 'dispositivos':
+                    matched = cat === 'rent';
+                    break;
+                case 'seguro':
+                    matched = cat === 'seguro';
+                    break;
+                case 'mpa':
+                    matched = prod.includes('movistar prosegur alarmas') || prod.includes('mpa') || prod.includes('alarma');
+                    break;
+                case 'fttr':
+                    matched = prod.includes('solución fttr') || prod.includes('solucion fttr') || prod.includes('fttr');
+                    break;
+                case 'señalización solar 360':
+                    matched = prod.includes('solar360') || prod.includes('solar 360') || prod.includes('solar');
+                    break;
+                case 'arpu':
+                    matched = cat === 'repos' && !prod.includes('fútbol') && !prod.includes('futbol');
+                    break;
+                case 'repo fútbol':
+                case 'repo futbol':
+                    matched = prod.includes('fútbol') || prod.includes('futbol') || prod.includes('repo f');
+                    break;
+                default:
+                    if (tipoVenta.toLowerCase().trim() === cat) {
+                        matched = true;
+                    } else {
+                        const searchString = `${prod} ${String(sale.detalle || '').toLowerCase()} ${String(sale.grupo || '').toLowerCase()}`;
+                        matched = matchProductFormula(searchString, tipoVenta);
+                    }
+                    break;
+            }
         }
         if (matched) return true;
     }
