@@ -5,6 +5,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { usePeriod } from '@/components/PeriodProvider'
 import { useGuard } from '@/hooks/useGuard'
 import { renderDashboardData, calculateDynamicCommission, isVentaWithinDates, normalizeString, getCurrentMonthString } from '@/lib/salesUtils'
+import { matchTipoVenta } from '@/hooks/useComisionesData'
 import * as XLSX from 'xlsx'
 import ExcelJS from 'exceljs'
 
@@ -22,6 +23,7 @@ const TABS = [
   { id: 'resto',           label: 'Resto BAF',       emoji: '📡', color: '#3B82F6', grupo: 'RESTO_BAF' },
   { id: 'traslado',        label: 'Traslado miMovistar', emoji: '🚚', color: '#7C3AED', grupo: 'TRASLADO' },
   { id: 'extras',          label: 'Extras',          emoji: '⚡', color: '#10b981', grupo: 'EXTRAS' },
+  { id: 'bonos_o2',        label: 'Bonos O2',        emoji: '🏆', color: '#005D82', grupo: 'BONOS_O2' },
 ]
 
 const PLUS_CODES = ['plus 1ks', 'plus 1sk', 'plus nfg', 'plus n7d', 'plus k2z', 'plus zf7']
@@ -214,6 +216,7 @@ function GrupoClienteContent() {
   const [activeTab, setActiveTab]   = useState('fd')
   const [extraAssignments, setExtraAssignments] = useState<any[]>([])
   const [catalogs, setCatalogs] = useState<any>({})
+  const [territorialO2Rules, setTerritorialO2Rules] = useState<any[]>([])
 
   const activePeriodObj = availablePeriods?.find((p: any) => p.period_key === activePeriodKey)
 
@@ -227,7 +230,9 @@ function GrupoClienteContent() {
       fetch(`/api/objetivos?periodKey=${activePeriodKey}&strictPeriod=1`).then(r => r.json()).catch(() => ({})),
       fetch(`/api/extras/assignments?periodKey=${activePeriodKey}`).then(r => r.json()).catch(() => ({})),
       fetch(`/api/catalogs?periodKey=${activePeriodKey}`).then(r => r.json()).catch(() => ({})),
-    ]).then(([sData, pymeData, plusData, objData, extrasData, catData]) => {
+      fetch(`/api/territorial?periodKey=${activePeriodKey}`).then(r => r.json()).catch(() => ({ success: true, o2: [] })),
+    ]).then(([sData, pymeData, plusData, objData, extrasData, catData, territorialRes]) => {
+      if (territorialRes?.success) setTerritorialO2Rules(territorialRes.o2 || [])
       if (sData?.success) {
         const rawSales = sData.logs || [];
         const mappedSales = rawSales.map((s: any) => {
@@ -524,6 +529,216 @@ function GrupoClienteContent() {
   const extrasGrandTotal  = extrasPlusTotal + extrasBasicoTotal
 
   if (authorized === null) return <div style={{ padding: 40 }}>Verificando acceso...</div>
+
+  // ── Bonos O2 tab content ─────────────────────────────────────────────
+  const renderBonosO2Tab = () => {
+    const COLOR = '#005D82'
+    const COLOR_LIGHT = '#e0f2fe'
+
+    const TRAMOS_MES = [
+      { key: '4_10',   label: 'Mes 4–10',  min: 4,  max: 10 },
+      { key: '11_14',  label: 'Mes 11–14', min: 11, max: 14 },
+      { key: '15_20',  label: 'Mes 15–20', min: 15, max: 20 },
+      { key: '21_30',  label: 'Mes 21–30', min: 21, max: 30 },
+      { key: '31_40',  label: 'Mes 31–40', min: 31, max: 40 },
+      { key: '41_plus',label: 'Mes ≥41',   min: 41, max: 99999 },
+    ]
+    const TRAMOS_TRIM = [
+      { key: '5_9',    label: 'Trim 5–9',  min: 5,  max: 9 },
+      { key: '10_plus',label: 'Trim ≥10',  min: 10, max: 99999 },
+    ]
+    const parseNum = (v: any) => {
+      let s = String(v || '0').replace(/[^0-9.,-]/g, '').replace(/\./g, '').replace(',', '.')
+      return parseFloat(s) || 0
+    }
+
+    // Calcular datos por regla
+    const ruleRows = territorialO2Rules.map(rule => {
+      const filtered = sales.filter(s => {
+        if (s.anulado === 'Si' || s.anulado === 'Sí' || s.pendiente === 'Anulado') return false
+        if ((s.vendedor || '').toLowerCase() !== 'marta') return false
+        return matchTipoVenta(s, rule.tipoVenta)
+      })
+      const isMoneyType = String(rule.tipoVenta).toLowerCase().includes('dispositivos') || String(rule.tipoVenta).toLowerCase().includes('importe')
+      const totalSales = isMoneyType
+        ? filtered.reduce((acc, s) => acc + (parseFloat(String(s.cuota || s.importe || 0).replace(',', '.')) || 0), 0)
+        : filtered.length
+      const pendingCount = filtered.filter(s => String(s.pendiente || '').toLowerCase() === 'si').length
+      const confirmedCount = filtered.length - pendingCount
+
+      // Tramo mes
+      let tramoMesKey = ''
+      let tramoMesLabel = '—'
+      let tramoMesAmt = 0
+      for (const t of [...TRAMOS_MES].reverse()) {
+        if (totalSales >= t.min) { tramoMesKey = t.key; tramoMesLabel = t.label; tramoMesAmt = parseNum(rule.tramosMes?.[t.key]); break }
+      }
+
+      // Tramo trim
+      let tramoTrimKey = ''
+      let tramoTrimLabel = '—'
+      let tramoTrimAmt = 0
+      for (const t of [...TRAMOS_TRIM].reverse()) {
+        if (totalSales >= t.min) { tramoTrimKey = t.key; tramoTrimLabel = t.label; tramoTrimAmt = parseNum(rule.tramosTrim?.[t.key]); break }
+      }
+
+      const conectividad = totalSales > 0 ? parseNum(rule.conectividad) : 0
+      const totalBono = tramoMesAmt + tramoTrimAmt + conectividad
+
+      return { rule, filtered, totalSales, pendingCount, confirmedCount, isMoneyType, tramoMesLabel, tramoMesAmt, tramoTrimLabel, tramoTrimAmt, conectividad, totalBono }
+    })
+
+    const grandTotal = ruleRows.reduce((acc, r) => acc + r.totalBono, 0)
+    const totalVentas = ruleRows.reduce((acc, r) => acc + r.totalSales, 0)
+
+    return (
+      <>
+        {/* KPIs */}
+        <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
+          {[
+            { v: territorialO2Rules.length, label: 'Reglas configuradas', color: COLOR },
+            { v: String(totalVentas) + ' uds.', label: 'Ventas Marta (total)', color: '#0891B2' },
+            { v: fmt(grandTotal), label: 'Bono Total O2', color: '#10b981' },
+          ].map((kpi, i) => (
+            <div key={i} style={{ background: 'var(--bg-card)', border: `1px solid ${kpi.color}40`, borderRadius: 10, padding: '12px 22px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ fontSize: 22, fontWeight: 900, color: kpi.color }}>{kpi.v}</span>
+              <span style={{ fontSize: 12, color: 'var(--medium-gray)', textTransform: 'uppercase', letterSpacing: 0.5 }}>{kpi.label}</span>
+            </div>
+          ))}
+        </div>
+
+        {territorialO2Rules.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: 60, background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border-color)', color: 'var(--medium-gray)' }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>🏆</div>
+            <div style={{ fontSize: 16, fontWeight: 600 }}>No hay reglas de Bonos O2 configuradas para este período.</div>
+            <div style={{ fontSize: 13, marginTop: 8 }}>Configúralas en Entrada de Datos → TERRITORIAL O2 MOVILFREE</div>
+          </div>
+        ) : (
+          <>
+            {/* Tabla de reglas */}
+            <div style={{ background: `${COLOR}10`, borderRadius: '12px 12px 0 0', padding: '10px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: `1px solid ${COLOR}30`, borderBottom: 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ background: COLOR, color: '#fff', fontSize: 11, fontWeight: 800, padding: '3px 12px', borderRadius: 20 }}>TERRITORIAL O2 MOVILFREE</span>
+                <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--light-text)' }}>Desglose de Bonos por Regla — Marta</span>
+                <span style={{ fontSize: 12, color: 'var(--medium-gray)' }}>{territorialO2Rules.length} regla{territorialO2Rules.length !== 1 ? 's' : ''}</span>
+              </div>
+              <span style={{ fontSize: 15, fontWeight: 800, color: '#10b981' }}>TOTAL: {fmt(grandTotal)}</span>
+            </div>
+
+            <div style={{ overflowX: 'auto', border: `1px solid ${COLOR}30`, borderRadius: '0 0 12px 12px', marginBottom: 32 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ background: 'var(--active-bg)' }}>
+                    {[
+                      { label: 'Nombre Regla',       right: false },
+                      { label: 'Ventas Confirm.', right: false },
+                      { label: 'Ventas Pend.',    right: false },
+                      { label: 'Total Ventas',    right: false },
+                      { label: 'Tramo Mes',       right: false },
+                      { label: 'Bono Mes',        right: true  },
+                      { label: 'Tramo Trim.',     right: false },
+                      { label: 'Bono Trim.',      right: true  },
+                      { label: 'Conectividad',    right: true  },
+                      { label: 'BONO TOTAL',      right: true  },
+                    ].map((h, i) => (
+                      <th key={i} style={{ padding: '10px 14px', textAlign: h.right ? 'right' : 'left', whiteSpace: 'nowrap', color: 'var(--medium-gray)', fontWeight: 700, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: `2px solid ${COLOR}50` }}>{h.label}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {ruleRows.map((row, idx) => (
+                    <tr key={idx} style={{ borderBottom: `1px solid ${COLOR}20`, background: idx % 2 === 0 ? 'transparent' : `${COLOR}06` }}>
+                      <td style={{ padding: '14px 14px', fontWeight: 700, color: 'var(--light-text)' }}>{row.rule.nombre || `Regla ${idx + 1}`}</td>
+                      <td style={{ padding: '14px 14px' }}>
+                        <span style={{ background: '#10b98122', color: '#10b981', borderRadius: 20, padding: '3px 12px', fontWeight: 800, fontSize: 13 }}>{row.confirmedCount}</span>
+                      </td>
+                      <td style={{ padding: '14px 14px' }}>
+                        <span style={{ background: '#f59e0b22', color: '#f59e0b', borderRadius: 20, padding: '3px 12px', fontWeight: 800, fontSize: 13 }}>{row.pendingCount}</span>
+                      </td>
+                      <td style={{ padding: '14px 14px' }}>
+                        <span style={{ background: `${COLOR}22`, color: COLOR, borderRadius: 20, padding: '3px 12px', fontWeight: 900, fontSize: 14 }}>{row.totalSales}</span>
+                      </td>
+                      <td style={{ padding: '14px 14px' }}>
+                        {row.tramoMesAmt > 0
+                          ? <span style={{ background: '#dcfce7', color: '#166534', borderRadius: 6, padding: '2px 10px', fontWeight: 700, fontSize: 12 }}>✅ {row.tramoMesLabel}</span>
+                          : <span style={{ color: 'var(--medium-gray)', fontSize: 12 }}>Sin tramo</span>
+                        }
+                      </td>
+                      <td style={{ padding: '14px 14px', textAlign: 'right', fontWeight: 700, color: row.tramoMesAmt > 0 ? '#166534' : 'var(--medium-gray)' }}>{fmt(row.tramoMesAmt)}</td>
+                      <td style={{ padding: '14px 14px' }}>
+                        {row.tramoTrimAmt > 0
+                          ? <span style={{ background: '#e0f2fe', color: '#0369a1', borderRadius: 6, padding: '2px 10px', fontWeight: 700, fontSize: 12 }}>✅ {row.tramoTrimLabel}</span>
+                          : <span style={{ color: 'var(--medium-gray)', fontSize: 12 }}>Sin tramo</span>
+                        }
+                      </td>
+                      <td style={{ padding: '14px 14px', textAlign: 'right', fontWeight: 700, color: row.tramoTrimAmt > 0 ? '#0369a1' : 'var(--medium-gray)' }}>{fmt(row.tramoTrimAmt)}</td>
+                      <td style={{ padding: '14px 14px', textAlign: 'right', fontWeight: 700, color: row.conectividad > 0 ? '#7c3aed' : 'var(--medium-gray)' }}>{fmt(row.conectividad)}</td>
+                      <td style={{ padding: '14px 14px', textAlign: 'right' }}>
+                        <span style={{ background: row.totalBono > 0 ? '#10b98122' : 'var(--section-bg)', color: row.totalBono > 0 ? '#10b981' : 'var(--medium-gray)', fontWeight: 900, fontSize: 15, borderRadius: 8, padding: '4px 14px' }}>{fmt(row.totalBono)}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Detalle de ventas de Marta */}
+            {ruleRows.map((row, idx) => row.filtered.length > 0 && (
+              <div key={idx} style={{ marginBottom: 24 }}>
+                <div style={{ background: `${COLOR}10`, borderRadius: '10px 10px 0 0', padding: '8px 16px', border: `1px solid ${COLOR}25`, borderBottom: 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ background: COLOR, color: '#fff', fontSize: 10, fontWeight: 800, padding: '2px 10px', borderRadius: 20 }}>VENTAS</span>
+                  <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--light-text)' }}>{row.rule.nombre || `Regla ${idx + 1}`}</span>
+                  <span style={{ fontSize: 12, color: 'var(--medium-gray)' }}>{row.filtered.length} operación{row.filtered.length !== 1 ? 'es' : ''} de Marta</span>
+                </div>
+                <div style={{ overflowX: 'auto', border: `1px solid ${COLOR}25`, borderRadius: '0 0 10px 10px' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
+                    <thead>
+                      <tr style={{ background: 'var(--active-bg)' }}>
+                        {['NIF', 'Cliente', 'Producto', 'Fecha', 'Estado'].map((h, i) => (
+                          <th key={i} style={{ padding: '8px 12px', textAlign: 'left', color: 'var(--medium-gray)', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', borderBottom: `1px solid ${COLOR}30` }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {row.filtered.map((s: any, si: number) => {
+                        const isPending = String(s.pendiente || '').toLowerCase() === 'si'
+                        return (
+                          <tr key={si} style={{ borderBottom: '1px dashed var(--border-color)', background: isPending ? '#fef9c3' : 'transparent' }}>
+                            <td style={{ padding: '10px 12px', color: 'var(--medium-gray)', fontSize: 12 }}>{s.nif || '—'}</td>
+                            <td style={{ padding: '10px 12px', fontWeight: 600, color: 'var(--light-text)' }}>{s.nombreCliente || '—'}</td>
+                            <td style={{ padding: '10px 12px', color: 'var(--light-text)' }}>{s.producto || '—'}</td>
+                            <td style={{ padding: '10px 12px', color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{s.fecha || '—'}</td>
+                            <td style={{ padding: '10px 12px' }}>
+                              {isPending
+                                ? <span style={{ background: '#fef08a', color: '#854d0e', borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 700 }}>⏳ Pendiente</span>
+                                : <span style={{ background: '#dcfce7', color: '#166534', borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 700 }}>✅ Confirmada</span>
+                              }
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
+
+            {/* Resumen total */}
+            <div style={{ padding: '18px 28px', background: 'rgba(0,93,130,0.08)', border: '2px solid rgba(0,93,130,0.25)', borderRadius: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: 13, color: 'var(--medium-gray)', marginBottom: 2 }}>🏆 Bonos O2 Territorial — RESUMEN</div>
+                <div style={{ fontSize: 12, color: 'var(--medium-gray)' }}>{territorialO2Rules.length} regla{territorialO2Rules.length !== 1 ? 's' : ''} · {totalVentas} ventas de Marta</div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 13, color: 'var(--medium-gray)', marginBottom: 2 }}>Bono territorial total</div>
+                <div style={{ fontSize: 28, fontWeight: 900, color: '#10b981' }}>{fmt(grandTotal)}</div>
+              </div>
+            </div>
+          </>
+        )}
+      </>
+    )
+  }
 
   // ── Extras tab content (separate render path) ────────────────────────
   const renderExtrasTab = () => {
@@ -1303,7 +1518,7 @@ function GrupoClienteContent() {
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: 60, color: 'var(--medium-gray)' }}>Cargando operaciones...</div>
-      ) : activeTab === 'extras' ? renderExtrasTab() : tabSales.length === 0 ? (
+      ) : activeTab === 'bonos_o2' ? renderBonosO2Tab() : activeTab === 'extras' ? renderExtrasTab() : tabSales.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 60, background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border-color)', color: 'var(--medium-gray)' }}>
           <div style={{ fontSize: 36, marginBottom: 12 }}>{tab.emoji}</div>
           <div style={{ fontSize: 16, fontWeight: 600 }}>No hay operaciones de {tab.label} en el período activo.</div>
