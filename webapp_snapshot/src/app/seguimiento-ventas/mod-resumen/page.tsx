@@ -270,7 +270,10 @@ export default function ModResumenPage() {
         if (key) storeSellers = TIENDAS_COMERCIALES[key];
       }
 
-      const filtered = salesList.filter(s => {
+      // IMPORTANTE: usar 'sales' sin sanitizeSale para respetar el campo 'detalle' original
+      // sanitizeSale puede sobreescribir 'categoria' en ventas de Marta sin categoria propia,
+      // convirtiendo 'O2' en 'MÓVIL' (via guessCategory), lo que rompe matchTipoVenta
+      const filtered = sales.filter(s => {
         if (s.anulado === 'Si' || s.anulado === 'Sí' || s.pendiente === 'Anulado') return false;
         if (!storeSellers.some(seller => (s.vendedor || '').toLowerCase() === seller.toLowerCase())) return false;
         return isProductMatch(s);
