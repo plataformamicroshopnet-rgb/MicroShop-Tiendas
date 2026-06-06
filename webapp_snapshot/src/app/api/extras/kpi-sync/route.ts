@@ -62,12 +62,31 @@ export async function POST(request: Request) {
                         sourceSaleIds: JSON.stringify(act.sourceSaleIds || []),
                         telecomRewardAmount: act.telecomRewardAmount,
                         sellerRewardAmount: act.sellerRewardAmount,
-                        status: 'LIQUIDATED' // Por defecto, si se superó la barrera en un momento del mes, sumamos directamente
+                        status: act.status || 'LIQUIDATED'
                     }
                 });
                 inserted++;
             } else {
-                skipped++;
+                if (
+                    existing.telecomRewardAmount !== act.telecomRewardAmount ||
+                    existing.sellerRewardAmount !== act.sellerRewardAmount ||
+                    existing.status !== (act.status || 'LIQUIDATED') ||
+                    existing.triggerSummary !== act.triggerSummary
+                ) {
+                    await prisma.extraAssignment.update({
+                        where: { id: existing.id },
+                        data: {
+                            telecomRewardAmount: act.telecomRewardAmount,
+                            sellerRewardAmount: act.sellerRewardAmount,
+                            status: act.status || 'LIQUIDATED',
+                            triggerSummary: act.triggerSummary,
+                            sourceSaleIds: JSON.stringify(act.sourceSaleIds || [])
+                        }
+                    });
+                    inserted++;
+                } else {
+                    skipped++;
+                }
             }
         }
 
