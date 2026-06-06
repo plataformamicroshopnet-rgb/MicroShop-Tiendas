@@ -108,6 +108,22 @@ export const isExtraRepoUpFutbol = (s: any) => {
 };
 
 export const matchesRule = (s: any, ruleName: string, ruleProductosCuentan: string) => {
+    // Si la venta es de Marta (O2), aplicamos la regla simplificada según instrucción del usuario
+    const isMartaSale = String(s.vendedor || '').toLowerCase().includes('marta') || String(s.detalle || '').toLowerCase() === 'o2';
+    
+    if (isMartaSale) {
+        const normRule = String(ruleName || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+        const prodName = String(s.producto || '').toLowerCase().trim();
+        
+        if (normRule.includes('altas/portas') || normRule.includes('altas fibra') || normRule === 'altas/portas fibra') {
+            return prodName.startsWith('fibra');
+        }
+        if (normRule.includes('internas') || normRule === 'internas fibra') {
+            return prodName.startsWith('interna');
+        }
+        return false;
+    }
+
     const normRule = String(ruleName || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
     if (normRule === 'arpu') {
         return matchTipoVenta(s, 'ARPU') || isSuscripcionesTV(s) || isExtraRepoUpFutbol(s);
