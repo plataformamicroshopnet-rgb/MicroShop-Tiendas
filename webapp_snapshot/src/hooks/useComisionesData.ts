@@ -284,11 +284,17 @@ export function useComisionesData(user?: any) {
                     const isPercentage = String(rule.importePrimerTramo || '').includes('%');
                     const val = getValueForRule(s, rule.nombre, catalogs);
                     if (isPercentage) {
-                        teamGroupCounts[rule.nombre] += val;
-                        if (isPending) teamGroupPending[rule.nombre] += val;
+                        if (isPending) {
+                            teamGroupPending[rule.nombre] += val;
+                        } else {
+                            teamGroupCounts[rule.nombre] += val;
+                        }
                     } else {
-                        teamGroupCounts[rule.nombre] += 1;
-                        if (isPending) teamGroupPending[rule.nombre] += 1;
+                        if (isPending) {
+                            teamGroupPending[rule.nombre] += 1;
+                        } else {
+                            teamGroupCounts[rule.nombre] += 1;
+                        }
                     }
                 }
                 if (s.seguroImporte && Number(s.seguroImporte) > 0 && String(s.categoria || s.detalle || s.sheet).toLowerCase() !== 'seguro') {
@@ -297,11 +303,17 @@ export function useComisionesData(user?: any) {
                         const isPercentage = String(rule.importePrimerTramo || '').includes('%');
                         const val = getValueForRule(virtualSeguro, rule.nombre, catalogs);
                         if (isPercentage) {
-                            teamGroupCounts[rule.nombre] += val;
-                            if (isPending) teamGroupPending[rule.nombre] += val;
+                            if (isPending) {
+                                teamGroupPending[rule.nombre] += val;
+                            } else {
+                                teamGroupCounts[rule.nombre] += val;
+                            }
                         } else {
-                            teamGroupCounts[rule.nombre] += 1;
-                            if (isPending) teamGroupPending[rule.nombre] += 1;
+                            if (isPending) {
+                                teamGroupPending[rule.nombre] += 1;
+                            } else {
+                                teamGroupCounts[rule.nombre] += 1;
+                            }
                         }
                     }
                 }
@@ -315,11 +327,17 @@ export function useComisionesData(user?: any) {
                     const isPercentage = String(rule.importePrimerTramo || '').includes('%');
                     const val = getValueForRule(s, rule.nombre, catalogs);
                     if (isPercentage) {
-                        o2TeamGroupCounts[rule.nombre] += val;
-                        if (isPending) o2TeamGroupPending[rule.nombre] += val;
+                        if (isPending) {
+                            o2TeamGroupPending[rule.nombre] += val;
+                        } else {
+                            o2TeamGroupCounts[rule.nombre] += val;
+                        }
                     } else {
-                        o2TeamGroupCounts[rule.nombre] += 1;
-                        if (isPending) o2TeamGroupPending[rule.nombre] += 1;
+                        if (isPending) {
+                            o2TeamGroupPending[rule.nombre] += 1;
+                        } else {
+                            o2TeamGroupCounts[rule.nombre] += 1;
+                        }
                     }
                 }
                 if (s.seguroImporte && Number(s.seguroImporte) > 0 && String(s.categoria || s.detalle || s.sheet).toLowerCase() !== 'seguro') {
@@ -328,11 +346,17 @@ export function useComisionesData(user?: any) {
                         const isPercentage = String(rule.importePrimerTramo || '').includes('%');
                         const val = getValueForRule(virtualSeguro, rule.nombre, catalogs);
                         if (isPercentage) {
-                            o2TeamGroupCounts[rule.nombre] += val;
-                            if (isPending) o2TeamGroupPending[rule.nombre] += val;
+                            if (isPending) {
+                                o2TeamGroupPending[rule.nombre] += val;
+                            } else {
+                                o2TeamGroupCounts[rule.nombre] += val;
+                            }
                         } else {
-                            o2TeamGroupCounts[rule.nombre] += 1;
-                            if (isPending) o2TeamGroupPending[rule.nombre] += 1;
+                            if (isPending) {
+                                o2TeamGroupPending[rule.nombre] += 1;
+                            } else {
+                                o2TeamGroupCounts[rule.nombre] += 1;
+                            }
                         }
                     }
                 }
@@ -455,12 +479,18 @@ export function useComisionesData(user?: any) {
                     const isPending = String(s.pendiente || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === 'si';
                     const val = getValueForRule(s, rule.nombre, catalogs);
                     if (isPercentage) {
-                        groupCounts[rule.nombre] += val;
-                        if (isPending) groupPending[rule.nombre] += val;
+                        if (isPending) {
+                            groupPending[rule.nombre] += val;
+                        } else {
+                            groupCounts[rule.nombre] += val;
+                        }
                         totalValueGroupsAmount += val;
                     } else {
-                        groupCounts[rule.nombre] += 1;
-                        if (isPending) groupPending[rule.nombre] += 1;
+                        if (isPending) {
+                            groupPending[rule.nombre] += 1;
+                        } else {
+                            groupCounts[rule.nombre] += 1;
+                        }
                         totalUnitGroupsAmount += 1;
                     }
                     groupSales[rule.nombre].push(s);
@@ -472,12 +502,18 @@ export function useComisionesData(user?: any) {
                         const isPending = String(s.pendiente || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === 'si';
                         const val = getValueForRule(virtualSeguro, rule.nombre, catalogs);
                         if (isPercentage) {
-                            groupCounts[rule.nombre] += val;
-                            if (isPending) groupPending[rule.nombre] += val;
+                            if (isPending) {
+                                groupPending[rule.nombre] += val;
+                            } else {
+                                groupCounts[rule.nombre] += val;
+                            }
                             totalValueGroupsAmount += val;
                         } else {
-                            groupCounts[rule.nombre] += 1;
-                            if (isPending) groupPending[rule.nombre] += 1;
+                            if (isPending) {
+                                groupPending[rule.nombre] += 1;
+                            } else {
+                                groupCounts[rule.nombre] += 1;
+                            }
                             totalUnitGroupsAmount += 1;
                         }
                         groupSales[rule.nombre].push(virtualSeguro);
@@ -511,9 +547,9 @@ export function useComisionesData(user?: any) {
             const imp1 = parseImporte(rule.importePrimerTramo);
             const imp2 = parseImporte(rule.importeSegundoTramo);
 
-            const qttyTotal = groupCounts[ruleName] || 0;
             const qttyPending = groupPending[ruleName] || 0;
-            const qttyFinalizadas = qttyTotal - qttyPending;
+            const qttyFinalizadas = groupCounts[ruleName] || 0;
+            const qttyTotal = qttyFinalizadas + qttyPending;
 
             let comTotal = 0;
             let comConsolidada = 0;
@@ -539,12 +575,12 @@ export function useComisionesData(user?: any) {
                                 } else if (cond.type === 'ACCUMULATIVE_FIXED_BASE') {
                                     isAccumulativeFixed = true;
                                 } else if (cond.type === 'REQUIRE_GROUP_QTY') {
-                                    const targetQtty = groupCounts[cond.targetGroup] || 0;
+                                    const targetQtty = (groupCounts[cond.targetGroup] || 0) + (groupPending[cond.targetGroup] || 0);
                                     if (targetQtty < cond.value) {
                                         isConsolidado = false;
                                     }
                                 } else if (cond.type === 'REQUIRE_GROUP_PCT') {
-                                    const targetQtty = groupCounts[cond.targetGroup] || 0;
+                                    const targetQtty = (groupCounts[cond.targetGroup] || 0) + (groupPending[cond.targetGroup] || 0);
                                     const targetObj = groupObj1[cond.targetGroup] || 0;
                                     if (targetObj > 0) {
                                         const pct = (targetQtty / targetObj) * 100;
@@ -566,7 +602,7 @@ export function useComisionesData(user?: any) {
 
                 if (isTeamObj2) {
                     const globalObj2 = rule.objSegundoTramo || 0;
-                    const teamTotal = activeTeamGroupCounts[ruleName] || 0;
+                    const teamTotal = (activeTeamGroupCounts[ruleName] || 0) + (activeTeamGroupPending[ruleName] || 0);
                     if (teamTotal >= globalObj2 && globalObj2 > 0 && qttyTotal >= obj1 && obj1 > 0) {
                         activeImp = imp2;
                     } else if (qttyTotal >= obj1 && obj1 > 0) {
@@ -636,11 +672,11 @@ export function useComisionesData(user?: any) {
         // --- AUTO-PILOTO RENDIMIENTOS GLOBALES (KPI BONOS) ---
         if (activePeriodKey && activeRules.length > 0) {
             
-            const qttyBaf = groupCounts['BAF'] || 0;
+            const qttyBaf = (groupCounts['BAF'] || 0) + (groupPending['BAF'] || 0);
             const targetBaf = groupObj2['BAF'] > 0 ? groupObj2['BAF'] : (groupObj1['BAF'] || 0);
             const perceBaf = targetBaf > 0 ? (qttyBaf / targetBaf) * 100 : (qttyBaf > 0 ? 100 : 0);
 
-            const qttyFd = groupCounts['FD'] || 0;
+            const qttyFd = (groupCounts['FD'] || 0) + (groupPending['FD'] || 0);
             const targetFd = groupObj2['FD'] > 0 ? groupObj2['FD'] : (groupObj1['FD'] || 0);
             const perceFd = targetFd > 0 ? (qttyFd / targetFd) * 100 : (qttyFd > 0 ? 100 : 0);
 
@@ -954,6 +990,7 @@ export function useComisionesData(user?: any) {
         }));
 
         const numSalesTotal = sSales.length;
+        const completedSalesCount = numSalesTotal - pendientes;
 
         const sellerObj = {
             name,
@@ -965,7 +1002,7 @@ export function useComisionesData(user?: any) {
             totalExtras: totalExtras,
             pendientes,
             ultimaVenta,
-            totalSales: numSalesTotal,
+            totalSales: completedSalesCount,
             groupCounts,
             groupSales,
             groupPending,

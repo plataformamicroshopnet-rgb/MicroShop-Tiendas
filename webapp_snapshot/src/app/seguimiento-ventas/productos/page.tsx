@@ -38,16 +38,16 @@ export default function AvancePalancasPage() {
   const getStatsForLever = (rule: any) => {
       const isMonetary = String(rule.importePrimerTramo || '').includes('%')
 
-      let totalCount = 0
+      let finalizadas = 0
       let pendientes = 0
 
       // Aggregate from pre-calculated sellerStats
       sellerStats.forEach(s => {
-          totalCount += (s.groupCounts[rule.nombre] || 0)
+          finalizadas += (s.groupCounts[rule.nombre] || 0)
           pendientes += (s.groupPending[rule.nombre] || 0)
       })
 
-      const finalizadas = totalCount - pendientes
+      const totalCount = finalizadas + pendientes
 
       const targetT1 = rule.objPrimerTramo || 0
       const targetT2 = rule.objSegundoTramo || 0

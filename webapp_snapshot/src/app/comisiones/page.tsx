@@ -607,18 +607,18 @@ export default function ComisionesDashboardPage() {
                                                 const gName = rule.nombre;
                                                 const qtty = s.groupCounts[gName] || 0
                                                 const pendingQtty = s.groupPending[gName] || 0
+                                                const totalQtty = qtty + pendingQtty
                                                 const obj1 = s.groupObj1[gName] || 0
                                                 const obj2 = s.groupObj2[gName] || 0
                                                 const isValueGroup = String(rule.importePrimerTramo || '').includes('%');
                                                 
                                                 const maxObj = obj2 > 0 ? obj2 : (obj1 > 0 ? obj1 : 0)
-                                                const percent = maxObj > 0 ? Math.min(100, (qtty / maxObj) * 100) : (qtty > 0 ? 100 : 0)
-                                                const obj1Percent = maxObj > 0 && obj1 > 0 ? Math.min(100, (obj1 / maxObj) * 100) : 0
+                                                const percent = maxObj > 0 ? Math.min(100, (totalQtty / maxObj) * 100) : (totalQtty > 0 ? 100 : 0)
                                                 
                                                 let gradientColor = 'linear-gradient(90deg, #fdba74, #f97316)' // Naranja (Bajo rendimiento)
-                                                if (qtty >= obj2 && obj2 > 0) gradientColor = 'linear-gradient(90deg, #86efac, #22c55e)' // Verde (Alto rendimiento)
-                                                else if (qtty >= obj1 && obj1 > 0) gradientColor = 'linear-gradient(90deg, #fde68a, #f59e0b)' // Amarillo (Medio rendimiento)
-                                                else if (qtty > 0 && obj1 === 0 && obj2 === 0) gradientColor = 'linear-gradient(90deg, #86efac, #22c55e)' // Verde Default (sin objetivos configurados)
+                                                if (totalQtty >= obj2 && obj2 > 0) gradientColor = 'linear-gradient(90deg, #86efac, #22c55e)' // Verde (Alto rendimiento)
+                                                else if (totalQtty >= obj1 && obj1 > 0) gradientColor = 'linear-gradient(90deg, #fde68a, #f59e0b)' // Amarillo (Medio rendimiento)
+                                                else if (totalQtty > 0 && obj1 === 0 && obj2 === 0) gradientColor = 'linear-gradient(90deg, #86efac, #22c55e)' // Verde Default (sin objetivos configurados)
                                                 
                                                 let isTeamObj2 = false;
                                                 if (rule.condicionantes && rule.condicionantes.startsWith('[')) {
@@ -631,8 +631,8 @@ export default function ComisionesDashboardPage() {
                                                 }
                                                 
                                                 let displayObj2 = obj2;
-                                                const falt1 = Math.max(0, obj1 - qtty)
-                                                let falt2 = Math.max(0, obj2 - qtty)
+                                                const falt1 = Math.max(0, obj1 - totalQtty)
+                                                let falt2 = Math.max(0, obj2 - totalQtty)
                                                 if (isTeamObj2) {
                                                     const teamCount = s.activeTeamGroupCounts[gName] || 0;
                                                     const teamPending = s.activeTeamGroupPending[gName] || 0;
