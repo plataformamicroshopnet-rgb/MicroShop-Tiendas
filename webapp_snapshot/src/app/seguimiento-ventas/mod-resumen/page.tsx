@@ -1,5 +1,6 @@
 'use client'
 
+// Force build revalidation to apply updated matchTipoVenta logic
 import React, { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useGuard } from '@/hooks/useGuard'
