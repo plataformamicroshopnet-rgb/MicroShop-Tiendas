@@ -320,8 +320,32 @@ export default function ModResumenPage() {
     };
 
     const bonosO2Real = territorialO2Rules.reduce((acc, rule) => {
-      const dataO2 = getSalesDataForStoreAndType('O2', rule.tipoVenta);
-      return acc + calculateO2Importe(rule, dataO2.value);
+      const isProductMatch = (sale: any) => matchTipoVenta(sale, rule.tipoVenta);
+      const martaSales = salesList.filter(s => {
+        if (s.anulado === 'Si' || s.anulado === 'Sí' || s.pendiente === 'Anulado') return false;
+        if ((s.vendedor || '').toLowerCase() !== 'marta') return false;
+        return isProductMatch(s);
+      });
+
+      const isMoneyType = rule.tipoVenta.toLowerCase().includes('dispositivos') || rule.tipoVenta.toLowerCase().includes('importe');
+      const totalSalesForRule = isMoneyType
+        ? martaSales.reduce((sum, s) => sum + parseSafeFloat(s.importe || s.cuota || 0), 0)
+        : martaSales.length;
+
+      const bonus = calculateO2Importe(rule, totalSalesForRule);
+      if (bonus === 0 || totalSalesForRule === 0) return acc;
+
+      const isPending = (s: any) => String(s.pendiente || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === 'si';
+      const pendingSales = martaSales.filter(s => isPending(s));
+
+      const pendingSalesForRule = isMoneyType
+        ? pendingSales.reduce((sum, s) => sum + parseSafeFloat(s.importe || s.cuota || 0), 0)
+        : pendingSales.length;
+
+      const pendingBonus = Math.round((bonus * (pendingSalesForRule / totalSalesForRule)) * 100) / 100;
+      const completedBonus = Math.round((bonus - pendingBonus) * 100) / 100;
+
+      return acc + completedBonus;
     }, 0);
 
     // --- 3. MOVILFREE GANANCIAS ---
