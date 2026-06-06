@@ -319,21 +319,10 @@ export default function ModResumenPage() {
       return bonus;
     };
 
+    // bonosO2Real: idéntico al "TOTAL O2" de la pantalla Territorial (Entrada de Datos)
     const bonosO2Real = territorialO2Rules.reduce((acc, rule) => {
-      const isProductMatch = (sale: any) => matchTipoVenta(sale, rule.tipoVenta);
-      const martaSales = salesList.filter(s => {
-        if (s.anulado === 'Si' || s.anulado === 'Sí' || s.pendiente === 'Anulado') return false;
-        if ((s.vendedor || '').toLowerCase() !== 'marta') return false;
-        return isProductMatch(s);
-      });
-
-      const isMoneyType = rule.tipoVenta.toLowerCase().includes('dispositivos') || rule.tipoVenta.toLowerCase().includes('importe');
-      const totalSalesForRule = isMoneyType
-        ? martaSales.reduce((sum, s) => sum + parseSafeFloat(s.importe || s.cuota || 0), 0)
-        : martaSales.length;
-
-      const bonus = calculateO2Importe(rule, totalSalesForRule);
-      return acc + bonus;
+      const dataO2 = getSalesDataForStoreAndType('O2', rule.tipoVenta);
+      return acc + calculateO2Importe(rule, dataO2.value);
     }, 0);
 
     // --- 3. MOVILFREE GANANCIAS ---
