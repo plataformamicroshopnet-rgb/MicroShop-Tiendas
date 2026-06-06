@@ -333,19 +333,7 @@ export default function ModResumenPage() {
         : martaSales.length;
 
       const bonus = calculateO2Importe(rule, totalSalesForRule);
-      if (bonus === 0 || totalSalesForRule === 0) return acc;
-
-      const isPending = (s: any) => String(s.pendiente || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === 'si';
-      const pendingSales = martaSales.filter(s => isPending(s));
-
-      const pendingSalesForRule = isMoneyType
-        ? pendingSales.reduce((sum, s) => sum + parseSafeFloat(s.importe || s.cuota || 0), 0)
-        : pendingSales.length;
-
-      const pendingBonus = Math.round((bonus * (pendingSalesForRule / totalSalesForRule)) * 100) / 100;
-      const completedBonus = Math.round((bonus - pendingBonus) * 100) / 100;
-
-      return acc + completedBonus;
+      return acc + bonus;
     }, 0);
 
     // --- 3. MOVILFREE GANANCIAS ---
