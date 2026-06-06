@@ -44,7 +44,12 @@ export const matchTipoVenta = (sale: any, tipoVentaRaw: string) => {
         let matched = false;
         if (cat === 'o2') {
             const target = String(tipoVenta).trim().toLowerCase();
-            matched = (prod === target);
+            if (target === 'o2') {
+                const prodName = prod.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                matched = prodName.startsWith('fibra') || prodName.startsWith('interna');
+            } else {
+                matched = (prod === target);
+            }
         } else {
             switch(tipoVenta.toLowerCase().trim()) {
                 case 'alta baf total':
