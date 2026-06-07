@@ -820,8 +820,15 @@ export default function ComisionesDashboardPage() {
                                                         if (vkMatches.length === 0) return null;
                                                         
                                                         const vk = vkMatches[0];
-                                                        const match = vk.triggerSummary ? vk.triggerSummary.match(/\((\d+)/) : null;
-                                                        const totalSales = match ? parseInt(match[1], 10) : 0;
+                                                        // Contar TODOS los vendedores: detalle=o2 y producto empieza por Fibra/Interna
+                                                        const totalSales = monthSales.filter((ms: any) => {
+                                                            if (ms.anulado === 'Si' || ms.anulado === 'Sí' || ms.pendiente === 'Anulado') return false;
+                                                            const det = String(ms.detalle || ms.categoria || ms.sheet || '').toLowerCase().trim();
+                                                            if (det !== 'o2') return false;
+                                                            const prod = String(ms.producto || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+                                                            return prod.startsWith('fibra') || prod.startsWith('interna');
+                                                        }).length;
+
                                                         
                                                         const tm = rule.tramosMes || {};
                                                         const tt = rule.tramosTrim || {};
