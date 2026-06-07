@@ -20,7 +20,8 @@ export default function VentasTiendasPage() {
     if (!activePeriodKey) return;
     setLoading(true);
     Promise.all([
-      fetch(`/api/sales?periodKey=${activePeriodKey}`).then(res => res.json()),
+      fetch(`/api/sales?periodKey=${activePeriodKey}&dashboard=true`).then(res => res.json()),
+
       fetch('/api/comerciales').then(res => res.json()),
       fetch(`/api/extras/assignments?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({}))
     ])
