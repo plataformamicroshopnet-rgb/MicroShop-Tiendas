@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState, useMemo, Suspense } from 'react'
 import { PageHeader } from '@/components/PageHeader'
@@ -534,23 +534,23 @@ function GrupoClienteContent() {
   const renderBonosO2Tab = () => {
     const COLOR = '#005D82'
     const TRAMOS_MES = [
-      { key: '4_10',    label: 'Mes de 4 a 10',  min: 4  },
-      { key: '11_14',   label: 'Mes de 11 a 14', min: 11 },
-      { key: '15_20',   label: 'Mes de 15 a 20', min: 15 },
-      { key: '21_30',   label: 'Mes de 21 a 30', min: 21 },
-      { key: '31_40',   label: 'Mes de 31 a 40', min: 31 },
-      { key: '41_plus', label: 'Mes de \u226541',     min: 41 },
+      { key: '4_10',    label: 'Mes de 4 a 10',  min: 4,  max: 10    },
+      { key: '11_14',   label: 'Mes de 11 a 14', min: 11, max: 14    },
+      { key: '15_20',   label: 'Mes de 15 a 20', min: 15, max: 20    },
+      { key: '21_30',   label: 'Mes de 21 a 30', min: 21, max: 30    },
+      { key: '31_40',   label: 'Mes de 31 a 40', min: 31, max: 40    },
+      { key: '41_plus', label: 'Mes de \u226541',     min: 41, max: 99999 },
     ]
     const TRAMOS_TRIM = [
-      { key: '5_9',     label: 'Trim de 5 a 9', min: 5  },
-      { key: '10_plus', label: 'Trim \u226510',      min: 10 },
+      { key: '5_9',     label: 'Trim de 5 a 9', min: 5,  max: 9     },
+      { key: '10_plus', label: 'Trim \u226510',      min: 10, max: 99999 },
     ]
     const parseNum = (v: any) => {
       const s = String(v || '0').replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.')
       return parseFloat(s) || 0
     }
+
     const ruleRows = territorialO2Rules.map((rule: any) => {
-      // Contar TODAS las ventas de cualquier comercial con detalle=o2 y producto Fibra/Interna
       const filtered = sales.filter((s: any) => {
         if (s.anulado === 'Si' || s.anulado === 'S\u00ed' || s.pendiente === 'Anulado') return false
         const det = String(s.detalle || s.categoria || '').toLowerCase().trim()
@@ -558,11 +558,9 @@ function GrupoClienteContent() {
         const prod = String(s.producto || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
         return prod.startsWith('fibra') || prod.startsWith('interna')
       })
-
-      const isMoneyType = String(rule.tipoVenta || '').toLowerCase().includes('dispositivos')
-      const totalSales = isMoneyType
-        ? filtered.reduce((a: number, s: any) => a + (parseFloat(String(s.cuota || s.importe || 0).replace(',', '.')) || 0), 0)
-        : filtered.length
+      const altasFibra    = filtered.filter((s: any) => String(s.producto || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().startsWith('fibra')).length
+      const internasFibra = filtered.filter((s: any) => String(s.producto || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().startsWith('interna')).length
+      const totalSales = filtered.length
       let activeMesKey = ''
       for (const t of [...TRAMOS_MES].reverse()) { if (totalSales >= t.min) { activeMesKey = t.key; break } }
       let activeTrimKey = ''
@@ -571,33 +569,39 @@ function GrupoClienteContent() {
       const tramoTrimAmt = activeTrimKey ? parseNum(rule.tramosTrim?.[activeTrimKey]) : 0
       const conectividad = totalSales > 0 ? parseNum(rule.conectividad) : 0
       const totalBono    = tramoMesAmt + tramoTrimAmt + conectividad
-      const tv = String(rule.tipoVenta || '')
-      const tvCount = tv.split(',').filter(Boolean).length
-      const tipoLabel = tvCount > 1 ? `${tvCount} seleccionados` : (tv.trim() || '\u2014')
-      return { rule, totalSales, activeMesKey, activeTrimKey, tramoMesAmt, tramoTrimAmt, conectividad, totalBono, tipoLabel }
+      return { rule, totalSales, altasFibra, internasFibra, activeMesKey, activeTrimKey, tramoMesAmt, tramoTrimAmt, conectividad, totalBono }
     })
     const grandTotal  = ruleRows.reduce((a: number, r: any) => a + r.totalBono, 0)
     const totalVentas = ruleRows.reduce((a: number, r: any) => a + r.totalSales, 0)
 
     const TH: React.CSSProperties = {
-      padding: '9px 10px', textAlign: 'center', whiteSpace: 'nowrap',
-      color: 'var(--medium-gray)', fontWeight: 700, fontSize: 11,
-      textTransform: 'uppercase', letterSpacing: 0.4,
+      padding: '9px 12px', fontWeight: 700, fontSize: 12, textTransform: 'uppercase' as const,
+      letterSpacing: 0.4, color: '#ffffff', background: '#0284c7', whiteSpace: 'nowrap' as const,
+      borderRight: '1px solid rgba(255,255,255,0.15)',
+    }
+    const TD_OBJ: React.CSSProperties = {
+      padding: '10px 14px', fontWeight: 600, fontSize: 13, color: 'var(--light-text)',
+      borderBottom: '1px solid var(--border-color)', whiteSpace: 'nowrap' as const,
+    }
+    const TD_NUM: React.CSSProperties = {
+      padding: '10px 12px', textAlign: 'center' as const, fontSize: 13,
+      color: 'var(--medium-gray)', borderBottom: '1px solid var(--border-color)',
       borderLeft: '1px solid var(--border-color)',
-      borderBottom: `2px solid ${COLOR}50`, background: 'var(--active-bg)',
     }
-    const cellActive: React.CSSProperties = {
-      padding: '13px 10px', textAlign: 'center', fontWeight: 800, fontSize: 14,
-      color: '#166534', background: '#dcfce7', position: 'relative',
-      borderLeft: '1px solid var(--border-color)', whiteSpace: 'nowrap',
+    const TD_ACTIVE_GREEN: React.CSSProperties = {
+      padding: '10px 12px', textAlign: 'center' as const, fontWeight: 800, fontSize: 14,
+      color: '#166534', background: '#dcfce7',
+      borderBottom: '1px solid var(--border-color)', borderLeft: '1px solid var(--border-color)',
     }
-    const cellInactive: React.CSSProperties = {
-      padding: '13px 10px', textAlign: 'center', fontWeight: 400, fontSize: 13,
-      color: '#9ca3af', background: 'transparent',
-      borderLeft: '1px solid var(--border-color)', whiteSpace: 'nowrap',
+    const TD_ACTIVE_PURPLE: React.CSSProperties = {
+      padding: '10px 12px', textAlign: 'center' as const, fontWeight: 800, fontSize: 14,
+      color: '#4c1d95', background: '#ede9fe',
+      borderBottom: '1px solid var(--border-color)', borderLeft: '1px solid var(--border-color)',
     }
+
     return (
       <>
+        {/* KPIs superiores */}
         <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
           {[
             { v: territorialO2Rules.length, label: 'Reglas',        color: COLOR },
@@ -610,97 +614,131 @@ function GrupoClienteContent() {
             </div>
           ))}
         </div>
+
         {territorialO2Rules.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 60, background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border-color)', color: 'var(--medium-gray)' }}>
-            <div style={{ fontSize: 36, marginBottom: 12 }}>\ud83c\udfc6</div>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>🏆</div>
             <div style={{ fontSize: 16, fontWeight: 600 }}>No hay reglas configuradas para este per\u00edodo.</div>
             <div style={{ fontSize: 13, marginTop: 8 }}>Conf\u00edguralas en Entrada de Datos \u2192 TERRITORIAL O2 MOVILFREE</div>
           </div>
-        ) : (
-          <>
+        ) : ruleRows.map((row: any, rIdx: number) => (
+          <div key={rIdx} style={{ marginBottom: 32 }}>
+            {/* Cabecera de bloque */}
             <div style={{ background: `${COLOR}10`, borderRadius: '12px 12px 0 0', padding: '10px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: `1px solid ${COLOR}30`, borderBottom: 'none' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ background: COLOR, color: '#fff', fontSize: 11, fontWeight: 800, padding: '3px 12px', borderRadius: 20 }}>TERRITORIAL O2 MOVILFREE</span>
                 <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--light-text)' }}>Bonos de cobro \u2014 Marta</span>
                 <span style={{ fontSize: 12, color: 'var(--medium-gray)' }}>Tramo activo en verde \u2713</span>
               </div>
-              <span style={{ fontSize: 15, fontWeight: 800, color: '#10b981' }}>TOTAL: {fmt(grandTotal)}</span>
+              <span style={{ fontSize: 15, fontWeight: 800, color: '#10b981' }}>COMISI\u00d3N TOTAL: {fmt(row.totalBono)}</span>
             </div>
+
+            {/* Tabla vertical */}
             <div style={{ overflowX: 'auto', border: `1px solid ${COLOR}30`, borderRadius: '0 0 12px 12px' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 1100 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, background: 'var(--bg-card)' }}>
                 <thead>
                   <tr>
-                    <th style={{ ...TH, textAlign: 'left', borderLeft: 'none', minWidth: 150 }}>Nombre Comisi\u00f3n</th>
-                    <th style={{ ...TH, minWidth: 115 }}>Tipo de Venta</th>
-                    {TRAMOS_MES.map(t  => <th key={t.key}  style={{ ...TH, minWidth: 92 }}>{t.label}</th>)}
-                    {TRAMOS_TRIM.map(t => <th key={t.key}  style={{ ...TH, minWidth: 92 }}>{t.label}</th>)}
-                    <th style={{ ...TH, minWidth: 78 }}>Conect.</th>
-                    <th style={{ ...TH, minWidth: 105, color: COLOR }}>Ventas Total O2</th>
-                    <th style={{ ...TH, minWidth: 112, color: '#10b981' }}>IMPORTE</th>
+                    <th style={{ ...TH, textAlign: 'left' }}>Objetivo</th>
+                    <th style={{ ...TH, textAlign: 'center' }}>Altas Fibra</th>
+                    <th style={{ ...TH, textAlign: 'center' }}>Internas Altas Fibra</th>
+                    <th style={{ ...TH, textAlign: 'center' }}>Bonos</th>
+                    <th style={{ ...TH, textAlign: 'center', background: '#166534' }}>Conseguido</th>
+                    <th style={{ ...TH, textAlign: 'center' }}>UDS.</th>
+                    <th style={{ ...TH, textAlign: 'center', borderRight: 'none' }}>Comisi\u00f3n</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {ruleRows.map((row: any, idx: number) => (
-                    <tr key={idx} style={{ borderBottom: `1px solid ${COLOR}15`, background: idx % 2 === 0 ? 'transparent' : `${COLOR}04` }}>
-                      <td style={{ padding: '14px 14px', fontWeight: 700, color: 'var(--light-text)', borderLeft: 'none' }}>
-                        {row.rule.nombre || `Regla ${idx + 1}`}
-                      </td>
-                      <td style={{ padding: '12px 10px', textAlign: 'center', borderLeft: '1px solid var(--border-color)' }}>
-                        <span style={{ fontSize: 12, color: 'var(--medium-gray)', background: `${COLOR}12`, borderRadius: 20, padding: '2px 10px' }}>{row.tipoLabel}</span>
-                      </td>
-                      {TRAMOS_MES.map((t: any) => {
-                        const val = parseNum(row.rule.tramosMes?.[t.key])
-                        const active = row.activeMesKey === t.key
-                        return (
-                          <td key={t.key} style={active ? cellActive : cellInactive}>
-                            {active && <span style={{ position: 'absolute', top: 3, right: 5, fontSize: 9, color: '#166534', fontWeight: 900 }}>\u2713</span>}
-                            {val > 0 ? fmt(val) : '\u2014'}
-                          </td>
-                        )
-                      })}
-                      {TRAMOS_TRIM.map((t: any) => {
-                        const val = parseNum(row.rule.tramosTrim?.[t.key])
-                        const active = row.activeTrimKey === t.key
-                        return (
-                          <td key={t.key} style={active ? cellActive : cellInactive}>
-                            {active && <span style={{ position: 'absolute', top: 3, right: 5, fontSize: 9, color: '#166534', fontWeight: 900 }}>\u2713</span>}
-                            {val > 0 ? fmt(val) : '\u2014'}
-                          </td>
-                        )
-                      })}
-                      <td style={{
-                        padding: '13px 10px', textAlign: 'center',
-                        borderLeft: '1px solid var(--border-color)', whiteSpace: 'nowrap',
-                        fontWeight: row.conectividad > 0 ? 700 : 400,
-                        color: row.conectividad > 0 ? '#7c3aed' : '#9ca3af',
-                        background: row.conectividad > 0 ? '#ede9fe' : 'transparent',
-                      }}>
-                        {row.conectividad > 0 ? fmt(row.conectividad) : '\u2014'}
-                      </td>
-                      <td style={{ padding: '13px 10px', textAlign: 'center', borderLeft: '1px solid var(--border-color)' }}>
-                        <span style={{ background: `${COLOR}20`, color: COLOR, borderRadius: 20, padding: '4px 14px', fontWeight: 900, fontSize: 15 }}>{row.totalSales}</span>
-                      </td>
-                      <td style={{ padding: '13px 14px', textAlign: 'right', borderLeft: '1px solid var(--border-color)' }}>
-                        <span style={{ background: row.totalBono > 0 ? '#dcfce7' : 'var(--section-bg)', color: row.totalBono > 0 ? '#166534' : 'var(--medium-gray)', fontWeight: 900, fontSize: 15, borderRadius: 8, padding: '4px 14px', whiteSpace: 'nowrap' }}>{fmt(row.totalBono)}</span>
-                      </td>
-                    </tr>
-                  ))}
+                  {TRAMOS_MES.map((t, tIdx) => {
+                    const bonoVal  = parseNum(row.rule.tramosMes?.[t.key])
+                    const isActive = row.activeMesKey === t.key
+                    const rowBg    = tIdx % 2 === 0 ? 'transparent' : `${COLOR}04`
+                    return (
+                      <tr key={t.key} style={{ background: rowBg }}>
+                        <td style={{ ...TD_OBJ, fontWeight: isActive ? 800 : 600, color: isActive ? '#0f172a' : 'var(--light-text)' }}>{t.label}</td>
+                        <td style={{ ...TD_NUM }}>
+                          {isActive && row.altasFibra > 0 ? <span style={{ fontWeight: 700, color: '#0f172a' }}>{row.altasFibra}</span> : ''}
+                        </td>
+                        <td style={{ ...TD_NUM }}>
+                          {isActive && row.internasFibra > 0 ? <span style={{ fontWeight: 700, color: '#0f172a' }}>{row.internasFibra}</span> : ''}
+                        </td>
+                        <td style={{ ...TD_NUM, color: bonoVal > 0 ? '#334155' : '#d1d5db' }}>
+                          {bonoVal > 0 ? fmt(bonoVal) : '\u2014'}
+                        </td>
+                        <td style={isActive && bonoVal > 0 ? TD_ACTIVE_GREEN : { ...TD_NUM, color: '#d1d5db' }}>
+                          {isActive && bonoVal > 0 ? fmt(bonoVal) : ''}
+                        </td>
+                        <td style={{ ...TD_NUM }}>
+                          {isActive ? <span style={{ fontWeight: 800, color: COLOR }}>{row.totalSales}</span> : ''}
+                        </td>
+                        <td style={{ ...TD_NUM, fontWeight: isActive ? 800 : 400, color: isActive && bonoVal > 0 ? '#166534' : '#d1d5db', borderRight: 'none' }}>
+                          {isActive && bonoVal > 0 ? fmt(bonoVal) : ''}
+                        </td>
+                      </tr>
+                    )
+                  })}
+
+                  <tr><td colSpan={7} style={{ height: 2, background: `${COLOR}20`, padding: 0 }} /></tr>
+
+                  {TRAMOS_TRIM.map((t, tIdx) => {
+                    const bonoVal  = parseNum(row.rule.tramosTrim?.[t.key])
+                    const isActive = row.activeTrimKey === t.key
+                    const rowBg    = (TRAMOS_MES.length + tIdx) % 2 === 0 ? 'transparent' : `${COLOR}04`
+                    return (
+                      <tr key={t.key} style={{ background: rowBg }}>
+                        <td style={{ ...TD_OBJ, fontWeight: isActive ? 800 : 600, color: isActive ? '#0f172a' : 'var(--light-text)' }}>{t.label}</td>
+                        <td style={{ ...TD_NUM }}></td>
+                        <td style={{ ...TD_NUM }}></td>
+                        <td style={{ ...TD_NUM, color: bonoVal > 0 ? '#334155' : '#d1d5db' }}>
+                          {bonoVal > 0 ? fmt(bonoVal) : '\u2014'}
+                        </td>
+                        <td style={isActive && bonoVal > 0 ? TD_ACTIVE_GREEN : { ...TD_NUM, color: '#d1d5db' }}>
+                          {isActive && bonoVal > 0 ? fmt(bonoVal) : ''}
+                        </td>
+                        <td style={{ ...TD_NUM }}></td>
+                        <td style={{ ...TD_NUM, fontWeight: isActive ? 800 : 400, color: isActive && bonoVal > 0 ? '#166534' : '#d1d5db', borderRight: 'none' }}>
+                          {isActive && bonoVal > 0 ? fmt(bonoVal) : ''}
+                        </td>
+                      </tr>
+                    )
+                  })}
+
+                  {(() => {
+                    const bonoVal  = parseNum(row.rule.conectividad)
+                    const isActive = row.conectividad > 0
+                    const rowBg    = (TRAMOS_MES.length + TRAMOS_TRIM.length) % 2 === 0 ? 'transparent' : `${COLOR}04`
+                    return (
+                      <tr style={{ background: rowBg }}>
+                        <td style={{ ...TD_OBJ, fontWeight: isActive ? 800 : 600 }}>Conect.</td>
+                        <td style={{ ...TD_NUM }}></td>
+                        <td style={{ ...TD_NUM }}></td>
+                        <td style={{ ...TD_NUM, color: bonoVal > 0 ? '#334155' : '#d1d5db' }}>
+                          {bonoVal > 0 ? fmt(bonoVal) : '\u2014'}
+                        </td>
+                        <td style={isActive ? TD_ACTIVE_PURPLE : { ...TD_NUM, color: '#d1d5db' }}>
+                          {isActive ? fmt(bonoVal) : ''}
+                        </td>
+                        <td style={{ ...TD_NUM }}></td>
+                        <td style={{ ...TD_NUM, fontWeight: isActive ? 800 : 400, color: isActive ? '#4c1d95' : '#d1d5db', borderRight: 'none' }}>
+                          {isActive ? fmt(bonoVal) : ''}
+                        </td>
+                      </tr>
+                    )
+                  })()}
                 </tbody>
                 <tfoot>
                   <tr style={{ borderTop: `2px solid ${COLOR}40`, background: `${COLOR}08` }}>
-                    <td colSpan={2 + TRAMOS_MES.length + TRAMOS_TRIM.length + 1} style={{ padding: '12px 14px', fontWeight: 700, color: 'var(--medium-gray)', fontSize: 13 }}>
+                    <td colSpan={6} style={{ padding: '12px 14px', fontWeight: 700, color: 'var(--medium-gray)', fontSize: 13 }}>
                       TOTAL \u2014 {ruleRows.length} regla{ruleRows.length !== 1 ? 's' : ''} \u00b7 {totalVentas} ventas de Marta
                     </td>
-                    <td style={{ padding: '12px 10px', textAlign: 'center', borderLeft: '1px solid var(--border-color)', fontWeight: 900, color: COLOR, fontSize: 15 }}>{totalVentas}</td>
-                    <td style={{ padding: '12px 14px', textAlign: 'right', borderLeft: '1px solid var(--border-color)' }}>
+                    <td style={{ padding: '12px 14px', textAlign: 'right', borderLeft: '1px solid var(--border-color)', borderRight: 'none' }}>
                       <span style={{ background: '#dcfce7', color: '#166534', fontWeight: 900, fontSize: 17, borderRadius: 8, padding: '5px 16px' }}>{fmt(grandTotal)}</span>
                     </td>
                   </tr>
                 </tfoot>
               </table>
             </div>
-          </>
-        )}
+          </div>
+        ))}
       </>
     )
   }
