@@ -53,8 +53,11 @@ export const matchTipoVenta = (sale: any, tipoVentaRaw: string) => {
         } else {
             switch(tipoVenta.toLowerCase().trim()) {
                 case 'alta baf total':
-                    matched = cat === 'mimovistar' || cat === 'resto baf' || prod.includes('baf total') || (prod.includes('fibra') && !prod.includes('movil') && !prod.includes('móvil'));
+                    // 'Migra BAF Total' ya encaja por prod.includes('baf total')
+                    // 'Migración a fibra' NO debe contar → excluimos prod que contienen 'migraci'
+                    matched = cat === 'mimovistar' || cat === 'resto baf' || prod.includes('baf total') || (prod.includes('fibra') && !prod.includes('movil') && !prod.includes('móvil') && !prod.includes('migraci'));
                     break;
+
                 case 'alta baf convergente':
                     matched = cat === 'mimovistar' || prod.includes('baf convergente') || prod.includes('fd total') || prod.includes('fd flex') || (prod.includes('fibra') && (prod.includes('movil') || prod.includes('móvil')));
                     break;
