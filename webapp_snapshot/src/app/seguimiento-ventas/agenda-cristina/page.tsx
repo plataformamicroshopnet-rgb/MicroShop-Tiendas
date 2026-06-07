@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { ArrowLeft, ChevronLeft, ChevronRight, Calendar, Info, Target, Printer, Download, Save, X, Mail } from 'lucide-react'
+import { ExcelIcon, PrinterIcon } from '@/components/ActionIcons'
 import { PageHeader } from '@/components/PageHeader'
 import Link from 'next/link'
 import { useGuard } from '@/hooks/useGuard'
@@ -396,10 +397,10 @@ export default function AgendaTiendasPage() {
                         <Mail size={16} style={{ verticalAlign: 'middle', marginRight: 6 }} /> Mail
                     </button>
                     <button onClick={handlePrint} style={{ background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--light-text)', padding: '6px 14px', borderRadius: 6, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
-                        <Printer size={16} style={{ verticalAlign: 'middle', marginRight: 6 }} /> Imprimir
+                        <PrinterIcon size={18} /> Imprimir
                     </button>
-                    <button onClick={handleExcel} style={{ background: '#0ea5e9', border: 'none', color: 'var(--bg-card)', padding: '6px 14px', borderRadius: 6, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
-                        <Download size={16} style={{ verticalAlign: 'middle', marginRight: 6 }} /> Excel .xlsx
+                    <button onClick={handleExcel} style={{ background: '#107c41', border: 'none', color: 'white', padding: '6px 14px', borderRadius: 6, cursor: 'pointer', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 2px 4px rgba(16,124,65,0.3)', transition: 'filter 0.2s' }} onMouseOver={e => e.currentTarget.style.filter='brightness(1.12)'} onMouseOut={e => e.currentTarget.style.filter='brightness(1)'}>
+                        <ExcelIcon size={18} /> Excel .xlsx
                     </button>
                 </div>
             </div>

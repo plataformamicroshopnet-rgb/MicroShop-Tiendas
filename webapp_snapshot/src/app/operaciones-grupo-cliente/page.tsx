@@ -1,9 +1,10 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useState, useMemo, Suspense } from 'react'
 import { PageHeader } from '@/components/PageHeader'
 import { usePeriod } from '@/components/PeriodProvider'
 import { useGuard } from '@/hooks/useGuard'
+import { ExcelIcon } from '@/components/ActionIcons'
 import { renderDashboardData, calculateDynamicCommission, isVentaWithinDates, normalizeString, getCurrentMonthString } from '@/lib/salesUtils'
 import { matchTipoVenta } from '@/hooks/useComisionesData'
 import * as XLSX from 'xlsx'
@@ -1452,9 +1453,9 @@ function GrupoClienteContent() {
       <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
           {[
-            { label: '📋 Hoja por Grupo', desc: 'Una pestaña por cada grupo', fn: exportByGroup, color: '#059669' },
-            { label: '📄 Todo en Una Hoja', desc: 'Todas las ventas juntas con columna Grupo', fn: exportAllInOne, color: '#2563eb' },
-            { label: '📊 Resumen', desc: 'Totales por grupo: ventas, cuota y tramo', fn: exportSummary, color: '#7C3AED' },
+            { label: <><ExcelIcon size={16} /> Hoja por Grupo</>, desc: 'Una pestaña por cada grupo', fn: exportByGroup },
+            { label: <><ExcelIcon size={16} /> Todo en Una Hoja</>, desc: 'Todas las ventas juntas con columna Grupo', fn: exportAllInOne },
+            { label: <><ExcelIcon size={16} /> Resumen</>, desc: 'Totales por grupo: ventas, cuota y tramo', fn: exportSummary },
           ].map((btn, i) => (
             <button key={i} onClick={btn.fn} title={btn.desc} style={{
               display: 'flex', alignItems: 'center', gap: 8,

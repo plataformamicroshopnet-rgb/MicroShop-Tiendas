@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { MapPin, ArrowLeft, Upload, Table as TableIcon, Download, Search, X, PlusCircle } from 'lucide-react'
+import { ExcelIcon } from '@/components/ActionIcons'
 import { PageHeader } from '@/components/PageHeader'
 import Link from 'next/link'
 import { can, canEdit } from '@/lib/permissions'
@@ -765,8 +766,8 @@ export default function VisitasTiendasPage() {
                         </select>
                     </div>
                    
-                    <button onClick={handleConfirmExport} style={{ background: 'var(--text-main)', color: 'var(--bg-card)', padding: '10px', border: 'none', borderRadius: 8, fontWeight: 600, cursor: 'pointer', marginTop: 6, display: 'flex', justifyContent: 'center', gap: 8, alignItems: 'center', fontSize: 12 }}>
-                        <Download size={16} /> Validar y Generar XLSX de Panel
+                    <button onClick={handleConfirmExport} style={{ background: '#107c41', color: 'white', padding: '10px', border: 'none', borderRadius: 8, fontWeight: 700, cursor: 'pointer', marginTop: 6, display: 'flex', justifyContent: 'center', gap: 8, alignItems: 'center', fontSize: 12, boxShadow: '0 2px 4px rgba(16,124,65,0.3)' }}>
+                        <ExcelIcon size={16} /> Validar y Generar XLSX de Panel
                     </button>
                 </div>
             </div>
@@ -850,10 +851,10 @@ export default function VisitasTiendasPage() {
                     <button 
                       onClick={() => { setExportCodes(uniqueCodes); setExportMonths([1, 2, 3]); setDateFrom(''); setDateTo(''); setExportActionFilter(''); setExportModal(true); }} 
                       disabled={!hasExportPermission}
-                      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', backgroundColor: 'var(--text-main)', color: 'var(--bg-card)', border: 'none', borderRadius: 6, cursor: hasExportPermission ? 'pointer' : 'not-allowed', fontWeight: 600, fontSize: 11, opacity: hasExportPermission ? 1 : 0.4 }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', background: '#107c41', color: 'white', border: 'none', borderRadius: 6, cursor: hasExportPermission ? 'pointer' : 'not-allowed', fontWeight: 700, fontSize: 11, opacity: hasExportPermission ? 1 : 0.4, boxShadow: '0 2px 4px rgba(16,124,65,0.3)' }}
                       title={!hasExportPermission ? "No tienes permisos de descarga maestra. Contacta con el administrador para que te asigne el permiso EXPORT_EXCEL." : "Abre el exportador avanzado: filtra por Código Tiendas, meses del trimestre, rango de fechas e impacto máximo alcanzado. Genera un archivo Excel (.xlsx) con la lista de clientes y sus acciones registradas. También permite exportar solo los clientes NO contactados en los meses seleccionados."}
                     >
-                        <Download size={12} /> Exportar Excel
+                        <ExcelIcon size={12} /> Exportar Excel
                     </button>
                   )
                 })()}

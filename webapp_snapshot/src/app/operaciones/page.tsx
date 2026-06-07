@@ -11,6 +11,7 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContai
 import { useGuard } from '@/hooks/useGuard'
 import { usePeriod } from '@/components/PeriodProvider'
 import { normalizeRole } from '@/lib/appConfig'
+import { ExcelIcon } from '@/components/ActionIcons'
 
 const LEVER_MAPPING: Record<string, string[]> = {
   'FD': ['Alta FD Total', 'Alta FD Total NC', 'Migra FD Total', 'Alta FD Flex', 'Alta FD Flex NC', 'Migra FD Flex'],
@@ -1182,7 +1183,7 @@ function OperationsContent() {
               onMouseOut={e => { e.currentTarget.style.filter = 'brightness(1)' }}
               title={!hasExportPermission ? "No tienes permisos para descargar el Excel nativo" : "Exportar a Excel"}
             >
-              {exporting ? 'Generando Excel...' : '📊 Exportar a Excel'}
+              <><ExcelIcon size={18} /> {exporting ? 'Generando...' : 'Exportar Excel'}</>
             </button>
           )
         })()}

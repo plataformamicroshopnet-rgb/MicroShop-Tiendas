@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from 'react'
 import { Euro, Calendar, ArrowLeft, Save, ClipboardList, X, Trash2, Settings, Download, Briefcase, FileText, BarChart2, Repeat, Zap, Settings2, ArrowUp, ArrowDown, Users, RefreshCcw, Map, TrendingUp } from 'lucide-react'
+import { ExcelIcon } from '@/components/ActionIcons'
 import ExcelJS from 'exceljs'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -1637,12 +1638,12 @@ export default function LiquidacionesPage() {
                                 <button 
                                     onClick={exportToExcel}
                                     disabled={!hasExportPermission}
-                                    style={{ background: 'transparent', border: '1px solid var(--mercedes-cyan)', color: '#000', cursor: hasExportPermission ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', padding: '2px 8px', borderRadius: '8px', transition: 'all 0.2s', opacity: hasExportPermission ? 1 : 0.4 }}
+                                    style={{ background: '#107c41', border: 'none', color: 'white', cursor: hasExportPermission ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: '8px', fontWeight: 700, fontSize: 12, opacity: hasExportPermission ? 1 : 0.4, boxShadow: '0 2px 4px rgba(16,124,65,0.3)', transition: 'filter 0.2s' }}
                                     title={!hasExportPermission ? "No tienes permisos para descargar el Excel nativo" : "Exportar a Excel"}
-                                    onMouseOver={(e) => { if (hasExportPermission) { e.currentTarget.style.backgroundColor = 'var(--mercedes-cyan)'; e.currentTarget.style.color = 'var(--bg-card)'; } }}
-                                    onMouseOut={(e) => { if (hasExportPermission) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#000'; } }}
+                                    onMouseOver={(e) => { if (hasExportPermission) e.currentTarget.style.filter = 'brightness(1.12)'; }}
+                                    onMouseOut={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
                                 >
-                                    <Download size={14} strokeWidth={2.5} />
+                                    <ExcelIcon size={16} /> Excel
                                 </button>
                             )
                         })()}
