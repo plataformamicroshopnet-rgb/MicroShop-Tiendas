@@ -14,6 +14,76 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveCont
 import { AuditableCell } from '@/components/AuditableCell'
 import { normalizeString } from '@/lib/salesUtils'
 
+// ── Modal detalle de ventas ────────────────────────────────────────────────
+const SalesDetailModal = ({ isOpen, onClose, title, sales }: { isOpen: boolean; onClose: () => void; title: string; sales: any[] }) => {
+    if (!isOpen) return null;
+    const isPending = (s: any) => String(s.pendiente || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim() === 'si';
+    const confirmed = sales.filter(s => !isPending(s));
+    const pending   = sales.filter(s =>  isPending(s));
+    const fmt = (s: any) => {
+        const prod = s.producto || '-';
+        const client = s.nombreCliente || s.nif || '-';
+        const fecha = s.fecha || '-';
+        const nif = s.nif || '';
+        return { prod, client, fecha, nif };
+    };
+    return (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.75)', backdropFilter:'blur(6px)', zIndex:9999, display:'flex', justifyContent:'center', alignItems:'center' }} onClick={onClose}>
+            <div style={{ background:'var(--bg-card)', border:'1px solid var(--border-color)', borderRadius:16, padding:28, maxWidth:640, width:'90%', maxHeight:'80vh', overflowY:'auto', position:'relative', boxShadow:'0 20px 60px rgba(0,0,0,0.5)' }} onClick={e => e.stopPropagation()}>
+                <button onClick={onClose} style={{ position:'absolute', top:14, right:14, background:'transparent', border:'none', cursor:'pointer', color:'var(--medium-gray)', fontSize:20, lineHeight:1 }}>✕</button>
+                <div style={{ fontSize:15, fontWeight:800, color:'var(--light-text)', marginBottom:16 }}>{title}</div>
+                {confirmed.length > 0 && (
+                    <>
+                        <div style={{ fontSize:11, fontWeight:700, color:'#2563eb', textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>✅ Confirmadas ({confirmed.length})</div>
+                        <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12, marginBottom:16 }}>
+                            <thead><tr style={{ background:'#eff6ff', color:'#1e40af' }}>
+                                <th style={{ padding:'6px 8px', textAlign:'left', fontWeight:700 }}>Cliente</th>
+                                <th style={{ padding:'6px 8px', textAlign:'left', fontWeight:700 }}>Producto</th>
+                                <th style={{ padding:'6px 8px', textAlign:'center', fontWeight:700 }}>Fecha</th>
+                                <th style={{ padding:'6px 8px', textAlign:'center', fontWeight:700 }}>NIF</th>
+                            </tr></thead>
+                            <tbody>
+                                {confirmed.map((s, i) => { const { prod, client, fecha, nif } = fmt(s); return (
+                                    <tr key={i} style={{ borderBottom:'1px solid #e2e8f0', background: i%2===0?'transparent':'#f8fafc' }}>
+                                        <td style={{ padding:'6px 8px', color:'#0f172a', fontWeight:600 }}>{client}</td>
+                                        <td style={{ padding:'6px 8px', color:'#334155' }}>{prod}</td>
+                                        <td style={{ padding:'6px 8px', textAlign:'center', color:'#64748b' }}>{fecha}</td>
+                                        <td style={{ padding:'6px 8px', textAlign:'center', color:'#94a3b8', fontSize:11 }}>{nif}</td>
+                                    </tr>
+                                )})}
+                            </tbody>
+                        </table>
+                    </>
+                )}
+                {pending.length > 0 && (
+                    <>
+                        <div style={{ fontSize:11, fontWeight:700, color:'#d97706', textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>⏳ Pendientes ({pending.length})</div>
+                        <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
+                            <thead><tr style={{ background:'#fffbeb', color:'#92400e' }}>
+                                <th style={{ padding:'6px 8px', textAlign:'left', fontWeight:700 }}>Cliente</th>
+                                <th style={{ padding:'6px 8px', textAlign:'left', fontWeight:700 }}>Producto</th>
+                                <th style={{ padding:'6px 8px', textAlign:'center', fontWeight:700 }}>Fecha</th>
+                                <th style={{ padding:'6px 8px', textAlign:'center', fontWeight:700 }}>NIF</th>
+                            </tr></thead>
+                            <tbody>
+                                {pending.map((s, i) => { const { prod, client, fecha, nif } = fmt(s); return (
+                                    <tr key={i} style={{ borderBottom:'1px solid #fde68a', background: i%2===0?'transparent':'#fffbeb' }}>
+                                        <td style={{ padding:'6px 8px', color:'#0f172a', fontWeight:600 }}>{client}</td>
+                                        <td style={{ padding:'6px 8px', color:'#334155' }}>{prod}</td>
+                                        <td style={{ padding:'6px 8px', textAlign:'center', color:'#64748b' }}>{fecha}</td>
+                                        <td style={{ padding:'6px 8px', textAlign:'center', color:'#94a3b8', fontSize:11 }}>{nif}</td>
+                                    </tr>
+                                )})}
+                            </tbody>
+                        </table>
+                    </>
+                )}
+                {sales.length === 0 && <div style={{ textAlign:'center', padding:32, color:'var(--medium-gray)' }}>Sin operaciones</div>}
+            </div>
+        </div>
+    );
+};
+
 
 
     // TODO: Confirmar cifras exactas con el usuario
@@ -301,6 +371,7 @@ const getCuotaTotal = (sale: any, catalogs?: Record<string, any[]>): number => {
 export default function ComisionesDashboardPage() {
     const router = useRouter()
     const { authorized, user } = useGuard('MODULE_COMISIONES')
+    const [salesModal, setSalesModal] = React.useState<{ title: string; sales: any[] } | null>(null);
     
 
     const {
@@ -373,6 +444,12 @@ export default function ComisionesDashboardPage() {
 
     return (
         <div style={{ padding: 20 }}>
+            <SalesDetailModal
+                isOpen={!!salesModal}
+                onClose={() => setSalesModal(null)}
+                title={salesModal?.title || ''}
+                sales={salesModal?.sales || []}
+            />
             <PageHeader 
                 title={<><Trophy size={28} className="mercedes-text" color="var(--mercedes-cyan)" /> Panel de Comisiones</>}
                 showBack={true}
@@ -701,12 +778,20 @@ export default function ComisionesDashboardPage() {
                                                         <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5, color: '#334155' }}>
                                                             {formatImporteTramo(rule.importeSegundoTramo)}
                                                         </td>
-                                                        <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 13.5, fontWeight: 800, color: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.05)' }}>
-                                                            {formatQtty(qtty)}
-                                                        </td>
-                                                        <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5, fontWeight: 700, color: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.05)' }}>
-                                                            {pendingQtty > 0 ? formatQtty(pendingQtty) : '-'}
-                                                        </td>
+                                                        <td
+                                                             onClick={(e) => { e.stopPropagation(); const allSales = s.groupSales[gName] || []; const confirmed = allSales.filter((x:any) => String(x.pendiente||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim() !== 'si'); if(confirmed.length>0) setSalesModal({ title: `${s.name} · ${gName} — Ventas confirmadas`, sales: confirmed }); }}
+                                                             style={{ padding: '8px 8px', textAlign: 'center', fontSize: 13.5, fontWeight: 800, color: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.05)', cursor: qtty > 0 ? 'pointer' : 'default', textDecoration: qtty > 0 ? 'underline' : 'none', textUnderlineOffset: 2 }}
+                                                             title={qtty > 0 ? 'Ver detalle de ventas confirmadas' : ''}
+                                                         >
+                                                             {formatQtty(qtty)}
+                                                         </td>
+                                                         <td
+                                                             onClick={(e) => { e.stopPropagation(); const allSales = s.groupSales[gName] || []; const pending = allSales.filter((x:any) => String(x.pendiente||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim() === 'si'); if(pending.length>0) setSalesModal({ title: `${s.name} · ${gName} — Pendientes`, sales: pending }); }}
+                                                             style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5, fontWeight: 700, color: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.05)', cursor: pendingQtty > 0 ? 'pointer' : 'default', textDecoration: pendingQtty > 0 ? 'underline' : 'none', textUnderlineOffset: 2 }}
+                                                             title={pendingQtty > 0 ? 'Ver detalle de ventas pendientes' : ''}
+                                                         >
+                                                             {pendingQtty > 0 ? formatQtty(pendingQtty) : '-'}
+                                                         </td>
                                                         <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5 }}>
                                                             {obj1 === 0 ? '-' : format(obj1)}
                                                         </td>
