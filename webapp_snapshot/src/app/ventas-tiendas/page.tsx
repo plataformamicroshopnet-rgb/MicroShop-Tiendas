@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { PageHeader } from '@/components/PageHeader'
 import { useGuard } from '@/hooks/useGuard'
 import { usePeriod } from '@/components/PeriodProvider'
-import { normalizeRole } from '@/lib/appConfig'
+
 
 export default function VentasTiendasPage() {
   const { authorized, user } = useGuard('MODULE_TIENDAS')
@@ -114,13 +114,8 @@ export default function VentasTiendasPage() {
   if (authorized === null) return <div style={{ padding: 20 }}>Verificando permisos...</div>;
   if (loading) return <div style={{ padding: 20 }}>Cargando datos de comerciales...</div>
 
-  const isComercial = user && normalizeRole(user.role) === 'COMERCIAL';
-  const normName = (name: string) => name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  const displayedComerciales = comerciales;
 
-  let displayedComerciales = comerciales;
-  if (isComercial && user.username) {
-      displayedComerciales = comerciales.filter(c => normName(c.name) === normName(user.username));
-  }
 
   return (
     <div className="w-full" style={{ padding: '24px 32px', backgroundColor: 'var(--bg-app)', minHeight: '100vh' }}>
