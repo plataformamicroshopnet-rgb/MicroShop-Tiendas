@@ -260,24 +260,32 @@ export default function ModResumenPage() {
     // --- 2. BONOS O2 ---
     const getSalesDataForStoreAndType = (storeName: string, tipoVenta: string) => {
       if (!tipoVenta) return { value: 0 };
-      const isProductMatch = (sale: any) => matchTipoVenta(sale, tipoVenta);
 
-      let storeSellers: string[] = [];
+      let filtered: any[];
+
       if (storeName === 'O2') {
-        storeSellers = TIENDAS_COMERCIALES['O2'] || ['Marta'];
+        // Contar TODAS las ventas de cualquier comercial donde:
+        // detalle/categoria = 'o2' Y producto empieza por 'Fibra' o 'Interna'
+        // IMPORTANTE: usar 'sales' raw (sin sanitizeSale) para respetar el campo 'detalle' original
+        filtered = sales.filter(s => {
+          if (s.anulado === 'Si' || s.anulado === 'Sí' || s.pendiente === 'Anulado') return false;
+          const det = String(s.detalle || s.categoria || '').toLowerCase().trim();
+          if (det !== 'o2') return false;
+          const prod = String(s.producto || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+          return prod.startsWith('fibra') || prod.startsWith('interna');
+        });
       } else {
+        const isProductMatch = (sale: any) => matchTipoVenta(sale, tipoVenta);
+        let storeSellers: string[] = [];
         const key = Object.keys(TIENDAS_COMERCIALES).find(k => k.toLowerCase().replace('é','e') === storeName.toLowerCase().replace('é','e'));
         if (key) storeSellers = TIENDAS_COMERCIALES[key];
-      }
 
-      // IMPORTANTE: usar 'sales' sin sanitizeSale para respetar el campo 'detalle' original
-      // sanitizeSale puede sobreescribir 'categoria' en ventas de Marta sin categoria propia,
-      // convirtiendo 'O2' en 'MÓVIL' (via guessCategory), lo que rompe matchTipoVenta
-      const filtered = sales.filter(s => {
-        if (s.anulado === 'Si' || s.anulado === 'Sí' || s.pendiente === 'Anulado') return false;
-        if (!storeSellers.some(seller => (s.vendedor || '').toLowerCase() === seller.toLowerCase())) return false;
-        return isProductMatch(s);
-      });
+        filtered = sales.filter(s => {
+          if (s.anulado === 'Si' || s.anulado === 'Sí' || s.pendiente === 'Anulado') return false;
+          if (!storeSellers.some(seller => (s.vendedor || '').toLowerCase() === seller.toLowerCase())) return false;
+          return isProductMatch(s);
+        });
+      }
 
       const isMoneyType = tipoVenta.toLowerCase().includes('dispositivos') || tipoVenta.toLowerCase().includes('importe');
 
@@ -287,6 +295,7 @@ export default function ModResumenPage() {
 
       return { value: filtered.length };
     };
+
 
     const calculateO2Importe = (rule: any, totalSales: number) => {
       const TRAMOS_MES = [

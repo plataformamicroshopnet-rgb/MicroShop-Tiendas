@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useState, useMemo, Suspense } from 'react'
 import { PageHeader } from '@/components/PageHeader'
@@ -550,11 +550,15 @@ function GrupoClienteContent() {
       return parseFloat(s) || 0
     }
     const ruleRows = territorialO2Rules.map((rule: any) => {
+      // Contar TODAS las ventas de cualquier comercial con detalle=o2 y producto Fibra/Interna
       const filtered = sales.filter((s: any) => {
         if (s.anulado === 'Si' || s.anulado === 'S\u00ed' || s.pendiente === 'Anulado') return false
-        if ((s.vendedor || '').toLowerCase() !== 'marta') return false
-        return matchTipoVenta(s, rule.tipoVenta)
+        const det = String(s.detalle || s.categoria || '').toLowerCase().trim()
+        if (det !== 'o2') return false
+        const prod = String(s.producto || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+        return prod.startsWith('fibra') || prod.startsWith('interna')
       })
+
       const isMoneyType = String(rule.tipoVenta || '').toLowerCase().includes('dispositivos')
       const totalSales = isMoneyType
         ? filtered.reduce((a: number, s: any) => a + (parseFloat(String(s.cuota || s.importe || 0).replace(',', '.')) || 0), 0)

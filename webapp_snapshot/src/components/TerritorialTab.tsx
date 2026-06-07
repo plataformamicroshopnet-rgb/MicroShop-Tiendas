@@ -108,21 +108,30 @@ export default function TerritorialTab() {
     
     const isProductMatch = (sale: any) => matchTipoVenta(sale, tipoVenta);
 
-    // Obtener los comerciales de la tienda
-    let storeSellers: string[] = [];
+    let filtered: any[];
+
     if (storeName === 'O2') {
-      storeSellers = TIENDAS_COMERCIALES['O2'] || ['Marta'];
+      // Contar TODAS las ventas de cualquier comercial donde:
+      // detalle/categoria = 'o2' Y producto empieza por 'Fibra' o 'Interna'
+      filtered = sales.filter(s => {
+        if (s.anulado === 'Si' || s.pendiente === 'Anulado') return false;
+        const det = String(s.detalle || s.categoria || '').toLowerCase().trim();
+        if (det !== 'o2') return false;
+        const prod = String(s.producto || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+        return prod.startsWith('fibra') || prod.startsWith('interna');
+      });
     } else {
-      // Intentar encontrar la tienda exacta, manejando tildes
+      // Para tiendas físicas: filtrar por comerciales de esa tienda
+      let storeSellers: string[] = [];
       const key = Object.keys(TIENDAS_COMERCIALES).find(k => k.toLowerCase().replace('é','e') === storeName.toLowerCase().replace('é','e'));
       if (key) storeSellers = TIENDAS_COMERCIALES[key];
-    }
 
-    const filtered = sales.filter(s => {
-      if (s.anulado === 'Si' || s.pendiente === 'Anulado') return false;
-      if (!storeSellers.some(seller => (s.vendedor || '').toLowerCase() === seller.toLowerCase())) return false;
-      return isProductMatch(s);
-    });
+      filtered = sales.filter(s => {
+        if (s.anulado === 'Si' || s.pendiente === 'Anulado') return false;
+        if (!storeSellers.some(seller => (s.vendedor || '').toLowerCase() === seller.toLowerCase())) return false;
+        return isProductMatch(s);
+      });
+    }
 
     const isMoneyType = tipoVenta.toLowerCase().includes('dispositivos') || tipoVenta.toLowerCase().includes('importe');
 
