@@ -934,7 +934,6 @@ export default function CatalogosPage() {
           { cat: 'O2', tip: 'Catálogo de productos y tarifas de O2. Introduce la categoría, nombre y comisión.' },
           { cat: 'miMovistar', tip: 'Catálogo de paquetes miMovistar. Configura categorías, tipos, productos multilínea y su estructura de comisiones por multiplicador.' },
           { cat: 'Suscripciones TV', tip: 'Catálogo de suscripciones de televisión. Introduce la categoría, nombre, comisión y fechas.' },
-          { cat: 'Prepago', tip: 'Catálogo de productos prepago. Introduce la categoría, nombre de producto y comisión.' },
           { cat: 'Varios', tip: 'Catálogo de productos varios (alarmas, migraciones, etc). Introduce categoría, nombre, cuota total y comisión.' },
           { cat: 'Repos', tip: 'Catálogo de Reposiciones. Introduce categoría, nombre, cuota total, comisión y multiplicador.' },
           { cat: 'Resto BAF', tip: 'Catálogo para Resto BAF. Estructura idéntica a miMovistar.' },
