@@ -1453,9 +1453,9 @@ function GrupoClienteContent() {
       <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
           {[
-            { label: <><ExcelIcon size={16} /> Hoja por Grupo</>, desc: 'Una pestaña por cada grupo', fn: exportByGroup },
-            { label: <><ExcelIcon size={16} /> Todo en Una Hoja</>, desc: 'Todas las ventas juntas con columna Grupo', fn: exportAllInOne },
-            { label: <><ExcelIcon size={16} /> Resumen</>, desc: 'Totales por grupo: ventas, cuota y tramo', fn: exportSummary },
+            { label: <><ExcelIcon size={16} /> Hoja por Grupo</>, desc: 'Una pestaña por cada grupo', fn: exportByGroup, color: '#107c41' },
+            { label: <><ExcelIcon size={16} /> Todo en Una Hoja</>, desc: 'Todas las ventas juntas con columna Grupo', fn: exportAllInOne, color: '#107c41' },
+            { label: <><ExcelIcon size={16} /> Resumen</>, desc: 'Totales por grupo: ventas, cuota y tramo', fn: exportSummary, color: '#107c41' },
           ].map((btn, i) => (
             <button key={i} onClick={btn.fn} title={btn.desc} style={{
               display: 'flex', alignItems: 'center', gap: 8,
