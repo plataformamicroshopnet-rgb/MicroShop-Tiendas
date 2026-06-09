@@ -60,6 +60,21 @@ export default function NuevaVentaPage() {
       })
   }, [])
 
+  useEffect(() => {
+    if (user) {
+      const username = user.username || ''
+      // Find user store in TIENDAS_COMERCIALES mapping
+      const match = Object.entries(TIENDAS_COMERCIALES).find(([store, commercials]) =>
+        commercials.some((c) => c.toLowerCase() === username.toLowerCase())
+      )
+
+      if (match) {
+        setSelectedTienda(match[0])
+        setFormData((prev: any) => ({ ...prev, vendedor: username }))
+      }
+    }
+  }, [user])
+
   // Handlers
   const handleInputChange = (field: string, value: any) => {
     setFormData((prev: any) => ({ ...prev, [field]: value }))
@@ -343,6 +358,12 @@ export default function NuevaVentaPage() {
     setError('')
     setSuccess('')
 
+    if (formData.productos.some((p: any) => p.categoria === 'Accesorios Venta y Stock')) {
+      setError('Las ventas de accesorios se gestionan y confirman en su panel dedicado. Por favor, elimine la línea de accesorios de este formulario o proceda a su panel.')
+      setLoading(false)
+      return
+    }
+
     try {
       const res = await fetch('/api/sales/unified', {
         method: 'POST',
@@ -485,6 +506,7 @@ export default function NuevaVentaPage() {
                         <select className="form-select" value={prod.categoria} onChange={e => handleProductChange(index, 'categoria', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
                           <option value="">Selecciona...</option>
                           {Object.keys(catalogs).filter(cat => cat !== 'Fija' && cat !== 'Móvil' && cat !== 'Micro' && cat !== 'Fija y Móvil' && cat !== 'Prepago').map(cat => <option key={cat} value={cat}>{cat === 'Ti' ? 'Contratos Móvil' : cat === 'O2' ? 'O2 MovilFree' : cat === 'Repos' ? 'Arpu (Repos)' : cat}</option>)}
+                          <option value="Accesorios Venta y Stock">Accesorios Venta y Stock</option>
                         </select>
                       </div>
 
@@ -633,6 +655,7 @@ export default function NuevaVentaPage() {
                         <select className="form-select" value={prod.categoria} onChange={e => handleProductChange(index, 'categoria', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
                           <option value="">Selecciona...</option>
                           {Object.keys(catalogs).filter(cat => cat !== 'Fija' && cat !== 'Móvil' && cat !== 'Micro' && cat !== 'Fija y Móvil' && cat !== 'Prepago').map(cat => <option key={cat} value={cat}>{cat === 'Ti' ? 'Contratos Móvil' : cat === 'O2' ? 'O2 MovilFree' : cat === 'Repos' ? 'Arpu (Repos)' : cat}</option>)}
+                          <option value="Accesorios Venta y Stock">Accesorios Venta y Stock</option>
                         </select>
                       </div>
 
@@ -748,6 +771,27 @@ export default function NuevaVentaPage() {
                       </div>
                     </div>
                   </div>
+                ) : prod.categoria === 'Accesorios Venta y Stock' ? (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center', backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', padding: '16px', borderRadius: '8px', width: '100%' }}>
+                    <div style={{ flex: '1', minWidth: '200px' }}>
+                      <h4 style={{ margin: 0, color: '#1B3D6A', fontSize: '15px', fontWeight: 'bold' }}>Categoría Seleccionada: Accesorios Venta y Stock</h4>
+                      <p style={{ margin: '8px 0 0 0', color: '#4A5568', fontSize: '13px', lineHeight: '1.4' }}>
+                        Las ventas de accesorios y el control de inventario de MicroShop se gestionan en su panel dedicado.
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                      <select className="form-select" value={prod.categoria} onChange={e => handleProductChange(index, 'categoria', e.target.value)} required style={{ backgroundColor: '#FFFFFF', border: '1px solid #90CAF9', color: '#1B3D6A', width: '200px', margin: 0 }}>
+                        <option value="">Selecciona...</option>
+                        {Object.keys(catalogs).filter(cat => cat !== 'Fija' && cat !== 'Móvil' && cat !== 'Micro' && cat !== 'Fija y Móvil' && cat !== 'Prepago').map(cat => <option key={cat} value={cat}>{cat === 'Ti' ? 'Contratos Móvil' : cat === 'O2' ? 'O2 MovilFree' : cat === 'Repos' ? 'Arpu (Repos)' : cat}</option>)}
+                        <option value="Accesorios Venta y Stock">Accesorios Venta y Stock</option>
+                      </select>
+                      <Link href="/microshop-accesorios">
+                        <button type="button" className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', backgroundColor: '#1B3D6A', color: '#FFFFFF', padding: '10px 16px', borderRadius: '6px', fontWeight: 'bold', fontSize: '13px', border: 'none', cursor: 'pointer' }}>
+                          Ir a Accesorios ➔
+                        </button>
+                      </Link>
+                    </div>
+                  </div>
                 ) : (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'stretch' }}>
                     
@@ -760,6 +804,7 @@ export default function NuevaVentaPage() {
                           {Object.keys(catalogs)
                             .filter(cat => cat !== 'Fija' && cat !== 'Móvil' && cat !== 'Micro' && cat !== 'Fija y Móvil' && cat !== 'Prepago')
                             .map(cat => <option key={cat} value={cat}>{cat === 'Ti' ? 'Contratos Móvil' : cat === 'O2' ? 'O2 MovilFree' : cat === 'Repos' ? 'Arpu (Repos)' : cat}</option>)}
+                          <option value="Accesorios Venta y Stock">Accesorios Venta y Stock</option>
                         </select>
                       </div>
 

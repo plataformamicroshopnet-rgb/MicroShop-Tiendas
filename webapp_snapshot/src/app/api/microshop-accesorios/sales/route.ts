@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
+
 const prisma = new PrismaClient()
 
+// Helper to map store keys to Caja table stores
 function mapStoreToCajaTienda(store: string): string {
   if (store.startsWith('Auxiliadora')) return 'Auxiliadora'
   if (store.startsWith('Correhuela')) return 'Correhuela'
@@ -13,7 +15,7 @@ function mapStoreToCajaTienda(store: string): string {
 
 export async function GET() {
   try {
-    const items = await prisma.movilFreeSale.findMany({ orderBy: { createdAt: 'desc' } })
+    const items = await prisma.microShopSale.findMany({ orderBy: { createdAt: 'desc' } })
     return NextResponse.json(items)
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
@@ -24,20 +26,20 @@ export async function POST(req: Request) {
   try {
     const data = await req.json()
     const listaProductosStr = JSON.stringify(data.listaProductos)
-    const tienda = data.tienda || 'O2'
     
-    const lastSale = await prisma.movilFreeSale.findFirst({
+    // Find next invoice number
+    const lastSale = await prisma.microShopSale.findFirst({
       where: { numeroFactura: { not: null } },
       orderBy: { numeroFactura: 'desc' }
     })
-    const newInvoiceNumber = lastSale && lastSale.numeroFactura ? lastSale.numeroFactura + 1 : 31000;
+    const newInvoiceNumber = lastSale && lastSale.numeroFactura ? lastSale.numeroFactura + 1 : 51000
     const totalAmount = Number(data.importeTotal)
 
-    // Create the sale
-    const item = await prisma.movilFreeSale.create({
+    // Create the accessory sale record
+    const sale = await prisma.microShopSale.create({
       data: {
-        vendedor: data.vendedor || 'Sistema',
-        tienda: tienda,
+        vendedor: data.vendedor,
+        tienda: data.tienda,
         nifCliente: data.nifCliente,
         nombreCliente: data.nombreCliente,
         listaProductos: listaProductosStr,
@@ -48,46 +50,50 @@ export async function POST(req: Request) {
       }
     })
 
-    // Deduct stock for each product in the specified store
+    // Decrement stock for each product in the specified store
     for (const prod of data.listaProductos) {
       if (prod.id) {
-        const isMicroShop = await prisma.microShopProduct.findUnique({ where: { id: prod.id } })
-        if (isMicroShop) {
-          await prisma.microShopStock.upsert({
+        const isMovilFree = await prisma.movilFreeProduct.findUnique({ where: { id: prod.id } })
+        if (isMovilFree) {
+          await prisma.movilFreeStock.update({
             where: {
               productId_tienda: {
                 productId: prod.id,
-                tienda: tienda
+                tienda: data.tienda
               }
             },
-            update: { cantidad: { decrement: Number(prod.cantidad) } },
-            create: { productId: prod.id, tienda: tienda, cantidad: -Number(prod.cantidad) }
-          }).catch(e => console.error("Error deducting MicroShop stock in MovilFree sale:", e))
+            data: {
+              cantidad: { decrement: Number(prod.cantidad) }
+            }
+          }).catch(e => console.error("Error decrementing MovilFree stock in MicroShop sale:", e))
         } else {
-          await prisma.movilFreeStock.upsert({
+          await prisma.microShopStock.update({
             where: {
               productId_tienda: {
                 productId: prod.id,
-                tienda: tienda
+                tienda: data.tienda
               }
             },
-            update: { cantidad: { decrement: Number(prod.cantidad) } },
-            create: { productId: prod.id, tienda: tienda, cantidad: -Number(prod.cantidad) }
-          }).catch(e => console.error("Error deducting MovilFree stock in MovilFree sale:", e))
+            data: {
+              cantidad: { decrement: Number(prod.cantidad) }
+            }
+          }).catch(e => console.error("Error decrementing stock:", e))
         }
       }
     }
 
-    // Update client total
+    // Update client total spent (MovilFreeClient table is shared)
     if (data.nifCliente && data.nifCliente !== 'CONTADO') {
       await prisma.movilFreeClient.update({
         where: { nif: data.nifCliente },
-        data: { totalComprado: { increment: totalAmount } }
+        data: {
+          totalComprado: { increment: totalAmount }
+        }
       }).catch(e => console.error("Error updating client total:", e))
     }
 
     // Integrate with Caja Entry automatically
-    const cajaTienda = mapStoreToCajaTienda(tienda)
+    const cajaTienda = mapStoreToCajaTienda(data.tienda)
     const todayStr = new Date().toISOString().split('T')[0]
     const productDetails = data.listaProductos.map((p: any) => `${p.cantidad}x ${p.nombre}`).join(', ')
     
@@ -98,26 +104,26 @@ export async function POST(req: Request) {
           tienda: cajaTienda,
           fecha: todayStr,
           concepto: '(+) Tarjeta MovilFree',
-          detalle: `Venta accesorios MovilFree Tarjeta - ${productDetails} [Importe: ${totalAmount.toFixed(2)}€] (Factura #${newInvoiceNumber})`,
+          detalle: `Venta accesorios Tarjeta - ${productDetails} [Importe: ${totalAmount.toFixed(2)}€] (Factura #${newInvoiceNumber})`,
           importe: 0,
           vendedor: data.vendedor || 'Sistema'
         }
       }).catch(e => console.error("Error creating card Caja entry:", e))
     } else {
-      // Cash Sale: concept '(+) Facturación MovilFree', amount = totalAmount
+      // Cash Sale: concept '(+) Facturación Microshop', amount = totalAmount, detail shows details
       await prisma.cajaEntry.create({
         data: {
           tienda: cajaTienda,
           fecha: todayStr,
-          concepto: '(+) Facturación MovilFree',
-          detalle: `Venta accesorios MovilFree Efectivo - ${productDetails} (Factura #${newInvoiceNumber})`,
+          concepto: '(+) Facturación Microshop',
+          detalle: `Venta accesorios Efectivo - ${productDetails} (Factura #${newInvoiceNumber})`,
           importe: totalAmount,
           vendedor: data.vendedor || 'Sistema'
         }
       }).catch(e => console.error("Error creating cash Caja entry:", e))
     }
 
-    return NextResponse.json(item)
+    return NextResponse.json(sale)
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
   }

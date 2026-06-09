@@ -500,15 +500,17 @@ model CajaEntry {
 }
 
 model MovilFreeProduct {
-  id        String   @id @default(cuid())
+  id        String                   @id @default(cuid())
   nombre    String
-  categoria String   @default("Varios")
+  categoria String                   @default("Varios")
   precio    Float
-  coste     Float    @default(0)
-  stock     Int      @default(0)
+  coste     Float                    @default(0)
+  stock     Int                      @default(0)
   imei      String? // Opcional, 15 digitos
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime                 @default(now())
+  updatedAt DateTime                 @updatedAt
+  stocks    MovilFreeStock[]
+  transfers MovilFreeStockTransfer[]
 }
 
 model MovilFreeClient {
@@ -531,6 +533,7 @@ model MovilFreeSale {
   id               String   @id @default(cuid())
   numeroFactura    Int?     @unique
   vendedor         String?
+  tienda           String   @default("O2") // The store where the sale occurred
   nifCliente       String?
   nombreCliente    String?
   listaProductos   String // JSON stringified array of { id, nombre, cantidad, precio, subtotal, cantidadDevuelta }
@@ -541,6 +544,30 @@ model MovilFreeSale {
   fechaVenta       DateTime @default(now())
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+}
+
+model MovilFreeStock {
+  id        String           @id @default(cuid())
+  productId String
+  tienda    String // 'Auxiliadora 45', 'Correhuela', 'Villamayor', 'Béjar', 'O2'
+  cantidad  Int              @default(0)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  product   MovilFreeProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, tienda])
+}
+
+model MovilFreeStockTransfer {
+  id        String           @id @default(cuid())
+  productId String
+  origen    String // 'Auxiliadora 45', 'Correhuela', 'Villamayor', 'Béjar', 'O2'
+  destino   String // 'Auxiliadora 45', 'Correhuela', 'Villamayor', 'Béjar', 'O2'
+  cantidad  Int
+  vendedor  String // The person who performed the transfer
+  fecha     DateTime         @default(now())
+  estado    String           @default("COMPLETADO") // 'PENDIENTE', 'COMPLETADO', 'RECHAZADO'
+  product   MovilFreeProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model StockItem {
@@ -738,4 +765,58 @@ model ComisionFFVVTienda {
 model ComisionMetadata {
   periodKey String  @id
   titulo    String?
+}
+
+model MicroShopProduct {
+  id        String                   @id @default(cuid())
+  nombre    String
+  categoria String                   @default("Varios")
+  precio    Float
+  coste     Float                    @default(0)
+  imei      String?
+  createdAt DateTime                 @default(now())
+  updatedAt DateTime                 @updatedAt
+  stocks    MicroShopStock[]
+  transfers MicroShopStockTransfer[]
+}
+
+model MicroShopStock {
+  id        String           @id @default(cuid())
+  productId String
+  tienda    String // 'Auxiliadora 45', 'Correhuela', 'Villamayor', 'Béjar', 'O2'
+  cantidad  Int              @default(0)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  product   MicroShopProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, tienda])
+}
+
+model MicroShopSale {
+  id               String   @id @default(cuid())
+  numeroFactura    Int?     @unique
+  vendedor         String?
+  tienda           String // The store where the sale occurred
+  nifCliente       String?
+  nombreCliente    String?
+  listaProductos   String // JSON stringified array of products
+  importeTotal     Float
+  estado           String   @default("COMPLETADA") // "COMPLETADA", "DEVUELTA", "DEVOLUCION_PARCIAL"
+  metodoPago       String?  @default("Efectivo") // "Efectivo" o "Tarjeta"
+  motivoDevolucion String?
+  fechaVenta       DateTime @default(now())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model MicroShopStockTransfer {
+  id        String           @id @default(cuid())
+  productId String
+  origen    String // 'Auxiliadora 45', 'Correhuela', 'Villamayor', 'Béjar', 'O2'
+  destino   String // 'Auxiliadora 45', 'Correhuela', 'Villamayor', 'Béjar', 'O2'
+  cantidad  Int
+  vendedor  String // The person who performed the transfer
+  fecha     DateTime         @default(now())
+  estado    String           @default("COMPLETADO") // 'PENDIENTE', 'COMPLETADO', 'RECHAZADO'
+  product   MicroShopProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
 }

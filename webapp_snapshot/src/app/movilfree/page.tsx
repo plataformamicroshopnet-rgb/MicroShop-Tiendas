@@ -1,37 +1,119 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, ShoppingCart, X, Users, ArrowLeftRight, RefreshCcw, Package, Edit, Save, Search, Edit2, Wrench, UploadCloud, Printer } from 'lucide-react'
+import { Plus, Trash2, ShoppingCart, X, Users, ArrowLeftRight, RefreshCcw, Package, Edit, Save, Search, Edit2, Wrench, UploadCloud, Printer, ArrowRight } from 'lucide-react'
+import { TIENDAS_COMERCIALES } from '@/lib/constants'
+import { useGuard } from '@/hooks/useGuard'
 import './MovilFree.css'
 
 // --- Types ---
-type Product = { id: string; nombre: string; categoria: string; precio: number; coste: number; stock: number; createdAt: string; imei?: string }
+type ProductStock = {
+  id: string
+  productId: string
+  tienda: string
+  cantidad: number
+}
+
+type Product = {
+  id: string
+  nombre: string
+  categoria: string
+  precio: number
+  coste: number
+  createdAt: string
+  imei?: string
+  stocks: ProductStock[]
+}
+
 type Client = { id: string; nif: string; nombre: string; direccion?: string; poblacion?: string; provincia?: string; cp?: string; movil?: string; fijo?: string; email: string; totalComprado: number }
-type Sale = { id: string; numeroFactura?: number; vendedor: string; nifCliente: string; nombreCliente: string; listaProductos: string; importeTotal: number; metodoPago?: string; estado: string; fechaVenta: string; motivoDevolucion: string }
+type Sale = { id: string; numeroFactura?: number; vendedor: string; tienda: string; nifCliente: string; nombreCliente: string; listaProductos: string; importeTotal: number; metodoPago?: string; estado: string; fechaVenta: string; motivoDevolucion: string }
 type Reparacion = { id?: string; numero: number; nombreApellidos: string; direccion?: string; dniNif?: string; telefono?: string; marca?: string; modelo?: string; imei?: string; fechaRecepcion?: string; observaciones?: string; motivo?: string; fechaEntrega?: string; garantia?: string; informe?: string; repara?: string; costePvd?: number; pvp?: number; createdAt?: string; }
 type BudgetLine = { id: string; desc: string; qty: number; price: number }
 
+type Transfer = {
+  id: string
+  productId: string
+  origen: string
+  destino: string
+  cantidad: number
+  vendedor: string
+  fecha: string
+  product: {
+    nombre: string
+  }
+}
+
+
 export default function MovilFreeApp() {
-  const [activeTab, setActiveTab] = useState<'ventas'|'productos'|'clientes'|'devoluciones'|'sat'>('ventas')
+  const { authorized, user } = useGuard('VIEW_NUEVA_VENTA')
+  const [activeTab, setActiveTab] = useState<'ventas'|'productos'|'clientes'|'devoluciones'|'sat'|'trazabilidad'>('ventas')
   
   // Data
   const [products, setProducts] = useState<Product[]>([])
   const [clients, setClients] = useState<Client[]>([])
   const [sales, setSales] = useState<Sale[]>([])
   const [reparaciones, setReparaciones] = useState<Reparacion[]>([])
+  const [transfers, setTransfers] = useState<Transfer[]>([])
+
+  // Active store / user context
+  const [userStore, setUserStore] = useState<string | null>(null)
+  const [isGlobalUser, setIsGlobalUser] = useState(false)
+  const [selectedTienda, setSelectedTienda] = useState<string>('O2')
 
   // Load data
   const loadReparaciones = () => fetch('/api/movilfree-reparaciones').then(r => r.json()).then(d => { if(Array.isArray(d)) setReparaciones(d); else console.error('API Error:', d) })
+  const loadTransfers = () => fetch('/api/movilfree/transfers').then(r => r.json()).then(d => { if(Array.isArray(d)) setTransfers(d) })
+
+  // Detect active store and role
+  useEffect(() => {
+    if (user) {
+      const username = user.username || ''
+      const role = user.role || ''
+
+      const globalAccess =
+        role === 'ADMIN' ||
+        role === 'JEFE DE VENTAS' ||
+        role === 'GESTORA' ||
+        role === 'BACK OFFICE'
+
+      setIsGlobalUser(globalAccess)
+
+      // Find user store in TIENDAS_COMERCIALES mapping
+      const match = Object.entries(TIENDAS_COMERCIALES).find(([store, commercials]) =>
+        commercials.some((c) => c.toLowerCase() === username.toLowerCase())
+      )
+
+      if (match) {
+        setUserStore(match[0])
+        setSelectedTienda(match[0])
+      } else {
+        setUserStore(null)
+        setSelectedTienda('O2')
+      }
+    }
+  }, [user])
 
   useEffect(() => {
-    fetch('/api/movilfree/products').then(r => r.json()).then(d => { if(Array.isArray(d)) setProducts(d); else console.error('API Error:', d) })
-    fetch('/api/movilfree/clients').then(r => r.json()).then(d => { if(Array.isArray(d)) setClients(d); else console.error('API Error:', d) })
-    fetch('/api/movilfree/sales').then(r => r.json()).then(d => { if(Array.isArray(d)) setSales(d); else console.error('API Error:', d) })
-    loadReparaciones()
-  }, [activeTab])
+    if (authorized) {
+      fetch('/api/movilfree/products').then(r => r.json()).then(d => { if(Array.isArray(d)) setProducts(d); else console.error('API Error:', d) })
+      fetch('/api/movilfree/clients').then(r => r.json()).then(d => { if(Array.isArray(d)) setClients(d); else console.error('API Error:', d) })
+      fetch('/api/movilfree/sales').then(r => r.json()).then(d => { if(Array.isArray(d)) setSales(d); else console.error('API Error:', d) })
+      loadReparaciones()
+      loadTransfers()
+    }
+  }, [authorized, activeTab])
 
   // Helpers
   const formatMoney = (val: number) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(val)
+
+  const getStock = (product: Product, storeName: string): number => {
+    const stockItem = product.stocks?.find((s) => s.tienda === storeName)
+    return stockItem ? stockItem.cantidad : 0
+  }
+
+  const getTotalStock = (product: Product): number => {
+    return product.stocks?.reduce((acc, s) => acc + s.cantidad, 0) || 0
+  }
 
   // --- Subcomponents ---
   
@@ -40,42 +122,89 @@ export default function MovilFreeApp() {
   const [showPasteModal, setShowPasteModal] = useState(false)
   const [pasteText, setPasteText] = useState('')
   const [searchInvProducts, setSearchInvProducts] = useState('')
+  const [searchInvCategory, setSearchInvCategory] = useState('Todas')
   const [searchClients, setSearchClients] = useState('')
   const [searchSales, setSearchSales] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+
+  // Transfer Modal
+  const [transferProduct, setTransferProduct] = useState<Product | null>(null)
+  const [transferOrigen, setTransferOrigen] = useState('')
+  const [transferDestino, setTransferDestino] = useState('')
+  const [transferQty, setTransferQty] = useState(1)
+
+  const handleOpenTransfer = (p: Product) => {
+    setTransferProduct(p)
+    setTransferOrigen(selectedTienda)
+    const remainingStores = Object.keys(TIENDAS_COMERCIALES).filter((t) => t !== selectedTienda)
+    setTransferDestino(remainingStores[0] || '')
+    setTransferQty(1)
+  }
+
+  const submitTransfer = async () => {
+    if (!transferProduct) return
+    const payload = {
+      productId: transferProduct.id,
+      origen: transferOrigen,
+      destino: transferDestino,
+      cantidad: transferQty,
+      vendedor: user?.username || 'Sistema',
+    }
+
+    try {
+      const res = await fetch('/api/movilfree/transfers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (res.ok) {
+        setTransferProduct(null)
+        fetch('/api/movilfree/products').then(r => r.json()).then(d => { if(Array.isArray(d)) setProducts(d) })
+        loadTransfers()
+        alert('Stock traspasado con éxito.')
+      } else {
+        const err = await res.json()
+        alert('Error: ' + err.error)
+      }
+    } catch (e) {
+      alert('Error de red al realizar el traspaso')
+    }
+  }
+
   const handleBulkPaste = async () => {
     if(!pasteText.trim()) return
     const rows = pasteText.split('\n').filter(r => r.trim() !== '')
     const newProducts = rows.map(r => {
       const cols = r.split('\t')
-      const rawDate = cols[0] ? cols[0].trim().split(' ')[0] : ''
+      const pvp = parseFloat((cols[3] || '0').replace(',', '.')) || 0
       return {
-        createdAt: rawDate ? new Date(rawDate).toISOString() : undefined,
-        nombre: cols[1] ? cols[1].trim() : 'Desconocido',
-        categoria: cols[2] ? cols[2].trim() : 'Varios',
-        coste: parseFloat((cols[3] || '0').replace(',', '.')) || 0,
-        precio: parseFloat((cols[4] || '0').replace(',', '.')) || 0,
-        imei: cols[6] ? cols[6].trim() : '',
-        stock: parseInt((cols[7] || '1'), 10) || 1
+        nombre: cols[0] ? cols[0].trim() : 'Desconocido',
+        categoria: cols[1] ? cols[1].trim() : 'Varios',
+        coste: parseFloat((cols[2] || '0').replace(',', '.')) || 0,
+        precio: Number((pvp / 1.21).toFixed(2)),
+        stock: parseInt((cols[4] || '1'), 10) || 1,
+        imei: cols[5] ? cols[5].trim() : '',
       }
     })
     
     try {
-      const res = await fetch('/api/movilfree/products', { method: 'POST', body: JSON.stringify(newProducts) })
+      const res = await fetch('/api/movilfree/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ products: newProducts, tienda: selectedTienda })
+      })
       if (!res.ok) throw new Error('Error al guardar en masa')
-      
-      const prodsRes = await fetch('/api/movilfree/products')
-      const data = await prodsRes.json()
-      setProducts(data)
       
       setShowPasteModal(false)
       setPasteText('')
-      alert(`¡Se han añadido ${newProducts.length} productos correctamente!`)
+      fetch('/api/movilfree/products').then(r => r.json()).then(d => { if(Array.isArray(d)) setProducts(d) })
+      alert(`¡Se han añadido ${newProducts.length} productos correctamente para la tienda ${selectedTienda === 'O2' ? 'Movilfree' : selectedTienda}!`)
     } catch(e: any) {
       alert(e.message)
     }
   }
+
 
   const [editingProductId, setEditingProductId] = useState<string | null>(null)
   const [editProdData, setEditProdData] = useState<any>(null)
@@ -83,11 +212,15 @@ export default function MovilFreeApp() {
   const handleSaveEditProduct = async () => {
     if(!editProdData) return;
     try {
-      const res = await fetch(`/api/movilfree/products/${editingProductId}`, { method: 'PUT', body: JSON.stringify(editProdData) })
+      const res = await fetch(`/api/movilfree/products/${editingProductId}`, { 
+        method: 'PUT', 
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...editProdData, tienda: selectedTienda }) 
+      })
       if(res.ok) {
-        setProducts(products.map(p => p.id === editingProductId ? editProdData : p))
         setEditingProductId(null)
         setEditProdData(null)
+        fetch('/api/movilfree/products').then(r => r.json()).then(d => { if(Array.isArray(d)) setProducts(d) })
       } else {
         const errRes = await res.json(); alert('Error al guardar: ' + (errRes.error || JSON.stringify(errRes)))
       }
@@ -108,7 +241,11 @@ export default function MovilFreeApp() {
 
   const handleCreateProduct = async () => {
     if(!newProd.nombre) return alert('El nombre es obligatorio')
-    const res = await fetch('/api/movilfree/products', { method: 'POST', body: JSON.stringify(newProd) })
+    const res = await fetch('/api/movilfree/products', { 
+      method: 'POST', 
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...newProd, tienda: selectedTienda }) 
+    })
     const created = await res.json()
     setProducts([created, ...products])
     setNewProd({ nombre: '', categoria: 'Accesorio', precio: 0, coste: 0, stock: 0, imei: '' })
@@ -116,9 +253,28 @@ export default function MovilFreeApp() {
   const updateStock = async (id: string, newStock: number) => {
     const p = products.find(x => x.id === id)
     if(!p) return
-    const res = await fetch(`/api/movilfree/products/${id}`, { method: 'PUT', body: JSON.stringify({ ...p, stock: newStock }) })
+    const res = await fetch(`/api/movilfree/products/${id}`, { 
+      method: 'PUT', 
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...p, stock: newStock, tienda: selectedTienda }) 
+    })
     if(res.ok) {
-      setProducts(products.map(x => x.id === id ? { ...x, stock: newStock } : x))
+      const updated = await res.json()
+      setProducts(products.map(x => x.id === id ? updated : x))
+    }
+  }
+
+  const updateStockForStore = async (id: string, storeName: string, newStock: number) => {
+    const p = products.find(x => x.id === id)
+    if(!p) return
+    const res = await fetch(`/api/movilfree/products/${id}`, { 
+      method: 'PUT', 
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...p, stock: newStock, tienda: storeName }) 
+    })
+    if(res.ok) {
+      const updated = await res.json()
+      setProducts(products.map(x => x.id === id ? updated : x))
     }
   }
 
@@ -214,10 +370,11 @@ export default function MovilFreeApp() {
   const [showSuggestions, setShowSuggestions] = useState(false)
   
   const addToCart = (p: Product) => {
-    if (p.stock <= 0) return alert('No hay stock de este producto')
+    const availableStock = getStock(p, selectedTienda)
+    if (availableStock <= 0) return alert(`No hay stock de este producto en la tienda seleccionada (${selectedTienda === 'O2' ? 'Movilfree' : selectedTienda})`)
     const existing = cart.find(x => x.product.id === p.id)
     if (existing) {
-      if (existing.cantidad >= p.stock) return alert('No hay más stock disponible')
+      if (existing.cantidad >= availableStock) return alert('No hay más stock disponible en esta tienda')
       setCart(cart.map(x => x.product.id === p.id ? { ...x, cantidad: x.cantidad + 1 } : x))
     } else {
       setCart([...cart, { product: p, cantidad: 1 }])
@@ -230,7 +387,8 @@ export default function MovilFreeApp() {
     const cl = clients.find(c => c.nif === selectedClient || c.nombre === clientName)
     
     const payload = {
-      vendedor: 'Sistema',
+      vendedor: user?.username || 'Sistema',
+      tienda: selectedTienda,
       nifCliente: selectedClient || (cl ? cl.nif : 'CONTADO'),
       nombreCliente: clientName || (cl ? cl.nombre : 'Cliente Contado'),
       importeTotal: total,
@@ -238,14 +396,25 @@ export default function MovilFreeApp() {
       listaProductos: cart.map(c => ({ id: c.product.id, nombre: c.product.nombre, cantidad: c.cantidad, precio: c.product.precio * 1.21, coste: c.product.coste }))
     }
 
-    const res = await fetch('/api/movilfree/sales', { method: 'POST', body: JSON.stringify(payload) })
-    if (res.ok) {
-      const createdSale = await res.json()
-      setPrintModalSale(createdSale)
-      setCart([])
-      setShowPaymentModal(false)
-      fetch('/api/movilfree/sales').then(r => r.json()).then(d => { if(Array.isArray(d)) setSales(d); else console.error(d) })
-      fetch('/api/movilfree/products').then(r => r.json()).then(d => { if(Array.isArray(d)) setProducts(d); else console.error(d) })
+    try {
+      const res = await fetch('/api/movilfree/sales', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      if (res.ok) {
+        const createdSale = await res.json()
+        setPrintModalSale(createdSale)
+        setCart([])
+        setShowPaymentModal(false)
+        fetch('/api/movilfree/sales').then(r => r.json()).then(d => { if(Array.isArray(d)) setSales(d); else console.error(d) })
+        fetch('/api/movilfree/products').then(r => r.json()).then(d => { if(Array.isArray(d)) setProducts(d); else console.error(d) })
+      } else {
+        const err = await res.json()
+        alert('Error al procesar la venta: ' + (err.error || 'Intente de nuevo'))
+      }
+    } catch (e) {
+      alert('Error de red al realizar el checkout')
     }
   }
 
@@ -270,11 +439,23 @@ export default function MovilFreeApp() {
       returnedItems: itemsToReturn
     }
     
-    const res = await fetch(`/api/movilfree/sales/${returnModalSale.id}`, { method: 'PUT', body: JSON.stringify(payload) })
-    if (res.ok) {
-      alert('Devolución registrada correctamente. El stock se ha actualizado.')
-      fetch('/api/movilfree/sales').then(r => r.json()).then(d => { if(Array.isArray(d)) setSales(d); else console.error(d) })
-      setReturnModalSale(null)
+    try {
+      const res = await fetch(`/api/movilfree/sales/${returnModalSale.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      if (res.ok) {
+        alert('Devolución registrada correctamente. El stock se ha actualizado.')
+        fetch('/api/movilfree/sales').then(r => r.json()).then(d => { if(Array.isArray(d)) setSales(d); else console.error(d) })
+        fetch('/api/movilfree/products').then(r => r.json()).then(d => { if(Array.isArray(d)) setProducts(d); else console.error(d) })
+        setReturnModalSale(null)
+      } else {
+        const err = await res.json()
+        alert('Error: ' + err.error)
+      }
+    } catch (e) {
+      alert('Error de red')
     }
   }
 
@@ -284,22 +465,41 @@ export default function MovilFreeApp() {
       estado: 'DEVUELTA',
       motivoDevolucion: returnReason || 'Devolución completa'
     }
-    const res = await fetch(`/api/movilfree/sales/${returnModalSale.id}`, { method: 'PUT', body: JSON.stringify(payload) })
-    if (res.ok) {
-      alert('Venta devuelta por completo.')
-      fetch('/api/movilfree/sales').then(r => r.json()).then(d => { if(Array.isArray(d)) setSales(d); else console.error(d) })
-      setReturnModalSale(null)
+    try {
+      const res = await fetch(`/api/movilfree/sales/${returnModalSale.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      if (res.ok) {
+        alert('Venta devuelta por completo.')
+        fetch('/api/movilfree/sales').then(r => r.json()).then(d => { if(Array.isArray(d)) setSales(d); else console.error(d) })
+        fetch('/api/movilfree/products').then(r => r.json()).then(d => { if(Array.isArray(d)) setProducts(d); else console.error(d) })
+        setReturnModalSale(null)
+      } else {
+        const err = await res.json()
+        alert('Error: ' + err.error)
+      }
+    } catch (e) {
+      alert('Error de red')
     }
   }
-
 
   const handleDeleteSale = async (id: string) => {
     if(!confirm('¿Estás seguro de eliminar esta venta por completo?')) return
-    const res = await fetch(`/api/movilfree/sales/${id}`, { method: 'DELETE' })
-    if(res.ok) {
-      setSales(sales.filter(s => s.id !== id))
+    try {
+      const res = await fetch(`/api/movilfree/sales/${id}`, { method: 'DELETE' })
+      if(res.ok) {
+        setSales(sales.filter(s => s.id !== id))
+        fetch('/api/movilfree/products').then(r => r.json()).then(d => { if(Array.isArray(d)) setProducts(d); else console.error(d) })
+      } else {
+        alert('Error al borrar la venta')
+      }
+    } catch (e) {
+      alert('Error de red')
     }
   }
+
 
   // SAT Logics
   const [searchReparaciones, setSearchReparaciones] = useState('')
@@ -442,6 +642,24 @@ export default function MovilFreeApp() {
           </div>
         </div>
 
+        {/* TIENDA SECTOR (GLOBAL USER CONTROL) */}
+        <div className="no-print" style={{ background: '#FFF', padding: '16px 24px', borderRadius: 16, marginBottom: 24, boxShadow: '0 4px 15px rgba(0,0,0,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <span style={{ fontSize: 14, color: '#666', fontWeight: 'bold' }}>TIENDA ACTIVA: </span>
+            <span style={{ fontSize: 16, color: fuchsia, fontWeight: 'bold', background: lightPink, padding: '6px 12px', borderRadius: 8 }}>{selectedTienda === 'O2' ? 'Movilfree' : selectedTienda}</span>
+          </div>
+          {isGlobalUser && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <label style={{ fontSize: 13, fontWeight: 'bold', color: '#555' }}>Cambiar Tienda Vista:</label>
+              <select value={selectedTienda} onChange={(e) => { setSelectedTienda(e.target.value); setCart([]); }} style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${fuchsia}`, fontSize: 13, background: 'white', color: fuchsia, fontWeight: 'bold' }}>
+                {Object.keys(TIENDAS_COMERCIALES).map((t) => (
+                  <option key={t} value={t}>{t === 'O2' ? 'Movilfree' : t}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+
         {/* TABS & SEARCH */}
         <div className="mf-tabs-bar">
           <div className="mf-tabs-buttons">
@@ -456,6 +674,9 @@ export default function MovilFreeApp() {
           </button>
           <button onClick={() => setActiveTab('devoluciones')} style={{ height: 44, padding: '0 16px', borderRadius: 12, border: 'none', background: activeTab === 'devoluciones' ? '#E91E97' : 'white', color: activeTab === 'devoluciones' ? 'white' : '#666', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: activeTab === 'devoluciones' ? '0 4px 12px rgba(233,30,151,0.2)' : 'none' }}>
             <RefreshCcw size={18} /> Ventas & Devoluciones
+          </button>
+          <button onClick={() => setActiveTab('trazabilidad')} style={{ height: 44, padding: '0 16px', borderRadius: 12, border: 'none', background: activeTab === 'trazabilidad' ? '#E91E97' : 'white', color: activeTab === 'trazabilidad' ? 'white' : '#666', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: activeTab === 'trazabilidad' ? '0 4px 12px rgba(233,30,151,0.2)' : 'none' }}>
+            <ArrowLeftRight size={18} /> Stock (Trazabilidad)
           </button>
           <button onClick={() => setActiveTab('sat')} style={{ height: 44, padding: '0 16px', borderRadius: 12, border: 'none', background: activeTab === 'sat' ? '#E91E97' : 'white', color: activeTab === 'sat' ? 'white' : '#666', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: activeTab === 'sat' ? '0 4px 12px rgba(233,30,151,0.2)' : 'none' }}>
             <Wrench size={18} /> SAT
@@ -518,7 +739,7 @@ export default function MovilFreeApp() {
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
-                  {products.filter(p => p.stock > 0 && (searchCategory === 'Todas' || p.categoria === searchCategory) && p.nombre.toLowerCase().includes(searchQuery.toLowerCase())).map(p => (
+                  {products.filter(p => getStock(p, selectedTienda) > 0 && (searchCategory === 'Todas' || p.categoria === searchCategory) && p.nombre.toLowerCase().includes(searchQuery.toLowerCase())).map(p => (
                     <div key={p.id} onClick={() => addToCart(p)} style={{ background: 'white', padding: 16, borderRadius: 12, border: '1px solid #eee', cursor: 'pointer', transition: 'all 0.2s', ':hover': { borderColor: '#E91E97', transform: 'translateY(-2px)' } } as any}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                         <div style={{ fontSize: 11, color: '#888' }}>{p.categoria}</div>
@@ -531,11 +752,11 @@ export default function MovilFreeApp() {
                       <div style={{ fontWeight: 'bold', color: '#333', marginBottom: 8 }}>{p.nombre}</div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div style={{ fontWeight: 900, color: '#E91E97', fontSize: 18 }}>{formatMoney(p.precio * 1.21)}</div>
-                        <div style={{ fontSize: 12, color: '#aaa' }}>Stock: {p.stock}</div>
+                        <div style={{ fontSize: 12, color: '#aaa' }}>Stock: {getStock(p, selectedTienda)}</div>
                       </div>
                     </div>
                   ))}
-                  {products.filter(p => p.stock > 0 && (searchCategory === 'Todas' || p.categoria === searchCategory) && p.nombre.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && <div style={{ color: '#888' }}>No se encontraron productos.</div>}
+                  {products.filter(p => getStock(p, selectedTienda) > 0 && (searchCategory === 'Todas' || p.categoria === searchCategory) && p.nombre.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && <div style={{ color: '#888' }}>No se encontraron productos.</div>}
                 </div>
               </div>
               <div style={{ background: '#f8f9fa', padding: 24, borderRadius: 16 }}>
@@ -627,22 +848,21 @@ export default function MovilFreeApp() {
                             if (c.cantidad <= 1) setCart(cart.filter(x => x.product.id !== c.product.id))
                             else setCart(cart.map(x => x.product.id === c.product.id ? { ...x, cantidad: x.cantidad - 1 } : x))
                           }} style={{ width: 24, height: 24, borderRadius: 12, border: '1px solid #ddd', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>-</button>
-                          
-                          <input 
+                           <input 
                             type="number" 
                             min="1" 
-                            max={c.product.stock}
+                            max={getStock(c.product, selectedTienda)}
                             value={c.cantidad} 
                             onChange={(e) => {
                               const val = parseInt(e.target.value) || 1;
-                              const validVal = Math.min(Math.max(1, val), c.product.stock);
+                              const validVal = Math.min(Math.max(1, val), getStock(c.product, selectedTienda));
                               setCart(cart.map(x => x.product.id === c.product.id ? { ...x, cantidad: validVal } : x));
                             }}
                             style={{ width: 40, textAlign: 'center', padding: '2px 4px', borderRadius: 4, border: '1px solid #ddd', fontSize: 13 }}
                           />
                           
                           <button onClick={() => {
-                            if (c.cantidad < c.product.stock) {
+                            if (c.cantidad < getStock(c.product, selectedTienda)) {
                               setCart(cart.map(x => x.product.id === c.product.id ? { ...x, cantidad: x.cantidad + 1 } : x))
                             } else {
                               alert('No hay más stock disponible')
@@ -721,9 +941,17 @@ export default function MovilFreeApp() {
                     <input type="text" maxLength={15} placeholder="Ej: 352456789012345" value={newProd.imei || ''} onChange={e=>setNewProd({...newProd, imei: e.target.value.replace(/\D/g, '')})} style={{ width: '100%', padding: 10, borderRadius: 6, border: '2px solid #E91E97', marginTop: 4, fontFamily: 'monospace' }} />
                   </div>
                 )}
-                <div className="mf-action-buttons">
+                <div className="mf-action-buttons" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <button onClick={handleCreateProduct} style={{ background: fuchsia, color: 'white', border: 'none', padding: '12px 20px', borderRadius: 6, fontWeight: 'bold', cursor: 'pointer', height: 40, whiteSpace: 'nowrap' }}>Añadir</button>
                   <button onClick={() => setShowPasteModal(true)} style={{ background: '#4CAF50', color: 'white', border: 'none', padding: '12px 20px', borderRadius: 6, fontWeight: 'bold', cursor: 'pointer', height: 40, whiteSpace: 'nowrap' }}>Excel 📋</button>
+                  <div style={{ background: '#fdf2f8', border: `1px solid ${fuchsia}`, borderRadius: 8, padding: '4px 12px', height: 40, display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 160, boxSizing: 'border-box' }}>
+                    <span style={{ fontSize: 9, color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Valoración coste sin IVA</span>
+                    <span style={{ fontSize: 13, fontWeight: 'bold', color: fuchsia }}>
+                      {formatMoney(
+                        products.reduce((acc, p) => acc + (p.coste * (isGlobalUser ? getTotalStock(p) : getStock(p, selectedTienda))), 0)
+                      )}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -752,6 +980,22 @@ export default function MovilFreeApp() {
               )}
 
 
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, marginTop: 16 }}>
+                <h3 style={{ margin: 0, color: fuchsia, fontWeight: 'bold' }}>Inventario de Stock</h3>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                  <span style={{ fontSize: 13, fontWeight: 'bold', color: '#555' }}>Filtrar por Categoría:</span>
+                  <select value={searchInvCategory} onChange={(e) => setSearchInvCategory(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #ff80ab', fontSize: 13, background: 'white', color: fuchsia, fontWeight: 'bold', outline: 'none' }}>
+                    <option value="Todas">Todas las categorías</option>
+                    <option value="Terminal">Terminal</option>
+                    <option value="Accesorio">Accesorio</option>
+                    <option value="Servicio">Servicio</option>
+                    <option value="SAT">SAT</option>
+                    <option value="Paquetería">Paquetería</option>
+                    <option value="Varios">Varios</option>
+                  </select>
+                </div>
+              </div>
+
               <div className="mf-table-wrapper">
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 14, minWidth: 900 }}>
                 <thead>
@@ -764,13 +1008,18 @@ export default function MovilFreeApp() {
                     <th style={{ padding: 10, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}>PVP</th>
                     <th style={{ padding: 10, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}>Beneficio</th>
                     <th style={{ padding: 10, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}>IMEI</th>
-                    <th style={{ padding: 10, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}>Stock</th>
+                    <th style={{ padding: 10, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}>{selectedTienda === 'O2' ? 'Movilfree' : selectedTienda}</th>
                     <th style={{ padding: 10, borderRadius: '0 8px 8px 0', textAlign: 'center', width: '1%', whiteSpace: 'nowrap' }}>Acciones</th>
                   </tr>
 
                 </thead>
                 <tbody>
-                  {products.filter(p => p.nombre.toLowerCase().includes(searchInvProducts.toLowerCase())).map(p => (
+                  {products.filter(p => {
+                    const matchesSearch = p.nombre.toLowerCase().includes(searchInvProducts.toLowerCase())
+                    if (!matchesSearch) return false
+                    if (searchInvCategory !== 'Todas' && p.categoria !== searchInvCategory) return false
+                    return true
+                  }).map(p => (
                     <tr key={p.id} style={{ borderBottom: '1px solid #eee', background: editingProductId === p.id ? '#fdf2f8' : 'transparent' }}>
                       {editingProductId === p.id ? (
                         <>
@@ -785,7 +1034,9 @@ export default function MovilFreeApp() {
                           <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}><input type="number" value={editProdData?.precio ? Number((editProdData.precio * 1.21).toFixed(2)) : 0} onChange={e => setEditProdData({...editProdData, precio: Number((Number(e.target.value) / 1.21).toFixed(2))})} style={{ width: 70, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center', fontWeight: 'bold', color: fuchsia }} /></td>
                           <td style={{ padding: 10, fontWeight: 'bold', color: '#276749', whiteSpace: 'nowrap', textAlign: 'center' }}>{formatMoney((editProdData?.precio || 0) - (editProdData?.coste || 0))}</td>
                           <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}><input value={editProdData?.imei || ''} maxLength={15} onChange={e => setEditProdData({...editProdData, imei: e.target.value.replace(/\D/g,'')})} style={{ width: 110, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center', fontSize: 13, fontFamily: 'monospace' }} /></td>
-                          <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}><input type="number" value={editProdData?.stock || 0} onChange={e => setEditProdData({...editProdData, stock: Number(e.target.value)})} style={{ width: 50, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center' }} /></td>
+                          <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}>
+                            <input type="number" value={editProdData?.stock || 0} onChange={e => setEditProdData({...editProdData, stock: Number(e.target.value)})} style={{ width: 50, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center' }} />
+                          </td>
                           <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}>
                             <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
                               <button onClick={handleSaveEditProduct} style={{ background: '#4CAF50', color: 'white', border: 'none', padding: 8, borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center' }} title="Guardar"><Save size={16} /></button>
@@ -806,14 +1057,15 @@ export default function MovilFreeApp() {
                           <td style={{ padding: 10, color: '#555', fontSize: 13, fontFamily: 'monospace', whiteSpace: 'nowrap', textAlign: 'center' }}>{p.imei || '-'}</td>
                           <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
-                              <button onClick={() => updateStock(p.id, p.stock - 1)} style={{ width: 24, height: 24, borderRadius: 12, border: '1px solid #ddd', background: 'white', cursor: 'pointer' }}>-</button>
-                              <span style={{ fontWeight: 'bold', width: 16, textAlign: 'center', color: p.stock === 0 ? 'red' : 'inherit' }}>{p.stock}</span>
-                              <button onClick={() => updateStock(p.id, p.stock + 1)} style={{ width: 24, height: 24, borderRadius: 12, border: 'none', background: fuchsia, color: 'white', cursor: 'pointer' }}>+</button>
+                              <button onClick={() => updateStock(p.id, getStock(p, selectedTienda) - 1)} style={{ width: 24, height: 24, borderRadius: 12, border: '1px solid #ddd', background: 'white', cursor: 'pointer' }}>-</button>
+                              <span style={{ fontWeight: 'bold', width: 16, textAlign: 'center', color: getStock(p, selectedTienda) === 0 ? 'red' : 'inherit' }}>{getStock(p, selectedTienda)}</span>
+                              <button onClick={() => updateStock(p.id, getStock(p, selectedTienda) + 1)} style={{ width: 24, height: 24, borderRadius: 12, border: 'none', background: fuchsia, color: 'white', cursor: 'pointer' }}>+</button>
                             </div>
                           </td>
                           <td style={{ padding: 10, whiteSpace: 'nowrap' }}>
                             <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-                              <button onClick={() => { setEditingProductId(p.id); setEditProdData({...p}); }} style={{ background: 'white', color: '#0ea5e9', border: '1px solid #e0f2fe', padding: 8, borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }} title="Editar"><Edit2 size={16} /></button>
+                              <button onClick={() => { setEditingProductId(p.id); setEditProdData({ nombre: p.nombre, categoria: p.categoria, coste: p.coste, precio: p.precio, stock: getStock(p, selectedTienda), imei: p.imei || '' }); }} style={{ background: 'white', color: '#0ea5e9', border: '1px solid #e0f2fe', padding: 8, borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }} title="Editar"><Edit2 size={16} /></button>
+                              <button onClick={() => handleOpenTransfer(p)} style={{ background: '#e0f7fa', color: '#006064', border: 'none', padding: '8px 12px', borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 'bold', fontSize: 12 }} title="Traspasar Stock"><ArrowLeftRight size={14} /> Traspasar</button>
                               <button onClick={() => handleDeleteProduct(p.id)} style={{ background: 'white', color: '#f43f5e', border: '1px solid #ffe4e6', padding: 8, borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }} title="Borrar"><Trash2 size={16} /></button>
                             </div>
                           </td>
@@ -824,6 +1076,7 @@ export default function MovilFreeApp() {
                 </tbody>
               </table>
               </div>
+
             </div>
           )}
 
@@ -1302,6 +1555,57 @@ export default function MovilFreeApp() {
             </div>
           </div>
         )}
+
+        {/* TAB: TRAZABILIDAD */}
+        {activeTab === 'trazabilidad' && (
+          <div>
+            <div style={{ marginTop: 20, background: 'white', padding: 24, borderRadius: 12, border: '1px solid #eee' }}>
+              <h3 style={{ margin: '0 0 16px 0', color: fuchsia, display: 'flex', alignItems: 'center', gap: 8, fontWeight: 'bold' }}>
+                <ArrowLeftRight size={20} /> Historial de Traspasos de Stock (Trazabilidad)
+              </h3>
+              <div className="mf-table-wrapper">
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ background: lightPink, color: fuchsia }}>
+                      <th style={{ padding: 10, borderRadius: '6px 0 0 6px' }}>Fecha</th>
+                      <th style={{ padding: 10 }}>Producto</th>
+                      <th style={{ padding: 10, textAlign: 'center' }}>Origen</th>
+                      <th style={{ padding: 10, textAlign: 'center' }}>Destino</th>
+                      <th style={{ padding: 10, textAlign: 'center' }}>Cantidad</th>
+                      <th style={{ padding: 10, borderRadius: '0 6px 6px 0' }}>Vendedor</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {transfers.filter((t) => t.origen === selectedTienda || t.destino === selectedTienda).length === 0 ? (
+                      <tr>
+                        <td colSpan={6} style={{ padding: 20, textAlign: 'center', color: '#888' }}>
+                          No se han realizado traspasos para esta tienda aún.
+                        </td>
+                      </tr>
+                    ) : (
+                      transfers
+                        .filter((t) => t.origen === selectedTienda || t.destino === selectedTienda)
+                        .map((t) => (
+                          <tr key={t.id} style={{ borderBottom: '1px solid #eee' }}>
+                            <td style={{ padding: 10, color: '#666' }}>{new Date(t.fecha).toLocaleString('es-ES')}</td>
+                            <td style={{ padding: 10, fontWeight: 'bold' }}>{t.product?.nombre || 'Desconocido'}</td>
+                            <td style={{ padding: 10, textAlign: 'center' }}>
+                              <span style={{ background: '#f3f4f6', padding: '2px 8px', borderRadius: 4, fontSize: 11 }}>{t.origen === 'O2' ? 'Movilfree' : t.origen}</span>
+                            </td>
+                            <td style={{ padding: 10, textAlign: 'center' }}>
+                              <span style={{ background: '#f3f4f6', padding: '2px 8px', borderRadius: 4, fontSize: 11 }}>{t.destino === 'O2' ? 'Movilfree' : t.destino}</span>
+                            </td>
+                            <td style={{ padding: 10, textAlign: 'center', fontWeight: 'bold' }}>{t.cantidad}</td>
+                            <td style={{ padding: 10, color: '#555' }}>{t.vendedor}</td>
+                          </tr>
+                        ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
         </div>
 
       {/* ELEMENTOS SOLO PARA IMPRIMIR */}
@@ -1522,6 +1826,61 @@ export default function MovilFreeApp() {
                 <button onClick={() => setPrintModalSale(null)} style={{ padding: '14px', borderRadius: 8, border: 'none', background: '#eee', cursor: 'pointer', fontWeight: 'bold', marginTop: 8, fontSize: 15 }}>
                   Cerrar
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* STOCK TRANSFER MODAL */}
+        {transferProduct && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }}>
+            <div style={{ background: 'white', padding: 30, borderRadius: 16, width: 450, boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
+              <h3 style={{ margin: '0 0 16px 0', color: fuchsia, fontWeight: 'bold' }}>Traspasar Stock entre Tiendas</h3>
+              <p style={{ margin: '0 0 20px 0', fontSize: 13, color: '#555' }}>
+                Producto: <strong>{transferProduct.nombre}</strong>
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 'bold', color: '#666' }}>Tienda Origen</label>
+                  {isGlobalUser ? (
+                    <select value={transferOrigen} onChange={(e) => { setTransferOrigen(e.target.value); setTransferQty(1); }} style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #ddd', marginTop: 4 }}>
+                      {Object.keys(TIENDAS_COMERCIALES).map((t) => (
+                        <option key={t} value={t}>{t === 'O2' ? 'Movilfree' : t}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input type="text" readOnly value={transferOrigen === 'O2' ? 'Movilfree' : transferOrigen} style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #ddd', marginTop: 4, background: '#f5f5f5' }} />
+                  )}
+                </div>
+
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 'bold', color: '#666' }}>Tienda Destino</label>
+                  <select value={transferDestino} onChange={(e) => setTransferDestino(e.target.value)} style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #ddd', marginTop: 4 }}>
+                    {Object.keys(TIENDAS_COMERCIALES)
+                      .filter((t) => t !== transferOrigen)
+                      .map((t) => (
+                        <option key={t} value={t}>{t === 'O2' ? 'Movilfree' : t}</option>
+                      ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 'bold', color: '#666' }}>Cantidad a Traspasar (Max: {getStock(transferProduct, transferOrigen)})</label>
+                  <input 
+                    type="number" 
+                    min="1" 
+                    max={getStock(transferProduct, transferOrigen)}
+                    value={transferQty} 
+                    onChange={(e) => setTransferQty(Math.min(getStock(transferProduct, transferOrigen), Math.max(1, parseInt(e.target.value) || 1)))} 
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #ddd', marginTop: 4 }} 
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 12 }}>
+                <button onClick={submitTransfer} disabled={getStock(transferProduct, transferOrigen) <= 0} style={{ flex: 1, background: fuchsia, color: 'white', border: 'none', padding: 12, borderRadius: 8, fontWeight: 'bold', cursor: 'pointer', opacity: getStock(transferProduct, transferOrigen) <= 0 ? 0.5 : 1 }}>Traspasar Stock</button>
+                <button onClick={() => setTransferProduct(null)} style={{ flex: 1, background: '#ccc', color: '#333', border: 'none', padding: 12, borderRadius: 8, fontWeight: 'bold', cursor: 'pointer' }}>Cancelar</button>
               </div>
             </div>
           </div>

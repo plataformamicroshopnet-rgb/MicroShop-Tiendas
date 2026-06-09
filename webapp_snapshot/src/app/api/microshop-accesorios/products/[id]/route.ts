@@ -1,17 +1,18 @@
 import { NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
+
 const prisma = new PrismaClient()
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = await params;
-  const id = resolvedParams.id;
+  const resolvedParams = await params
+  const id = resolvedParams.id
   try {
     const data = await req.json()
     
-    // Check if it belongs to MicroShop
-    const isMicroShop = await prisma.microShopProduct.findUnique({ where: { id: id } })
-    if (isMicroShop) {
-      await prisma.microShopProduct.update({
+    // Check if it belongs to MovilFree
+    const isMovilFree = await prisma.movilFreeProduct.findUnique({ where: { id: id } })
+    if (isMovilFree) {
+      await prisma.movilFreeProduct.update({
         where: { id: id },
         data: {
           nombre: data.nombre,
@@ -23,7 +24,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       })
       
       if (data.tienda !== undefined && data.stock !== undefined) {
-        await prisma.microShopStock.upsert({
+        await prisma.movilFreeStock.upsert({
           where: {
             productId_tienda: {
               productId: id,
@@ -41,15 +42,15 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         })
       }
       
-      const result = await prisma.microShopProduct.findUnique({
+      const result = await prisma.movilFreeProduct.findUnique({
         where: { id: id },
         include: { stocks: true }
       })
       return NextResponse.json(result)
     }
 
-    // Default to MovilFree
-    await prisma.movilFreeProduct.update({
+    // Default to MicroShop
+    await prisma.microShopProduct.update({
       where: { id: id },
       data: {
         nombre: data.nombre,
@@ -61,7 +62,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     })
     
     if (data.tienda !== undefined && data.stock !== undefined) {
-      await prisma.movilFreeStock.upsert({
+      await prisma.microShopStock.upsert({
         where: {
           productId_tienda: {
             productId: id,
@@ -79,31 +80,29 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       })
     }
     
-    const result = await prisma.movilFreeProduct.findUnique({
+    const result = await prisma.microShopProduct.findUnique({
       where: { id: id },
       include: { stocks: true }
     })
     return NextResponse.json(result)
   } catch (e: any) {
-    console.error('PUT Error:', e);
     return NextResponse.json({ error: e.message }, { status: 500 })
   }
 }
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = await params;
-  const id = resolvedParams.id;
+  const resolvedParams = await params
+  const id = resolvedParams.id
   try {
-    const isMicroShop = await prisma.microShopProduct.findUnique({ where: { id: id } })
-    if (isMicroShop) {
-      await prisma.microShopProduct.delete({ where: { id: id } })
+    const isMovilFree = await prisma.movilFreeProduct.findUnique({ where: { id: id } })
+    if (isMovilFree) {
+      await prisma.movilFreeProduct.delete({ where: { id: id } })
       return NextResponse.json({ success: true })
     }
 
-    await prisma.movilFreeProduct.delete({ where: { id: id } })
+    await prisma.microShopProduct.delete({ where: { id: id } })
     return NextResponse.json({ success: true })
   } catch (e: any) {
-    console.error('DELETE Error:', e);
     return NextResponse.json({ error: e.message }, { status: 500 })
   }
 }

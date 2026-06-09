@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
+
 const prisma = new PrismaClient()
 
 function mapStoreToCajaTienda(store: string): string {
@@ -12,14 +13,14 @@ function mapStoreToCajaTienda(store: string): string {
 }
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = await params;
-  const id = resolvedParams.id;
+  const resolvedParams = await params
+  const id = resolvedParams.id
   try {
     const data = await req.json()
-    const currentSale = await prisma.movilFreeSale.findUnique({ where: { id: id } })
-    if (!currentSale) throw new Error("Sale not found")
+    const currentSale = await prisma.microShopSale.findUnique({ where: { id: id } })
+    if (!currentSale) throw new Error("Venta no encontrada")
     
-    const tienda = currentSale.tienda || 'O2'
+    const tienda = currentSale.tienda
     const cajaTienda = mapStoreToCajaTienda(tienda)
     const todayStr = new Date().toISOString().split('T')[0]
 
@@ -30,19 +31,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         if (prod.id) {
           const qtyToReturn = prod.cantidad - (prod.cantidadDevuelta || 0)
           if (qtyToReturn > 0) {
-            const isMicroShop = await prisma.microShopProduct.findUnique({ where: { id: prod.id } })
-            if (isMicroShop) {
-              await prisma.microShopStock.upsert({
-                where: {
-                  productId_tienda: {
-                    productId: prod.id,
-                    tienda: tienda
-                  }
-                },
-                update: { cantidad: { increment: qtyToReturn } },
-                create: { productId: prod.id, tienda: tienda, cantidad: qtyToReturn }
-              }).catch(e => console.error(e))
-            } else {
+            const isMovilFree = await prisma.movilFreeProduct.findUnique({ where: { id: prod.id } })
+            if (isMovilFree) {
               await prisma.movilFreeStock.upsert({
                 where: {
                   productId_tienda: {
@@ -50,18 +40,44 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
                     tienda: tienda
                   }
                 },
-                update: { cantidad: { increment: qtyToReturn } },
-                create: { productId: prod.id, tienda: tienda, cantidad: qtyToReturn }
+                update: {
+                  cantidad: { increment: qtyToReturn }
+                },
+                create: {
+                  productId: prod.id,
+                  tienda: tienda,
+                  cantidad: qtyToReturn
+                }
+              }).catch(e => console.error(e))
+            } else {
+              await prisma.microShopStock.upsert({
+                where: {
+                  productId_tienda: {
+                    productId: prod.id,
+                    tienda: tienda
+                  }
+                },
+                update: {
+                  cantidad: { increment: qtyToReturn }
+                },
+                create: {
+                  productId: prod.id,
+                  tienda: tienda,
+                  cantidad: qtyToReturn
+                }
               }).catch(e => console.error(e))
             }
           }
         }
       }
       
+      // Update client spent
       if (currentSale.nifCliente && currentSale.nifCliente !== 'CONTADO') {
         await prisma.movilFreeClient.update({
           where: { nif: currentSale.nifCliente },
-          data: { totalComprado: { decrement: currentSale.importeTotal } }
+          data: {
+            totalComprado: { decrement: currentSale.importeTotal }
+          }
         }).catch(e => console.error(e))
       }
 
@@ -73,7 +89,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
             tienda: cajaTienda,
             fecha: todayStr,
             concepto: '(+) Tarjeta MovilFree',
-            detalle: `Devolución accesorios MovilFree Tarjeta - ${productDetails} [Importe: -${currentSale.importeTotal.toFixed(2)}€] (Factura #${currentSale.numeroFactura})`,
+            detalle: `Devolución accesorios Tarjeta - ${productDetails} [Importe: -${currentSale.importeTotal.toFixed(2)}€] (Factura #${currentSale.numeroFactura})`,
             importe: 0,
             vendedor: currentSale.vendedor || 'Sistema'
           }
@@ -84,14 +100,14 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
             tienda: cajaTienda,
             fecha: todayStr,
             concepto: '(-) Otras salidas',
-            detalle: `Devolución accesorios MovilFree Efectivo - ${productDetails} (Factura #${currentSale.numeroFactura})`,
+            detalle: `Devolución accesorios Efectivo - ${productDetails} (Factura #${currentSale.numeroFactura})`,
             importe: -currentSale.importeTotal,
             vendedor: currentSale.vendedor || 'Sistema'
           }
         }).catch(e => console.error(e))
       }
       
-      const item = await prisma.movilFreeSale.update({
+      const item = await prisma.microShopSale.update({
         where: { id: id },
         data: {
           estado: 'DEVUELTA',
@@ -105,8 +121,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     // PARTIAL RETURN
     if (data.estado === 'DEVOLUCION_PARCIAL') {
       const prods = JSON.parse(currentSale.listaProductos)
-      let totalDevuelto = 0;
-      const returnedItemsList: any[] = []
+      let totalDevuelto = 0
       
       for (const ret of data.returnedItems) {
         const prodInSale = prods.find((p: any) => p.id === ret.id)
@@ -116,21 +131,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           if (qtyToReturn > 0 && (prevDevuelto + qtyToReturn) <= prodInSale.cantidad) {
             prodInSale.cantidadDevuelta = prevDevuelto + qtyToReturn
             totalDevuelto += qtyToReturn * Number(prodInSale.precio)
-            returnedItemsList.push({ ...prodInSale, cantidad: qtyToReturn })
             
-            const isMicroShop = await prisma.microShopProduct.findUnique({ where: { id: ret.id } })
-            if (isMicroShop) {
-              await prisma.microShopStock.upsert({
-                where: {
-                  productId_tienda: {
-                    productId: ret.id,
-                    tienda: tienda
-                  }
-                },
-                update: { cantidad: { increment: qtyToReturn } },
-                create: { productId: ret.id, tienda: tienda, cantidad: qtyToReturn }
-              }).catch(e => console.error(e))
-            } else {
+            const isMovilFree = await prisma.movilFreeProduct.findUnique({ where: { id: ret.id } })
+            if (isMovilFree) {
               await prisma.movilFreeStock.upsert({
                 where: {
                   productId_tienda: {
@@ -138,8 +141,31 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
                     tienda: tienda
                   }
                 },
-                update: { cantidad: { increment: qtyToReturn } },
-                create: { productId: ret.id, tienda: tienda, cantidad: qtyToReturn }
+                update: {
+                  cantidad: { increment: qtyToReturn }
+                },
+                create: {
+                  productId: ret.id,
+                  tienda: tienda,
+                  cantidad: qtyToReturn
+                }
+              }).catch(e => console.error(e))
+            } else {
+              await prisma.microShopStock.upsert({
+                where: {
+                  productId_tienda: {
+                    productId: ret.id,
+                    tienda: tienda
+                  }
+                },
+                update: {
+                  cantidad: { increment: qtyToReturn }
+                },
+                create: {
+                  productId: ret.id,
+                  tienda: tienda,
+                  cantidad: qtyToReturn
+                }
               }).catch(e => console.error(e))
             }
           }
@@ -147,22 +173,31 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       }
       
       if (totalDevuelto > 0) {
+        // Update client spent
         if (currentSale.nifCliente && currentSale.nifCliente !== 'CONTADO') {
           await prisma.movilFreeClient.update({
             where: { nif: currentSale.nifCliente },
-            data: { totalComprado: { decrement: totalDevuelto } }
+            data: {
+              totalComprado: { decrement: totalDevuelto }
+            }
           }).catch(e => console.error(e))
         }
 
         // Add Caja counter-movement
-        const returnedDetails = returnedItemsList.map((p: any) => `${p.cantidad}x ${p.nombre}`).join(', ')
+        const returnedProductDetails = data.returnedItems
+          .map((ret: any) => {
+            const p = prods.find((x: any) => x.id === ret.id)
+            return p ? `${ret.cantidad}x ${p.nombre}` : ''
+          })
+          .filter(Boolean)
+          .join(', ')
         if (currentSale.metodoPago === 'Tarjeta') {
           await prisma.cajaEntry.create({
             data: {
               tienda: cajaTienda,
               fecha: todayStr,
               concepto: '(+) Tarjeta MovilFree',
-              detalle: `Devolución parcial MovilFree Tarjeta - ${returnedDetails} [Importe: -${totalDevuelto.toFixed(2)}€] (Factura #${currentSale.numeroFactura})`,
+              detalle: `Devolución parcial Tarjeta - ${returnedProductDetails} [Importe: -${totalDevuelto.toFixed(2)}€] (Factura #${currentSale.numeroFactura})`,
               importe: 0,
               vendedor: currentSale.vendedor || 'Sistema'
             }
@@ -173,7 +208,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
               tienda: cajaTienda,
               fecha: todayStr,
               concepto: '(-) Otras salidas',
-              detalle: `Devolución parcial MovilFree Efectivo - ${returnedDetails} [Importe: -${totalDevuelto.toFixed(2)}€] (Factura #${currentSale.numeroFactura})`,
+              detalle: `Devolución parcial Efectivo - ${returnedProductDetails} [Importe: -${totalDevuelto.toFixed(2)}€] (Factura #${currentSale.numeroFactura})`,
               importe: -totalDevuelto,
               vendedor: currentSale.vendedor || 'Sistema'
             }
@@ -184,7 +219,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       const isFullNow = prods.every((p: any) => (p.cantidadDevuelta || 0) === p.cantidad)
       const newState = isFullNow ? 'DEVUELTA' : 'DEVOLUCION_PARCIAL'
       
-      const item = await prisma.movilFreeSale.update({
+      const item = await prisma.microShopSale.update({
         where: { id },
         data: {
           estado: newState,
@@ -197,7 +232,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     }
 
     // Default UPDATE
-    const item = await prisma.movilFreeSale.update({
+    const item = await prisma.microShopSale.update({
       where: { id: id },
       data: {
         estado: data.estado || currentSale.estado,
@@ -211,32 +246,19 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 }
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = await params;
-  const id = resolvedParams.id;
+  const resolvedParams = await params
+  const id = resolvedParams.id
   try {
-    const currentSale = await prisma.movilFreeSale.findUnique({ where: { id: id } })
+    const currentSale = await prisma.microShopSale.findUnique({ where: { id: id } })
     if (currentSale && currentSale.estado !== 'DEVUELTA') {
-      const tienda = currentSale.tienda || 'O2'
+      const tienda = currentSale.tienda
       const cajaTienda = mapStoreToCajaTienda(tienda)
       const todayStr = new Date().toISOString().split('T')[0]
-      
-      // Restore stock
       const prods = JSON.parse(currentSale.listaProductos)
       for (const prod of prods) {
         if (prod.id) {
-          const isMicroShop = await prisma.microShopProduct.findUnique({ where: { id: prod.id } })
-          if (isMicroShop) {
-            await prisma.microShopStock.upsert({
-              where: {
-                productId_tienda: {
-                  productId: prod.id,
-                  tienda: tienda
-                }
-              },
-              update: { cantidad: { increment: Number(prod.cantidad) } },
-              create: { productId: prod.id, tienda: tienda, cantidad: Number(prod.cantidad) }
-            }).catch(e => console.error(e))
-          } else {
+          const isMovilFree = await prisma.movilFreeProduct.findUnique({ where: { id: prod.id } })
+          if (isMovilFree) {
             await prisma.movilFreeStock.upsert({
               where: {
                 productId_tienda: {
@@ -244,17 +266,43 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
                   tienda: tienda
                 }
               },
-              update: { cantidad: { increment: Number(prod.cantidad) } },
-              create: { productId: prod.id, tienda: tienda, cantidad: Number(prod.cantidad) }
+              update: {
+                cantidad: { increment: Number(prod.cantidad) }
+              },
+              create: {
+                productId: prod.id,
+                tienda: tienda,
+                cantidad: Number(prod.cantidad)
+              }
+            }).catch(e => console.error(e))
+          } else {
+            await prisma.microShopStock.upsert({
+              where: {
+                productId_tienda: {
+                  productId: prod.id,
+                  tienda: tienda
+                }
+              },
+              update: {
+                cantidad: { increment: Number(prod.cantidad) }
+              },
+              create: {
+                productId: prod.id,
+                tienda: tienda,
+                cantidad: Number(prod.cantidad)
+              }
             }).catch(e => console.error(e))
           }
         }
       }
       
+      // Update client spent
       if (currentSale.nifCliente && currentSale.nifCliente !== 'CONTADO') {
         await prisma.movilFreeClient.update({
           where: { nif: currentSale.nifCliente },
-          data: { totalComprado: { decrement: currentSale.importeTotal } }
+          data: {
+            totalComprado: { decrement: currentSale.importeTotal }
+          }
         }).catch(e => console.error(e))
       }
 
@@ -266,7 +314,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
             tienda: cajaTienda,
             fecha: todayStr,
             concepto: '(+) Tarjeta MovilFree',
-            detalle: `Anulación venta MovilFree Tarjeta - ${productDetails} [Importe: -${currentSale.importeTotal.toFixed(2)}€] (Factura #${currentSale.numeroFactura})`,
+            detalle: `Anulación venta Tarjeta - ${productDetails} [Importe: -${currentSale.importeTotal.toFixed(2)}€] (Factura #${currentSale.numeroFactura})`,
             importe: 0,
             vendedor: currentSale.vendedor || 'Sistema'
           }
@@ -277,7 +325,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
             tienda: cajaTienda,
             fecha: todayStr,
             concepto: '(-) Otras salidas',
-            detalle: `Anulación venta MovilFree Efectivo - ${productDetails} (Factura #${currentSale.numeroFactura})`,
+            detalle: `Anulación venta Efectivo - ${productDetails} (Factura #${currentSale.numeroFactura})`,
             importe: -currentSale.importeTotal,
             vendedor: currentSale.vendedor || 'Sistema'
           }
@@ -285,7 +333,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
       }
     }
 
-    await prisma.movilFreeSale.delete({ where: { id: id } })
+    await prisma.microShopSale.delete({ where: { id: id } })
     return NextResponse.json({ success: true })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
