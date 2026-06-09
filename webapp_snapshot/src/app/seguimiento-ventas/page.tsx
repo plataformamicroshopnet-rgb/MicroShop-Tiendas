@@ -107,6 +107,14 @@ export default function SeguimientoVentasPage() {
       color: 'rgba(239, 68, 68, 0.1)',
       textColor: '#ef4444',
       permission: 'CARD_COMISIONES_JEFE'
+    },
+    {
+      title: 'MicroShop Accesorios',
+      description: 'Gestión de inventario de accesorios de MicroShop, punto de venta y trazabilidad.',
+      icon: Package,
+      action: () => router.push('/microshop-accesorios'),
+      color: 'rgba(0,173,239,0.1)',
+      textColor: 'var(--mercedes-cyan)'
     }
   ]
 

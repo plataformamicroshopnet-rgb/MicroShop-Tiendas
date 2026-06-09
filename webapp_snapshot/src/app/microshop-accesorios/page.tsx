@@ -936,18 +936,12 @@ export default function MicroShopAccesoriosApp() {
                       <th style={{ padding: 10, textAlign: 'right' }}>PVP (con IVA)</th>
                       <th style={{ padding: 10, textAlign: 'right' }}>Beneficio Ud.</th>
                       <th style={{ padding: 10, textAlign: 'center' }}>IMEI</th>
-                      {isGlobalUser ? (
-                        <>
-                          <th style={{ padding: 10, textAlign: 'center' }}>Auxiliadora</th>
-                          <th style={{ padding: 10, textAlign: 'center' }}>Correhuela</th>
-                          <th style={{ padding: 10, textAlign: 'center' }}>Villamayor</th>
-                          <th style={{ padding: 10, textAlign: 'center' }}>Béjar</th>
-                          <th style={{ padding: 10, textAlign: 'center' }}>Movilfree</th>
-                          <th style={{ padding: 10, textAlign: 'center', fontWeight: 'bold', color: '#00adef' }}>Total Stock</th>
-                        </>
-                      ) : (
-                        <th style={{ padding: 10, textAlign: 'center', fontWeight: 'bold' }}>{selectedTienda === 'O2' ? 'Movilfree' : selectedTienda}</th>
-                      )}
+                      <th style={{ padding: 10, textAlign: 'center' }}>Auxiliadora</th>
+                      <th style={{ padding: 10, textAlign: 'center' }}>Correhuela</th>
+                      <th style={{ padding: 10, textAlign: 'center' }}>Villamayor</th>
+                      <th style={{ padding: 10, textAlign: 'center' }}>Béjar</th>
+                      <th style={{ padding: 10, textAlign: 'center' }}>Movilfree</th>
+                      <th style={{ padding: 10, textAlign: 'center', fontWeight: 'bold', color: '#00adef' }}>Total Stock</th>
                       <th style={{ padding: 10, borderRadius: '0 8px 8px 0', textAlign: 'center' }}>Acciones</th>
                     </tr>
                   </thead>
@@ -957,9 +951,7 @@ export default function MicroShopAccesoriosApp() {
                         const matchesSearch = p.nombre.toLowerCase().includes(searchInvProducts.toLowerCase())
                         if (!matchesSearch) return false
                         if (searchInvCategory !== 'Todas' && p.categoria !== searchInvCategory) return false
-                        if (isGlobalUser) return true
-                        // Filter by active store stock record existence for non-global users
-                        return p.stocks.some((s) => s.tienda === selectedTienda)
+                        return true
                       })
                       .map((p) => {
                         const isEditing = editingProductId === p.id
@@ -1010,56 +1002,44 @@ export default function MicroShopAccesoriosApp() {
                             </td>
                             
                             {/* Stock Columns */}
-                            {isGlobalUser ? (
-                              <>
-                                <td style={{ padding: 10, textAlign: 'center' }}>
-                                  {isEditing && selectedTienda === 'Auxiliadora 45' ? (
-                                    <input type="number" value={editProdData.stock} onChange={(e) => setEditProdData({ ...editProdData, stock: Number(e.target.value) })} style={{ width: 50 }} />
-                                  ) : (
-                                    getStock(p, 'Auxiliadora 45')
-                                  )}
-                                </td>
-                                <td style={{ padding: 10, textAlign: 'center' }}>
-                                  {isEditing && selectedTienda === 'Correhuela' ? (
-                                    <input type="number" value={editProdData.stock} onChange={(e) => setEditProdData({ ...editProdData, stock: Number(e.target.value) })} style={{ width: 50 }} />
-                                  ) : (
-                                    getStock(p, 'Correhuela')
-                                  )}
-                                </td>
-                                <td style={{ padding: 10, textAlign: 'center' }}>
-                                  {isEditing && selectedTienda === 'Villamayor' ? (
-                                    <input type="number" value={editProdData.stock} onChange={(e) => setEditProdData({ ...editProdData, stock: Number(e.target.value) })} style={{ width: 50 }} />
-                                  ) : (
-                                    getStock(p, 'Villamayor')
-                                  )}
-                                </td>
-                                <td style={{ padding: 10, textAlign: 'center' }}>
-                                  {isEditing && selectedTienda === 'Béjar' ? (
-                                    <input type="number" value={editProdData.stock} onChange={(e) => setEditProdData({ ...editProdData, stock: Number(e.target.value) })} style={{ width: 50 }} />
-                                  ) : (
-                                    getStock(p, 'Béjar')
-                                  )}
-                                </td>
-                                <td style={{ padding: 10, textAlign: 'center' }}>
-                                  {isEditing && selectedTienda === 'O2' ? (
-                                    <input type="number" value={editProdData.stock} onChange={(e) => setEditProdData({ ...editProdData, stock: Number(e.target.value) })} style={{ width: 50 }} />
-                                  ) : (
-                                    getStock(p, 'O2')
-                                  )}
-                                </td>
-                                <td style={{ padding: 10, textAlign: 'center', fontWeight: 'bold', color: '#00adef', background: '#f0f9ff' }}>
-                                  {getTotalStock(p)}
-                                </td>
-                              </>
-                            ) : (
-                              <td style={{ padding: 10, textAlign: 'center', fontWeight: 'bold' }}>
-                                {isEditing ? (
-                                  <input type="number" value={editProdData.stock} onChange={(e) => setEditProdData({ ...editProdData, stock: Number(e.target.value) })} style={{ width: 60 }} />
-                                ) : (
-                                  getStock(p, selectedTienda)
-                                )}
-                              </td>
-                            )}
+                            <td style={{ padding: 10, textAlign: 'center' }}>
+                              {isEditing && selectedTienda === 'Auxiliadora 45' ? (
+                                <input type="number" value={editProdData.stock} onChange={(e) => setEditProdData({ ...editProdData, stock: Number(e.target.value) })} style={{ width: 50 }} />
+                              ) : (
+                                getStock(p, 'Auxiliadora 45')
+                              )}
+                            </td>
+                            <td style={{ padding: 10, textAlign: 'center' }}>
+                              {isEditing && selectedTienda === 'Correhuela' ? (
+                                <input type="number" value={editProdData.stock} onChange={(e) => setEditProdData({ ...editProdData, stock: Number(e.target.value) })} style={{ width: 50 }} />
+                              ) : (
+                                getStock(p, 'Correhuela')
+                              )}
+                            </td>
+                            <td style={{ padding: 10, textAlign: 'center' }}>
+                              {isEditing && selectedTienda === 'Villamayor' ? (
+                                <input type="number" value={editProdData.stock} onChange={(e) => setEditProdData({ ...editProdData, stock: Number(e.target.value) })} style={{ width: 50 }} />
+                              ) : (
+                                getStock(p, 'Villamayor')
+                              )}
+                            </td>
+                            <td style={{ padding: 10, textAlign: 'center' }}>
+                              {isEditing && selectedTienda === 'Béjar' ? (
+                                <input type="number" value={editProdData.stock} onChange={(e) => setEditProdData({ ...editProdData, stock: Number(e.target.value) })} style={{ width: 50 }} />
+                              ) : (
+                                getStock(p, 'Béjar')
+                              )}
+                            </td>
+                            <td style={{ padding: 10, textAlign: 'center' }}>
+                              {isEditing && selectedTienda === 'O2' ? (
+                                <input type="number" value={editProdData.stock} onChange={(e) => setEditProdData({ ...editProdData, stock: Number(e.target.value) })} style={{ width: 50 }} />
+                              ) : (
+                                getStock(p, 'O2')
+                              )}
+                            </td>
+                            <td style={{ padding: 10, textAlign: 'center', fontWeight: 'bold', color: '#00adef', background: '#f0f9ff' }}>
+                              {getTotalStock(p)}
+                            </td>
 
                             {/* Actions */}
                             <td style={{ padding: 10, textAlign: 'center' }}>

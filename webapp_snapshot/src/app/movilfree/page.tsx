@@ -1014,7 +1014,12 @@ export default function MovilFreeApp() {
                     <th style={{ padding: 10, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}>PVP</th>
                     <th style={{ padding: 10, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}>Beneficio</th>
                     <th style={{ padding: 10, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}>IMEI</th>
-                    <th style={{ padding: 10, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}>{selectedTienda === 'O2' ? 'Movilfree' : selectedTienda}</th>
+                    <th style={{ padding: 10, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}>Auxiliadora</th>
+                    <th style={{ padding: 10, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}>Correhuela</th>
+                    <th style={{ padding: 10, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}>Villamayor</th>
+                    <th style={{ padding: 10, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}>Béjar</th>
+                    <th style={{ padding: 10, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}>Movilfree</th>
+                    <th style={{ padding: 10, width: '1%', whiteSpace: 'nowrap', textAlign: 'center', fontWeight: 'bold' }}>Total Stock</th>
                     <th style={{ padding: 10, borderRadius: '0 8px 8px 0', textAlign: 'center', width: '1%', whiteSpace: 'nowrap' }}>Acciones</th>
                   </tr>
 
@@ -1040,8 +1045,49 @@ export default function MovilFreeApp() {
                           <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}><input type="number" value={editProdData?.precio ? Number((editProdData.precio * 1.21).toFixed(2)) : 0} onChange={e => setEditProdData({...editProdData, precio: Number((Number(e.target.value) / 1.21).toFixed(2))})} style={{ width: 70, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center', fontWeight: 'bold', color: fuchsia }} /></td>
                           <td style={{ padding: 10, fontWeight: 'bold', color: '#276749', whiteSpace: 'nowrap', textAlign: 'center' }}>{formatMoney((editProdData?.precio || 0) - (editProdData?.coste || 0))}</td>
                           <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}><input value={editProdData?.imei || ''} maxLength={15} onChange={e => setEditProdData({...editProdData, imei: e.target.value.replace(/\D/g,'')})} style={{ width: 110, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center', fontSize: 13, fontFamily: 'monospace' }} /></td>
+                          {/* Auxiliadora */}
                           <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}>
-                            <input type="number" value={editProdData?.stock || 0} onChange={e => setEditProdData({...editProdData, stock: Number(e.target.value)})} style={{ width: 50, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center' }} />
+                            {selectedTienda === 'Auxiliadora 45' ? (
+                              <input type="number" value={editProdData?.stock || 0} onChange={e => setEditProdData({...editProdData, stock: Number(e.target.value)})} style={{ width: 50, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center' }} />
+                            ) : (
+                              getStock(p, 'Auxiliadora 45')
+                            )}
+                          </td>
+                          {/* Correhuela */}
+                          <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}>
+                            {selectedTienda === 'Correhuela' ? (
+                              <input type="number" value={editProdData?.stock || 0} onChange={e => setEditProdData({...editProdData, stock: Number(e.target.value)})} style={{ width: 50, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center' }} />
+                            ) : (
+                              getStock(p, 'Correhuela')
+                            )}
+                          </td>
+                          {/* Villamayor */}
+                          <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}>
+                            {selectedTienda === 'Villamayor' ? (
+                              <input type="number" value={editProdData?.stock || 0} onChange={e => setEditProdData({...editProdData, stock: Number(e.target.value)})} style={{ width: 50, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center' }} />
+                            ) : (
+                              getStock(p, 'Villamayor')
+                            )}
+                          </td>
+                          {/* Béjar */}
+                          <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}>
+                            {selectedTienda === 'Béjar' ? (
+                              <input type="number" value={editProdData?.stock || 0} onChange={e => setEditProdData({...editProdData, stock: Number(e.target.value)})} style={{ width: 50, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center' }} />
+                            ) : (
+                              getStock(p, 'Béjar')
+                            )}
+                          </td>
+                          {/* Movilfree */}
+                          <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}>
+                            {selectedTienda === 'O2' ? (
+                              <input type="number" value={editProdData?.stock || 0} onChange={e => setEditProdData({...editProdData, stock: Number(e.target.value)})} style={{ width: 50, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center' }} />
+                            ) : (
+                              getStock(p, 'O2')
+                            )}
+                          </td>
+                          {/* Total Stock */}
+                          <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center', fontWeight: 'bold', color: fuchsia }}>
+                            {getTotalStock(p)}
                           </td>
                           <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}>
                             <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
@@ -1061,12 +1107,69 @@ export default function MovilFreeApp() {
                           <td style={{ padding: 10, fontWeight: 'bold', color: fuchsia, whiteSpace: 'nowrap', textAlign: 'center' }}>{formatMoney(p.precio * 1.21)}</td>
                           <td style={{ padding: 10, fontWeight: 'bold', color: '#276749', whiteSpace: 'nowrap', textAlign: 'center' }}>{formatMoney(p.precio - p.coste)}</td>
                           <td style={{ padding: 10, color: '#555', fontSize: 13, fontFamily: 'monospace', whiteSpace: 'nowrap', textAlign: 'center' }}>{p.imei || '-'}</td>
+                          {/* Auxiliadora */}
                           <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
-                              <button onClick={() => updateStock(p.id, getStock(p, selectedTienda) - 1)} style={{ width: 24, height: 24, borderRadius: 12, border: '1px solid #ddd', background: 'white', cursor: 'pointer' }}>-</button>
-                              <span style={{ fontWeight: 'bold', width: 16, textAlign: 'center', color: getStock(p, selectedTienda) === 0 ? 'red' : 'inherit' }}>{getStock(p, selectedTienda)}</span>
-                              <button onClick={() => updateStock(p.id, getStock(p, selectedTienda) + 1)} style={{ width: 24, height: 24, borderRadius: 12, border: 'none', background: fuchsia, color: 'white', cursor: 'pointer' }}>+</button>
-                            </div>
+                            {selectedTienda === 'Auxiliadora 45' ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
+                                <button onClick={() => updateStock(p.id, getStock(p, 'Auxiliadora 45') - 1)} style={{ width: 20, height: 20, borderRadius: 10, border: '1px solid #ddd', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>-</button>
+                                <span style={{ fontWeight: 'bold', width: 16, textAlign: 'center', color: getStock(p, 'Auxiliadora 45') === 0 ? 'red' : 'inherit' }}>{getStock(p, 'Auxiliadora 45')}</span>
+                                <button onClick={() => updateStock(p.id, getStock(p, 'Auxiliadora 45') + 1)} style={{ width: 20, height: 20, borderRadius: 10, border: 'none', background: fuchsia, color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>+</button>
+                              </div>
+                            ) : (
+                              <span style={{ color: getStock(p, 'Auxiliadora 45') === 0 ? '#ccc' : 'inherit' }}>{getStock(p, 'Auxiliadora 45')}</span>
+                            )}
+                          </td>
+                          {/* Correhuela */}
+                          <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}>
+                            {selectedTienda === 'Correhuela' ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
+                                <button onClick={() => updateStock(p.id, getStock(p, 'Correhuela') - 1)} style={{ width: 20, height: 20, borderRadius: 10, border: '1px solid #ddd', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>-</button>
+                                <span style={{ fontWeight: 'bold', width: 16, textAlign: 'center', color: getStock(p, 'Correhuela') === 0 ? 'red' : 'inherit' }}>{getStock(p, 'Correhuela')}</span>
+                                <button onClick={() => updateStock(p.id, getStock(p, 'Correhuela') + 1)} style={{ width: 20, height: 20, borderRadius: 10, border: 'none', background: fuchsia, color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>+</button>
+                              </div>
+                            ) : (
+                              <span style={{ color: getStock(p, 'Correhuela') === 0 ? '#ccc' : 'inherit' }}>{getStock(p, 'Correhuela')}</span>
+                            )}
+                          </td>
+                          {/* Villamayor */}
+                          <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}>
+                            {selectedTienda === 'Villamayor' ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
+                                <button onClick={() => updateStock(p.id, getStock(p, 'Villamayor') - 1)} style={{ width: 20, height: 20, borderRadius: 10, border: '1px solid #ddd', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>-</button>
+                                <span style={{ fontWeight: 'bold', width: 16, textAlign: 'center', color: getStock(p, 'Villamayor') === 0 ? 'red' : 'inherit' }}>{getStock(p, 'Villamayor')}</span>
+                                <button onClick={() => updateStock(p.id, getStock(p, 'Villamayor') + 1)} style={{ width: 20, height: 20, borderRadius: 10, border: 'none', background: fuchsia, color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>+</button>
+                              </div>
+                            ) : (
+                              <span style={{ color: getStock(p, 'Villamayor') === 0 ? '#ccc' : 'inherit' }}>{getStock(p, 'Villamayor')}</span>
+                            )}
+                          </td>
+                          {/* Béjar */}
+                          <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}>
+                            {selectedTienda === 'Béjar' ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
+                                <button onClick={() => updateStock(p.id, getStock(p, 'Béjar') - 1)} style={{ width: 20, height: 20, borderRadius: 10, border: '1px solid #ddd', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>-</button>
+                                <span style={{ fontWeight: 'bold', width: 16, textAlign: 'center', color: getStock(p, 'Béjar') === 0 ? 'red' : 'inherit' }}>{getStock(p, 'Béjar')}</span>
+                                <button onClick={() => updateStock(p.id, getStock(p, 'Béjar') + 1)} style={{ width: 20, height: 20, borderRadius: 10, border: 'none', background: fuchsia, color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>+</button>
+                              </div>
+                            ) : (
+                              <span style={{ color: getStock(p, 'Béjar') === 0 ? '#ccc' : 'inherit' }}>{getStock(p, 'Béjar')}</span>
+                            )}
+                          </td>
+                          {/* Movilfree */}
+                          <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}>
+                            {selectedTienda === 'O2' ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
+                                <button onClick={() => updateStock(p.id, getStock(p, 'O2') - 1)} style={{ width: 20, height: 20, borderRadius: 10, border: '1px solid #ddd', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>-</button>
+                                <span style={{ fontWeight: 'bold', width: 16, textAlign: 'center', color: getStock(p, 'O2') === 0 ? 'red' : 'inherit' }}>{getStock(p, 'O2')}</span>
+                                <button onClick={() => updateStock(p.id, getStock(p, 'O2') + 1)} style={{ width: 20, height: 20, borderRadius: 10, border: 'none', background: fuchsia, color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>+</button>
+                              </div>
+                            ) : (
+                              <span style={{ color: getStock(p, 'O2') === 0 ? '#ccc' : 'inherit' }}>{getStock(p, 'O2')}</span>
+                            )}
+                          </td>
+                          {/* Total Stock */}
+                          <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center', fontWeight: 'bold', color: fuchsia }}>
+                            {getTotalStock(p)}
                           </td>
                           <td style={{ padding: 10, whiteSpace: 'nowrap' }}>
                             <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>

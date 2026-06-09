@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
-import { Briefcase, CreditCard, Smartphone, ShieldCheck, Tag, Target, Globe, Settings2, ArrowUp, ArrowDown, Save, X, Calculator } from 'lucide-react'
+import { Briefcase, CreditCard, Smartphone, ShieldCheck, Tag, Target, Globe, Settings2, ArrowUp, ArrowDown, Save, X, Calculator, Package } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useGuard } from '@/hooks/useGuard'
 import { PeriodSelector } from '@/components/PeriodSelector'
@@ -60,6 +60,15 @@ export default function TiendasHubPage() {
       action: () => router.push('/tiendas/condiciones-mensuales'),
       bgIcon: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.2) 100%)',
       colorIcon: '#f59e0b',
+      isMain: false
+    },
+    {
+      title: 'MicroShop Accesorios',
+      description: 'Gestión de inventario de accesorios de MicroShop, punto de venta y trazabilidad.',
+      icon: Package,
+      action: () => router.push('/microshop-accesorios'),
+      bgIcon: 'linear-gradient(135deg, rgba(0, 173, 239, 0.15) 0%, rgba(0, 150, 200, 0.2) 100%)',
+      colorIcon: 'var(--mercedes-cyan)',
       isMain: false
     }
   ]
