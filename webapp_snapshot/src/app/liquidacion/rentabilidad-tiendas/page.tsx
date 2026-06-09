@@ -18,7 +18,7 @@ type GroupedSale = {
 
 const TIPOS_VENTA = [
   'Contratos Móvil', 'Rent', 'O2 MovilFree', 'Seguro', 'miMovistar',
-  'Suscripciones TV', 'Prepago', 'Varios', 'Repos', 'Resto BAF'
+  'Suscripciones TV', 'Varios', 'Repos', 'Resto BAF'
 ]
 
 export default function RentabilidadTiendasPage() {

@@ -81,7 +81,7 @@ type ProductItem = {
   importStatus?: 'new' | 'updated' | 'missing' | 'unchanged'
 }
 
-const CATEGORIES = ['Fija y Móvil', 'Ti', 'Rent', 'Seguro', 'O2', 'miMovistar', 'Suscripciones TV', 'Prepago', 'Varios', 'Repos', 'Resto BAF']
+const CATEGORIES = ['Ti', 'Rent', 'Seguro', 'O2', 'miMovistar', 'Suscripciones TV', 'Varios', 'Repos', 'Resto BAF']
 
 const getTabStyle = (cat: string, isActive: boolean) => {
   return {
@@ -107,9 +107,9 @@ export default function CatalogosPage() {
   const previousPeriod = currentIndex > 0 ? sortedPeriods[currentIndex - 1] : null
 
   const [catalogs, setCatalogs] = useState<Record<string, ProductItem[]>>({
-    "Fija y Móvil": [], "Ti": [], "Rent": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": [], "Prepago": [], "Varios": [], "Repos": [], "Resto BAF": [], "Traslado miMovistar": []
+    "Ti": [], "Rent": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": [], "Varios": [], "Repos": [], "Resto BAF": [], "Traslado miMovistar": []
   })
-  const [activeTab, setActiveTab] = useState('Fija y Móvil')
+  const [activeTab, setActiveTab] = useState('Ti')
   const isProductTab = CATEGORIES.includes(activeTab) && activeTab !== 'Comisiones para Tiendas' && activeTab !== 'Comisiones para Tienda O2 MovilFree' && activeTab !== 'PRV Territorial Movistar y O2'
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -126,7 +126,7 @@ export default function CatalogosPage() {
       .then(res => res.json())
       .then(data => {
         if (data.success) {
-          const mapped: Record<string, ProductItem[]> = { "Fija y Móvil": [], "Ti": [], "Rent": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": [], "Prepago": [], "Varios": [], "Repos": [], "Resto BAF": [], "Traslado miMovistar": [] }
+          const mapped: Record<string, ProductItem[]> = { "Ti": [], "Rent": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": [], "Varios": [], "Repos": [], "Resto BAF": [], "Traslado miMovistar": [] }
           for (const [cat, items] of Object.entries(data.catalogs as Record<string, any[]>)) {
              if (!mapped[cat]) mapped[cat] = [];
              mapped[cat] = [...mapped[cat], ...items.map((it: any) => ({
@@ -321,7 +321,7 @@ export default function CatalogosPage() {
         const res = await fetch(`/api/catalogs?legacyOnly=1`)
         const data = await res.json()
         if (data.success) {
-            const mapped: Record<string, ProductItem[]> = { "Fija y Móvil": [], "Ti": [], "Rent": [], "Micro": [], "O2": [] }
+            const mapped: Record<string, ProductItem[]> = { "Ti": [], "Rent": [], "O2": [] }
             let totalItems = 0
             for (const [cat, items] of Object.entries(data.catalogs as Record<string, any[]>)) {
                 if (!mapped[cat]) mapped[cat] = [];
@@ -896,7 +896,7 @@ export default function CatalogosPage() {
             showBack={true}
             backFallback="/admin"
             showPeriodSelector={false}
-            onBack={!isProductTab ? () => setActiveTab('Fija y Móvil') : undefined}
+            onBack={!isProductTab ? () => setActiveTab('Ti') : undefined}
             helpContent={
               <div>
                 <h4 style={{ margin: '0 0 12px 0', color: 'var(--mercedes-cyan)', fontSize: 15 }}>Manual: Entrada de Datos</h4>
