@@ -520,7 +520,14 @@ export default function MovilFreeApp() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
                   {products.filter(p => p.stock > 0 && (searchCategory === 'Todas' || p.categoria === searchCategory) && p.nombre.toLowerCase().includes(searchQuery.toLowerCase())).map(p => (
                     <div key={p.id} onClick={() => addToCart(p)} style={{ background: 'white', padding: 16, borderRadius: 12, border: '1px solid #eee', cursor: 'pointer', transition: 'all 0.2s', ':hover': { borderColor: '#E91E97', transform: 'translateY(-2px)' } } as any}>
-                      <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>{p.categoria}</div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                        <div style={{ fontSize: 11, color: '#888' }}>{p.categoria}</div>
+                        {p.categoria === 'Terminal' && p.imei && (
+                          <span style={{ fontSize: 11, color: '#E91E97', fontFamily: 'monospace', fontWeight: 'bold', background: '#FFF0F9', padding: '2px 6px', borderRadius: 4 }}>
+                            {p.imei}
+                          </span>
+                        )}
+                      </div>
                       <div style={{ fontWeight: 'bold', color: '#333', marginBottom: 8 }}>{p.nombre}</div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div style={{ fontWeight: 900, color: '#E91E97', fontSize: 18 }}>{formatMoney(p.precio * 1.21)}</div>
