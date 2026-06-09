@@ -24,8 +24,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       })
       
       if (data.tienda !== undefined && data.stock !== undefined) {
-        // Enforce 0 stock if target store is O2
-        const targetStock = data.tienda === 'O2' ? 0 : Number(data.stock)
         await prisma.microShopStock.upsert({
           where: {
             productId_tienda: {
@@ -34,12 +32,12 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
             }
           },
           update: {
-            cantidad: targetStock
+            cantidad: Number(data.stock)
           },
           create: {
             productId: id,
             tienda: data.tienda,
-            cantidad: targetStock
+            cantidad: Number(data.stock)
           }
         })
       }

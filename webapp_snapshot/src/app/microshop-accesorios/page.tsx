@@ -216,9 +216,6 @@ export default function MicroShopAccesoriosApp() {
     if (product.isMovilFree && movistarStores.includes(storeName)) {
       return 0
     }
-    if (!product.isMovilFree && storeName === 'O2') {
-      return 0
-    }
     const stockItem = product.stocks?.find((s) => s.tienda === storeName)
     return stockItem ? stockItem.cantidad : 0
   }

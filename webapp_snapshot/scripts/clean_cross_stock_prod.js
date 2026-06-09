@@ -18,17 +18,6 @@ async function main() {
     }
   });
   console.log(`[Boot-Clean] Updated ${resultMf.count} MovilFreeStock records in Movistar stores to 0.`);
-
-  // 2. Reset MicroShopStock entries for O2 store to 0
-  const resultMs = await prisma.microShopStock.updateMany({
-    where: {
-      tienda: 'O2'
-    },
-    data: {
-      cantidad: 0
-    }
-  });
-  console.log(`[Boot-Clean] Updated ${resultMs.count} MicroShopStock records in O2 store to 0.`);
 }
 
 main()

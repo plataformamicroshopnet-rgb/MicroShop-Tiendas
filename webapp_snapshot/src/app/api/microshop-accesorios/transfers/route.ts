@@ -123,10 +123,6 @@ export async function POST(req: Request) {
     }
 
     // Default to MicroShop
-    if (destino === 'O2') {
-      return NextResponse.json({ error: 'Los accesorios de MicroShop no se pueden traspasar a la tienda Movilfree' }, { status: 400 })
-    }
-
     const sourceStock = await prisma.microShopStock.findUnique({
       where: {
         productId_tienda: {
