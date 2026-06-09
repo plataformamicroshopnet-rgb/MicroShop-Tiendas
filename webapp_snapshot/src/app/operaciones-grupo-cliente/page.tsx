@@ -6,9 +6,55 @@ import { usePeriod } from '@/components/PeriodProvider'
 import { useGuard } from '@/hooks/useGuard'
 import { ExcelIcon } from '@/components/ActionIcons'
 import { renderDashboardData, calculateDynamicCommission, isVentaWithinDates, normalizeString, getCurrentMonthString } from '@/lib/salesUtils'
-import { matchTipoVenta } from '@/hooks/useComisionesData'
+import { matchesRule, getValueForRule, matchTipoVenta } from '@/hooks/useComisionesData'
 import * as XLSX from 'xlsx'
 import ExcelJS from 'exceljs'
+
+// Definición estática de las 6 palancas solicitadas y sus tramos según el mockup
+const STATIC_PALANCAS = [
+  {
+    key: 'altas_baf',
+    negocio: 'Fijo',
+    palanca: 'Altas BAF',
+    tramos: { tramo1: '20%', tramo2: '30%', tramo3: '-', bonif: '-' },
+    matches: ['Alta BAF Total', 'Altas BAF', 'baf total']
+  },
+  {
+    key: 'altas_baf_conv',
+    negocio: 'Fijo',
+    palanca: 'Altas BAF Movistar Convergente',
+    tramos: { tramo1: '40%', tramo2: '50%', tramo3: '-', bonif: '-' },
+    matches: ['Alta BAF Convergente', 'Altas BAF Movistar Convergente', 'baf convergente']
+  },
+  {
+    key: 'baf_conv_ms_disp',
+    negocio: 'Fijo',
+    palanca: 'BAF Convergente MS / Dispositivos',
+    tramos: { tramo1: '-', tramo2: '-', tramo3: '-', bonif: '20%' },
+    matches: ['BAF Convergente MS / Dispositivos', 'baf convergente ms / dispositivos']
+  },
+  {
+    key: 'fibra_fttr',
+    negocio: 'Fijo',
+    palanca: 'Fibra FTTR por Tienda',
+    tramos: { tramo1: '200 €', tramo2: '-', tramo3: '-', bonif: '-' },
+    matches: ['FTTR', 'Fibra FTTR por Tienda', 'fttr por tienda']
+  },
+  {
+    key: 'rent_disp_seguros',
+    negocio: 'Móvil',
+    palanca: 'Rent/Dispositivos + Seguros',
+    tramos: { tramo1: '3,5%', tramo2: '4,5%', tramo3: '6,0%', bonif: '-' },
+    matches: ['Dispositivos + Seguros', 'Rent/Dispositivos + Seguros', 'Dispositivos + Seguro']
+  },
+  {
+    key: 'altas_futbol_tv',
+    negocio: 'Fijo',
+    palanca: 'Altas Fútbol/ Desarrollo TV por Tienda',
+    tramos: { tramo1: '300 €', tramo2: '500 €', tramo3: '-', bonif: '-' },
+    matches: ['Repo Fútbol', 'Altas Fútbol/ Desarrollo TV por Tienda', 'Repo Futbol', 'futbol por tienda']
+  }
+];
 
 // ── Tabs ────────────────────────────────────────────────────────────
 const TABS = [
@@ -18,12 +64,11 @@ const TABS = [
   { id: 'seguro',          label: 'Seguro',          emoji: '🛡️', color: '#10B981', grupo: 'SEGURO' },
   { id: 'mimovi',          label: 'miMovistar',      emoji: '🏠', color: '#7C3AED', grupo: 'MIMOVI' },
   { id: 'tv',              label: 'Suscripciones TV',emoji: '📺', color: '#D97706', grupo: 'TV' },
-  { id: 'prepago',         label: 'Prepago',         emoji: '💳', color: '#6366F1', grupo: 'Prepago' },
   { id: 'varios',          label: 'Varios',          emoji: '📦', color: '#8B5CF6', grupo: 'VARIOS' },
-  { id: 'repos',           label: 'Repos',           emoji: '🔁', color: '#0891B2', grupo: 'REPOS' },
+  { id: 'repos',           label: 'Arpu (Repos)',    emoji: '🔁', color: '#0891B2', grupo: 'REPOS' },
   { id: 'resto',           label: 'Resto BAF',       emoji: '📡', color: '#3B82F6', grupo: 'RESTO_BAF' },
   { id: 'traslado',        label: 'Traslado miMovistar', emoji: '🚚', color: '#7C3AED', grupo: 'TRASLADO' },
-  { id: 'extras',          label: 'Extras',          emoji: '⚡', color: '#10b981', grupo: 'EXTRAS' },
+  { id: 'extras',          label: 'PRV Territorial Tiendas', emoji: '⚡', color: '#10b981', grupo: 'EXTRAS' },
   { id: 'bonos_o2',        label: 'Bonos O2',        emoji: '🏆', color: '#005D82', grupo: 'BONOS_O2' },
 ]
 
@@ -49,8 +94,7 @@ const filterByTab = (sale: any, tabId: string): boolean => {
     case 'o2':              return val === 'o2' || val === 'o2 movilfree'
     case 'seguro':          return val === 'seguro'
     case 'mimovi':          return val === 'mimovi' || val === 'mimovistar'
-    case 'tv':              return val === 'tv' || val === 'suscripciones tv'
-    case 'prepago':         return val === 'prepago'
+    case 'tv':              return val === 'tv' || val === 'suscripciones TV'
     case 'varios':          return val === 'varios'
     case 'repos':           return val === 'repos'
     case 'resto':           return val === 'resto baf'
@@ -218,6 +262,8 @@ function GrupoClienteContent() {
   const [extraAssignments, setExtraAssignments] = useState<any[]>([])
   const [catalogs, setCatalogs] = useState<any>({})
   const [territorialO2Rules, setTerritorialO2Rules] = useState<any[]>([])
+  const [tiendaRules, setTiendaRules] = useState<any[]>([])
+  const [territorialRules, setTerritorialRules] = useState<any[]>([])
 
   const activePeriodObj = availablePeriods?.find((p: any) => p.period_key === activePeriodKey)
 
@@ -231,9 +277,16 @@ function GrupoClienteContent() {
       fetch(`/api/objetivos?periodKey=${activePeriodKey}&strictPeriod=1`).then(r => r.json()).catch(() => ({})),
       fetch(`/api/extras/assignments?periodKey=${activePeriodKey}`).then(r => r.json()).catch(() => ({})),
       fetch(`/api/catalogs?periodKey=${activePeriodKey}`).then(r => r.json()).catch(() => ({})),
-      fetch(`/api/territorial?periodKey=${activePeriodKey}`).then(r => r.json()).catch(() => ({ success: true, o2: [] })),
-    ]).then(([sData, pymeData, plusData, objData, extrasData, catData, territorialRes]) => {
-      if (territorialRes?.success) setTerritorialO2Rules(territorialRes.o2 || [])
+      fetch(`/api/territorial?periodKey=${activePeriodKey}`).then(r => r.json()).catch(() => ({ success: true, o2: [], tiendas: [] })),
+      fetch(`/api/tiendas-comisiones?periodKey=${activePeriodKey}`).then(r => r.json()).catch(() => ({ success: true, rules: [] })),
+    ]).then(([sData, pymeData, plusData, objData, extrasData, catData, territorialRes, tiendasRes]) => {
+      if (territorialRes?.success) {
+        setTerritorialO2Rules(territorialRes.o2 || [])
+        setTerritorialRules(territorialRes.tiendas || [])
+      }
+      if (tiendasRes?.success) {
+        setTiendaRules(tiendasRes.rules || [])
+      }
       if (sData?.success) {
         const rawSales = sData.logs || [];
         const mappedSales = rawSales.map((s: any) => {
@@ -263,6 +316,148 @@ function GrupoClienteContent() {
       }
     }).finally(() => setLoading(false))
   }, [activePeriodKey])
+
+  // Auxiliares para cálculo territorial
+  const parseNumber = (val: any): number => {
+    if (val === null || val === undefined) return 0;
+    if (typeof val === 'number') return isNaN(val) ? 0 : val;
+    let s = String(val).replace(/[^0-9.,\-]/g, '').trim();
+    s = s.replace(/\./g, '').replace(',', '.');
+    return parseFloat(s) || 0;
+  };
+
+  const findRuleInList = (palancaMatches: string[], rules: any[]) => {
+    const clean = (str: string) => String(str || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "").trim();
+    const cleanMatches = palancaMatches.map(m => clean(m));
+
+    return rules.find(r => {
+      const rName = clean(r.nombre);
+      return cleanMatches.some(m => rName === m || rName.includes(m) || m.includes(rName));
+    });
+  };
+
+  const getSalesCountForRule = (ruleName: string, ruleProductosCuentan: string) => {
+    let completed = 0;
+    const isPercentage = String(ruleName).toLowerCase().includes('dispositivos') || String(ruleName).toLowerCase().includes('seguro');
+
+    sales.forEach(s => {
+      if (String(s.vendedor || '').toLowerCase().includes('marta')) return;
+      if (s.anulado === 'Si' || s.anulado === 'Sí' || s.pendiente === 'Anulado') return;
+
+      if (matchesRule(s, ruleName, ruleProductosCuentan)) {
+        const val = isPercentage ? getValueForRule(s, ruleName, catalogs) : 1;
+        completed += val;
+      }
+
+      if (s.seguroImporte && Number(s.seguroImporte) > 0 && String(s.categoria || s.detalle || s.sheet || '').toLowerCase() !== 'seguro') {
+        const virtualSeguro = { ...s, categoria: 'seguro', detalle: 'seguro', cuota: Number(s.seguroImporte) };
+        if (matchesRule(virtualSeguro, ruleName, ruleProductosCuentan)) {
+          const val = isPercentage ? getValueForRule(virtualSeguro, ruleName, catalogs) : 1;
+          completed += val;
+        }
+      }
+    });
+
+    return completed;
+  };
+
+  const calculatedRows = useMemo(() => {
+    return STATIC_PALANCAS.map(p => {
+      const baseRule = findRuleInList(p.matches, tiendaRules);
+      const objetivo = baseRule ? (baseRule.objPrimerTramo || 0) : 0;
+      const terrRule = findRuleInList(p.matches, territorialRules);
+      
+      const t1Raw = terrRule ? terrRule.importe1 : p.tramos.tramo1;
+      const t2Raw = terrRule ? terrRule.importe2 : p.tramos.tramo2;
+      const t3Raw = p.tramos.tramo3;
+      const bonifRaw = p.tramos.bonif;
+
+      let ventas = 0;
+      if (baseRule) {
+        ventas = getSalesCountForRule(baseRule.nombre, baseRule.productosCuentan);
+      } else {
+        if (p.key === 'altas_baf') {
+          ventas = getSalesCountForRule('Alta BAF Total', 'Alta BAF Total, Alta BAF Convergente');
+        } else if (p.key === 'altas_baf_conv') {
+          ventas = getSalesCountForRule('Alta BAF Convergente', 'Alta BAF Convergente');
+        } else if (p.key === 'baf_conv_ms_disp') {
+          ventas = sales.filter(s => {
+            if (String(s.vendedor || '').toLowerCase().includes('marta')) return false;
+            if (s.anulado === 'Si' || s.anulado === 'Sí' || s.pendiente === 'Anulado') return false;
+            return String(s.categoria || s.detalle || s.sheet || '').toLowerCase() === 'rent';
+          }).length;
+        } else if (p.key === 'fibra_fttr') {
+          ventas = getSalesCountForRule('FTTR', 'Solución FTTR');
+        } else if (p.key === 'rent_disp_seguros') {
+          ventas = getSalesCountForRule('Dispositivos + Seguros', 'Dispositivos, Seguro');
+        } else if (p.key === 'altas_futbol_tv') {
+          ventas = getSalesCountForRule('Repo Fútbol', 'Extra Repos up destino Fútbol');
+        }
+      }
+
+      let pct = 0;
+      if (p.key === 'baf_conv_ms_disp') {
+        const bafConvRow = findRuleInList(['Alta BAF Convergente'], tiendaRules);
+        const bafConvObj = bafConvRow ? (bafConvRow.objPrimerTramo || 0) : 0;
+        const bafConvSales = getSalesCountForRule('Alta BAF Convergente', 'Alta BAF Convergente');
+        pct = bafConvObj > 0 ? (bafConvSales / bafConvObj) * 100 : 0;
+      } else {
+        pct = objetivo > 0 ? (ventas / objetivo) * 100 : 0;
+      }
+
+      let importe = 0;
+      let tramoAplicado = '';
+      const isPct = (str: string) => String(str).includes('%');
+      
+      if (p.key === 'baf_conv_ms_disp') {
+        if (pct >= 100) {
+          tramoAplicado = 'Bonif (20%)';
+          importe = ventas * 0.20;
+        }
+      } else if (p.key === 'rent_disp_seguros') {
+        if (pct >= 130) {
+          tramoAplicado = 'Tramo 3 (6%)';
+          importe = ventas * 0.06;
+        } else if (pct >= 115) {
+          tramoAplicado = 'Tramo 2 (4,5%)';
+          importe = ventas * 0.045;
+        } else if (pct >= 100) {
+          tramoAplicado = 'Tramo 1 (3,5%)';
+          importe = ventas * 0.035;
+        }
+      } else {
+        const obj1Val = objetivo;
+        const obj2Val = baseRule ? (baseRule.objSegundoTramo || 0) : 0;
+        const val1 = parseNumber(t1Raw);
+        const val2 = parseNumber(t2Raw);
+
+        if (obj2Val > 0 && ventas >= obj2Val) {
+          tramoAplicado = `Tramo 2 (${t2Raw})`;
+          importe = isPct(t2Raw) ? (ventas * (val2 / 100)) : val2;
+        } else if (obj1Val > 0 && ventas >= obj1Val) {
+          tramoAplicado = `Tramo 1 (${t1Raw})`;
+          importe = isPct(t1Raw) ? (ventas * (val1 / 100)) : val1;
+        }
+      }
+
+      return {
+        ...p,
+        objetivo,
+        ventas,
+        pct,
+        t1Raw,
+        t2Raw,
+        t3Raw,
+        bonifRaw,
+        tramoAplicado,
+        importe
+      };
+    });
+  }, [sales, tiendaRules, territorialRules, catalogs]);
+
+  const totalImporteTerritorial = useMemo(() => {
+    return calculatedRows.reduce((acc, row) => acc + row.importe, 0);
+  }, [calculatedRows]);
 
   const tab = TABS.find(t => t.id === activeTab) || TABS[0]
 
@@ -505,8 +700,11 @@ function GrupoClienteContent() {
       comSum += Number(ea.telecomRewardAmount || 0)
     })
 
+    // Sumar el total consolidado de la tabla territorial
+    comSum += totalImporteTerritorial
+
     return { globalCuotaTotal: cuotaSum, globalComisionTotal: comSum }
-  }, [sales, extraAssignments, catalogs, plusDash, basicoDash])
+  }, [sales, extraAssignments, catalogs, plusDash, basicoDash, totalImporteTerritorial])
 
   // ── Resolve extra channel code ──────────────────────────────────────
   const resolveExtraCode = (ea: any): string => {
@@ -746,6 +944,14 @@ function GrupoClienteContent() {
 
   // ── Extras tab content (separate render path) ────────────────────────
   const renderExtrasTab = () => {
+    const formatCurrency = (val: number) => {
+      return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(val);
+    };
+
+    const formatPercent = (val: number) => {
+      return new Intl.NumberFormat('es-ES', { maximumFractionDigits: 2, minimumFractionDigits: 2 }).format(val) + '%';
+    };
+
     // Lookup first source sale for NIF / phone / código
     const getSale = (ea: any): any => {
       try {
@@ -819,12 +1025,133 @@ function GrupoClienteContent() {
     }
 
     return (
-
       <>
+        {/* TABLA TERRITORIAL PDV MIRROR */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 18px', background: 'rgba(2, 132, 199, 0.08)', borderRadius: '12px 12px 0 0', border: '1px solid rgba(2, 132, 199, 0.25)', borderBottom: 'none' }}>
+            <span style={{ background: '#0284c7', color: '#fff', fontSize: 11, fontWeight: 800, padding: '3px 10px', borderRadius: 20, letterSpacing: 1 }}>TERRITORIAL PDV</span>
+            <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--light-text)' }}>Cálculo y auditoría del tramo territorial consolidado para los puntos de venta</span>
+          </div>
+          <div style={{ 
+            backgroundColor: 'var(--bg-card)', 
+            borderRadius: '0 0 12px 12px', 
+            border: '1px solid var(--border-color)', 
+            overflow: 'hidden', 
+            boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+          }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+              <thead>
+                <tr style={{ 
+                  background: 'linear-gradient(90deg, #0ea5e9, #0284c7)', 
+                  color: 'white',
+                  borderBottom: '1px solid var(--border-color)'
+                }}>
+                  <th style={{ padding: '10px 12px', fontWeight: 700 }}>Negocio</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 700 }}>Palanca</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 700, textAlign: 'center' }}>Objetivos</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 600, textAlign: 'center', fontSize: '10px', whiteSpace: 'normal', lineHeight: 1.1 }}>Tramo 1<br/>(&gt;=100% y &lt;115%)</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 600, textAlign: 'center', fontSize: '10px', whiteSpace: 'normal', lineHeight: 1.1 }}>Tramo 2<br/>(&gt;=115% y &lt;130%)</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 600, textAlign: 'center', fontSize: '10px', whiteSpace: 'normal', lineHeight: 1.1 }}>Tramo 3<br/>(&gt;=130%)</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 600, textAlign: 'center', fontSize: '10px', whiteSpace: 'normal', lineHeight: 1.1 }}>Bonificación<br/>(&gt;=100%)</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 700, textAlign: 'center' }}>Ventas</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 700, textAlign: 'center' }}>Porcentaje Ventas</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 700, textAlign: 'right' }}>Importe</th>
+                </tr>
+              </thead>
+              <tbody>
+                {calculatedRows.map((row) => {
+                  const isValueObjective = row.key === 'rent_disp_seguros';
+                  const isBafConvMsDisp = row.key === 'baf_conv_ms_disp';
+
+                  const displayObj = isBafConvMsDisp
+                    ? '-' 
+                    : (isValueObjective ? formatCurrency(row.objetivo) : row.objetivo);
+                  
+                  const displaySales = isValueObjective
+                    ? formatCurrency(row.ventas)
+                    : row.ventas;
+
+                  const displayPct = isBafConvMsDisp || row.objetivo > 0
+                    ? formatPercent(row.pct)
+                    : '-';
+
+                  const hasEarned = row.importe > 0;
+
+                  return (
+                    <tr 
+                      key={row.key} 
+                      style={{ 
+                        borderBottom: '1px solid var(--border-color)', 
+                        backgroundColor: 'transparent'
+                      }}
+                    >
+                      <td style={{ padding: '9px 12px', fontWeight: 600, color: 'var(--medium-gray)' }}>{row.negocio}</td>
+                      <td style={{ padding: '9px 12px', fontWeight: 700, color: 'var(--light-text)' }}>{row.palanca}</td>
+                      
+                      <td style={{ padding: '9px 12px', textAlign: 'center', fontWeight: 600, color: 'var(--light-text)' }}>
+                        {displayObj}
+                      </td>
+                      
+                      <td style={{ padding: '9px 12px', textAlign: 'center', color: row.tramoAplicado.includes('Tramo 1') ? '#10b981' : 'var(--medium-gray)', fontWeight: row.tramoAplicado.includes('Tramo 1') ? 700 : 400 }}>
+                        {row.t1Raw}
+                      </td>
+                      <td style={{ padding: '9px 12px', textAlign: 'center', color: row.tramoAplicado.includes('Tramo 2') ? '#10b981' : 'var(--medium-gray)', fontWeight: row.tramoAplicado.includes('Tramo 2') ? 700 : 400 }}>
+                        {row.t2Raw}
+                      </td>
+                      <td style={{ padding: '9px 12px', textAlign: 'center', color: row.tramoAplicado.includes('Tramo 3') ? '#10b981' : 'var(--medium-gray)', fontWeight: row.tramoAplicado.includes('Tramo 3') ? 700 : 400 }}>
+                        {row.t3Raw}
+                      </td>
+                      <td style={{ padding: '9px 12px', textAlign: 'center', color: row.tramoAplicado.includes('Bonif') ? '#10b981' : 'var(--medium-gray)', fontWeight: row.tramoAplicado.includes('Bonif') ? 700 : 400 }}>
+                        {row.bonifRaw}
+                      </td>
+
+                      <td style={{ padding: '9px 12px', textAlign: 'center', fontWeight: 700, color: '#00ADEF' }}>
+                        {displaySales}
+                      </td>
+                      
+                      <td style={{ 
+                        padding: '9px 12px', 
+                        textAlign: 'center', 
+                        fontWeight: 800, 
+                        color: row.pct >= 100 ? '#10b981' : (row.pct > 0 ? '#f59e0b' : 'var(--medium-gray)')
+                      }}>
+                        {displayPct}
+                      </td>
+                      
+                      <td style={{ 
+                        padding: '9px 12px', 
+                        textAlign: 'right', 
+                        fontWeight: 900, 
+                        color: hasEarned ? '#10b981' : 'var(--medium-gray)',
+                        fontSize: '13px',
+                        backgroundColor: hasEarned ? 'rgba(16, 185, 129, 0.05)' : 'transparent'
+                      }}>
+                        {formatCurrency(row.importe)}
+                      </td>
+                    </tr>
+                  )
+                })}
+
+                <tr style={{ 
+                  backgroundColor: 'rgba(0, 0, 0, 0.02)',
+                  borderTop: '2px solid var(--border-color)',
+                  fontWeight: 800
+                }}>
+                  <td colSpan={2} style={{ padding: '12px 12px', fontSize: '13px', color: 'var(--light-text)' }}>Total Consolidado Tiendas</td>
+                  <td colSpan={7}></td>
+                  <td style={{ padding: '12px 12px', textAlign: 'right', fontSize: '14px', color: '#10b981', fontWeight: 900 }}>
+                    {formatCurrency(totalImporteTerritorial)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         {/* KPIs */}
         <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
           {[
-            { v: extraAssignments.length, label: 'Extras totales', color: '#10b981' },
+            { v: extraAssignments.length, label: 'PRV Territorial Tiendas totales', color: '#10b981' },
             { v: fmt(extrasPlusTotal),   label: 'Total Plus',    color: '#34C759' },
             { v: fmt(extrasBasicoTotal), label: 'Total Básico',  color: 'var(--mercedes-cyan)' },
             { v: fmt(extrasGrandTotal),  label: 'Gran Total',    color: '#10b981' },
@@ -838,7 +1165,7 @@ function GrupoClienteContent() {
         {extrasPlus.length === 0 && extrasBasico.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 60, background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border-color)', color: 'var(--medium-gray)' }}>
             <div style={{ fontSize: 36, marginBottom: 12 }}>⚡</div>
-            <div style={{ fontSize: 16, fontWeight: 600 }}>No hay Incentivos Extra en el período activo.</div>
+            <div style={{ fontSize: 16, fontWeight: 600 }}>No hay incentivos o cálculos para PRV Territorial Tiendas.</div>
           </div>
         ) : (
           <>
@@ -847,7 +1174,7 @@ function GrupoClienteContent() {
             {/* Grand total */}
             <div style={{ marginTop: 8, padding: '18px 28px', background: 'rgba(16,185,129,0.08)', border: '2px solid rgba(16,185,129,0.3)', borderRadius: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <div style={{ fontSize: 13, color: 'var(--medium-gray)', marginBottom: 2 }}>⚡ Extras — GRAN TOTAL</div>
+                <div style={{ fontSize: 13, color: 'var(--medium-gray)', marginBottom: 2 }}>⚡ PRV Territorial Tiendas — GRAN TOTAL</div>
                 <div style={{ fontSize: 12, color: 'var(--medium-gray)' }}>{extraAssignments.length} extras activos</div>
               </div>
               <div style={{ textAlign: 'right' }}>
@@ -1122,7 +1449,7 @@ function GrupoClienteContent() {
     })
 
     if (rows.length === 0) {
-      const dataRow = sheet.addRow({ Grupo: 'Extras', Comercial: 'Sin extras' })
+      const dataRow = sheet.addRow({ Grupo: 'PRV Territorial Tiendas', Comercial: 'Sin extras' })
       dataRow.height = 22
       dataRow.eachCell(cell => {
         cell.font = { name: 'Segoe UI', size: 10 }
@@ -1216,14 +1543,14 @@ function GrupoClienteContent() {
     
     // Pestaña de extras
     const extrasRows = extraAssignments.map((ea: any) => ({
-      Grupo:    'Extras',
+      Grupo:    'PRV Territorial Tiendas',
       Comercial: ea.seller || '—',
       Cliente:   ea.customerName || '—',
       Regla:     ea.rule?.name || 'Extra Manual',
       Canal:     ea.rule?.channelType || '—',
       'Importe Comercial': ea.sellerRewardAmount || 0
     }))
-    addStyledExtrasSheet(wb, 'Extras', extrasRows)
+    addStyledExtrasSheet(wb, 'PRV Territorial Tiendas', extrasRows)
 
     try {
       const buffer = await wb.xlsx.writeBuffer()
@@ -1263,7 +1590,7 @@ function GrupoClienteContent() {
       } catch(e) {}
 
       allRows.push({
-        Grupo: '⚡ Extras',
+        Grupo: '⚡ PRV Territorial Tiendas',
         NIF: nif,
         Empresa: ea.customerName || '—',
         'Fecha Tram.': fch,
@@ -1351,7 +1678,7 @@ function GrupoClienteContent() {
     totalComisiones += extrasTotal
 
     sheet.addRow({
-      grupo: '⚡ Extras',
+      grupo: '⚡ PRV Territorial Tiendas',
       ventas: extrasVentas,
       cuota: 0,
       comision: extrasTotal
