@@ -334,13 +334,13 @@ function CommercialDashboard({ data, activeExtras = [], isComercial, isAdmin, ca
           <h3 style={{ fontSize: 16, color: '#333333', margin: 0 }}>Resumen por Grupo</h3>
         </div>
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14.5px' }}>
             <thead>
               <tr style={{ backgroundColor: '#00ADEF', color: '#FFFFFF' }}>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 'bold' }}>Grupo</th>
-                <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 'bold' }}>Nº Ventas</th>
-                <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 'bold' }}>Cuota Total (€)</th>
-                {isAdmin && <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 'bold' }}>Comisión</th>}
+                <th style={{ padding: '11px 16px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid rgba(255, 255, 255, 0.25)' }}>Grupo</th>
+                <th style={{ padding: '11px 16px', textAlign: 'center', fontWeight: 'bold', borderRight: '1px solid rgba(255, 255, 255, 0.25)' }}>Nº Ventas</th>
+                <th style={{ padding: '11px 16px', textAlign: 'right', fontWeight: 'bold', borderRight: isAdmin ? '1px solid rgba(255, 255, 255, 0.25)' : 'none' }}>Cuota Total (€)</th>
+                {isAdmin && <th style={{ padding: '11px 16px', textAlign: 'right', fontWeight: 'bold' }}>Comisión</th>}
               </tr>
             </thead>
             <tbody>
@@ -349,16 +349,18 @@ function CommercialDashboard({ data, activeExtras = [], isComercial, isAdmin, ca
                 const isEven = idx % 2 !== 0;
                 return (
                   <tr key={group.id} style={{ backgroundColor: isEven ? '#F4F9FD' : '#FFFFFF', borderBottom: '1px solid #E2E8F0', color: '#333333' }}>
-                    <td style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
-                      <span style={{ fontSize: '16px' }}>{group.icon}</span>
-                      {group.label}
+                    <td style={{ padding: '9px 16px', fontWeight: 600, borderRight: '1px solid #E2E8F0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '16px' }}>{group.icon}</span>
+                        {group.label}
+                      </div>
                     </td>
-                    <td style={{ padding: '10px 16px', textAlign: 'center' }}>{stats.count}</td>
-                    <td style={{ padding: '10px 16px', textAlign: 'right' }}>
+                    <td style={{ padding: '9px 16px', textAlign: 'center', borderRight: '1px solid #E2E8F0' }}>{stats.count}</td>
+                    <td style={{ padding: '9px 16px', textAlign: 'right', borderRight: isAdmin ? '1px solid #E2E8F0' : 'none' }}>
                       {stats.cuota > 0 ? `${stats.cuota.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : '-  €'}
                     </td>
                     {isAdmin && (
-                      <td style={{ padding: '10px 16px', textAlign: 'right', color: '#0078D4', fontWeight: 'bold' }}>
+                      <td style={{ padding: '9px 16px', textAlign: 'right', color: '#0078D4', fontWeight: 'bold' }}>
                         {stats.comision > 0 ? `${stats.comision.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : '-  €'}
                       </td>
                     )}
@@ -368,13 +370,13 @@ function CommercialDashboard({ data, activeExtras = [], isComercial, isAdmin, ca
             </tbody>
             <tfoot>
               <tr style={{ backgroundColor: '#E1F0FA', fontWeight: 'bold', color: '#333333' }}>
-                <td style={{ padding: '12px 16px', textTransform: 'uppercase' }}>TOTAL</td>
-                <td style={{ padding: '12px 16px', textAlign: 'center' }}>{totalSummarySales}</td>
-                <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                <td style={{ padding: '11px 16px', textTransform: 'uppercase', borderRight: '1px solid #CBD5E1' }}>TOTAL</td>
+                <td style={{ padding: '11px 16px', textAlign: 'center', borderRight: '1px solid #CBD5E1' }}>{totalSummarySales}</td>
+                <td style={{ padding: '11px 16px', textAlign: 'right', borderRight: isAdmin ? '1px solid #CBD5E1' : 'none' }}>
                   {totalSummaryCuota > 0 ? `${totalSummaryCuota.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : '-  €'}
                 </td>
                 {isAdmin && (
-                  <td style={{ padding: '12px 16px', textAlign: 'right', color: '#0078D4' }}>
+                  <td style={{ padding: '11px 16px', textAlign: 'right', color: '#0078D4' }}>
                     {totalSummaryComision > 0 ? `${totalSummaryComision.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : '-  €'}
                   </td>
                 )}
