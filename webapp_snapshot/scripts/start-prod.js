@@ -33,8 +33,13 @@ try {
     // Usamos el entorno actual, para que pille DATABASE_URL que apunte al volumen
     execSync('npx prisma db push --accept-data-loss --skip-generate', { stdio: 'inherit' });
     console.log('[Boot] Sincronización Prisma finalizada con éxito.');
+    
+    // Correr limpieza de stock cruzado en producción
+    console.log('[Boot] Corriendo limpieza de stock cruzado...');
+    execSync('node scripts/clean_cross_stock_prod.js', { stdio: 'inherit' });
+    console.log('[Boot] Limpieza de stock cruzado finalizada con éxito.');
 } catch (e) {
-    console.error('[Boot] Error sincronizando bd:', e.message);
+    console.error('[Boot] Error sincronizando bd o limpiando stock:', e.message);
 }
 
 const port = process.env.PORT || 3000;

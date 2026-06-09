@@ -44,3 +44,4 @@ prisma/temp_restore*
 scripts/*
 !scripts/start-prod.js
 !scripts/close_tracking.ts
+!scripts/clean_cross_stock_prod.js
