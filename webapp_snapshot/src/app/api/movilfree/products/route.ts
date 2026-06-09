@@ -40,7 +40,10 @@ export async function GET() {
       orderBy: { createdAt: 'desc' }
     })
     
-    const combined = [...finalItems, ...msItems]
+    const combined = [
+      ...finalItems.map(item => ({ ...item, isMovilFree: true })),
+      ...msItems.map(item => ({ ...item, isMovilFree: false }))
+    ]
     return NextResponse.json(combined)
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
@@ -50,6 +53,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const data = await req.json()
+    const movistarStores = ['Auxiliadora 45', 'Correhuela', 'Villamayor', 'Béjar']
     
     // Bulk Import
     if (Array.isArray(data) || Array.isArray(data.products)) {
@@ -93,7 +97,8 @@ export async function POST(req: Request) {
           });
         }
         
-        // Upsert stock in target store
+        // Upsert stock in target store (enforce 0 if store is a Movistar store)
+        const targetStock = movistarStores.includes(tienda) ? 0 : (Number(prod.stock) || 0)
         await prisma.movilFreeStock.upsert({
           where: {
             productId_tienda: {
@@ -102,12 +107,12 @@ export async function POST(req: Request) {
             }
           },
           update: {
-            cantidad: { increment: Number(prod.stock) || 0 }
+            cantidad: { increment: targetStock }
           },
           create: {
             productId: product.id,
             tienda: tienda,
-            cantidad: Number(prod.stock) || 0
+            cantidad: targetStock
           }
         })
         count++;
@@ -143,7 +148,8 @@ export async function POST(req: Request) {
       })
     }
     
-    // Upsert store specific stock
+    // Upsert store specific stock (enforce 0 if store is a Movistar store)
+    const targetStock = movistarStores.includes(tienda) ? 0 : (Number(data.stock) || 0)
     await prisma.movilFreeStock.upsert({
       where: {
         productId_tienda: {
@@ -152,12 +158,12 @@ export async function POST(req: Request) {
         }
       },
       update: {
-        cantidad: { increment: Number(data.stock) || 0 }
+        cantidad: { increment: targetStock }
       },
       create: {
         productId: product.id,
         tienda: tienda,
-        cantidad: Number(data.stock) || 0
+        cantidad: targetStock
       }
     })
     

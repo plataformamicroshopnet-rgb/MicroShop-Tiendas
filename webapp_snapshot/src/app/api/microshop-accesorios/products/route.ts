@@ -23,7 +23,10 @@ export async function GET() {
         createdAt: 'desc'
       }
     })
-    const combined = [...items, ...mfItems]
+    const combined = [
+      ...items.map(item => ({ ...item, isMovilFree: false })),
+      ...mfItems.map(item => ({ ...item, isMovilFree: true }))
+    ]
     return NextResponse.json(combined)
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
@@ -73,7 +76,8 @@ export async function POST(req: Request) {
           })
         }
         
-        // Upsert stock for this specific store
+        // Upsert stock for this specific store (enforce 0 if store is O2)
+        const targetStock = tienda === 'O2' ? 0 : (Number(p.stock) || 0)
         await prisma.microShopStock.upsert({
           where: {
             productId_tienda: {
@@ -82,12 +86,12 @@ export async function POST(req: Request) {
             }
           },
           update: {
-            cantidad: { increment: Number(p.stock) || 0 }
+            cantidad: { increment: targetStock }
           },
           create: {
             productId: product.id,
             tienda: tienda,
-            cantidad: Number(p.stock) || 0
+            cantidad: targetStock
           }
         })
         count++
@@ -128,7 +132,8 @@ export async function POST(req: Request) {
       })
     }
     
-    // Update stock in store
+    // Update stock in store (enforce 0 if store is O2)
+    const targetStock = tienda === 'O2' ? 0 : (Number(data.stock) || 0)
     await prisma.microShopStock.upsert({
       where: {
         productId_tienda: {
@@ -137,12 +142,12 @@ export async function POST(req: Request) {
         }
       },
       update: {
-        cantidad: { increment: Number(data.stock) || 0 }
+        cantidad: { increment: targetStock }
       },
       create: {
         productId: product.id,
         tienda: tienda,
-        cantidad: Number(data.stock) || 0
+        cantidad: targetStock
       }
     })
     

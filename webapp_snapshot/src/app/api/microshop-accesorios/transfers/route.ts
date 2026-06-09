@@ -51,6 +51,11 @@ export async function POST(req: Request) {
     // Check if it belongs to MovilFree
     const isMovilFree = await prisma.movilFreeProduct.findUnique({ where: { id: productId } })
     if (isMovilFree) {
+      const movistarStores = ['Auxiliadora 45', 'Correhuela', 'Villamayor', 'Béjar']
+      if (movistarStores.includes(destino)) {
+        return NextResponse.json({ error: 'Los productos de Movilfree no se pueden traspasar a tiendas Movistar' }, { status: 400 })
+      }
+
       const sourceStock = await prisma.movilFreeStock.findUnique({
         where: {
           productId_tienda: {
@@ -118,6 +123,10 @@ export async function POST(req: Request) {
     }
 
     // Default to MicroShop
+    if (destino === 'O2') {
+      return NextResponse.json({ error: 'Los accesorios de MicroShop no se pueden traspasar a la tienda Movilfree' }, { status: 400 })
+    }
+
     const sourceStock = await prisma.microShopStock.findUnique({
       where: {
         productId_tienda: {

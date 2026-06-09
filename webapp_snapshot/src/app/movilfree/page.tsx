@@ -23,6 +23,7 @@ type Product = {
   createdAt: string
   imei?: string
   stocks: ProductStock[]
+  isMovilFree?: boolean
 }
 
 type Client = { id: string; nif: string; nombre: string; direccion?: string; poblacion?: string; provincia?: string; cp?: string; movil?: string; fijo?: string; email: string; totalComprado: number }
@@ -107,12 +108,20 @@ export default function MovilFreeApp() {
   const formatMoney = (val: number) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(val)
 
   const getStock = (product: Product, storeName: string): number => {
+    const movistarStores = ['Auxiliadora 45', 'Correhuela', 'Villamayor', 'Béjar']
+    if (product.isMovilFree && movistarStores.includes(storeName)) {
+      return 0
+    }
+    if (!product.isMovilFree && storeName === 'O2') {
+      return 0
+    }
     const stockItem = product.stocks?.find((s) => s.tienda === storeName)
     return stockItem ? stockItem.cantidad : 0
   }
 
   const getTotalStock = (product: Product): number => {
-    return product.stocks?.reduce((acc, s) => acc + s.cantidad, 0) || 0
+    const stores = ['Auxiliadora 45', 'Correhuela', 'Villamayor', 'Béjar', 'O2']
+    return stores.reduce((acc, store) => acc + getStock(product, store), 0)
   }
 
   // --- Subcomponents ---

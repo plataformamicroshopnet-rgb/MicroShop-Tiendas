@@ -8,6 +8,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const id = resolvedParams.id
   try {
     const data = await req.json()
+    const movistarStores = ['Auxiliadora 45', 'Correhuela', 'Villamayor', 'Béjar']
     
     // Check if it belongs to MovilFree
     const isMovilFree = await prisma.movilFreeProduct.findUnique({ where: { id: id } })
@@ -24,6 +25,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       })
       
       if (data.tienda !== undefined && data.stock !== undefined) {
+        // Enforce 0 stock if target store is a Movistar store
+        const targetStock = movistarStores.includes(data.tienda) ? 0 : Number(data.stock)
         await prisma.movilFreeStock.upsert({
           where: {
             productId_tienda: {
@@ -32,12 +35,12 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
             }
           },
           update: {
-            cantidad: Number(data.stock)
+            cantidad: targetStock
           },
           create: {
             productId: id,
             tienda: data.tienda,
-            cantidad: Number(data.stock)
+            cantidad: targetStock
           }
         })
       }
@@ -62,6 +65,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     })
     
     if (data.tienda !== undefined && data.stock !== undefined) {
+      // Enforce 0 stock if target store is O2
+      const targetStock = data.tienda === 'O2' ? 0 : Number(data.stock)
       await prisma.microShopStock.upsert({
         where: {
           productId_tienda: {
@@ -70,12 +75,12 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           }
         },
         update: {
-          cantidad: Number(data.stock)
+          cantidad: targetStock
         },
         create: {
           productId: id,
           tienda: data.tienda,
-          cantidad: Number(data.stock)
+          cantidad: targetStock
         }
       })
     }
