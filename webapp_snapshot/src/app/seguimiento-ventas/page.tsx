@@ -38,6 +38,15 @@ export default function SeguimientoVentasPage() {
 
   const cards = [
     {
+      title: 'Ventas Tiendas',
+      description: 'Acceso al módulo principal de registro, tracking y gestión de ventas del canal.',
+      icon: Briefcase,
+      action: () => router.push('/ventas-tiendas'),
+      color: 'rgba(59,130,246,0.1)',
+      textColor: '#3b82f6',
+      permission: 'CARD_VENTAS_TIENDAS'
+    },
+    {
       title: 'Avance de Palancas',
       description: 'Acceso directo a las hojas secundarias de operaciones (Cloud, Novac, Portas, etc.).',
       icon: Package,
