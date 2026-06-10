@@ -47,8 +47,25 @@ export default function StockPage() {
 
   const parseNumber = (val: string) => {
     if (!val) return 0
-    const clean = val.replace(/€/g, '').replace(/%/g, '').replace(/\s/g, '').replace(',', '.')
-    const num = parseFloat(clean)
+    let s = val.replace(/[€%\s]/g, '').trim()
+    const lastComma = s.lastIndexOf(',')
+    const lastDot = s.lastIndexOf('.')
+    
+    if (lastComma > -1 && lastDot > -1) {
+      if (lastComma > lastDot) {
+        s = s.replace(/\./g, '').replace(/,/g, '.')
+      } else {
+        s = s.replace(/,/g, '')
+      }
+    } else if (lastComma > -1) {
+      s = s.replace(/,/g, '.')
+    } else if (lastDot > -1) {
+      const parts = s.split('.')
+      if (parts.length === 2 && parts[1].length === 3) {
+        s = s.replace(/\./g, '')
+      }
+    }
+    const num = parseFloat(s)
     return isNaN(num) ? 0 : num
   }
 
