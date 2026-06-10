@@ -1309,23 +1309,23 @@ export default function MovilFreeApp() {
                           <td style={{ padding: 10, textAlign: 'center' }}><input value={editProdData?.imei || ''} maxLength={15} onChange={e => setEditProdData({...editProdData, imei: e.target.value.replace(/\D/g,'')})} style={{ width: 110, padding: 4, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center', fontSize: 13, fontFamily: 'monospace' }} /></td>
                           {/* Auxiliadora */}
                           <td style={{ padding: 10, textAlign: 'center' }}>
-                            <input type="number" value={editProdData?.stocks?.['Auxiliadora 45'] ?? 0} onChange={e => setEditProdData({...editProdData, stocks: { ...editProdData.stocks, 'Auxiliadora 45': Number(e.target.value) }})} style={{ width: 50, textAlign: 'center', border: '1px solid #ff80ab', borderRadius: 4, padding: 2 }} />
+                            <input type="number" disabled={!isGlobalUser && userStore !== 'Auxiliadora 45'} value={editProdData?.stocks?.['Auxiliadora 45'] ?? 0} onChange={e => setEditProdData({...editProdData, stocks: { ...editProdData.stocks, 'Auxiliadora 45': Number(e.target.value) }})} style={{ width: 50, textAlign: 'center', border: '1px solid #ff80ab', borderRadius: 4, padding: 2, opacity: (!isGlobalUser && userStore !== 'Auxiliadora 45') ? 0.6 : 1, backgroundColor: (!isGlobalUser && userStore !== 'Auxiliadora 45') ? '#f0f0f0' : 'white' }} />
                           </td>
                           {/* Correhuela */}
                           <td style={{ padding: 10, textAlign: 'center' }}>
-                            <input type="number" value={editProdData?.stocks?.['Correhuela'] ?? 0} onChange={e => setEditProdData({...editProdData, stocks: { ...editProdData.stocks, 'Correhuela': Number(e.target.value) }})} style={{ width: 50, textAlign: 'center', border: '1px solid #ff80ab', borderRadius: 4, padding: 2 }} />
+                            <input type="number" disabled={!isGlobalUser && userStore !== 'Correhuela'} value={editProdData?.stocks?.['Correhuela'] ?? 0} onChange={e => setEditProdData({...editProdData, stocks: { ...editProdData.stocks, 'Correhuela': Number(e.target.value) }})} style={{ width: 50, textAlign: 'center', border: '1px solid #ff80ab', borderRadius: 4, padding: 2, opacity: (!isGlobalUser && userStore !== 'Correhuela') ? 0.6 : 1, backgroundColor: (!isGlobalUser && userStore !== 'Correhuela') ? '#f0f0f0' : 'white' }} />
                           </td>
                           {/* Villamayor */}
                           <td style={{ padding: 10, textAlign: 'center' }}>
-                            <input type="number" value={editProdData?.stocks?.['Villamayor'] ?? 0} onChange={e => setEditProdData({...editProdData, stocks: { ...editProdData.stocks, 'Villamayor': Number(e.target.value) }})} style={{ width: 50, textAlign: 'center', border: '1px solid #ff80ab', borderRadius: 4, padding: 2 }} />
+                            <input type="number" disabled={!isGlobalUser && userStore !== 'Villamayor'} value={editProdData?.stocks?.['Villamayor'] ?? 0} onChange={e => setEditProdData({...editProdData, stocks: { ...editProdData.stocks, 'Villamayor': Number(e.target.value) }})} style={{ width: 50, textAlign: 'center', border: '1px solid #ff80ab', borderRadius: 4, padding: 2, opacity: (!isGlobalUser && userStore !== 'Villamayor') ? 0.6 : 1, backgroundColor: (!isGlobalUser && userStore !== 'Villamayor') ? '#f0f0f0' : 'white' }} />
                           </td>
                           {/* Béjar */}
                           <td style={{ padding: 10, textAlign: 'center' }}>
-                            <input type="number" value={editProdData?.stocks?.['Béjar'] ?? 0} onChange={e => setEditProdData({...editProdData, stocks: { ...editProdData.stocks, 'Béjar': Number(e.target.value) }})} style={{ width: 50, textAlign: 'center', border: '1px solid #ff80ab', borderRadius: 4, padding: 2 }} />
+                            <input type="number" disabled={!isGlobalUser && userStore !== 'Béjar'} value={editProdData?.stocks?.['Béjar'] ?? 0} onChange={e => setEditProdData({...editProdData, stocks: { ...editProdData.stocks, 'Béjar': Number(e.target.value) }})} style={{ width: 50, textAlign: 'center', border: '1px solid #ff80ab', borderRadius: 4, padding: 2, opacity: (!isGlobalUser && userStore !== 'Béjar') ? 0.6 : 1, backgroundColor: (!isGlobalUser && userStore !== 'Béjar') ? '#f0f0f0' : 'white' }} />
                           </td>
                           {/* Movilfree */}
                           <td style={{ padding: 10, textAlign: 'center' }}>
-                            <input type="number" value={editProdData?.stocks?.['O2'] ?? 0} onChange={e => setEditProdData({...editProdData, stocks: { ...editProdData.stocks, 'O2': Number(e.target.value) }})} style={{ width: 50, textAlign: 'center', border: '1px solid #ff80ab', borderRadius: 4, padding: 2 }} />
+                            <input type="number" disabled={!isGlobalUser && userStore !== 'O2'} value={editProdData?.stocks?.['O2'] ?? 0} onChange={e => setEditProdData({...editProdData, stocks: { ...editProdData.stocks, 'O2': Number(e.target.value) }})} style={{ width: 50, textAlign: 'center', border: '1px solid #ff80ab', borderRadius: 4, padding: 2, opacity: (!isGlobalUser && userStore !== 'O2') ? 0.6 : 1, backgroundColor: (!isGlobalUser && userStore !== 'O2') ? '#f0f0f0' : 'white' }} />
                           </td>
                           {/* Total Stock */}
                           <td style={{ padding: 10, textAlign: 'center', fontWeight: 'bold', color: fuchsia }}>

@@ -1264,35 +1264,35 @@ export default function MicroShopAccesoriosApp() {
                             {/* Stock Columns */}
                             <td style={{ padding: 10, textAlign: 'center' }}>
                               {isEditing ? (
-                                <input type="number" value={editProdData?.stocks?.['Auxiliadora 45'] ?? 0} onChange={(e) => setEditProdData({ ...editProdData, stocks: { ...editProdData.stocks, 'Auxiliadora 45': Number(e.target.value) } })} style={{ width: 50, textAlign: 'center', border: '1px solid #90caf9', borderRadius: 4, padding: 2 }} />
+                                <input type="number" disabled={!isGlobalUser && userStore !== 'Auxiliadora 45'} value={editProdData?.stocks?.['Auxiliadora 45'] ?? 0} onChange={(e) => setEditProdData({ ...editProdData, stocks: { ...editProdData.stocks, 'Auxiliadora 45': Number(e.target.value) } })} style={{ width: 50, textAlign: 'center', border: '1px solid #90caf9', borderRadius: 4, padding: 2, opacity: (!isGlobalUser && userStore !== 'Auxiliadora 45') ? 0.6 : 1, backgroundColor: (!isGlobalUser && userStore !== 'Auxiliadora 45') ? '#f0f0f0' : 'white' }} />
                               ) : (
                                 getStock(p, 'Auxiliadora 45')
                               )}
                             </td>
                             <td style={{ padding: 10, textAlign: 'center' }}>
                               {isEditing ? (
-                                <input type="number" value={editProdData?.stocks?.['Correhuela'] ?? 0} onChange={(e) => setEditProdData({ ...editProdData, stocks: { ...editProdData.stocks, 'Correhuela': Number(e.target.value) } })} style={{ width: 50, textAlign: 'center', border: '1px solid #90caf9', borderRadius: 4, padding: 2 }} />
+                                <input type="number" disabled={!isGlobalUser && userStore !== 'Correhuela'} value={editProdData?.stocks?.['Correhuela'] ?? 0} onChange={(e) => setEditProdData({ ...editProdData, stocks: { ...editProdData.stocks, 'Correhuela': Number(e.target.value) } })} style={{ width: 50, textAlign: 'center', border: '1px solid #90caf9', borderRadius: 4, padding: 2, opacity: (!isGlobalUser && userStore !== 'Correhuela') ? 0.6 : 1, backgroundColor: (!isGlobalUser && userStore !== 'Correhuela') ? '#f0f0f0' : 'white' }} />
                               ) : (
                                 getStock(p, 'Correhuela')
                               )}
                             </td>
                             <td style={{ padding: 10, textAlign: 'center' }}>
                               {isEditing ? (
-                                <input type="number" value={editProdData?.stocks?.['Villamayor'] ?? 0} onChange={(e) => setEditProdData({ ...editProdData, stocks: { ...editProdData.stocks, 'Villamayor': Number(e.target.value) } })} style={{ width: 50, textAlign: 'center', border: '1px solid #90caf9', borderRadius: 4, padding: 2 }} />
+                                <input type="number" disabled={!isGlobalUser && userStore !== 'Villamayor'} value={editProdData?.stocks?.['Villamayor'] ?? 0} onChange={(e) => setEditProdData({ ...editProdData, stocks: { ...editProdData.stocks, 'Villamayor': Number(e.target.value) } })} style={{ width: 50, textAlign: 'center', border: '1px solid #90caf9', borderRadius: 4, padding: 2, opacity: (!isGlobalUser && userStore !== 'Villamayor') ? 0.6 : 1, backgroundColor: (!isGlobalUser && userStore !== 'Villamayor') ? '#f0f0f0' : 'white' }} />
                               ) : (
                                 getStock(p, 'Villamayor')
                               )}
                             </td>
                             <td style={{ padding: 10, textAlign: 'center' }}>
                               {isEditing ? (
-                                <input type="number" value={editProdData?.stocks?.['Béjar'] ?? 0} onChange={(e) => setEditProdData({ ...editProdData, stocks: { ...editProdData.stocks, 'Béjar': Number(e.target.value) } })} style={{ width: 50, textAlign: 'center', border: '1px solid #90caf9', borderRadius: 4, padding: 2 }} />
+                                <input type="number" disabled={!isGlobalUser && userStore !== 'Béjar'} value={editProdData?.stocks?.['Béjar'] ?? 0} onChange={(e) => setEditProdData({ ...editProdData, stocks: { ...editProdData.stocks, 'Béjar': Number(e.target.value) } })} style={{ width: 50, textAlign: 'center', border: '1px solid #90caf9', borderRadius: 4, padding: 2, opacity: (!isGlobalUser && userStore !== 'Béjar') ? 0.6 : 1, backgroundColor: (!isGlobalUser && userStore !== 'Béjar') ? '#f0f0f0' : 'white' }} />
                               ) : (
                                 getStock(p, 'Béjar')
                               )}
                             </td>
                             <td style={{ padding: 10, textAlign: 'center' }}>
                               {isEditing ? (
-                                <input type="number" value={editProdData?.stocks?.['O2'] ?? 0} onChange={(e) => setEditProdData({ ...editProdData, stocks: { ...editProdData.stocks, 'O2': Number(e.target.value) } })} style={{ width: 50, textAlign: 'center', border: '1px solid #90caf9', borderRadius: 4, padding: 2 }} />
+                                <input type="number" disabled={!isGlobalUser && userStore !== 'O2'} value={editProdData?.stocks?.['O2'] ?? 0} onChange={(e) => setEditProdData({ ...editProdData, stocks: { ...editProdData.stocks, 'O2': Number(e.target.value) } })} style={{ width: 50, textAlign: 'center', border: '1px solid #90caf9', borderRadius: 4, padding: 2, opacity: (!isGlobalUser && userStore !== 'O2') ? 0.6 : 1, backgroundColor: (!isGlobalUser && userStore !== 'O2') ? '#f0f0f0' : 'white' }} />
                               ) : (
                                 getStock(p, 'O2')
                               )}
