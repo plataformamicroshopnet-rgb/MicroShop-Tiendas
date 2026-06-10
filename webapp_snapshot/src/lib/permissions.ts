@@ -64,6 +64,7 @@ export function can(user: any, permission: string): boolean {
   if (permission === 'EDIT_SALES' || permission === 'CANCEL_SALES') return activePerms.includes('CARD_REGISTRO_OPERACIONES');
   if (permission === 'MANAGE_CATALOG') return activePerms.includes('CARD_CATALOGOS');
   if (permission === 'CLOSE_MONTH') return activePerms.includes('CLOSE_MONTH'); // Mantenemos el nombre original si hace falta
+  if (permission === 'CARD_DIR_MOD') return activePerms.includes('CARD_DIR_MOD') || activePerms.includes('HUB_SEGUIMIENTO') || user.role === 'JEFE DE VENTAS';
 
   // Mapeos temporales de retrocompatibilidad unificados en can()
   if (permission === 'MODULE_TIENDAS') return activePerms.includes('HUB_TIENDAS');
