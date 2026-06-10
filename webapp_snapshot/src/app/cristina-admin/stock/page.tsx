@@ -371,6 +371,11 @@ export default function StockPage() {
     return matrix
   }
 
+  const getTabDisplayName = (cat: string) => {
+    if (cat === 'Accesorios') return 'Accesorios Venta Rápida (Total)'
+    return cat
+  }
+
   const totalsMatrix = getTotalsByStoreAndCategory()
   const formatEuro = (val: number) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(val)
 
@@ -401,7 +406,7 @@ export default function StockPage() {
               boxShadow: activeTab === cat ? '0 4px 6px rgba(0, 173, 239, 0.2)' : 'none'
             }}
           >
-            {cat}
+            {getTabDisplayName(cat)}
           </button>
         ))}
       </div>
@@ -422,7 +427,7 @@ export default function StockPage() {
                      <div style={{ padding: '16px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
                             <span style={{ color: '#475569' }}>Accesorios Venta Rápida (Total)</span>
-                            <span style={{ fontWeight: 'bold' }}>{formatEuro(accesoriosHubTotals.TotalValor)}</span>
+                            <span style={{ fontWeight: 'bold' }}>{formatEuro(totalsMatrix['Accesorios'].Valor)}</span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
                             <span style={{ color: '#475569' }}>Villamayor</span>
@@ -448,7 +453,7 @@ export default function StockPage() {
                      <div style={{ padding: '16px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #F1F5F9', background: '#DBEAFE', borderRadius: 4, paddingLeft: 8, paddingRight: 8, marginBottom: 4 }}>
                             <span style={{ color: '#1E3A8A', fontWeight: 'bold' }}>Total Accesorios</span>
-                            <span style={{ fontWeight: 'bold', color: '#1E3A8A' }}>{accesoriosHubTotals.TotalUds} uds / {formatEuro(accesoriosHubTotals.TotalValor)}</span>
+                            <span style={{ fontWeight: 'bold', color: '#1E3A8A' }}>{totalsMatrix['Accesorios'].Uds} uds / {formatEuro(totalsMatrix['Accesorios'].Valor)}</span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #F1F5F9', background: '#DBEAFE', borderRadius: 4, paddingLeft: 8, paddingRight: 8, marginBottom: 4 }}>
                             <span style={{ color: '#1E3A8A', fontWeight: 'bold' }}>Dispositivos Urgente Vender</span>
@@ -465,8 +470,8 @@ export default function StockPage() {
                         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', background: '#0EA5E9', borderRadius: 4, paddingLeft: 8, paddingRight: 8, color: '#FFF', marginTop: 12 }}>
                             <span style={{ fontWeight: 'bold', fontSize: 18 }}>TOTAL</span>
                             <span style={{ fontWeight: 'bold', fontSize: 18 }}>
-                                {accesoriosHubTotals.TotalUds + totalsMatrix['Rent'].Uds + totalsMatrix['Demos'].Uds} uds / 
-                                {formatEuro(accesoriosHubTotals.TotalValor + totalsMatrix['Rent'].Valor + totalsMatrix['Demos'].Valor)}
+                                {totalsMatrix['Accesorios'].Uds + totalsMatrix['Rent'].Uds + totalsMatrix['Demos'].Uds} uds / 
+                                {formatEuro(totalsMatrix['Accesorios'].Valor + totalsMatrix['Rent'].Valor + totalsMatrix['Demos'].Valor)}
                             </span>
                         </div>
                      </div>
@@ -488,7 +493,7 @@ export default function StockPage() {
               </div>
               <div style={{ display: 'flex', gap: '12px', alignItems: 'stretch' }}>
                 <div style={{ display: 'flex', alignItems: 'center', padding: '0 16px', background: '#F0FDF4', borderRadius: '8px', border: '1px solid #10B981', color: '#047857', fontWeight: 'bold' }}>
-                  Total Pestaña: {totalsMatrix[activeTab]?.Valor ? formatEuro(totalsMatrix[activeTab].Valor) : '0,00 €'}
+                  {activeTab === 'Accesorios' ? 'Total Importe: ' : 'Total Pestaña: '}{totalsMatrix[activeTab]?.Valor ? formatEuro(totalsMatrix[activeTab].Valor) : '0,00 €'}
                 </div>
                 <button 
                   onClick={handleAddRow}
