@@ -81,9 +81,49 @@ export default function StockPage() {
     setSaving(true)
     
     const lines = bulkText.split('\n').filter(l => l.trim())
+    if (lines.length === 0) {
+      setSaving(false)
+      return
+    }
+    
+    // Detect headers from the first line
+    const firstLine = lines[0] || ''
+    const headerParts = firstLine.split('\t').map(p => p.trim().toLowerCase())
+    const hasHeader = headerParts.some(p => 
+      p.includes('marca') || p.includes('modelo') || p.includes('terminal') || 
+      p.includes('producto') || p.includes('pvd') || p.includes('coste')
+    )
+
+    let colMap: any = {}
+    if (hasHeader) {
+      headerParts.forEach((part, idx) => {
+        if (part.includes('marca') || part.includes('modelo') || part.includes('terminal') || part.includes('producto')) {
+          colMap.producto = idx
+        } else if (part.includes('pvd') || part.includes('coste')) {
+          colMap.pvd = idx
+        } else if (part.includes('pvp')) {
+          colMap.pvp = idx
+        } else if (part.includes('correhuela')) {
+          colMap.correhuela = idx
+        } else if (part.includes('auxiliadora')) {
+          colMap.auxiliadora = idx
+        } else if (part.includes('bejar') || part.includes('béjar')) {
+          colMap.bejar = idx
+        } else if (part.includes('villamayor')) {
+          colMap.villamayor = idx
+        } else if (part.includes('movilfree') || part.includes('o2')) {
+          colMap.movilfree = idx
+        } else if (part.includes('observaciones') || part.includes('obs')) {
+          colMap.observaciones = idx
+        }
+      })
+    }
+
+    const startIdx = hasHeader ? 1 : 0
     const newItems: any[] = []
 
-    for (const line of lines) {
+    for (let i = startIdx; i < lines.length; i++) {
+      const line = lines[i]
       const parts = line.split('\t')
       if (parts.length < 2) continue 
       
@@ -100,30 +140,7 @@ export default function StockPage() {
         observaciones: ''
       }
 
-      if (activeTab === 'Dispositivos Urgente Vender') {
-        item.producto = parts[0]
-        item.pvd = parseNumber(parts[1])
-        item.udsCorrehuela = parseIntSafe(parts[2])
-        item.udsAuxiliadora = parseIntSafe(parts[3])
-        item.udsBejar = parseIntSafe(parts[4])
-        item.udsVillamayor = parseIntSafe(parts[5])
-      } else if (activeTab === 'Rent') {
-        item.producto = parts[0]
-        item.pvd = parseNumber(parts[1])
-        item.udsCorrehuela = parseIntSafe(parts[4])
-        item.udsAuxiliadora = parseIntSafe(parts[5])
-        item.udsBejar = parseIntSafe(parts[6])
-        item.udsVillamayor = parseIntSafe(parts[7])
-      } else if (activeTab === 'Demos') {
-        item.producto = parts[0]
-        item.pvd = parseNumber(parts[1])
-        item.udsCorrehuela = parseIntSafe(parts[3])
-        item.udsAuxiliadora = parseIntSafe(parts[4])
-        item.udsBejar = parseIntSafe(parts[5])
-        item.udsVillamayor = parseIntSafe(parts[6])
-        item.observaciones = parts[8] || ''
-        item.pvp = parseNumber(parts[10])
-      } else if (activeTab === 'Accesorios') {
+      if (activeTab === 'Accesorios') {
         const tienda = parts[0]?.toUpperCase() || ''
         item.producto = parts[1]
         item.pvd = parseNumber(parts[3])
@@ -140,10 +157,70 @@ export default function StockPage() {
         const comisionStr = parts[9] || '0,00 €'
         const materialStr = parts[10] || ''
         item.observaciones = JSON.stringify({ comision: comisionStr, material: materialStr })
+      } else {
+        // Dynamic column mapping for other tabs
+        let idxProducto = colMap.producto !== undefined ? colMap.producto : 0
+        let idxPVD = colMap.pvd !== undefined ? colMap.pvd : 1
+        let idxPVP = colMap.pvp !== undefined ? colMap.pvp : -1
+        let idxCorrehuela = colMap.correhuela !== undefined ? colMap.correhuela : -1
+        let idxAuxiliadora = colMap.auxiliadora !== undefined ? colMap.auxiliadora : -1
+        let idxBejar = colMap.bejar !== undefined ? colMap.bejar : -1
+        let idxVillamayor = colMap.villamayor !== undefined ? colMap.villamayor : -1
+        let idxMovilfree = colMap.movilfree !== undefined ? colMap.movilfree : -1
+        let idxObservaciones = colMap.observaciones !== undefined ? colMap.observaciones : -1
+
+        // Fallbacks if no header was detected or store columns weren't matched
+        if (idxCorrehuela === -1 || idxAuxiliadora === -1 || idxBejar === -1 || idxVillamayor === -1) {
+          if (activeTab === 'Dispositivos Urgente Vender') {
+            idxCorrehuela = 2
+            idxAuxiliadora = 3
+            idxBejar = 4
+            idxVillamayor = 5
+          } else if (activeTab === 'Rent') {
+            if (parts.length >= 8 && parts.length < 10) {
+              idxCorrehuela = 2
+              idxAuxiliadora = 3
+              idxBejar = 4
+              idxVillamayor = 5
+            } else {
+              idxCorrehuela = 4
+              idxAuxiliadora = 5
+              idxBejar = 6
+              idxVillamayor = 7
+            }
+          } else if (activeTab === 'Demos') {
+            idxCorrehuela = 3
+            idxAuxiliadora = 4
+            idxBejar = 5
+            idxVillamayor = 6
+            if (idxObservaciones === -1) idxObservaciones = 8
+            if (idxPVP === -1) idxPVP = 10
+          }
+        }
+
+        item.producto = parts[idxProducto] || 'Desconocido'
+        item.pvd = parseNumber(parts[idxPVD])
+        if (idxPVP !== -1) item.pvp = parseNumber(parts[idxPVP])
+
+        if (idxCorrehuela !== -1) item.udsCorrehuela = parseIntSafe(parts[idxCorrehuela])
+        if (idxAuxiliadora !== -1) item.udsAuxiliadora = parseIntSafe(parts[idxAuxiliadora])
+        if (idxBejar !== -1) item.udsBejar = parseIntSafe(parts[idxBejar])
+        if (idxVillamayor !== -1) item.udsVillamayor = parseIntSafe(parts[idxVillamayor])
+        if (idxMovilfree !== -1) item.udsMovilfree = parseIntSafe(parts[idxMovilfree])
+        if (idxObservaciones !== -1) item.observaciones = parts[idxObservaciones] || ''
       }
 
-      if (item.producto && item.producto.toLowerCase() !== 'marca y modelo de terminal' && item.producto.toLowerCase() !== 'accesorios') {
-          newItems.push(item)
+      // Filter out header row if it is still here or placeholder rows
+      const prodLower = (item.producto || '').toLowerCase()
+      if (
+        prodLower && 
+        prodLower !== 'marca y modelo' && 
+        prodLower !== 'marca y modelo de terminal' && 
+        prodLower !== 'accesorios' && 
+        prodLower !== 'desconocido' &&
+        prodLower !== 'producto'
+      ) {
+        newItems.push(item)
       }
     }
 
