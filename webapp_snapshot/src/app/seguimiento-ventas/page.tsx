@@ -123,6 +123,15 @@ export default function SeguimientoVentasPage() {
       action: () => router.push('/cristina-admin/stock'),
       color: 'rgba(14,165,233,0.1)',
       textColor: '#0ea5e9'
+    },
+    {
+      title: 'MOD (Media Operaciones Diaria)',
+      description: 'Comparativa de operaciones, importe medio y rentabilidad diaria.',
+      icon: TrendingUp,
+      action: () => router.push('/seguimiento-ventas/mod'),
+      color: 'rgba(34, 197, 94, 0.1)',
+      textColor: '#22c55e',
+      permission: 'CARD_DIR_MOD'
     }
   ]
 
