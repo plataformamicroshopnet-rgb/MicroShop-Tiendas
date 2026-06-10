@@ -24,7 +24,28 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         }
       })
       
-      if (data.tienda !== undefined && data.stock !== undefined) {
+      if (data.stocks !== undefined) {
+        for (const [storeName, qty] of Object.entries(data.stocks)) {
+          // Enforce 0 stock if target store is a Movistar store
+          const targetStock = movistarStores.includes(storeName) ? 0 : Number(qty)
+          await prisma.movilFreeStock.upsert({
+            where: {
+              productId_tienda: {
+                productId: id,
+                tienda: storeName
+              }
+            },
+            update: {
+              cantidad: targetStock
+            },
+            create: {
+              productId: id,
+              tienda: storeName,
+              cantidad: targetStock
+            }
+          })
+        }
+      } else if (data.tienda !== undefined && data.stock !== undefined) {
         // Enforce 0 stock if target store is a Movistar store
         const targetStock = movistarStores.includes(data.tienda) ? 0 : Number(data.stock)
         await prisma.movilFreeStock.upsert({
@@ -64,7 +85,26 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       }
     })
     
-    if (data.tienda !== undefined && data.stock !== undefined) {
+    if (data.stocks !== undefined) {
+      for (const [storeName, qty] of Object.entries(data.stocks)) {
+        await prisma.microShopStock.upsert({
+          where: {
+            productId_tienda: {
+              productId: id,
+              tienda: storeName
+            }
+          },
+          update: {
+            cantidad: Number(qty)
+          },
+          create: {
+            productId: id,
+            tienda: storeName,
+            cantidad: Number(qty)
+          }
+        })
+      }
+    } else if (data.tienda !== undefined && data.stock !== undefined) {
       await prisma.microShopStock.upsert({
         where: {
           productId_tienda: {

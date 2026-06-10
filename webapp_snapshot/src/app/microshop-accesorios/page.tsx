@@ -314,14 +314,10 @@ export default function MicroShopAccesoriosApp() {
   const handleSaveEditProduct = async () => {
     if (!editProdData) return
     try {
-      // Send selected store so quantity updates are tied to the active/selected store
       const res = await fetch(`/api/microshop-accesorios/products/${editingProductId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...editProdData,
-          tienda: selectedTienda,
-        }),
+        body: JSON.stringify(editProdData),
       })
       if (res.ok) {
         setEditingProductId(null)
@@ -382,6 +378,214 @@ export default function MicroShopAccesoriosApp() {
       alert(e.message)
     }
   }
+
+  const handleExportExcel = async () => {
+    try {
+      let ExcelJS = (await import('exceljs')) as any;
+      if (ExcelJS.default) {
+        ExcelJS = ExcelJS.default;
+      }
+      const workbook = new ExcelJS.Workbook();
+      
+      const filteredProds = products.filter((p) => {
+        const matchesSearch = p.nombre.toLowerCase().includes(searchInvProducts.toLowerCase())
+        if (!matchesSearch) return false
+        if (searchInvCategory !== 'Todas' && p.categoria !== searchInvCategory) return false
+        return true
+      });
+
+      // 1. GLOBAL SHEET
+      const globalSheet = workbook.addWorksheet('Resumen Global');
+      globalSheet.views = [{ showGridLines: true }];
+      
+      globalSheet.columns = [
+        { header: 'Producto', key: 'Producto', width: 35 },
+        { header: 'Categoría', key: 'Categoría', width: 15 },
+        { header: 'Coste PVD (sin IVA)', key: 'Coste', width: 18 },
+        { header: 'PVP (con IVA)', key: 'PVP', width: 15 },
+        { header: 'Beneficio Ud.', key: 'Beneficio', width: 15 },
+        { header: 'IMEI', key: 'IMEI', width: 18 },
+        { header: 'Auxiliadora', key: 'Auxiliadora', width: 13 },
+        { header: 'Correhuela', key: 'Correhuela', width: 13 },
+        { header: 'Villamayor', key: 'Villamayor', width: 13 },
+        { header: 'Béjar', key: 'Bejar', width: 13 },
+        { header: 'Movilfree', key: 'Movilfree', width: 13 },
+        { header: 'Total Stock', key: 'TotalStock', width: 13 }
+      ];
+
+      // Format Header Row
+      const headerRow = globalSheet.getRow(1);
+      headerRow.height = 28;
+      headerRow.eachCell((cell: any) => {
+        cell.font = { name: 'Segoe UI', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00ADEF' } }; // `#00ADEF`
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      });
+
+      // Add Data Rows to Global Sheet
+      const currencyFmt = '#,##0.00" €"';
+      filteredProds.forEach((p) => {
+        const costVal = p.coste || 0;
+        const pvpVal = p.precio * 1.21;
+        const profitVal = (p.precio || 0) - costVal;
+
+        globalSheet.addRow({
+          Producto: p.nombre,
+          Categoría: p.categoria,
+          Coste: costVal,
+          PVP: pvpVal,
+          Beneficio: profitVal,
+          IMEI: p.imei || '---',
+          Auxiliadora: getStock(p, 'Auxiliadora 45'),
+          Correhuela: getStock(p, 'Correhuela'),
+          Villamayor: getStock(p, 'Villamayor'),
+          Bejar: getStock(p, 'Béjar'),
+          Movilfree: getStock(p, 'O2'),
+          TotalStock: getTotalStock(p)
+        });
+      });
+
+      // Style Rows
+      globalSheet.eachRow({ includeEmpty: false }, (row: any, rowNumber: number) => {
+        if (rowNumber === 1) return;
+        row.height = 20;
+        const isEven = rowNumber % 2 === 0;
+
+        row.eachCell((cell: any, colNumber: number) => {
+          cell.font = { name: 'Segoe UI', size: 10 };
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: isEven ? 'FFF9FAFB' : 'FFFFFFFF' }
+          };
+          cell.border = {
+            bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            top: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+          };
+
+          if (colNumber === 1) {
+            cell.alignment = { vertical: 'middle', horizontal: 'left' };
+          } else if ([2, 6].includes(colNumber)) {
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+          } else if ([3, 4, 5].includes(colNumber)) {
+            cell.alignment = { vertical: 'middle', horizontal: 'right' };
+            cell.numFmt = currencyFmt;
+          } else {
+            // Stock numbers
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            cell.numFmt = '#,##0';
+          }
+        });
+      });
+
+      // Add Individual Store Sheets
+      const storesInfo = [
+        { key: 'Auxiliadora 45', sheetName: 'Auxiliadora 45' },
+        { key: 'Correhuela', sheetName: 'Correhuela' },
+        { key: 'Villamayor', sheetName: 'Villamayor' },
+        { key: 'Béjar', sheetName: 'Béjar' },
+        { key: 'O2', sheetName: 'Movilfree' }
+      ];
+
+      storesInfo.forEach((store) => {
+        const storeSheet = workbook.addWorksheet(store.sheetName);
+        storeSheet.views = [{ showGridLines: true }];
+
+        storeSheet.columns = [
+          { header: 'Producto', key: 'Producto', width: 35 },
+          { header: 'Categoría', key: 'Categoría', width: 15 },
+          { header: 'Coste PVD (sin IVA)', key: 'Coste', width: 18 },
+          { header: 'PVP (con IVA)', key: 'PVP', width: 15 },
+          { header: 'Beneficio Ud.', key: 'Beneficio', width: 15 },
+          { header: 'IMEI', key: 'IMEI', width: 18 },
+          { header: 'Stock', key: 'Stock', width: 12 }
+        ];
+
+        // Format Header Row
+        const storeHeader = storeSheet.getRow(1);
+        storeHeader.height = 28;
+        storeHeader.eachCell((cell: any) => {
+          cell.font = { name: 'Segoe UI', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF107C41' } }; // green `#107C41` for individual stores
+          cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        });
+
+        // Filter products for this store (stock > 0)
+        const storeProds = filteredProds.filter((p) => getStock(p, store.key) > 0);
+
+        storeProds.forEach((p) => {
+          const costVal = p.coste || 0;
+          const pvpVal = p.precio * 1.21;
+          const profitVal = (p.precio || 0) - costVal;
+
+          storeSheet.addRow({
+            Producto: p.nombre,
+            Categoría: p.categoria,
+            Coste: costVal,
+            PVP: pvpVal,
+            Beneficio: profitVal,
+            IMEI: p.imei || '---',
+            Stock: getStock(p, store.key)
+          });
+        });
+
+        // Style Store Rows
+        storeSheet.eachRow({ includeEmpty: false }, (row: any, rowNumber: number) => {
+          if (rowNumber === 1) return;
+          row.height = 20;
+          const isEven = rowNumber % 2 === 0;
+
+          row.eachCell((cell: any, colNumber: number) => {
+            cell.font = { name: 'Segoe UI', size: 10 };
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: isEven ? 'FFF4FBF7' : 'FFFFFFFF' }
+            };
+            cell.border = {
+              bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+              right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+              left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+              top: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+            };
+
+            if (colNumber === 1) {
+              cell.alignment = { vertical: 'middle', horizontal: 'left' };
+            } else if ([2, 6].includes(colNumber)) {
+              cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            } else if ([3, 4, 5].includes(colNumber)) {
+              cell.alignment = { vertical: 'middle', horizontal: 'right' };
+              cell.numFmt = currencyFmt;
+            } else {
+              cell.alignment = { vertical: 'middle', horizontal: 'center' };
+              cell.numFmt = '#,##0';
+            }
+          });
+        });
+      });
+
+      // Write and Download Excel File
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      
+      const objDate = new Date();
+      const mesName = objDate.toLocaleString('es-ES', { month: 'long' }).toLowerCase();
+      const agno = objDate.getFullYear();
+      const fileName = `inventario_accesorios_${mesName}_${agno}.xlsx`;
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error exporting stock to Excel:", error);
+      alert("Error al intentar exportar el inventario a Excel.");
+    }
+  };
 
   // Stock transfer handler
   const handleOpenTransfer = (p: Product) => {
@@ -913,7 +1117,27 @@ export default function MicroShopAccesoriosApp() {
                 </div>
               )}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, marginTop: 16 }}>
-                <h3 style={{ margin: 0, color: '#00adef', fontWeight: 'bold' }}>Inventario de Stock</h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <h3 style={{ margin: 0, color: '#00adef', fontWeight: 'bold' }}>Inventario de Stock</h3>
+                  <button
+                    onClick={handleExportExcel}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: 4,
+                      borderRadius: 6,
+                      transition: 'background 0.2s',
+                    }}
+                    onMouseOver={e => e.currentTarget.style.backgroundColor = '#f0fdf4'}
+                    onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                    title="Exportar Stock a Excel"
+                  >
+                    <img src="/excel_icon.png" alt="Excel" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+                  </button>
+                </div>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                   <span style={{ fontSize: 13, fontWeight: 'bold', color: '#555' }}>Filtrar por Categoría:</span>
                   <select value={searchInvCategory} onChange={(e) => setSearchInvCategory(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #90caf9', fontSize: 13, background: 'white', color: '#00adef', fontWeight: 'bold', outline: 'none' }}>
@@ -1003,42 +1227,50 @@ export default function MicroShopAccesoriosApp() {
                             
                             {/* Stock Columns */}
                             <td style={{ padding: 10, textAlign: 'center' }}>
-                              {isEditing && selectedTienda === 'Auxiliadora 45' ? (
-                                <input type="number" value={editProdData.stock} onChange={(e) => setEditProdData({ ...editProdData, stock: Number(e.target.value) })} style={{ width: 50 }} />
+                              {isEditing ? (
+                                <input type="number" value={editProdData?.stocks?.['Auxiliadora 45'] ?? 0} disabled={p.isMovilFree} onChange={(e) => setEditProdData({ ...editProdData, stocks: { ...editProdData.stocks, 'Auxiliadora 45': Number(e.target.value) } })} style={{ width: 50, textAlign: 'center', border: '1px solid #90caf9', borderRadius: 4, padding: 2 }} />
                               ) : (
                                 getStock(p, 'Auxiliadora 45')
                               )}
                             </td>
                             <td style={{ padding: 10, textAlign: 'center' }}>
-                              {isEditing && selectedTienda === 'Correhuela' ? (
-                                <input type="number" value={editProdData.stock} onChange={(e) => setEditProdData({ ...editProdData, stock: Number(e.target.value) })} style={{ width: 50 }} />
+                              {isEditing ? (
+                                <input type="number" value={editProdData?.stocks?.['Correhuela'] ?? 0} disabled={p.isMovilFree} onChange={(e) => setEditProdData({ ...editProdData, stocks: { ...editProdData.stocks, 'Correhuela': Number(e.target.value) } })} style={{ width: 50, textAlign: 'center', border: '1px solid #90caf9', borderRadius: 4, padding: 2 }} />
                               ) : (
                                 getStock(p, 'Correhuela')
                               )}
                             </td>
                             <td style={{ padding: 10, textAlign: 'center' }}>
-                              {isEditing && selectedTienda === 'Villamayor' ? (
-                                <input type="number" value={editProdData.stock} onChange={(e) => setEditProdData({ ...editProdData, stock: Number(e.target.value) })} style={{ width: 50 }} />
+                              {isEditing ? (
+                                <input type="number" value={editProdData?.stocks?.['Villamayor'] ?? 0} disabled={p.isMovilFree} onChange={(e) => setEditProdData({ ...editProdData, stocks: { ...editProdData.stocks, 'Villamayor': Number(e.target.value) } })} style={{ width: 50, textAlign: 'center', border: '1px solid #90caf9', borderRadius: 4, padding: 2 }} />
                               ) : (
                                 getStock(p, 'Villamayor')
                               )}
                             </td>
                             <td style={{ padding: 10, textAlign: 'center' }}>
-                              {isEditing && selectedTienda === 'Béjar' ? (
-                                <input type="number" value={editProdData.stock} onChange={(e) => setEditProdData({ ...editProdData, stock: Number(e.target.value) })} style={{ width: 50 }} />
+                              {isEditing ? (
+                                <input type="number" value={editProdData?.stocks?.['Béjar'] ?? 0} disabled={p.isMovilFree} onChange={(e) => setEditProdData({ ...editProdData, stocks: { ...editProdData.stocks, 'Béjar': Number(e.target.value) } })} style={{ width: 50, textAlign: 'center', border: '1px solid #90caf9', borderRadius: 4, padding: 2 }} />
                               ) : (
                                 getStock(p, 'Béjar')
                               )}
                             </td>
                             <td style={{ padding: 10, textAlign: 'center' }}>
-                              {isEditing && selectedTienda === 'O2' ? (
-                                <input type="number" value={editProdData.stock} onChange={(e) => setEditProdData({ ...editProdData, stock: Number(e.target.value) })} style={{ width: 50 }} />
+                              {isEditing ? (
+                                <input type="number" value={editProdData?.stocks?.['O2'] ?? 0} onChange={(e) => setEditProdData({ ...editProdData, stocks: { ...editProdData.stocks, 'O2': Number(e.target.value) } })} style={{ width: 50, textAlign: 'center', border: '1px solid #90caf9', borderRadius: 4, padding: 2 }} />
                               ) : (
                                 getStock(p, 'O2')
                               )}
                             </td>
                             <td style={{ padding: 10, textAlign: 'center', fontWeight: 'bold', color: '#00adef', background: '#f0f9ff' }}>
-                              {getTotalStock(p)}
+                              {isEditing ? (
+                                (editProdData?.stocks?.['Auxiliadora 45'] ?? 0) +
+                                (editProdData?.stocks?.['Correhuela'] ?? 0) +
+                                (editProdData?.stocks?.['Villamayor'] ?? 0) +
+                                (editProdData?.stocks?.['Béjar'] ?? 0) +
+                                (editProdData?.stocks?.['O2'] ?? 0)
+                              ) : (
+                                getTotalStock(p)
+                              )}
                             </td>
 
                             {/* Actions */}
@@ -1051,7 +1283,7 @@ export default function MicroShopAccesoriosApp() {
                                   </>
                                 ) : (
                                   <>
-                                    <button onClick={() => { setEditingProductId(p.id); setEditProdData({ nombre: p.nombre, categoria: p.categoria, coste: p.coste, precio: p.precio, stock: getStock(p, selectedTienda), imei: p.imei || '' }); }} style={{ background: '#e3f2fd', color: '#00adef', border: 'none', padding: '6px', borderRadius: 4, cursor: 'pointer' }}><Edit size={14} /></button>
+                                    <button onClick={() => { setEditingProductId(p.id); setEditProdData({ nombre: p.nombre, categoria: p.categoria, coste: p.coste, precio: p.precio, stocks: { 'Auxiliadora 45': getStock(p, 'Auxiliadora 45'), 'Correhuela': getStock(p, 'Correhuela'), 'Villamayor': getStock(p, 'Villamayor'), 'Béjar': getStock(p, 'Béjar'), 'O2': getStock(p, 'O2') }, imei: p.imei || '' }); }} style={{ background: '#e3f2fd', color: '#00adef', border: 'none', padding: '6px', borderRadius: 4, cursor: 'pointer' }}><Edit size={14} /></button>
                                     <button onClick={() => handleOpenTransfer(p)} style={{ background: '#e0f7fa', color: '#006064', border: 'none', padding: '6px', borderRadius: 4, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 2 }} title="Traspasar Stock"><ArrowLeftRight size={14} /> Traspasar</button>
                                     <button onClick={() => handleDeleteProduct(p.id)} style={{ background: '#ffebee', color: '#c62828', border: 'none', padding: '6px', borderRadius: 4, cursor: 'pointer' }}><Trash2 size={14} /></button>
                                   </>
