@@ -70,6 +70,15 @@ export default function TiendasHubPage() {
       bgIcon: 'linear-gradient(135deg, rgba(0, 173, 239, 0.15) 0%, rgba(0, 150, 200, 0.2) 100%)',
       colorIcon: 'var(--mercedes-cyan)',
       isMain: false
+    },
+    {
+      title: 'Control de Stock',
+      description: 'Gestión y control de inventario y almacén.',
+      icon: Package,
+      action: () => router.push('/cristina-admin/stock'),
+      bgIcon: 'linear-gradient(135deg, rgba(14, 165, 233, 0.15) 0%, rgba(2, 132, 199, 0.2) 100%)',
+      colorIcon: '#0ea5e9',
+      isMain: false
     }
   ]
 

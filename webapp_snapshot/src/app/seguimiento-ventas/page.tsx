@@ -115,6 +115,14 @@ export default function SeguimientoVentasPage() {
       action: () => router.push('/microshop-accesorios'),
       color: 'rgba(0,173,239,0.1)',
       textColor: 'var(--mercedes-cyan)'
+    },
+    {
+      title: 'Control de Stock',
+      description: 'Gestión y control de inventario y almacén.',
+      icon: Package,
+      action: () => router.push('/cristina-admin/stock'),
+      color: 'rgba(14,165,233,0.1)',
+      textColor: '#0ea5e9'
     }
   ]
 
