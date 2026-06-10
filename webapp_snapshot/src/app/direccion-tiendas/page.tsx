@@ -59,15 +59,7 @@ export default function DireccionTiendasPage() {
       textColor: 'var(--mercedes-cyan)',
       permission: 'CARD_DIR_PRODUCTOS'
     },
-    {
-      title: 'Seguimiento de Tramitación',
-      description: 'Monitorización y analítica de los productos vendidos y pendientes',
-      icon: LineChart,
-      action: () => router.push('/seguimiento-ventas/tramitacion'),
-      color: 'rgba(236, 72, 153, 0.1)',
-      textColor: '#ec4899',
-      permission: 'CARD_DIR_TRAMITACION'
-    },
+
 
     {
       title: 'Rentabilidad por Tiendas',
