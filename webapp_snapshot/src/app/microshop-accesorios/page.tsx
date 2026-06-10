@@ -400,6 +400,7 @@ export default function MicroShopAccesoriosApp() {
       
       globalSheet.columns = [
         { header: 'Producto', key: 'Producto', width: 35 },
+        { header: 'Fecha de Entrada', key: 'FechaEntrada', width: 18 },
         { header: 'Categoría', key: 'Categoría', width: 15 },
         { header: 'Coste PVD (sin IVA)', key: 'Coste', width: 18 },
         { header: 'PVP (con IVA)', key: 'PVP', width: 15 },
@@ -428,9 +429,11 @@ export default function MicroShopAccesoriosApp() {
         const costVal = p.coste || 0;
         const pvpVal = p.precio * 1.21;
         const profitVal = (p.precio || 0) - costVal;
+        const fechaEntrada = p.createdAt ? new Date(p.createdAt).toLocaleDateString('es-ES') : '---';
 
         globalSheet.addRow({
           Producto: p.nombre,
+          FechaEntrada: fechaEntrada,
           Categoría: p.categoria,
           Coste: costVal,
           PVP: pvpVal,
@@ -467,9 +470,9 @@ export default function MicroShopAccesoriosApp() {
 
           if (colNumber === 1) {
             cell.alignment = { vertical: 'middle', horizontal: 'left' };
-          } else if ([2, 6].includes(colNumber)) {
+          } else if ([2, 3, 7].includes(colNumber)) {
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
-          } else if ([3, 4, 5].includes(colNumber)) {
+          } else if ([4, 5, 6].includes(colNumber)) {
             cell.alignment = { vertical: 'middle', horizontal: 'right' };
             cell.numFmt = currencyFmt;
           } else {
@@ -495,6 +498,7 @@ export default function MicroShopAccesoriosApp() {
 
         storeSheet.columns = [
           { header: 'Producto', key: 'Producto', width: 35 },
+          { header: 'Fecha de Entrada', key: 'FechaEntrada', width: 18 },
           { header: 'Categoría', key: 'Categoría', width: 15 },
           { header: 'Coste PVD (sin IVA)', key: 'Coste', width: 18 },
           { header: 'PVP (con IVA)', key: 'PVP', width: 15 },
@@ -519,9 +523,11 @@ export default function MicroShopAccesoriosApp() {
           const costVal = p.coste || 0;
           const pvpVal = p.precio * 1.21;
           const profitVal = (p.precio || 0) - costVal;
+          const fechaEntrada = p.createdAt ? new Date(p.createdAt).toLocaleDateString('es-ES') : '---';
 
           storeSheet.addRow({
             Producto: p.nombre,
+            FechaEntrada: fechaEntrada,
             Categoría: p.categoria,
             Coste: costVal,
             PVP: pvpVal,
@@ -553,9 +559,9 @@ export default function MicroShopAccesoriosApp() {
 
             if (colNumber === 1) {
               cell.alignment = { vertical: 'middle', horizontal: 'left' };
-            } else if ([2, 6].includes(colNumber)) {
+            } else if ([2, 3, 7].includes(colNumber)) {
               cell.alignment = { vertical: 'middle', horizontal: 'center' };
-            } else if ([3, 4, 5].includes(colNumber)) {
+            } else if ([4, 5, 6].includes(colNumber)) {
               cell.alignment = { vertical: 'middle', horizontal: 'right' };
               cell.numFmt = currencyFmt;
             } else {

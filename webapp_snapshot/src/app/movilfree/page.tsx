@@ -211,6 +211,220 @@ export default function MovilFreeApp() {
     }
   }
 
+  const handleExportExcel = async () => {
+    try {
+      let ExcelJS = (await import('exceljs')) as any;
+      if (ExcelJS.default) {
+        ExcelJS = ExcelJS.default;
+      }
+      const workbook = new ExcelJS.Workbook();
+      
+      const filteredProds = products.filter((p) => {
+        const matchesSearch = p.nombre.toLowerCase().includes(searchInvProducts.toLowerCase())
+        if (!matchesSearch) return false
+        if (searchInvCategory !== 'Todas' && p.categoria !== searchInvCategory) return false
+        return true
+      });
+
+      // 1. GLOBAL SHEET
+      const globalSheet = workbook.addWorksheet('Resumen Global');
+      globalSheet.views = [{ showGridLines: true }];
+      
+      globalSheet.columns = [
+        { header: 'Producto', key: 'Producto', width: 35 },
+        { header: 'Fecha de Entrada', key: 'FechaEntrada', width: 18 },
+        { header: 'Categoría', key: 'Categoría', width: 15 },
+        { header: 'Coste PVD (sin IVA)', key: 'Coste', width: 18 },
+        { header: 'PVP (con IVA)', key: 'PVP', width: 15 },
+        { header: 'Beneficio Ud.', key: 'Beneficio', width: 15 },
+        { header: 'IMEI', key: 'IMEI', width: 18 },
+        { header: 'Auxiliadora', key: 'Auxiliadora', width: 13 },
+        { header: 'Correhuela', key: 'Correhuela', width: 13 },
+        { header: 'Villamayor', key: 'Villamayor', width: 13 },
+        { header: 'Béjar', key: 'Bejar', width: 13 },
+        { header: 'Movilfree', key: 'Movilfree', width: 13 },
+        { header: 'Total Stock', key: 'TotalStock', width: 13 }
+      ];
+
+      // Format Header Row
+      const headerRow = globalSheet.getRow(1);
+      headerRow.height = 28;
+      headerRow.eachCell((cell: any) => {
+        cell.font = { name: 'Segoe UI', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE91E97' } }; // Fuchsia theme `#E91E97`
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      });
+
+      // Add Data Rows to Global Sheet
+      const currencyFmt = '#,##0.00" €"';
+      filteredProds.forEach((p) => {
+        const costVal = p.coste || 0;
+        const pvpVal = p.precio * 1.21;
+        const profitVal = (p.precio || 0) - costVal;
+        const fechaEntrada = p.createdAt ? new Date(p.createdAt).toLocaleDateString('es-ES') : '---';
+
+        globalSheet.addRow({
+          Producto: p.nombre,
+          FechaEntrada: fechaEntrada,
+          Categoría: p.categoria,
+          Coste: costVal,
+          PVP: pvpVal,
+          Beneficio: profitVal,
+          IMEI: p.imei || '---',
+          Auxiliadora: getStock(p, 'Auxiliadora 45'),
+          Correhuela: getStock(p, 'Correhuela'),
+          Villamayor: getStock(p, 'Villamayor'),
+          Bejar: getStock(p, 'Béjar'),
+          Movilfree: getStock(p, 'O2'),
+          TotalStock: getTotalStock(p)
+        });
+      });
+
+      // Style Rows
+      globalSheet.eachRow({ includeEmpty: false }, (row: any, rowNumber: number) => {
+        if (rowNumber === 1) return;
+        row.height = 20;
+        const isEven = rowNumber % 2 === 0;
+
+        row.eachCell((cell: any, colNumber: number) => {
+          cell.font = { name: 'Segoe UI', size: 10 };
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: isEven ? 'FFFDF4FA' : 'FFFFFFFF' } // light pink tint
+          };
+          cell.border = {
+            bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            top: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+          };
+
+          if (colNumber === 1) {
+            cell.alignment = { vertical: 'middle', horizontal: 'left' };
+          } else if ([2, 3, 7].includes(colNumber)) {
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+          } else if ([4, 5, 6].includes(colNumber)) {
+            cell.alignment = { vertical: 'middle', horizontal: 'right' };
+            cell.numFmt = currencyFmt;
+          } else {
+            // Stock numbers
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            cell.numFmt = '#,##0';
+          }
+        });
+      });
+
+      // Add Individual Store Sheets
+      const storesInfo = [
+        { key: 'Auxiliadora 45', sheetName: 'Auxiliadora 45' },
+        { key: 'Correhuela', sheetName: 'Correhuela' },
+        { key: 'Villamayor', sheetName: 'Villamayor' },
+        { key: 'Béjar', sheetName: 'Béjar' },
+        { key: 'O2', sheetName: 'Movilfree' }
+      ];
+
+      storesInfo.forEach((store) => {
+        const storeSheet = workbook.addWorksheet(store.sheetName);
+        storeSheet.views = [{ showGridLines: true }];
+
+        storeSheet.columns = [
+          { header: 'Producto', key: 'Producto', width: 35 },
+          { header: 'Fecha de Entrada', key: 'FechaEntrada', width: 18 },
+          { header: 'Categoría', key: 'Categoría', width: 15 },
+          { header: 'Coste PVD (sin IVA)', key: 'Coste', width: 18 },
+          { header: 'PVP (con IVA)', key: 'PVP', width: 15 },
+          { header: 'Beneficio Ud.', key: 'Beneficio', width: 15 },
+          { header: 'IMEI', key: 'IMEI', width: 18 },
+          { header: 'Stock', key: 'Stock', width: 12 }
+        ];
+
+        // Format Header Row
+        const storeHeader = storeSheet.getRow(1);
+        storeHeader.height = 28;
+        storeHeader.eachCell((cell: any) => {
+          cell.font = { name: 'Segoe UI', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF107C41' } }; // green `#107C41` for individual stores
+          cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        });
+
+        // Filter products for this store (stock > 0)
+        const storeProds = filteredProds.filter((p) => getStock(p, store.key) > 0);
+
+        storeProds.forEach((p) => {
+          const costVal = p.coste || 0;
+          const pvpVal = p.precio * 1.21;
+          const profitVal = (p.precio || 0) - costVal;
+          const fechaEntrada = p.createdAt ? new Date(p.createdAt).toLocaleDateString('es-ES') : '---';
+
+          storeSheet.addRow({
+            Producto: p.nombre,
+            FechaEntrada: fechaEntrada,
+            Categoría: p.categoria,
+            Coste: costVal,
+            PVP: pvpVal,
+            Beneficio: profitVal,
+            IMEI: p.imei || '---',
+            Stock: getStock(p, store.key)
+          });
+        });
+
+        // Style Store Rows
+        storeSheet.eachRow({ includeEmpty: false }, (row: any, rowNumber: number) => {
+          if (rowNumber === 1) return;
+          row.height = 20;
+          const isEven = rowNumber % 2 === 0;
+
+          row.eachCell((cell: any, colNumber: number) => {
+            cell.font = { name: 'Segoe UI', size: 10 };
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: isEven ? 'FFF4FBF7' : 'FFFFFFFF' }
+            };
+            cell.border = {
+              bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+              right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+              left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+              top: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+            };
+
+            if (colNumber === 1) {
+              cell.alignment = { vertical: 'middle', horizontal: 'left' };
+            } else if ([2, 3, 7].includes(colNumber)) {
+              cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            } else if ([4, 5, 6].includes(colNumber)) {
+              cell.alignment = { vertical: 'middle', horizontal: 'right' };
+              cell.numFmt = currencyFmt;
+            } else {
+              cell.alignment = { vertical: 'middle', horizontal: 'center' };
+              cell.numFmt = '#,##0';
+            }
+          });
+        });
+      });
+
+      // Write and Download Excel File
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      
+      const objDate = new Date();
+      const mesName = objDate.toLocaleString('es-ES', { month: 'long' }).toLowerCase();
+      const agno = objDate.getFullYear();
+      const fileName = `inventario_accesorios_movilfree_${mesName}_${agno}.xlsx`;
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error exporting stock to Excel:", error);
+      alert("Error al intentar exportar el inventario a Excel.");
+    }
+  };
+
 
   const [editingProductId, setEditingProductId] = useState<string | null>(null)
   const [editProdData, setEditProdData] = useState<any>(null)
@@ -987,7 +1201,27 @@ export default function MovilFreeApp() {
 
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, marginTop: 16 }}>
-                <h3 style={{ margin: 0, color: fuchsia, fontWeight: 'bold' }}>Inventario de Stock</h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <h3 style={{ margin: 0, color: fuchsia, fontWeight: 'bold' }}>Inventario de Stock</h3>
+                  <button
+                    onClick={handleExportExcel}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: 4,
+                      borderRadius: 6,
+                      transition: 'background 0.2s',
+                    }}
+                    onMouseOver={e => e.currentTarget.style.backgroundColor = '#fdf2f8'}
+                    onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                    title="Exportar Stock a Excel"
+                  >
+                    <img src="/excel_icon.png" alt="Excel" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+                  </button>
+                </div>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                   <span style={{ fontSize: 13, fontWeight: 'bold', color: '#555' }}>Filtrar por Categoría:</span>
                   <select value={searchInvCategory} onChange={(e) => setSearchInvCategory(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #ff80ab', fontSize: 13, background: 'white', color: fuchsia, fontWeight: 'bold', outline: 'none' }}>
@@ -1047,47 +1281,31 @@ export default function MovilFreeApp() {
                           <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}><input value={editProdData?.imei || ''} maxLength={15} onChange={e => setEditProdData({...editProdData, imei: e.target.value.replace(/\D/g,'')})} style={{ width: 110, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center', fontSize: 13, fontFamily: 'monospace' }} /></td>
                           {/* Auxiliadora */}
                           <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}>
-                            {selectedTienda === 'Auxiliadora 45' ? (
-                              <input type="number" value={editProdData?.stock || 0} onChange={e => setEditProdData({...editProdData, stock: Number(e.target.value)})} style={{ width: 50, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center' }} />
-                            ) : (
-                              getStock(p, 'Auxiliadora 45')
-                            )}
+                            <input type="number" value={editProdData?.stocks?.['Auxiliadora 45'] ?? 0} disabled={p.isMovilFree} onChange={e => setEditProdData({...editProdData, stocks: { ...editProdData.stocks, 'Auxiliadora 45': Number(e.target.value) }})} style={{ width: 50, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center' }} />
                           </td>
                           {/* Correhuela */}
                           <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}>
-                            {selectedTienda === 'Correhuela' ? (
-                              <input type="number" value={editProdData?.stock || 0} onChange={e => setEditProdData({...editProdData, stock: Number(e.target.value)})} style={{ width: 50, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center' }} />
-                            ) : (
-                              getStock(p, 'Correhuela')
-                            )}
+                            <input type="number" value={editProdData?.stocks?.['Correhuela'] ?? 0} disabled={p.isMovilFree} onChange={e => setEditProdData({...editProdData, stocks: { ...editProdData.stocks, 'Correhuela': Number(e.target.value) }})} style={{ width: 50, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center' }} />
                           </td>
                           {/* Villamayor */}
                           <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}>
-                            {selectedTienda === 'Villamayor' ? (
-                              <input type="number" value={editProdData?.stock || 0} onChange={e => setEditProdData({...editProdData, stock: Number(e.target.value)})} style={{ width: 50, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center' }} />
-                            ) : (
-                              getStock(p, 'Villamayor')
-                            )}
+                            <input type="number" value={editProdData?.stocks?.['Villamayor'] ?? 0} disabled={p.isMovilFree} onChange={e => setEditProdData({...editProdData, stocks: { ...editProdData.stocks, 'Villamayor': Number(e.target.value) }})} style={{ width: 50, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center' }} />
                           </td>
                           {/* Béjar */}
                           <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}>
-                            {selectedTienda === 'Béjar' ? (
-                              <input type="number" value={editProdData?.stock || 0} onChange={e => setEditProdData({...editProdData, stock: Number(e.target.value)})} style={{ width: 50, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center' }} />
-                            ) : (
-                              getStock(p, 'Béjar')
-                            )}
+                            <input type="number" value={editProdData?.stocks?.['Béjar'] ?? 0} disabled={p.isMovilFree} onChange={e => setEditProdData({...editProdData, stocks: { ...editProdData.stocks, 'Béjar': Number(e.target.value) }})} style={{ width: 50, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center' }} />
                           </td>
                           {/* Movilfree */}
                           <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}>
-                            {selectedTienda === 'O2' ? (
-                              <input type="number" value={editProdData?.stock || 0} onChange={e => setEditProdData({...editProdData, stock: Number(e.target.value)})} style={{ width: 50, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center' }} />
-                            ) : (
-                              getStock(p, 'O2')
-                            )}
+                            <input type="number" value={editProdData?.stocks?.['O2'] ?? 0} onChange={e => setEditProdData({...editProdData, stocks: { ...editProdData.stocks, 'O2': Number(e.target.value) }})} style={{ width: 50, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center' }} />
                           </td>
                           {/* Total Stock */}
                           <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center', fontWeight: 'bold', color: fuchsia }}>
-                            {getTotalStock(p)}
+                            {(editProdData?.stocks?.['Auxiliadora 45'] ?? 0) +
+                             (editProdData?.stocks?.['Correhuela'] ?? 0) +
+                             (editProdData?.stocks?.['Villamayor'] ?? 0) +
+                             (editProdData?.stocks?.['Béjar'] ?? 0) +
+                             (editProdData?.stocks?.['O2'] ?? 0)}
                           </td>
                           <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}>
                             <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
@@ -1173,7 +1391,7 @@ export default function MovilFreeApp() {
                           </td>
                           <td style={{ padding: 10, whiteSpace: 'nowrap' }}>
                             <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-                              <button onClick={() => { setEditingProductId(p.id); setEditProdData({ nombre: p.nombre, categoria: p.categoria, coste: p.coste, precio: p.precio, stock: getStock(p, selectedTienda), imei: p.imei || '' }); }} style={{ background: 'white', color: '#0ea5e9', border: '1px solid #e0f2fe', padding: 8, borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }} title="Editar"><Edit2 size={16} /></button>
+                               <button onClick={() => { setEditingProductId(p.id); setEditProdData({ nombre: p.nombre, categoria: p.categoria, coste: p.coste, precio: p.precio, stocks: { 'Auxiliadora 45': getStock(p, 'Auxiliadora 45'), 'Correhuela': getStock(p, 'Correhuela'), 'Villamayor': getStock(p, 'Villamayor'), 'Béjar': getStock(p, 'Béjar'), 'O2': getStock(p, 'O2') }, imei: p.imei || '' }); }} style={{ background: 'white', color: '#0ea5e9', border: '1px solid #e0f2fe', padding: 8, borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }} title="Editar"><Edit2 size={16} /></button>
                               <button onClick={() => handleOpenTransfer(p)} style={{ background: '#e0f7fa', color: '#006064', border: 'none', padding: '8px 12px', borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 'bold', fontSize: 12 }} title="Traspasar Stock"><ArrowLeftRight size={14} /> Traspasar</button>
                               <button onClick={() => handleDeleteProduct(p.id)} style={{ background: 'white', color: '#f43f5e', border: '1px solid #ffe4e6', padding: 8, borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }} title="Borrar"><Trash2 size={16} /></button>
                             </div>
