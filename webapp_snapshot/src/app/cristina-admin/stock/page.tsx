@@ -25,6 +25,18 @@ export default function StockPage() {
 
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<any>({})
+  const [accesoriosHubTotals, setAccesoriosHubTotals] = useState<any>({
+    Correhuela: 0,
+    Auxiliadora: 0,
+    Bejar: 0,
+    Villamayor: 0,
+    UdsC: 0,
+    UdsA: 0,
+    UdsB: 0,
+    UdsV: 0,
+    TotalValor: 0,
+    TotalUds: 0
+  })
 
   const fetchStock = async () => {
     setLoading(true)
@@ -33,6 +45,9 @@ export default function StockPage() {
       const data = await res.json()
       if (data.success) {
         setStockItems(data.data)
+        if (data.accesoriosHubTotals) {
+          setAccesoriosHubTotals(data.accesoriosHubTotals)
+        }
       }
     } catch (e) {
       console.error(e)
@@ -402,61 +417,60 @@ export default function StockPage() {
              </h2>
              
              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-                <div style={{ border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden' }}>
-                    <div style={{ background: '#84CC16', color: '#FFF', padding: '12px 16px', fontWeight: 'bold' }}>Valor Accesorios por Tienda</div>
-                    <div style={{ padding: '16px' }}>
-                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
-                           <span style={{ color: '#475569' }}>Accesorios Venta Rápida (Total)</span>
-                           <span style={{ fontWeight: 'bold' }}>{formatEuro(totalsMatrix['Accesorios'].Valor)}</span>
-                       </div>
-                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
-                           <span style={{ color: '#475569' }}>Villamayor</span>
-                           <span style={{ fontWeight: 'bold', color: '#0EA5E9' }}>{formatEuro(totalsMatrix['Accesorios'].Villamayor)}</span>
-                       </div>
-                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
-                           <span style={{ color: '#475569' }}>Auxiliadora</span>
-                           <span style={{ fontWeight: 'bold', color: '#0EA5E9' }}>{formatEuro(totalsMatrix['Accesorios'].Auxiliadora)}</span>
-                       </div>
-                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
-                           <span style={{ color: '#475569' }}>Correhuela</span>
-                           <span style={{ fontWeight: 'bold', color: '#0EA5E9' }}>{formatEuro(totalsMatrix['Accesorios'].Correhuela)}</span>
-                       </div>
-                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
-                           <span style={{ color: '#475569' }}>Béjar</span>
-                           <span style={{ fontWeight: 'bold', color: '#0EA5E9' }}>{formatEuro(totalsMatrix['Accesorios'].Bejar)}</span>
-                       </div>
-                    </div>
-                </div>
+                 <div style={{ border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden' }}>
+                     <div style={{ background: '#84CC16', color: '#FFF', padding: '12px 16px', fontWeight: 'bold' }}>Valor Accesorios por Tienda</div>
+                     <div style={{ padding: '16px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
+                            <span style={{ color: '#475569' }}>Accesorios Venta Rápida (Total)</span>
+                            <span style={{ fontWeight: 'bold' }}>{formatEuro(accesoriosHubTotals.TotalValor)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
+                            <span style={{ color: '#475569' }}>Villamayor</span>
+                            <span style={{ fontWeight: 'bold', color: '#0EA5E9' }}>{formatEuro(accesoriosHubTotals.Villamayor)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
+                            <span style={{ color: '#475569' }}>Auxiliadora</span>
+                            <span style={{ fontWeight: 'bold', color: '#0EA5E9' }}>{formatEuro(accesoriosHubTotals.Auxiliadora)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #F1F5F9' }}>
+                            <span style={{ color: '#475569' }}>Correhuela</span>
+                            <span style={{ fontWeight: 'bold', color: '#0EA5E9' }}>{formatEuro(accesoriosHubTotals.Correhuela)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
+                            <span style={{ color: '#475569' }}>Béjar</span>
+                            <span style={{ fontWeight: 'bold', color: '#0EA5E9' }}>{formatEuro(accesoriosHubTotals.Bejar)}</span>
+                        </div>
+                     </div>
+                 </div>
 
-                <div style={{ border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden' }}>
-                    <div style={{ background: '#3B82F6', color: '#FFF', padding: '12px 16px', fontWeight: 'bold' }}>Resumen Totales Globales</div>
-                    <div style={{ padding: '16px' }}>
-                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #F1F5F9', background: '#DBEAFE', borderRadius: 4, paddingLeft: 8, paddingRight: 8, marginBottom: 4 }}>
-                           <span style={{ color: '#1E3A8A', fontWeight: 'bold' }}>Total Accesorios</span>
-                           <span style={{ fontWeight: 'bold', color: '#1E3A8A' }}>{totalsMatrix['Accesorios'].Uds} uds / {formatEuro(totalsMatrix['Accesorios'].Valor)}</span>
-                       </div>
-                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #F1F5F9', background: '#DBEAFE', borderRadius: 4, paddingLeft: 8, paddingRight: 8, marginBottom: 4 }}>
-                           <span style={{ color: '#1E3A8A', fontWeight: 'bold' }}>Total Dispositivos OJO</span>
-                           <span style={{ fontWeight: 'bold', color: '#1E3A8A' }}>{totalsMatrix['Dispositivos Urgente Vender'].Uds} uds / {formatEuro(totalsMatrix['Dispositivos Urgente Vender'].Valor)}</span>
-                       </div>
-                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #F1F5F9', background: '#2563EB', borderRadius: 4, paddingLeft: 8, paddingRight: 8, marginBottom: 4, color: '#FFF' }}>
-                           <span style={{ fontWeight: 'bold' }}>Total Teléfonos RENT</span>
-                           <span style={{ fontWeight: 'bold' }}>{totalsMatrix['Rent'].Uds} uds / {formatEuro(totalsMatrix['Rent'].Valor)}</span>
-                       </div>
-                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #F1F5F9', background: '#2563EB', borderRadius: 4, paddingLeft: 8, paddingRight: 8, marginBottom: 4, color: '#FFF' }}>
-                           <span style={{ fontWeight: 'bold' }}>Teléfonos en Demo</span>
-                           <span style={{ fontWeight: 'bold' }}>{totalsMatrix['Demos'].Uds} uds / {formatEuro(totalsMatrix['Demos'].Valor)}</span>
-                       </div>
-                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', background: '#0EA5E9', borderRadius: 4, paddingLeft: 8, paddingRight: 8, color: '#FFF', marginTop: 12 }}>
-                           <span style={{ fontWeight: 'bold', fontSize: 18 }}>TOTAL</span>
-                           <span style={{ fontWeight: 'bold', fontSize: 18 }}>
-                               {totalsMatrix['Accesorios'].Uds + totalsMatrix['Dispositivos Urgente Vender'].Uds + totalsMatrix['Rent'].Uds + totalsMatrix['Demos'].Uds} uds / 
-                               {formatEuro(totalsMatrix['Accesorios'].Valor + totalsMatrix['Dispositivos Urgente Vender'].Valor + totalsMatrix['Rent'].Valor + totalsMatrix['Demos'].Valor)}
-                           </span>
-                       </div>
-                    </div>
-                </div>
-
+                 <div style={{ border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden' }}>
+                     <div style={{ background: '#3B82F6', color: '#FFF', padding: '12px 16px', fontWeight: 'bold' }}>Resumen Totales Globales</div>
+                     <div style={{ padding: '16px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #F1F5F9', background: '#DBEAFE', borderRadius: 4, paddingLeft: 8, paddingRight: 8, marginBottom: 4 }}>
+                            <span style={{ color: '#1E3A8A', fontWeight: 'bold' }}>Total Accesorios</span>
+                            <span style={{ fontWeight: 'bold', color: '#1E3A8A' }}>{accesoriosHubTotals.TotalUds} uds / {formatEuro(accesoriosHubTotals.TotalValor)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #F1F5F9', background: '#DBEAFE', borderRadius: 4, paddingLeft: 8, paddingRight: 8, marginBottom: 4 }}>
+                            <span style={{ color: '#1E3A8A', fontWeight: 'bold' }}>Dispositivos Urgente Vender</span>
+                            <span style={{ fontWeight: 'bold', color: '#1E3A8A' }}>{totalsMatrix['Dispositivos Urgente Vender'].Uds} uds / {formatEuro(totalsMatrix['Dispositivos Urgente Vender'].Valor)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #F1F5F9', background: '#2563EB', borderRadius: 4, paddingLeft: 8, paddingRight: 8, marginBottom: 4, color: '#FFF' }}>
+                            <span style={{ fontWeight: 'bold' }}>Total Teléfonos RENT</span>
+                            <span style={{ fontWeight: 'bold' }}>{totalsMatrix['Rent'].Uds} uds / {formatEuro(totalsMatrix['Rent'].Valor)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #F1F5F9', background: '#2563EB', borderRadius: 4, paddingLeft: 8, paddingRight: 8, marginBottom: 4, color: '#FFF' }}>
+                            <span style={{ fontWeight: 'bold' }}>Teléfonos en Demo</span>
+                            <span style={{ fontWeight: 'bold' }}>{totalsMatrix['Demos'].Uds} uds / {formatEuro(totalsMatrix['Demos'].Valor)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', background: '#0EA5E9', borderRadius: 4, paddingLeft: 8, paddingRight: 8, color: '#FFF', marginTop: 12 }}>
+                            <span style={{ fontWeight: 'bold', fontSize: 18 }}>TOTAL</span>
+                            <span style={{ fontWeight: 'bold', fontSize: 18 }}>
+                                {accesoriosHubTotals.TotalUds + totalsMatrix['Rent'].Uds + totalsMatrix['Demos'].Uds} uds / 
+                                {formatEuro(accesoriosHubTotals.TotalValor + totalsMatrix['Rent'].Valor + totalsMatrix['Demos'].Valor)}
+                            </span>
+                        </div>
+                     </div>
+                 </div>
              </div>
           </div>
         ) : (
