@@ -1182,7 +1182,7 @@ export default function MovilFreeApp() {
                     <span style={{ fontSize: 9, color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Valoración coste sin IVA</span>
                     <span style={{ fontSize: 13, fontWeight: 'bold', color: fuchsia }}>
                       {formatMoney(
-                        products.reduce((acc, p) => acc + (p.coste * (isGlobalUser ? getTotalStock(p) : getStock(p, selectedTienda))), 0)
+                        products.reduce((acc, p) => acc + (p.coste * getStock(p, selectedTienda)), 0)
                       )}
                     </span>
                   </div>
