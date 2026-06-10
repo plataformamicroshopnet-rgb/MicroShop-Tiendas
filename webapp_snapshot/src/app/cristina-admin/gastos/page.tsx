@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
-import { Receipt, ArrowLeft, Download, Plus, Save, TrendingUp, X, Filter, BarChart2, Table as TableIcon, Edit2, Trash2, Copy } from 'lucide-react'
+import { Receipt, ArrowLeft, Download, Plus, Save, TrendingUp, X, Filter, BarChart2, Table as TableIcon, Edit2, Trash2, Copy, MessageSquare } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
 import Link from 'next/link'
 import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid, LabelList } from 'recharts'
@@ -33,6 +33,7 @@ interface Gasto {
   importe_r: number
   importe_dif: number
   importe_total: number
+  notas?: string | null
 }
 
 export default function GastosPage() {
@@ -251,6 +252,10 @@ export default function GastosPage() {
             if (isSubField) {
               updated.importe_total = updated.importe_c + updated.importe_r + updated.importe_dif
               finalTotal = updated.importe_total
+            } else if (field === 'importe_total') {
+              updated.importe_c = 0
+              updated.importe_r = 0
+              updated.importe_dif = 0
             }
             return updated
           }
@@ -272,6 +277,10 @@ export default function GastosPage() {
       const payload: any = { year: activeYear, month, grupo, concepto, [field]: importe }
       if (isSubField) {
         payload.importe_total = finalTotal
+      } else if (field === 'importe_total') {
+        payload.importe_c = 0
+        payload.importe_r = 0
+        payload.importe_dif = 0
       }
 
       await fetch('/api/gastos', {
@@ -281,6 +290,33 @@ export default function GastosPage() {
       })
     } catch (e) {
       console.error('Error saving cell', e)
+    }
+  }
+
+  const handleUpdateNota = async (grupo: string, concepto: string, month: number, currentNota: string) => {
+    const newNota = window.prompt("Editar nota:", currentNota)
+    if (newNota === null) return
+
+    // Update local state optimistic
+    setGastos(prev => {
+      const exists = prev.find(g => g.concepto === concepto && g.month === month && g.grupo === grupo)
+      if (exists) {
+        return prev.map(g => g.id === exists.id ? { ...g, notas: newNota } : g)
+      } else {
+        const newGasto: any = { id: Math.random().toString(), year: activeYear, month, grupo, concepto, importe_c: 0, importe_r: 0, importe_dif: 0, importe_total: 0, notas: newNota }
+        return [...prev, newGasto as Gasto]
+      }
+    })
+
+    // Persist
+    try {
+      await fetch('/api/gastos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ year: activeYear, month, grupo, concepto, notas: newNota })
+      })
+    } catch (e) {
+      console.error('Error saving note', e)
     }
   }
 
@@ -336,7 +372,7 @@ export default function GastosPage() {
                 month: i,
                 grupo: pasteGrupo,
                 concepto,
-                importe
+                importe_total: importe
               })
             }
           }
@@ -373,7 +409,7 @@ export default function GastosPage() {
 
   // AGRUPACIÓN DE DATOS PARA LA MATRIZ
   const matrizData = useMemo(() => {
-    const agrupado: Record<string, Record<string, { c: number[], r: number[], dif: number[], total: number[] }>> = {}
+    const agrupado: Record<string, Record<string, { c: number[], r: number[], dif: number[], total: number[], notas: (string | null)[] }>> = {}
     
     gastos.forEach(g => {
       if (g.grupo === 'MERCADERIAS') return // Aislar mercaderías
@@ -384,7 +420,8 @@ export default function GastosPage() {
           c: new Array(12).fill(0),
           r: new Array(12).fill(0),
           dif: new Array(12).fill(0),
-          total: new Array(12).fill(0)
+          total: new Array(12).fill(0),
+          notas: new Array(12).fill(null)
         }
       }
       const sumCRD = g.importe_c + g.importe_r + g.importe_dif;
@@ -394,6 +431,7 @@ export default function GastosPage() {
       agrupado[g.grupo][g.concepto].r[g.month - 1] = g.importe_r
       agrupado[g.grupo][g.concepto].dif[g.month - 1] = g.importe_dif
       agrupado[g.grupo][g.concepto].total[g.month - 1] = effectiveTotal
+      agrupado[g.grupo][g.concepto].notas[g.month - 1] = g.notas || null
     })
 
     // Sort grupos y conceptos
@@ -630,6 +668,7 @@ export default function GastosPage() {
                       const valR = concepto.meses.r[index]
                       const valDif = concepto.meses.dif[index]
                       const valTotal = concepto.meses.total[index]
+                      const cellNota = (concepto.meses as any).notas?.[index]
 
                       return (
                         <React.Fragment key={m.id}>
@@ -676,18 +715,38 @@ export default function GastosPage() {
                               </td>
                             </>
                           )}
-                          <td style={{ padding: '2px 4px', textAlign: 'right', background: isExpanded ? 'rgba(0,173,239,0.05)' : 'rgba(0,173,239,0.02)' }}>
-                            <input 
-                              type="text" 
-                              defaultValue={valTotal === 0 ? '' : valTotal}
-                              placeholder="-"
-                              style={{ width: '100%', textAlign: 'center', background: 'transparent', border: '1px solid transparent', borderRadius: 4, padding: '2px', color: valTotal === 0 ? 'var(--medium-gray)' : 'var(--text-main)', fontSize: 12, fontWeight: isExpanded ? 600 : 400 }}
-                              onFocus={e => e.target.style.border = '1px solid var(--mercedes-cyan)'}
-                              onBlur={e => {
-                                e.target.style.border = '1px solid transparent'
-                                if (e.target.value !== String(valTotal)) handleUpdateCell(grupo.grupo, concepto.concepto, m.id, 'importe_total', e.target.value)
-                              }}
-                            />
+                          <td style={{ padding: '2px 4px', background: isExpanded ? 'rgba(0,173,239,0.05)' : 'rgba(0,173,239,0.02)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <input 
+                                type="text" 
+                                defaultValue={valTotal === 0 ? '' : valTotal}
+                                placeholder="-"
+                                style={{ width: '100%', textAlign: 'center', background: 'transparent', border: '1px solid transparent', borderRadius: 4, padding: '2px', color: valTotal === 0 ? 'var(--medium-gray)' : 'var(--text-main)', fontSize: 12, fontWeight: isExpanded ? 600 : 400 }}
+                                onFocus={e => e.target.style.border = '1px solid var(--mercedes-cyan)'}
+                                onBlur={e => {
+                                  e.target.style.border = '1px solid transparent'
+                                  if (e.target.value !== String(valTotal)) handleUpdateCell(grupo.grupo, concepto.concepto, m.id, 'importe_total', e.target.value)
+                                }}
+                              />
+                              {['Gastos Fijos', 'Gastos Variables'].includes(grupo.grupo) && (
+                                <button
+                                  title={cellNota || "Añadir nota"}
+                                  onClick={() => handleUpdateNota(grupo.grupo, concepto.concepto, m.id, cellNota || '')}
+                                  style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    padding: '2px',
+                                    marginLeft: '2px',
+                                    color: cellNota ? '#f59e0b' : '#cbd5e1',
+                                    display: 'flex',
+                                    alignItems: 'center'
+                                  }}
+                                >
+                                  <MessageSquare size={13} fill={cellNota ? '#fef3c7' : 'none'} />
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </React.Fragment>
                       )

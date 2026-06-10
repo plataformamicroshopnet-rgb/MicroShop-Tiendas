@@ -616,6 +616,7 @@ model GastoMensual {
   importe_r     Float    @default(0)
   importe_dif   Float    @default(0)
   importe_total Float    @default(0)
+  notas         String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

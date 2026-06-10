@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { year, month, grupo, concepto, importe_c, importe_r, importe_dif, importe_total } = body
+    const { year, month, grupo, concepto, importe_c, importe_r, importe_dif, importe_total, notas } = body
 
     if (!year || !month || !grupo || !concepto) {
       return NextResponse.json({ success: false, error: 'Faltan campos requeridos' }, { status: 400 })
@@ -69,7 +69,8 @@ export async function POST(request: NextRequest) {
         importe_c: importe_c !== undefined ? parseFloat(importe_c) : undefined,
         importe_r: importe_r !== undefined ? parseFloat(importe_r) : undefined,
         importe_dif: importe_dif !== undefined ? parseFloat(importe_dif) : undefined,
-        importe_total: importe_total !== undefined ? parseFloat(importe_total) : undefined
+        importe_total: importe_total !== undefined ? parseFloat(importe_total) : undefined,
+        notas: notas !== undefined ? notas : undefined
       },
       create: {
         year: parseInt(year),
@@ -79,7 +80,8 @@ export async function POST(request: NextRequest) {
         importe_c: parseFloat(importe_c || 0),
         importe_r: parseFloat(importe_r || 0),
         importe_dif: parseFloat(importe_dif || 0),
-        importe_total: parseFloat(importe_total || 0)
+        importe_total: parseFloat(importe_total || 0),
+        notas: notas || null
       }
     })
 
