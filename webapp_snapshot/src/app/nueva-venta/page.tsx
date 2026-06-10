@@ -50,12 +50,22 @@ export default function NuevaVentaPage() {
     ]
   })
 
+  const [stockItems, setStockItems] = useState<any[]>([])
+
   useEffect(() => {
     fetch(`/api/catalogs?_t=${Date.now()}`)
       .then(res => res.json())
       .then(data => {
         if (data.success) {
           setCatalogs(data.catalogs)
+        }
+      })
+
+    fetch('/api/stock')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setStockItems(data.data)
         }
       })
   }, [])
@@ -78,6 +88,37 @@ export default function NuevaVentaPage() {
   // Handlers
   const handleInputChange = (field: string, value: any) => {
     setFormData((prev: any) => ({ ...prev, [field]: value }))
+  }
+
+  const handleTiendaChange = (tienda: string) => {
+    setSelectedTienda(tienda)
+    setFormData((prev: any) => ({ ...prev, vendedor: '' }))
+    
+    if (tienda && stockItems.length > 0) {
+      setFormData((prev: any) => {
+        const newProducts = prev.productos.map((prod: any) => {
+          if (prod.categoria === 'Rent' && prod.producto) {
+            const storeField = getStoreField(tienda);
+            const matchedItem = findMatchingStockItem(prod.producto, stockItems, storeField);
+            const currentStock = (matchedItem && storeField) ? (matchedItem[storeField] || 0) : 0;
+            if (currentStock <= 0) {
+              const confirmContinue = window.confirm(
+                `El producto "${prod.producto}" no tiene stock disponible en ${tienda}.\n\n¿Desea continuar con la venta?`
+              );
+              if (!confirmContinue) {
+                return { ...prod, producto: '', showMotivoSinStock: false, motivoSinStock: '' };
+              } else {
+                return { ...prod, showMotivoSinStock: true };
+              }
+            } else {
+              return { ...prod, showMotivoSinStock: false, motivoSinStock: '' };
+            }
+          }
+          return prod;
+        });
+        return { ...prev, productos: newProducts };
+      });
+    }
   }
 
   const handleProductChange = (index: number, field: string, value: any) => {
@@ -156,6 +197,35 @@ export default function NuevaVentaPage() {
       
       // Autofill importe if product is selected
       if (field === 'producto') {
+         if (newProducts[index].categoria === 'Rent' && value) {
+           if (!selectedTienda) {
+             alert('Por favor, selecciona primero la tienda en la cabecera para verificar el stock.');
+             newProducts[index].producto = '';
+             return prev;
+           }
+
+           const storeField = getStoreField(selectedTienda);
+           const matchedItem = findMatchingStockItem(value, stockItems, storeField);
+           const currentStock = (matchedItem && storeField) ? (matchedItem[storeField] || 0) : 0;
+
+           if (currentStock <= 0) {
+             const confirmContinue = window.confirm(
+               `El producto "${value}" no tiene stock disponible en ${selectedTienda}.\n\n¿Desea continuar con la venta?`
+             );
+             if (!confirmContinue) {
+               newProducts[index].producto = '';
+               newProducts[index].showMotivoSinStock = false;
+               newProducts[index].motivoSinStock = '';
+               return { ...prev, productos: newProducts };
+             } else {
+               newProducts[index].showMotivoSinStock = true;
+             }
+           } else {
+             newProducts[index].showMotivoSinStock = false;
+             newProducts[index].motivoSinStock = '';
+           }
+         }
+
          const actualCat = newProducts[index].categoria === 'Traslado miMovistar' ? 'miMovistar' : newProducts[index].categoria;
          const catList = catalogs[actualCat] || []
          const selectedItem = catList.find((p: any) => {
@@ -364,6 +434,15 @@ export default function NuevaVentaPage() {
       return
     }
 
+    const missingMotivos = formData.productos.some((p: any) => 
+      p.categoria === 'Rent' && p.producto && p.showMotivoSinStock && !String(p.motivoSinStock || '').trim()
+    )
+    if (missingMotivos) {
+      setError('Por favor, indica el motivo de venta sin stock para los productos correspondientes.')
+      setLoading(false)
+      return
+    }
+
     try {
       const res = await fetch('/api/sales/unified', {
         method: 'POST',
@@ -420,7 +499,7 @@ export default function NuevaVentaPage() {
               <h4 style={{ margin: '0 0 4px 0', color: '#1B3D6A', fontSize: '13px', fontWeight: 'bold' }}>Asignación Comercial</h4>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label" style={{ color: '#1B3D6A' }}>Tienda</label>
-                <select className="form-select" value={selectedTienda} onChange={e => { setSelectedTienda(e.target.value); handleInputChange('vendedor', ''); }} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
+                <select className="form-select" value={selectedTienda} onChange={e => handleTiendaChange(e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
                   <option value="">Selecciona...</option>
                   {Object.keys(TIENDAS_COMERCIALES).map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
@@ -539,6 +618,23 @@ export default function NuevaVentaPage() {
                         <datalist id={`prod-${index}`}>
                           {(catalogs['Rent'] || []).filter((p:any) => (!prod.fabricante || p.fabricante === prod.fabricante) && (!prod.subcategoria || p.subcategoria === prod.subcategoria)).map((p:any) => p.producto).filter((p:any, i:number, self:any[]) => self.indexOf(p) === i).sort().map((p:any) => <option key={String(p)} value={String(p)} />)}
                         </datalist>
+
+                        {prod.showMotivoSinStock && (
+                          <div style={{ marginTop: '8px' }}>
+                            <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#FF453A', fontWeight: 'bold' }}>
+                              Motivo de venta sin stock (Obligatorio)
+                            </label>
+                            <input 
+                              type="text" 
+                              className="form-input" 
+                              value={prod.motivoSinStock || ''} 
+                              onChange={e => handleProductChange(index, 'motivoSinStock', e.target.value)} 
+                              placeholder="Escribe el motivo..." 
+                              required 
+                              style={{ backgroundColor: '#FFEBEB', border: '1px solid #FF8E8E', color: '#B71C1C' }}
+                            />
+                          </div>
+                        )}
                       </div>
 
                       <div style={{ height: 1, backgroundColor: '#E0E0E0', margin: '8px 0' }}></div>
@@ -966,4 +1062,63 @@ export default function NuevaVentaPage() {
       </form>
     </div>
   )
+}
+
+// --- HELPER FUNCTIONS FOR STOCK MATCHING ---
+const NOISE_WORDS = new Set(['rent', 'rnt', 'reac', 'reac.a', 'reac.b', 'reac.c', 'certif', 'apple', 'con', 'de', 'el', 'la', 'a', 'b', 'c']);
+const MODEL_MODIFIERS = ['pro', 'max', 'mini', 'plus', 'se'];
+
+function getKeywords(name: string): string[] {
+  return name.toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((w: string) => w.length > 0)
+    .filter((w: string) => !NOISE_WORDS.has(w));
+}
+
+function findMatchingStockItem(prodName: string, stockItems: any[], storeField: string): any {
+  const name = prodName.trim().toLowerCase();
+  
+  // 1. Exact match first
+  let best = stockItems.find((s: any) => s.producto.trim().toLowerCase() === name);
+  if (best) return best;
+
+  // 2. Keyword match
+  const keywords = getKeywords(name);
+  if (keywords.length === 0) return null;
+
+  const matches = stockItems.filter((s: any) => {
+    const sTokens = s.producto.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter((w: string) => w.length > 0);
+    
+    // All input keywords must be in stock item tokens
+    const allKeywordsMatch = keywords.every((kw: string) => sTokens.includes(kw));
+    if (!allKeywordsMatch) return false;
+
+    // Check modifiers: if stock item has a modifier, it must be in keywords
+    const sModifiers = MODEL_MODIFIERS.filter((mod: string) => sTokens.includes(mod));
+    const modifierMismatch = sModifiers.some((mod: string) => !keywords.includes(mod));
+    if (modifierMismatch) return false;
+
+    return true;
+  });
+
+  if (matches.length === 1) return matches[0];
+  if (matches.length > 1) {
+    if (storeField) {
+      const preferred = matches.find((m: any) => m[storeField] > 0);
+      return preferred || matches[0];
+    }
+    return matches[0];
+  }
+
+  return null;
+}
+
+function getStoreField(storeName: string): string {
+  if (storeName === 'Auxiliadora 45') return 'udsAuxiliadora';
+  if (storeName === 'Correhuela') return 'udsCorrehuela';
+  if (storeName === 'Villamayor') return 'udsVillamayor';
+  if (storeName === 'Béjar') return 'udsBejar';
+  if (storeName === 'O2') return 'udsMovilfree';
+  return '';
 }

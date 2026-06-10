@@ -111,6 +111,7 @@ export async function POST(request: Request) {
     }
 
     const salesToInsert = []
+    const stockDecrements = []
 
     for (let x = 0; x < data.productos.length; x++) {
       const prod = data.productos[x]
@@ -135,6 +136,13 @@ export async function POST(request: Request) {
       console.log('prod.producto:', prod.producto)
       console.log('Valor final asignado a grupo:', calculatedGroup)
 
+      let finalAnotaciones = data.anotaciones || ''
+      if (prod.motivoSinStock) {
+        finalAnotaciones = finalAnotaciones 
+          ? `${finalAnotaciones} | Motivo Sin Stock: ${prod.motivoSinStock}`
+          : `Motivo Sin Stock: ${prod.motivoSinStock}`
+      }
+
       salesToInsert.push({
         sheet: sheetCategory,
         vendedor: data.vendedor,
@@ -147,7 +155,7 @@ export async function POST(request: Request) {
         telf: prod.telf || '',
         pendiente: prod.pendiente || '',
         anulado: 'No',
-        anotaciones: data.anotaciones || '',
+        anotaciones: finalAnotaciones,
         telefonoFijo: data.telefonoFijo || '',
         telefonoMovil: data.telefonoMovil || '',
         boletin: data.boletin || '',
@@ -166,12 +174,46 @@ export async function POST(request: Request) {
         isSwap: prod.isSwap === true,
         periodId: activePeriod?.id || null
       })
+
+      // Queue stock decrement if it is Rent
+      if (prod.categoria === 'Rent' && data.codigo) {
+        const storeField = getStoreField(data.codigo)
+        if (storeField) {
+          stockDecrements.push({
+            producto: prod.producto,
+            storeField
+          })
+        }
+      }
     }
 
     if (salesToInsert.length > 0) {
       await prisma.sale.createMany({
         data: salesToInsert
       })
+
+      // Execute stock decrements
+      if (stockDecrements.length > 0) {
+        const stockItems = await prisma.stockItem.findMany({
+          where: { tabCategory: 'Rent' }
+        })
+        for (const dec of stockDecrements) {
+          const matchedItem = findMatchingStockItem(dec.producto, stockItems, dec.storeField)
+          if (matchedItem) {
+            await prisma.stockItem.update({
+              where: { id: matchedItem.id },
+              data: {
+                [dec.storeField]: {
+                  decrement: 1
+                }
+              }
+            })
+            console.log(`Decremented stock for Rent product: "${matchedItem.producto}" in store field "${dec.storeField}"`)
+          } else {
+            console.log(`No match in StockItem found to decrement stock for: "${dec.producto}"`)
+          }
+        }
+      }
 
       // Disparador Reactivo: Calcular Reglas Extra para el Mes de las ventas importadas
       if (activePeriod?.id) {
@@ -186,3 +228,63 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'Error interno del servidor' }, { status: 500 })
   }
 }
+
+// --- HELPER FUNCTIONS FOR STOCK MATCHING ---
+const NOISE_WORDS = new Set(['rent', 'rnt', 'reac', 'reac.a', 'reac.b', 'reac.c', 'certif', 'apple', 'con', 'de', 'el', 'la', 'a', 'b', 'c']);
+const MODEL_MODIFIERS = ['pro', 'max', 'mini', 'plus', 'se'];
+
+function getKeywords(name: string): string[] {
+  return name.toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((w: string) => w.length > 0)
+    .filter((w: string) => !NOISE_WORDS.has(w));
+}
+
+function findMatchingStockItem(prodName: string, stockItems: any[], storeField: string): any {
+  const name = prodName.trim().toLowerCase();
+  
+  // 1. Exact match first
+  let best = stockItems.find((s: any) => s.producto.trim().toLowerCase() === name);
+  if (best) return best;
+
+  // 2. Keyword match
+  const keywords = getKeywords(name);
+  if (keywords.length === 0) return null;
+
+  const matches = stockItems.filter((s: any) => {
+    const sTokens = s.producto.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter((w: string) => w.length > 0);
+    
+    // All input keywords must be in stock item tokens
+    const allKeywordsMatch = keywords.every((kw: string) => sTokens.includes(kw));
+    if (!allKeywordsMatch) return false;
+
+    // Check modifiers: if stock item has a modifier, it must be in keywords
+    const sModifiers = MODEL_MODIFIERS.filter((mod: string) => sTokens.includes(mod));
+    const modifierMismatch = sModifiers.some((mod: string) => !keywords.includes(mod));
+    if (modifierMismatch) return false;
+
+    return true;
+  });
+
+  if (matches.length === 1) return matches[0];
+  if (matches.length > 1) {
+    if (storeField) {
+      const preferred = matches.find((m: any) => m[storeField] > 0);
+      return preferred || matches[0];
+    }
+    return matches[0];
+  }
+
+  return null;
+}
+
+function getStoreField(storeName: string): string {
+  if (storeName === 'Auxiliadora 45') return 'udsAuxiliadora';
+  if (storeName === 'Correhuela') return 'udsCorrehuela';
+  if (storeName === 'Villamayor') return 'udsVillamayor';
+  if (storeName === 'Béjar') return 'udsBejar';
+  if (storeName === 'O2') return 'udsMovilfree';
+  return '';
+}
+
