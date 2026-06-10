@@ -4,15 +4,16 @@ import { notFound } from 'next/navigation'
 
 const prisma = new PrismaClient()
 
-export default async function PrintInvoice({ params, searchParams }: { params: { id: string }, searchParams: { type: string } }) {
+export default async function PrintInvoice({ params, searchParams }: { params: Promise<{ id: string }>, searchParams: Promise<{ type: string }> }) {
   // Fix Next.js 15 async params
   const resolvedParams = await params;
   const id = resolvedParams.id;
-  const resolvedSearchParams = await searchParams;
-  const type = resolvedSearchParams.type || 'ticket';
-
+  
   const sale = await prisma.movilFreeSale.findUnique({ where: { id: id } })
   if (!sale) return notFound()
+
+  const resolvedSearchParams = await searchParams;
+  const type = resolvedSearchParams.type || sale.tipoDocumento || 'ticket';
 
   // We need Client data if it's a Factura (A4)
   let client = null;
@@ -58,7 +59,9 @@ export default async function PrintInvoice({ params, searchParams }: { params: {
         </div>
         
         <div className="separator"></div>
-        <div className="center bold">FACTURA SIMPLIFICADA #{sale.numeroFactura || '---'}</div>
+        <div className="center bold">
+          {sale.tipoDocumento === 'factura' ? `FACTURA #${sale.facturaSerie || '---'}` : `FACTURA SIMPLIFICADA #${sale.numeroFactura || '---'}`}
+        </div>
         <div className="separator"></div>
 
         <div>
@@ -167,14 +170,14 @@ export default async function PrintInvoice({ params, searchParams }: { params: {
           </div>
         </div>
         <div className="invoice-title-block">
-          <h1>FACTURA</h1>
+          <h1>{sale.tipoDocumento === 'factura' ? 'FACTURA' : 'FACTURA SIMPLIFICADA'}</h1>
           <div className="invoice-meta">
             <span>Número:</span>
-            <strong>#{sale.numeroFactura || '---'}</strong>
+            <strong>{sale.tipoDocumento === 'factura' ? (sale.facturaSerie || '---') : `#${sale.numeroFactura || '---'}`}</strong>
             <span>Fecha:</span>
             <strong>{formatDate(sale.fechaVenta)}</strong>
             <span>Forma de pago:</span>
-            <strong>Contado / Tarjeta</strong>
+            <strong>{sale.metodoPago || 'Efectivo'}</strong>
           </div>
         </div>
       </div>

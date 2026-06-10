@@ -544,6 +544,8 @@ model MovilFreeSale {
   fechaVenta       DateTime @default(now())
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+  tipoDocumento    String?  @default("ticket")
+  facturaSerie     String?  @unique
 }
 
 model MovilFreeStock {
@@ -808,6 +810,8 @@ model MicroShopSale {
   fechaVenta       DateTime @default(now())
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+  tipoDocumento    String?  @default("ticket")
+  facturaSerie     String?  @unique
 }
 
 model MicroShopStockTransfer {

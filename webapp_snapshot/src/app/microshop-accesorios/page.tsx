@@ -54,6 +54,8 @@ type Sale = {
   estado: string
   fechaVenta: string
   motivoDevolucion?: string
+  tipoDocumento?: string | null
+  facturaSerie?: string | null
 }
 
 type Transfer = {
@@ -106,6 +108,7 @@ export default function MicroShopAccesoriosApp() {
   // Modals/Forms
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<'Efectivo' | 'Tarjeta'>('Efectivo')
+  const [documentType, setDocumentType] = useState<'ticket' | 'factura'>('ticket')
   const [printModalSale, setPrintModalSale] = useState<Sale | null>(null)
 
   const [newProd, setNewProd] = useState({ nombre: '', categoria: 'Accesorio', precio: 0, coste: 0, stock: 0, imei: '' })
@@ -244,13 +247,26 @@ export default function MicroShopAccesoriosApp() {
     const total = cart.reduce((acc, item) => acc + item.product.precio * 1.21 * item.cantidad, 0)
     const cl = clients.find((c) => c.nif === selectedClient || c.nombre === clientName)
 
+    const nifCliente = selectedClient || (cl ? cl.nif : 'CONTADO')
+    const nombreCliente = clientName || (cl ? cl.nombre : 'Cliente Contado')
+
+    if (documentType === 'factura') {
+      if (!nifCliente || nifCliente.trim() === '' || nifCliente.toUpperCase() === 'CONTADO') {
+        return alert('Para emitir una Factura es obligatorio seleccionar o registrar un cliente con NIF válido (no CONTADO).')
+      }
+      if (!nombreCliente || nombreCliente.trim() === '' || nombreCliente.toUpperCase() === 'CLIENTE CONTADO') {
+        return alert('Para emitir una Factura es obligatorio indicar el Nombre del cliente.')
+      }
+    }
+
     const payload = {
       vendedor: user?.username || 'Sistema',
       tienda: selectedTienda,
-      nifCliente: selectedClient || (cl ? cl.nif : 'CONTADO'),
-      nombreCliente: clientName || (cl ? cl.nombre : 'Cliente Contado'),
+      nifCliente,
+      nombreCliente,
       importeTotal: total,
       metodoPago: paymentMethod,
+      tipoDocumento: documentType,
       listaProductos: cart.map((c) => ({
         id: c.product.id,
         nombre: c.product.nombre,
@@ -1038,7 +1054,7 @@ export default function MicroShopAccesoriosApp() {
                   </div>
                 </div>
 
-                <button onClick={() => { if (cart.length === 0) return alert('El carrito está vacío'); setShowPaymentModal(true); }} style={{ width: '100%', background: '#00adef', color: 'white', border: 'none', padding: 14, borderRadius: 10, fontWeight: 'bold', fontSize: 15, cursor: 'pointer', boxShadow: '0 4px 10px rgba(0, 173, 239,0.2)' }}>
+                <button onClick={() => { if (cart.length === 0) return alert('El carrito está vacío'); setDocumentType('ticket'); setShowPaymentModal(true); }} style={{ width: '100%', background: '#00adef', color: 'white', border: 'none', padding: 14, borderRadius: 10, fontWeight: 'bold', fontSize: 15, cursor: 'pointer', boxShadow: '0 4px 10px rgba(0, 173, 239,0.2)' }}>
                   Confirmar y Cobrar
                 </button>
               </div>
@@ -1640,6 +1656,18 @@ export default function MicroShopAccesoriosApp() {
       {showPaymentModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ background: 'white', padding: 30, borderRadius: 16, width: 400, boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
+            <h3 style={{ margin: '0 0 10px 0', color: '#00adef', fontWeight: 'bold' }}>Tipo de Documento</h3>
+            <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
+              <label style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 10, border: '1px solid #ddd', borderRadius: 8, cursor: 'pointer', background: documentType === 'ticket' ? '#e3f2fd' : 'transparent', borderColor: documentType === 'ticket' ? '#00adef' : '#ddd' }}>
+                <input type="radio" name="docType" checked={documentType === 'ticket'} onChange={() => setDocumentType('ticket')} />
+                <span style={{ fontWeight: 'bold', fontSize: 13 }}>Ticket 🎫</span>
+              </label>
+              <label style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 10, border: '1px solid #ddd', borderRadius: 8, cursor: 'pointer', background: documentType === 'factura' ? '#e3f2fd' : 'transparent', borderColor: documentType === 'factura' ? '#00adef' : '#ddd' }}>
+                <input type="radio" name="docType" checked={documentType === 'factura'} onChange={() => setDocumentType('factura')} />
+                <span style={{ fontWeight: 'bold', fontSize: 13 }}>Factura 📄</span>
+              </label>
+            </div>
+
             <h3 style={{ margin: '0 0 20px 0', color: '#00adef', fontWeight: 'bold' }}>Método de Pago</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 14, border: '1px solid #ddd', borderRadius: 8, cursor: 'pointer', background: paymentMethod === 'Efectivo' ? '#e3f2fd' : 'transparent', borderColor: paymentMethod === 'Efectivo' ? '#00adef' : '#ddd' }}>
@@ -1667,7 +1695,9 @@ export default function MicroShopAccesoriosApp() {
               <Printer size={32} />
             </div>
             <h2 style={{ margin: 0, color: '#00adef', fontWeight: 'bold' }}>¡Venta Completada!</h2>
-            <p style={{ color: '#555', margin: '8px 0 24px 0', fontSize: 14 }}>Factura de accesorios simplificada #{printModalSale.numeroFactura || '---'}</p>
+            <p style={{ color: '#555', margin: '8px 0 24px 0', fontSize: 14 }}>
+              {printModalSale.tipoDocumento === 'factura' ? 'Factura' : 'Factura simplificada (Ticket)'} de accesorios #{printModalSale.facturaSerie || printModalSale.numeroFactura || '---'}
+            </p>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
               <button onClick={() => window.open(`/microshop-accesorios/print/${printModalSale.id}?type=ticket`, '_blank')} style={{ padding: 12, borderRadius: 8, border: '1px solid #00adef', background: 'white', color: '#00adef', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>

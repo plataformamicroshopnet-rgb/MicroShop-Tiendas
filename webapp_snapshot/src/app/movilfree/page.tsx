@@ -27,7 +27,7 @@ type Product = {
 }
 
 type Client = { id: string; nif: string; nombre: string; direccion?: string; poblacion?: string; provincia?: string; cp?: string; movil?: string; fijo?: string; email: string; totalComprado: number }
-type Sale = { id: string; numeroFactura?: number; vendedor: string; tienda: string; nifCliente: string; nombreCliente: string; listaProductos: string; importeTotal: number; metodoPago?: string; estado: string; fechaVenta: string; motivoDevolucion: string }
+type Sale = { id: string; numeroFactura?: number; vendedor: string; tienda: string; nifCliente: string; nombreCliente: string; listaProductos: string; importeTotal: number; metodoPago?: string; estado: string; fechaVenta: string; motivoDevolucion: string; tipoDocumento?: string | null; facturaSerie?: string | null }
 type Reparacion = { id?: string; numero: number; nombreApellidos: string; direccion?: string; dniNif?: string; telefono?: string; marca?: string; modelo?: string; imei?: string; fechaRecepcion?: string; observaciones?: string; motivo?: string; fechaEntrega?: string; garantia?: string; informe?: string; repara?: string; costePvd?: number; pvp?: number; createdAt?: string; }
 type BudgetLine = { id: string; desc: string; qty: number; price: number }
 
@@ -606,13 +606,26 @@ export default function MovilFreeApp() {
     const total = cart.reduce((acc, item) => acc + (item.product.precio * 1.21 * item.cantidad), 0)
     const cl = clients.find(c => c.nif === selectedClient || c.nombre === clientName)
     
+    const nifCliente = selectedClient || (cl ? cl.nif : 'CONTADO')
+    const nombreCliente = clientName || (cl ? cl.nombre : 'Cliente Contado')
+
+    if (documentType === 'factura') {
+      if (!nifCliente || nifCliente.trim() === '' || nifCliente.toUpperCase() === 'CONTADO') {
+        return alert('Para emitir una Factura es obligatorio seleccionar o registrar un cliente con NIF válido (no CONTADO).')
+      }
+      if (!nombreCliente || nombreCliente.trim() === '' || nombreCliente.toUpperCase() === 'CLIENTE CONTADO') {
+        return alert('Para emitir una Factura es obligatorio indicar el Nombre del cliente.')
+      }
+    }
+
     const payload = {
       vendedor: user?.username || 'Sistema',
       tienda: selectedTienda,
-      nifCliente: selectedClient || (cl ? cl.nif : 'CONTADO'),
-      nombreCliente: clientName || (cl ? cl.nombre : 'Cliente Contado'),
+      nifCliente,
+      nombreCliente,
       importeTotal: total,
       metodoPago: paymentMethod,
+      tipoDocumento: documentType,
       listaProductos: cart.map(c => ({ id: c.product.id, nombre: c.product.nombre, cantidad: c.cantidad, precio: c.product.precio * 1.21, coste: c.product.coste }))
     }
 
@@ -814,6 +827,7 @@ export default function MovilFreeApp() {
 
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<'Efectivo' | 'Tarjeta'>('Efectivo')
+  const [documentType, setDocumentType] = useState<'ticket' | 'factura'>('ticket')
 
   const handlePrintSat = (r: Reparacion) => {
     setPrintModalSat(r)
@@ -1117,7 +1131,7 @@ export default function MovilFreeApp() {
                   </div>
                 </div>
 
-                <button onClick={() => { if(cart.length === 0) return alert('El carrito está vacío'); setShowPaymentModal(true); }} style={{ width: '100%', background: fuchsia, color: 'white', border: 'none', padding: 16, borderRadius: 12, fontWeight: 'bold', fontSize: 16, cursor: 'pointer' }}>
+                <button onClick={() => { if(cart.length === 0) return alert('El carrito está vacío'); setDocumentType('ticket'); setShowPaymentModal(true); }} style={{ width: '100%', background: fuchsia, color: 'white', border: 'none', padding: 16, borderRadius: 12, fontWeight: 'bold', fontSize: 16, cursor: 'pointer' }}>
                   Cobrar Venta
                 </button>
               </div>
@@ -2104,6 +2118,22 @@ export default function MovilFreeApp() {
         {showPaymentModal && (
           <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
             <div style={{ background: 'white', padding: 32, borderRadius: 16, width: '100%', maxWidth: 400, textAlign: 'center' }}>
+              <h2 style={{ margin: '0 0 10px 0', color: '#333', fontSize: 18, fontWeight: 'bold' }}>Tipo de Documento</h2>
+              <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
+                <button 
+                  onClick={() => setDocumentType('ticket')}
+                  style={{ flex: 1, padding: '12px', borderRadius: 8, border: `2px solid ${documentType === 'ticket' ? fuchsia : '#ddd'}`, background: documentType === 'ticket' ? lightPink : 'white', cursor: 'pointer', fontWeight: 'bold', fontSize: 14, color: documentType === 'ticket' ? fuchsia : '#555' }}
+                >
+                  Ticket 🎫
+                </button>
+                <button 
+                  onClick={() => setDocumentType('factura')}
+                  style={{ flex: 1, padding: '12px', borderRadius: 8, border: `2px solid ${documentType === 'factura' ? fuchsia : '#ddd'}`, background: documentType === 'factura' ? lightPink : 'white', cursor: 'pointer', fontWeight: 'bold', fontSize: 14, color: documentType === 'factura' ? fuchsia : '#555' }}
+                >
+                  Factura 📄
+                </button>
+              </div>
+
               <h2 style={{ margin: '0 0 16px 0', color: '#333' }}>Método de Pago</h2>
               
               <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
@@ -2141,7 +2171,9 @@ export default function MovilFreeApp() {
                 <span style={{ fontSize: 32 }}>✓</span>
               </div>
               <h2 style={{ margin: '0 0 8px 0', color: '#333' }}>¡Venta Completada!</h2>
-              <p style={{ color: '#555', marginBottom: 24 }}>Factura #{printModalSale.numeroFactura || '---'}</p>
+              <p style={{ color: '#555', marginBottom: 24 }}>
+                {printModalSale.tipoDocumento === 'factura' ? 'Factura' : 'Factura simplificada (Ticket)'} #{printModalSale.facturaSerie || printModalSale.numeroFactura || '---'}
+              </p>
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <button onClick={() => window.open(`/movilfree/print/${printModalSale.id}?type=ticket`, '_blank')} style={{ padding: '14px', borderRadius: 8, border: '1px solid #ddd', background: 'white', cursor: 'pointer', fontWeight: 'bold', fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>

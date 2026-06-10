@@ -36,6 +36,15 @@ export default function AdminDashboardPage() {
       permission: 'CARD_CAJA',
       colorGroup: 'cyan'
     },
+    {
+      title: 'Facturas y Tickets',
+      description: 'Consulta, búsqueda y exportación de facturas y tickets emitidos por tienda.',
+      icon: Calculator,
+      action: () => router.push('/cristina-admin/facturas'),
+      color: 'rgba(0,173,239,0.1)',
+      textColor: 'var(--mercedes-cyan)',
+      colorGroup: 'cyan'
+    },
 
     // --- GRUPO NARANJA ---
     {

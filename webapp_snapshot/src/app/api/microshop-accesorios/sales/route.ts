@@ -26,14 +26,49 @@ export async function POST(req: Request) {
   try {
     const data = await req.json()
     const listaProductosStr = JSON.stringify(data.listaProductos)
-    
-    // Find next invoice number
-    const lastSale = await prisma.microShopSale.findFirst({
-      where: { numeroFactura: { not: null } },
-      orderBy: { numeroFactura: 'desc' }
-    })
-    const newInvoiceNumber = lastSale && lastSale.numeroFactura ? lastSale.numeroFactura + 1 : 51000
     const totalAmount = Number(data.importeTotal)
+    const tipoDocumento = data.tipoDocumento || 'ticket'
+    
+    let newInvoiceNumber: number | null = null
+    let facturaSerie: string | null = null
+
+    if (tipoDocumento === 'factura') {
+      let prefix = 'GEN/'
+      const storeName = data.tienda || ''
+      if (storeName.startsWith('Auxiliadora')) prefix = 'AUX/'
+      else if (storeName.startsWith('Villamayor')) prefix = 'VIL/'
+      else if (storeName.startsWith('Correhuela')) prefix = 'COR/'
+      else if (storeName.startsWith('Béjar') || storeName.startsWith('Bejar')) prefix = 'BEJ/'
+
+      // Find last sale with this prefix to get next number
+      const lastFactura = await prisma.microShopSale.findFirst({
+        where: {
+          facturaSerie: {
+            startsWith: prefix
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      })
+
+      let nextNumber = 1
+      if (lastFactura && lastFactura.facturaSerie) {
+        const parts = lastFactura.facturaSerie.split('/')
+        const lastNum = parseInt(parts[1], 10)
+        if (!isNaN(lastNum)) {
+          nextNumber = lastNum + 1
+        }
+      }
+      facturaSerie = `${prefix}${nextNumber}`
+    } else {
+      // Ticket path
+      const lastSale = await prisma.microShopSale.findFirst({
+        where: { numeroFactura: { not: null } },
+        orderBy: { numeroFactura: 'desc' }
+      })
+      newInvoiceNumber = lastSale && lastSale.numeroFactura ? lastSale.numeroFactura + 1 : 51000
+    }
 
     // Create the accessory sale record
     const sale = await prisma.microShopSale.create({
@@ -46,7 +81,9 @@ export async function POST(req: Request) {
         importeTotal: totalAmount,
         estado: 'COMPLETADA',
         metodoPago: data.metodoPago || 'Efectivo',
-        numeroFactura: newInvoiceNumber
+        numeroFactura: newInvoiceNumber,
+        tipoDocumento,
+        facturaSerie
       }
     })
 
@@ -97,6 +134,8 @@ export async function POST(req: Request) {
     const todayStr = new Date().toISOString().split('T')[0]
     const productDetails = data.listaProductos.map((p: any) => `${p.cantidad}x ${p.nombre}`).join(', ')
     
+    const docIdentifier = tipoDocumento === 'factura' ? facturaSerie : `#${newInvoiceNumber}`
+    
     if (data.metodoPago === 'Tarjeta') {
       // Card Sale: concept '(+) Tarjeta MovilFree', amount = 0, detail shows actual charge
       await prisma.cajaEntry.create({
@@ -104,7 +143,7 @@ export async function POST(req: Request) {
           tienda: cajaTienda,
           fecha: todayStr,
           concepto: '(+) Tarjeta MovilFree',
-          detalle: `Venta accesorios Tarjeta - ${productDetails} [Importe: ${totalAmount.toFixed(2)}€] (Factura #${newInvoiceNumber})`,
+          detalle: `Venta accesorios Tarjeta - ${productDetails} [Importe: ${totalAmount.toFixed(2)}€] (Doc: ${docIdentifier})`,
           importe: 0,
           vendedor: data.vendedor || 'Sistema'
         }
@@ -116,7 +155,7 @@ export async function POST(req: Request) {
           tienda: cajaTienda,
           fecha: todayStr,
           concepto: '(+) Facturación Microshop',
-          detalle: `Venta accesorios Efectivo - ${productDetails} (Factura #${newInvoiceNumber})`,
+          detalle: `Venta accesorios Efectivo - ${productDetails} (Doc: ${docIdentifier})`,
           importe: totalAmount,
           vendedor: data.vendedor || 'Sistema'
         }

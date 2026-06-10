@@ -63,6 +63,14 @@ export default function CristinaAdminPage() {
       action: () => router.push('/cristina-admin/iva'),
       bgIcon: 'linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(147, 51, 234, 0.2) 100%)',
       colorIcon: '#a855f7'
+    },
+    {
+      title: 'Facturas y Tickets',
+      description: 'Consulta, búsqueda y exportación de facturas y tickets emitidos por tienda.',
+      icon: Receipt,
+      action: () => router.push('/cristina-admin/facturas'),
+      bgIcon: 'linear-gradient(135deg, rgba(233, 30, 151, 0.15) 0%, rgba(200, 20, 120, 0.2) 100%)',
+      colorIcon: '#E91E97'
     }
   ]
 

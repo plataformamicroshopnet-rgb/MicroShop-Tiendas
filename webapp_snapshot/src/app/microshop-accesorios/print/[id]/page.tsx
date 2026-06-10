@@ -8,11 +8,12 @@ export default async function PrintMicroShopInvoice({ params, searchParams }: { 
   // Fix Next.js async params
   const resolvedParams = await params;
   const id = resolvedParams.id;
-  const resolvedSearchParams = await searchParams;
-  const type = resolvedSearchParams.type || 'ticket';
-
+  
   const sale = await prisma.microShopSale.findUnique({ where: { id: id } })
   if (!sale) return notFound()
+
+  const resolvedSearchParams = await searchParams;
+  const type = resolvedSearchParams.type || sale.tipoDocumento || 'ticket';
 
   // Load client data if it's an A4 Invoice and NIF is provided
   let client = null;
@@ -60,7 +61,9 @@ export default async function PrintMicroShopInvoice({ params, searchParams }: { 
         </div>
         
         <div className="separator"></div>
-        <div className="center bold">FACTURA SIMPLIFICADA #{sale.numeroFactura || '---'}</div>
+        <div className="center bold">
+          {sale.tipoDocumento === 'factura' ? `FACTURA #${sale.facturaSerie || '---'}` : `FACTURA SIMPLIFICADA #${sale.numeroFactura || '---'}`}
+        </div>
         <div className="separator"></div>
 
         <div>
@@ -173,10 +176,10 @@ export default async function PrintMicroShopInvoice({ params, searchParams }: { 
           </div>
         </div>
         <div className="invoice-title-block">
-          <h1>FACTURA</h1>
+          <h1>{sale.tipoDocumento === 'factura' ? 'FACTURA' : 'FACTURA SIMPLIFICADA'}</h1>
           <div className="invoice-meta">
             <span>Número:</span>
-            <strong>#{sale.numeroFactura || '---'}</strong>
+            <strong>{sale.tipoDocumento === 'factura' ? (sale.facturaSerie || '---') : `#${sale.numeroFactura || '---'}`}</strong>
             <span>Fecha:</span>
             <strong>{formatDate(sale.fechaVenta)}</strong>
             <span>Tienda:</span>
