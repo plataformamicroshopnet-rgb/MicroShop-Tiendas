@@ -33,6 +33,14 @@ export default function CristinaAdminPage() {
       colorIcon: '#0ea5e9'
     },
     {
+      title: 'MicroShop Accesorios',
+      description: 'Gestión de inventario de accesorios de MicroShop, punto de venta y trazabilidad.',
+      icon: Package,
+      action: () => router.push('/microshop-accesorios'),
+      bgIcon: 'linear-gradient(135deg, rgba(0, 173, 239, 0.15) 0%, rgba(0, 150, 200, 0.2) 100%)',
+      colorIcon: 'var(--mercedes-cyan)'
+    },
+    {
       title: 'Informes de Gastos',
       description: 'Registro y seguimiento de gastos operativos.',
       icon: Receipt,
