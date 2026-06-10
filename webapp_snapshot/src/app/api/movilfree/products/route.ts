@@ -97,8 +97,8 @@ export async function POST(req: Request) {
           });
         }
         
-        // Upsert stock in target store (enforce 0 if store is a Movistar store)
-        const targetStock = movistarStores.includes(tienda) ? 0 : (Number(prod.stock) || 0)
+        // Upsert stock in target store
+        const targetStock = Number(prod.stock) || 0
         await prisma.movilFreeStock.upsert({
           where: {
             productId_tienda: {
@@ -148,8 +148,8 @@ export async function POST(req: Request) {
       })
     }
     
-    // Upsert store specific stock (enforce 0 if store is a Movistar store)
-    const targetStock = movistarStores.includes(tienda) ? 0 : (Number(data.stock) || 0)
+    // Upsert store specific stock
+    const targetStock = Number(data.stock) || 0
     await prisma.movilFreeStock.upsert({
       where: {
         productId_tienda: {

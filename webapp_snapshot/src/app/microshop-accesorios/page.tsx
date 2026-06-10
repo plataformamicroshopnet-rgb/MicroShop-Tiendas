@@ -215,10 +215,6 @@ export default function MicroShopAccesoriosApp() {
     new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(val)
 
   const getStock = (product: Product, storeName: string): number => {
-    const movistarStores = ['Auxiliadora 45', 'Correhuela', 'Villamayor', 'Béjar']
-    if (product.isMovilFree && movistarStores.includes(storeName)) {
-      return 0
-    }
     const stockItem = product.stocks?.find((s) => s.tienda === storeName)
     return stockItem ? stockItem.cantidad : 0
   }
@@ -226,6 +222,16 @@ export default function MicroShopAccesoriosApp() {
   const getTotalStock = (product: Product): number => {
     const stores = ['Auxiliadora 45', 'Correhuela', 'Villamayor', 'Béjar', 'O2']
     return stores.reduce((acc, store) => acc + getStock(product, store), 0)
+  }
+
+  const getSortedProducts = (prodList: Product[], tienda: string) => {
+    return [...prodList].sort((a, b) => {
+      const stockA = getStock(a, tienda)
+      const stockB = getStock(b, tienda)
+      if (stockA > 0 && stockB === 0) return -1
+      if (stockA === 0 && stockB > 0) return 1
+      return 0
+    })
   }
 
   // Cart/TPV handlers
@@ -917,17 +923,24 @@ export default function MicroShopAccesoriosApp() {
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, maxHeight: 600, overflowY: 'auto', paddingRight: 6 }}>
-                  {products
+                  {getSortedProducts(products, selectedTienda)
                     .filter((p) => {
-                      const stockVal = getStock(p, selectedTienda)
                       return (
-                        stockVal > 0 &&
                         (searchCategory === 'Todas' || p.categoria === searchCategory) &&
                         p.nombre.toLowerCase().includes(searchQuery.toLowerCase())
                       )
                     })
                     .map((p) => (
-                      <div key={p.id} onClick={() => addToCart(p)} style={{ background: 'white', padding: 16, borderRadius: 12, border: '1px solid #eee', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 5px rgba(0,0,0,0.02)' }}>
+                      <div key={p.id} onClick={() => addToCart(p)} style={{ 
+                        background: getStock(p, selectedTienda) === 0 ? '#fafafa' : 'white', 
+                        padding: 16, 
+                        borderRadius: 12, 
+                        border: '1px solid #eee', 
+                        cursor: getStock(p, selectedTienda) === 0 ? 'not-allowed' : 'pointer', 
+                        opacity: getStock(p, selectedTienda) === 0 ? 0.6 : 1,
+                        transition: 'all 0.2s', 
+                        boxShadow: '0 2px 5px rgba(0,0,0,0.02)' 
+                      }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                           <span style={{ fontSize: 10, color: '#888', fontWeight: 'bold', textTransform: 'uppercase' }}>{p.categoria}</span>
                           {p.imei && (
@@ -943,8 +956,8 @@ export default function MicroShopAccesoriosApp() {
                         </div>
                       </div>
                     ))}
-                  {products.filter((p) => getStock(p, selectedTienda) > 0 && (searchCategory === 'Todas' || p.categoria === searchCategory) && p.nombre.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
-                    <div style={{ color: '#888', padding: 20 }}>No hay accesorios en stock en {selectedTienda === 'O2' ? 'Movilfree' : selectedTienda}.</div>
+                  {products.filter((p) => (searchCategory === 'Todas' || p.categoria === searchCategory) && p.nombre.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+                    <div style={{ color: '#888', padding: 20 }}>No se encontraron productos.</div>
                   )}
                 </div>
               </div>
@@ -1192,14 +1205,15 @@ export default function MicroShopAccesoriosApp() {
                     </tr>
                   </thead>
                   <tbody>
-                    {products
-                      .filter((p) => {
+                    {getSortedProducts(
+                      products.filter((p) => {
                         const matchesSearch = p.nombre.toLowerCase().includes(searchInvProducts.toLowerCase())
                         if (!matchesSearch) return false
                         if (searchInvCategory !== 'Todas' && p.categoria !== searchInvCategory) return false
                         return true
-                      })
-                      .map((p) => {
+                      }),
+                      selectedTienda
+                    ).map((p) => {
                         const isEditing = editingProductId === p.id
                         return (
                           <tr key={p.id} style={{ borderBottom: '1px solid #eee' }}>
@@ -1250,28 +1264,28 @@ export default function MicroShopAccesoriosApp() {
                             {/* Stock Columns */}
                             <td style={{ padding: 10, textAlign: 'center' }}>
                               {isEditing ? (
-                                <input type="number" value={editProdData?.stocks?.['Auxiliadora 45'] ?? 0} disabled={p.isMovilFree} onChange={(e) => setEditProdData({ ...editProdData, stocks: { ...editProdData.stocks, 'Auxiliadora 45': Number(e.target.value) } })} style={{ width: 50, textAlign: 'center', border: '1px solid #90caf9', borderRadius: 4, padding: 2 }} />
+                                <input type="number" value={editProdData?.stocks?.['Auxiliadora 45'] ?? 0} onChange={(e) => setEditProdData({ ...editProdData, stocks: { ...editProdData.stocks, 'Auxiliadora 45': Number(e.target.value) } })} style={{ width: 50, textAlign: 'center', border: '1px solid #90caf9', borderRadius: 4, padding: 2 }} />
                               ) : (
                                 getStock(p, 'Auxiliadora 45')
                               )}
                             </td>
                             <td style={{ padding: 10, textAlign: 'center' }}>
                               {isEditing ? (
-                                <input type="number" value={editProdData?.stocks?.['Correhuela'] ?? 0} disabled={p.isMovilFree} onChange={(e) => setEditProdData({ ...editProdData, stocks: { ...editProdData.stocks, 'Correhuela': Number(e.target.value) } })} style={{ width: 50, textAlign: 'center', border: '1px solid #90caf9', borderRadius: 4, padding: 2 }} />
+                                <input type="number" value={editProdData?.stocks?.['Correhuela'] ?? 0} onChange={(e) => setEditProdData({ ...editProdData, stocks: { ...editProdData.stocks, 'Correhuela': Number(e.target.value) } })} style={{ width: 50, textAlign: 'center', border: '1px solid #90caf9', borderRadius: 4, padding: 2 }} />
                               ) : (
                                 getStock(p, 'Correhuela')
                               )}
                             </td>
                             <td style={{ padding: 10, textAlign: 'center' }}>
                               {isEditing ? (
-                                <input type="number" value={editProdData?.stocks?.['Villamayor'] ?? 0} disabled={p.isMovilFree} onChange={(e) => setEditProdData({ ...editProdData, stocks: { ...editProdData.stocks, 'Villamayor': Number(e.target.value) } })} style={{ width: 50, textAlign: 'center', border: '1px solid #90caf9', borderRadius: 4, padding: 2 }} />
+                                <input type="number" value={editProdData?.stocks?.['Villamayor'] ?? 0} onChange={(e) => setEditProdData({ ...editProdData, stocks: { ...editProdData.stocks, 'Villamayor': Number(e.target.value) } })} style={{ width: 50, textAlign: 'center', border: '1px solid #90caf9', borderRadius: 4, padding: 2 }} />
                               ) : (
                                 getStock(p, 'Villamayor')
                               )}
                             </td>
                             <td style={{ padding: 10, textAlign: 'center' }}>
                               {isEditing ? (
-                                <input type="number" value={editProdData?.stocks?.['Béjar'] ?? 0} disabled={p.isMovilFree} onChange={(e) => setEditProdData({ ...editProdData, stocks: { ...editProdData.stocks, 'Béjar': Number(e.target.value) } })} style={{ width: 50, textAlign: 'center', border: '1px solid #90caf9', borderRadius: 4, padding: 2 }} />
+                                <input type="number" value={editProdData?.stocks?.['Béjar'] ?? 0} onChange={(e) => setEditProdData({ ...editProdData, stocks: { ...editProdData.stocks, 'Béjar': Number(e.target.value) } })} style={{ width: 50, textAlign: 'center', border: '1px solid #90caf9', borderRadius: 4, padding: 2 }} />
                               ) : (
                                 getStock(p, 'Béjar')
                               )}

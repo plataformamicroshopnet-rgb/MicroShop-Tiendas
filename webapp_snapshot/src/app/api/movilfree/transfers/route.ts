@@ -118,10 +118,6 @@ export async function POST(req: Request) {
     }
 
     // Default to MovilFree
-    const movistarStores = ['Auxiliadora 45', 'Correhuela', 'Villamayor', 'Béjar']
-    if (movistarStores.includes(destino)) {
-      return NextResponse.json({ error: 'Los productos de Movilfree no se pueden traspasar a tiendas Movistar' }, { status: 400 })
-    }
 
     const sourceStock = await prisma.movilFreeStock.findUnique({
       where: {

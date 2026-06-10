@@ -26,8 +26,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       
       if (data.stocks !== undefined) {
         for (const [storeName, qty] of Object.entries(data.stocks)) {
-          // Enforce 0 stock if target store is a Movistar store
-          const targetStock = movistarStores.includes(storeName) ? 0 : Number(qty)
+          const targetStock = Number(qty)
           await prisma.movilFreeStock.upsert({
             where: {
               productId_tienda: {
@@ -46,8 +45,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           })
         }
       } else if (data.tienda !== undefined && data.stock !== undefined) {
-        // Enforce 0 stock if target store is a Movistar store
-        const targetStock = movistarStores.includes(data.tienda) ? 0 : Number(data.stock)
+        const targetStock = Number(data.stock)
         await prisma.movilFreeStock.upsert({
           where: {
             productId_tienda: {

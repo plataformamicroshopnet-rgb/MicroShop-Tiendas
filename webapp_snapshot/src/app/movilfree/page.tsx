@@ -108,10 +108,6 @@ export default function MovilFreeApp() {
   const formatMoney = (val: number) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(val)
 
   const getStock = (product: Product, storeName: string): number => {
-    const movistarStores = ['Auxiliadora 45', 'Correhuela', 'Villamayor', 'Béjar']
-    if (product.isMovilFree && movistarStores.includes(storeName)) {
-      return 0
-    }
     const stockItem = product.stocks?.find((s) => s.tienda === storeName)
     return stockItem ? stockItem.cantidad : 0
   }
@@ -119,6 +115,16 @@ export default function MovilFreeApp() {
   const getTotalStock = (product: Product): number => {
     const stores = ['Auxiliadora 45', 'Correhuela', 'Villamayor', 'Béjar', 'O2']
     return stores.reduce((acc, store) => acc + getStock(product, store), 0)
+  }
+
+  const getSortedProducts = (prodList: Product[], tienda: string) => {
+    return [...prodList].sort((a, b) => {
+      const stockA = getStock(a, tienda)
+      const stockB = getStock(b, tienda)
+      if (stockA > 0 && stockB === 0) return -1
+      if (stockA === 0 && stockB > 0) return 1
+      return 0
+    })
   }
 
   // --- Subcomponents ---
@@ -973,8 +979,17 @@ export default function MovilFreeApp() {
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
-                  {products.filter(p => getStock(p, selectedTienda) > 0 && (searchCategory === 'Todas' || p.categoria === searchCategory) && p.nombre.toLowerCase().includes(searchQuery.toLowerCase())).map(p => (
-                    <div key={p.id} onClick={() => addToCart(p)} style={{ background: 'white', padding: 16, borderRadius: 12, border: '1px solid #eee', cursor: 'pointer', transition: 'all 0.2s', ':hover': { borderColor: '#E91E97', transform: 'translateY(-2px)' } } as any}>
+                  {getSortedProducts(products, selectedTienda).filter(p => (searchCategory === 'Todas' || p.categoria === searchCategory) && p.nombre.toLowerCase().includes(searchQuery.toLowerCase())).map(p => (
+                    <div key={p.id} onClick={() => addToCart(p)} style={{ 
+                      background: getStock(p, selectedTienda) === 0 ? '#fafafa' : 'white', 
+                      padding: 16, 
+                      borderRadius: 12, 
+                      border: '1px solid #eee', 
+                      cursor: getStock(p, selectedTienda) === 0 ? 'not-allowed' : 'pointer', 
+                      opacity: getStock(p, selectedTienda) === 0 ? 0.6 : 1,
+                      transition: 'all 0.2s', 
+                      ':hover': getStock(p, selectedTienda) === 0 ? {} : { borderColor: '#E91E97', transform: 'translateY(-2px)' } 
+                    } as any}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                         <div style={{ fontSize: 11, color: '#888' }}>{p.categoria}</div>
                         {p.categoria === 'Terminal' && p.imei && (
@@ -990,7 +1005,7 @@ export default function MovilFreeApp() {
                       </div>
                     </div>
                   ))}
-                  {products.filter(p => getStock(p, selectedTienda) > 0 && (searchCategory === 'Todas' || p.categoria === searchCategory) && p.nombre.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && <div style={{ color: '#888' }}>No se encontraron productos.</div>}
+                  {products.filter(p => (searchCategory === 'Todas' || p.categoria === searchCategory) && p.nombre.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && <div style={{ color: '#888' }}>No se encontraron productos.</div>}
                 </div>
               </div>
               <div style={{ background: '#f8f9fa', padding: 24, borderRadius: 16 }}>
@@ -1273,12 +1288,15 @@ export default function MovilFreeApp() {
 
                 </thead>
                 <tbody>
-                  {products.filter(p => {
-                    const matchesSearch = p.nombre.toLowerCase().includes(searchInvProducts.toLowerCase())
-                    if (!matchesSearch) return false
-                    if (searchInvCategory !== 'Todas' && p.categoria !== searchInvCategory) return false
-                    return true
-                  }).map(p => (
+                  {getSortedProducts(
+                    products.filter(p => {
+                      const matchesSearch = p.nombre.toLowerCase().includes(searchInvProducts.toLowerCase())
+                      if (!matchesSearch) return false
+                      if (searchInvCategory !== 'Todas' && p.categoria !== searchInvCategory) return false
+                      return true
+                    }),
+                    selectedTienda
+                  ).map(p => (
                     <tr key={p.id} style={{ borderBottom: '1px solid #eee', background: editingProductId === p.id ? '#fdf2f8' : 'transparent' }}>
                       {editingProductId === p.id ? (
                         <>
@@ -1295,19 +1313,19 @@ export default function MovilFreeApp() {
                           <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}><input value={editProdData?.imei || ''} maxLength={15} onChange={e => setEditProdData({...editProdData, imei: e.target.value.replace(/\D/g,'')})} style={{ width: 110, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center', fontSize: 13, fontFamily: 'monospace' }} /></td>
                           {/* Auxiliadora */}
                           <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}>
-                            <input type="number" value={editProdData?.stocks?.['Auxiliadora 45'] ?? 0} disabled={p.isMovilFree} onChange={e => setEditProdData({...editProdData, stocks: { ...editProdData.stocks, 'Auxiliadora 45': Number(e.target.value) }})} style={{ width: 50, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center' }} />
+                            <input type="number" value={editProdData?.stocks?.['Auxiliadora 45'] ?? 0} onChange={e => setEditProdData({...editProdData, stocks: { ...editProdData.stocks, 'Auxiliadora 45': Number(e.target.value) }})} style={{ width: 50, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center' }} />
                           </td>
                           {/* Correhuela */}
                           <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}>
-                            <input type="number" value={editProdData?.stocks?.['Correhuela'] ?? 0} disabled={p.isMovilFree} onChange={e => setEditProdData({...editProdData, stocks: { ...editProdData.stocks, 'Correhuela': Number(e.target.value) }})} style={{ width: 50, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center' }} />
+                            <input type="number" value={editProdData?.stocks?.['Correhuela'] ?? 0} onChange={e => setEditProdData({...editProdData, stocks: { ...editProdData.stocks, 'Correhuela': Number(e.target.value) }})} style={{ width: 50, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center' }} />
                           </td>
                           {/* Villamayor */}
                           <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}>
-                            <input type="number" value={editProdData?.stocks?.['Villamayor'] ?? 0} disabled={p.isMovilFree} onChange={e => setEditProdData({...editProdData, stocks: { ...editProdData.stocks, 'Villamayor': Number(e.target.value) }})} style={{ width: 50, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center' }} />
+                            <input type="number" value={editProdData?.stocks?.['Villamayor'] ?? 0} onChange={e => setEditProdData({...editProdData, stocks: { ...editProdData.stocks, 'Villamayor': Number(e.target.value) }})} style={{ width: 50, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center' }} />
                           </td>
                           {/* Béjar */}
                           <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}>
-                            <input type="number" value={editProdData?.stocks?.['Béjar'] ?? 0} disabled={p.isMovilFree} onChange={e => setEditProdData({...editProdData, stocks: { ...editProdData.stocks, 'Béjar': Number(e.target.value) }})} style={{ width: 50, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center' }} />
+                            <input type="number" value={editProdData?.stocks?.['Béjar'] ?? 0} onChange={e => setEditProdData({...editProdData, stocks: { ...editProdData.stocks, 'Béjar': Number(e.target.value) }})} style={{ width: 50, padding: 6, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', textAlign: 'center' }} />
                           </td>
                           {/* Movilfree */}
                           <td style={{ padding: 10, whiteSpace: 'nowrap', textAlign: 'center' }}>
