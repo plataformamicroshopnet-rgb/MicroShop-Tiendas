@@ -1195,11 +1195,11 @@ export default function MicroShopAccesoriosApp() {
                       <th style={{ padding: 10, textAlign: 'right' }}>PVP (con IVA)</th>
                       <th style={{ padding: 10, textAlign: 'right' }}>Beneficio Ud.</th>
                       <th style={{ padding: 10, textAlign: 'center' }}>IMEI</th>
-                      <th style={{ padding: 10, textAlign: 'center' }}>Auxiliadora</th>
-                      <th style={{ padding: 10, textAlign: 'center' }}>Correhuela</th>
-                      <th style={{ padding: 10, textAlign: 'center' }}>Villamayor</th>
-                      <th style={{ padding: 10, textAlign: 'center' }}>Béjar</th>
-                      <th style={{ padding: 10, textAlign: 'center' }}>Movilfree</th>
+                      <th style={{ padding: 10, textAlign: 'center' }}>AUX</th>
+                      <th style={{ padding: 10, textAlign: 'center' }}>COR</th>
+                      <th style={{ padding: 10, textAlign: 'center' }}>VIL</th>
+                      <th style={{ padding: 10, textAlign: 'center' }}>BEJ</th>
+                      <th style={{ padding: 10, textAlign: 'center' }}>MVF</th>
                       <th style={{ padding: 10, textAlign: 'center', fontWeight: 'bold', color: '#00adef' }}>Total Stock</th>
                       <th style={{ padding: 10, borderRadius: '0 8px 8px 0', textAlign: 'center' }}>Acciones</th>
                     </tr>
