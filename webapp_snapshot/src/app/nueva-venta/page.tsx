@@ -1065,11 +1065,12 @@ export default function NuevaVentaPage() {
 }
 
 // --- HELPER FUNCTIONS FOR STOCK MATCHING ---
-const NOISE_WORDS = new Set(['rent', 'rnt', 'reac', 'reac.a', 'reac.b', 'reac.c', 'certif', 'apple', 'con', 'de', 'el', 'la', 'a', 'b', 'c']);
+const NOISE_WORDS = new Set(['rent', 'rnt', 'reac', 'reac.a', 'reac.b', 'reac.c', 'certif', 'apple', 'con', 'de', 'el', 'la', 'a', 'b', 'c', 'gb', 'tb']);
 const MODEL_MODIFIERS = ['pro', 'max', 'mini', 'plus', 'se'];
 
 function getKeywords(name: string): string[] {
   return name.toLowerCase()
+    .replace(/(\d+)(gb|tb)/gi, '$1 $2')
     .replace(/[^a-z0-9\s]/g, ' ')
     .split(/\s+/)
     .filter((w: string) => w.length > 0)
@@ -1088,7 +1089,11 @@ function findMatchingStockItem(prodName: string, stockItems: any[], storeField: 
   if (keywords.length === 0) return null;
 
   const matches = stockItems.filter((s: any) => {
-    const sTokens = s.producto.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter((w: string) => w.length > 0);
+    const sTokens = s.producto.toLowerCase()
+      .replace(/(\d+)(gb|tb)/gi, '$1 $2')
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter((w: string) => w.length > 0);
     
     // All input keywords must be in stock item tokens
     const allKeywordsMatch = keywords.every((kw: string) => sTokens.includes(kw));
