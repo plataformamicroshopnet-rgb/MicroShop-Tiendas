@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import Sidebar from '@/components/Sidebar'
 import BottomNav from '@/components/BottomNav'
@@ -20,6 +20,14 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: 'black-translucent',
   },
+}
+
+// Viewport móvil + color de barra del navegador (PWA)
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: '#0B0F19',
+  viewportFit: 'cover',
 }
 
 export default function RootLayout({

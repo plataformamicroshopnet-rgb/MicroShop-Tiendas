@@ -254,6 +254,81 @@ button, input, select, textarea {
   }
 }
 
+/* --- RESCATE MÓVIL (solo < 768px) ---
+   Muchas páginas usan estilos en línea con min-width fijos (350px) y
+   rejillas de varias columnas que desbordan un móvil de 375px. Estas
+   reglas con !important ganan a los estilos en línea y fuerzan el
+   apilado vertical sin tocar la lógica de ninguna página. */
+@media (max-width: 767px) {
+  .main-content {
+    overflow-x: hidden;
+  }
+
+  /* Tarjetas/columnas con min-width en línea: a ancho completo, apiladas */
+  .main-content [style*="min-width: 350px"],
+  .main-content [style*="min-width:350px"],
+  .main-content [style*="min-width: 250px"],
+  .main-content [style*="min-width:250px"],
+  .main-content [style*="min-width: 300px"],
+  .main-content [style*="min-width:300px"] {
+    min-width: 0 !important;
+    flex-basis: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Rejillas en línea de 3+ columnas: a 2 columnas máximo */
+  .main-content div[style*="grid-template-columns: 1fr 1.5fr 1fr"],
+  .main-content div[style*="grid-template-columns: 1fr 1fr 1fr"] {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* Cabeceras de página: que envuelvan en vez de truncar el título */
+  .page-header {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .page-title {
+    font-size: 20px;
+  }
+  .main-content h1 {
+    font-size: 22px !important;
+  }
+
+  /* Tablas anchas: deslizables horizontalmente dentro de su tarjeta */
+  .main-content table {
+    display: block;
+    overflow-x: auto;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Botones de acción de cabeceras: tamaño táctil sin invadir el título */
+  .page-header button {
+    flex-shrink: 0;
+  }
+
+  /* Cabecera compartida (PageHeader): el título envuelve en vez de
+     truncarse, y los botones redondos se compactan para dejarle sitio */
+  .page-header-bar .page-title {
+    white-space: normal !important;
+    font-size: 19px !important;
+    line-height: 1.25 !important;
+  }
+  .page-header-bar p {
+    white-space: normal !important;
+  }
+  .page-header-bar > div:last-child > button {
+    width: 34px !important;
+    height: 34px !important;
+  }
+  .page-header-bar {
+    gap: 8px !important;
+    margin-bottom: 16px !important;
+  }
+}
+
 /* --- PRINT STYLES --- */
 @media print {
   body {

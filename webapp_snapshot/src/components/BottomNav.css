@@ -12,6 +12,10 @@
   overflow-x: auto;
   white-space: nowrap;
   -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+  /* Degradado en el borde derecho: insinúa que hay más items deslizando */
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 28px), rgba(0,0,0,0.25) 100%);
+  mask-image: linear-gradient(to right, black calc(100% - 28px), rgba(0,0,0,0.25) 100%);
 }
 
 .bottom-nav::-webkit-scrollbar {
@@ -26,14 +30,16 @@
 
 .bottom-nav-item {
   flex: 0 0 auto;
-  min-width: 72px; /* Prevent squishing on many items */
+  min-width: 62px; /* Compacto: caben más items a la vista */
+  padding: 0 4px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   color: var(--text-muted);
   position: relative;
+  scroll-snap-align: start;
 }
 
 .bottom-nav-icon {
@@ -41,7 +47,7 @@
 }
 
 .bottom-nav-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 500;
 }
 

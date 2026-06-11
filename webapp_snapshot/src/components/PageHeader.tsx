@@ -62,9 +62,9 @@ export function PageHeader({
   };
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      justifyContent: 'space-between', 
+    <div className="page-header-bar" style={{
+      display: 'flex',
+      justifyContent: 'space-between',
       alignItems: 'center', // Align everything on a single line
       marginBottom: 24,
       gap: 16
