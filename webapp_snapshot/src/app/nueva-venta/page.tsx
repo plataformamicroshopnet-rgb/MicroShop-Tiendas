@@ -634,7 +634,7 @@ export default function NuevaVentaPage() {
               <h4 style={{ margin: '0 0 4px 0', fontSize: '13px', fontWeight: 'bold', color: '#333' }}>Operación</h4>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ color: '#555' }}>Fecha de Venta</label>
+                  <label className="form-label" style={{ color: '#555' }} title="Debe ser la fecha real de tramitación en los sistemas de Movistar">Fecha de Venta (tramitación)</label>
                   <input type="date" className="form-input" value={formData.fechaVenta} onChange={e => handleInputChange('fechaVenta', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
                 </div>
                 <div className="form-group" style={{ marginBottom: 0 }}>
@@ -642,17 +642,18 @@ export default function NuevaVentaPage() {
                   <input type="text" className="form-input" maxLength={16} value={formData.boletin} onChange={e => handleInputChange('boletin', e.target.value)} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
                 </div>
               </div>
-              {/* Advertencia premium: la fecha debe ser la de tramitación real en Movistar */}
-              <div style={{ backgroundColor: '#FFFFFF', border: formData.fechaVenta === hoyISO ? '1px solid #E3E8EF' : '1px solid #EADFCB', borderLeft: formData.fechaVenta === hoyISO ? '4px solid #90CAF9' : '4px solid #C9A227', borderRadius: 8, padding: '8px 12px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-                <div style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontSize: 13, fontWeight: 600, color: '#1B2A41', letterSpacing: '0.2px' }}>
-                  {formData.fechaVenta === hoyISO ? '¿La operación se tramitó hoy?' : 'Has elegido una fecha distinta a hoy'}
+              {/* Advertencia premium: solo cuando la fecha elegida NO es hoy.
+                  Con fecha de hoy no se muestra nada (no estorba el flujo). */}
+              {formData.fechaVenta !== hoyISO && (
+                <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #EADFCB', borderLeft: '4px solid #C9A227', borderRadius: 8, padding: '8px 12px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                  <div style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontSize: 13, fontWeight: 600, color: '#1B2A41', letterSpacing: '0.2px' }}>
+                    Has elegido una fecha distinta a hoy
+                  </div>
+                  <div style={{ fontSize: 11.5, color: '#5A6B7F', lineHeight: 1.45 }}>
+                    Comprueba que es la fecha real en la que se tramitó la operación en Movistar; de ella depende el mes en que se reclama el cobro.
+                  </div>
                 </div>
-                <div style={{ fontSize: 11.5, color: '#5A6B7F', lineHeight: 1.45 }}>
-                  {formData.fechaVenta === hoyISO
-                    ? 'Si se tramitó otro día en los sistemas de Movistar, selecciona aquí la fecha de tramitación.'
-                    : 'Comprueba que es la fecha real en la que se tramitó la operación en Movistar; de ella depende el mes en que se reclama el cobro.'}
-                </div>
-              </div>
+              )}
               <div className="form-group" style={{ marginBottom: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <label className="form-label" style={{ color: '#555' }}>Anotaciones Generales</label>
                 <textarea className="form-textarea" value={formData.anotaciones} onChange={e => handleInputChange('anotaciones', e.target.value)} style={{ flex: 1, minHeight: '40px', backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A', resize: 'none' }}></textarea>

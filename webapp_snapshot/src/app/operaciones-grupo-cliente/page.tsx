@@ -225,7 +225,7 @@ function SectionTable({
               {(() => {
                 const headers = ['Cliente (NIF) 🔑', 'Nombre del Cliente', 'Fecha Tram.', telfEsLlave ? 'Teléfono 🔑' : 'Teléfono'];
                 if (conPedido) headers.push('Nº Pedido 🔑');
-                if (conImei) headers.push('IMEI 🔑');
+                if (conImei) headers.push('IMEI 🔑', 'Anotaciones');
                 headers.push('Código', 'Comercial', 'Productos', 'Uds.');
                 if (showCuotaTotal) headers.push(importeLabel);
                 headers.push('Comisión');
@@ -260,6 +260,9 @@ function SectionTable({
                     )}
                     {conImei && (
                       <td style={{ padding: '12px 14px', whiteSpace: 'nowrap', fontSize: 12, ...tdLlave(hayDato(sale.imei)) }}>{hayDato(sale.imei) ? sale.imei : 'FALTA'}</td>
+                    )}
+                    {conImei && (
+                      <td style={{ padding: '12px 14px', color: 'var(--medium-gray)', fontSize: 11.5, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={sale.anotaciones || ''}>{sale.anotaciones || '—'}</td>
                     )}
                     <td style={{ padding: '12px 14px', fontSize: 11.5, color: 'var(--medium-gray)', borderRight: '1px solid var(--border-color)' }}>{sale.codigo || '—'}</td>
                     <td style={{ padding: '12px 14px', fontWeight: 600, borderRight: '1px solid var(--border-color)' }}>{sale.vendedor || '—'}</td>
