@@ -914,9 +914,15 @@ export default function NuevaVentaPage() {
 
                       <div style={{ height: 1, backgroundColor: '#E0E0E0', margin: '8px 0' }}></div>
                       
-                      <div>
-                        <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>Teléfono (Nº Fijo / Móvil)</label>
-                        <input type="text" className="form-input" maxLength={9} value={prod.telf} onChange={e => handleProductChange(index, 'telf', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                        <div>
+                          <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>Teléfono (Nº Fijo / Móvil)</label>
+                          <input type="text" className="form-input" maxLength={9} value={prod.telf} onChange={e => handleProductChange(index, 'telf', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>Nº Pedido Movistar 🔑</label>
+                          <input type="text" className="form-input" maxLength={20} value={prod.numeroPedido || ''} onChange={e => handleProductChange(index, 'numeroPedido', e.target.value.trim())} placeholder="Llave de cruce con Telefónica" style={estiloCampo(prod, 'numeroPedido')} />
+                        </div>
                       </div>
                     </div>
 
@@ -932,11 +938,6 @@ export default function NuevaVentaPage() {
 
                       <div style={{ backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', flex: 1 }}>
                         <h5 style={{ margin: '0 0 6px 0', fontSize: '13px', fontWeight: 'bold', color: '#333' }}>Estado</h5>
-
-                        <div className="form-group" style={{ marginBottom: 6 }}>
-                          <label className="form-label" style={{ color: '#555' }}>{esLlave(prod, 'numeroPedido') ? 'Nº Pedido Movistar 🔑' : 'Nº Pedido Movistar'}</label>
-                          <input type="text" className="form-input" maxLength={20} value={prod.numeroPedido || ''} onChange={e => handleProductChange(index, 'numeroPedido', e.target.value.trim())} placeholder="Llave de cruce con Telefónica" style={estiloCampo(prod, 'numeroPedido')} />
-                        </div>
 
                         <div>
                           <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>¿Pendiente?</label>
@@ -1037,26 +1038,34 @@ export default function NuevaVentaPage() {
                               .map((p: any, i: number) => <option key={p.id || i} value={p.producto}>{p.producto}</option>)}
                           </select>
                         </div>
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label className="form-label" style={{ color: (prod.categoria === 'Repos' || prod.categoria === 'Suscripciones TV') ? '#D32F2F' : '#555', fontWeight: (prod.categoria === 'Repos' || prod.categoria === 'Suscripciones TV') ? 'bold' : 'normal' }}>
-                            {(prod.categoria === 'Repos' || prod.categoria === 'Suscripciones TV') ? 'Teléfono Fijo Obligatorio' : 'Teléfono'}{esLlave(prod, 'telf') ? ' 🔑' : ''}
-                          </label>
-                          <input
-                            type="text"
-                            className="form-input"
-                            maxLength={9}
-                            value={prod.telf}
-                            onChange={e => handleProductChange(index, 'telf', e.target.value)}
-                            onPaste={e => {
-                              const pasted = e.clipboardData.getData('text');
-                              if (pasted.length > 9) {
-                                e.preventDefault();
-                                handleProductChange(index, 'telf', pasted);
-                              }
-                            }}
-                            required
-                            style={estiloCampo(prod, 'telf')}
-                          />
+                        <div style={{ display: 'grid', gridTemplateColumns: prod.categoria === 'O2' ? '1fr' : '1fr 1fr', gap: '6px' }}>
+                          <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label className="form-label" style={{ color: (prod.categoria === 'Repos' || prod.categoria === 'Suscripciones TV') ? '#D32F2F' : '#555', fontWeight: (prod.categoria === 'Repos' || prod.categoria === 'Suscripciones TV') ? 'bold' : 'normal' }}>
+                              {(prod.categoria === 'Repos' || prod.categoria === 'Suscripciones TV') ? 'Teléfono Fijo Obligatorio' : 'Teléfono'}{esLlave(prod, 'telf') ? ' 🔑' : ''}
+                            </label>
+                            <input
+                              type="text"
+                              className="form-input"
+                              maxLength={9}
+                              value={prod.telf}
+                              onChange={e => handleProductChange(index, 'telf', e.target.value)}
+                              onPaste={e => {
+                                const pasted = e.clipboardData.getData('text');
+                                if (pasted.length > 9) {
+                                  e.preventDefault();
+                                  handleProductChange(index, 'telf', pasted);
+                                }
+                              }}
+                              required
+                              style={estiloCampo(prod, 'telf')}
+                            />
+                          </div>
+                          {prod.categoria !== 'O2' && (
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                              <label className="form-label" style={{ color: '#555' }}>{esLlave(prod, 'numeroPedido') ? 'Nº Pedido Movistar 🔑' : 'Nº Pedido Movistar'}</label>
+                              <input type="text" className="form-input" maxLength={20} value={prod.numeroPedido || ''} onChange={e => handleProductChange(index, 'numeroPedido', e.target.value.trim())} placeholder="Llave de cruce con Telefónica" style={estiloCampo(prod, 'numeroPedido')} />
+                            </div>
+                          )}
                         </div>
                         {prod.categoria === 'Seguro' && (
                           <div className="form-group" style={{ marginBottom: 0 }}>
@@ -1138,10 +1147,6 @@ export default function NuevaVentaPage() {
                           </div>
                         )}
 
-                        <div className="form-group" style={{ marginBottom: 6 }}>
-                          <label className="form-label" style={{ color: '#555' }}>{esLlave(prod, 'numeroPedido') ? 'Nº Pedido Movistar 🔑' : 'Nº Pedido Movistar'}</label>
-                          <input type="text" className="form-input" maxLength={20} value={prod.numeroPedido || ''} onChange={e => handleProductChange(index, 'numeroPedido', e.target.value.trim())} placeholder="Llave de cruce con Telefónica" style={estiloCampo(prod, 'numeroPedido')} />
-                        </div>
                         <div className="form-group" style={{ marginBottom: 0 }}>
                           <label className="form-label" style={{ color: '#555' }}>¿Pendiente?</label>
                           <select className="form-select" value={prod.pendiente} onChange={e => handleProductChange(index, 'pendiente', e.target.value)} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
