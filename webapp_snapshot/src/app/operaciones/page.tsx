@@ -67,6 +67,8 @@ const coOk = (v: any) => /^(CO\d{4}[A-Z0-9]{6,12}|MDN?\d{6,10})$/.test(String(v 
 const imeiValido = (v: any): boolean => {
   const s = String(v || '').trim()
   if (!/^[0-9]{15}$/.test(s)) return false
+  // Mismo dígito repetido 15 veces = relleno (000... pasa el Luhn)
+  if (/^([0-9])\1{14}$/.test(s)) return false
   let suma = 0
   for (let i = 0; i < 15; i++) {
     let d = s.charCodeAt(i) - 48
