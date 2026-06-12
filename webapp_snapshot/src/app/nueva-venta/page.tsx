@@ -41,6 +41,7 @@ export default function NuevaVentaPage() {
         imei: '',
         numeroPedido: '',
         rentConCoste: '',
+        origenStock: '',
         seguro: '',
         seguroImporte: 0,
         fabricante: '',
@@ -112,11 +113,13 @@ export default function NuevaVentaPage() {
       ll.push({ campo: 'numeroPedido', etiqueta: 'Nº Pedido Telefónica/Movistar', ok: pedidoOk(prod.numeroPedido) })
     } else if (cat === 'Seguro') {
       ll.push({ campo: 'telf', etiqueta: 'Teléfono', ok: telOk(prod.telf) })
+      ll.push({ campo: 'numeroPedido', etiqueta: 'Nº Pedido Telefónica/Movistar', ok: pedidoOk(prod.numeroPedido) })
     } else if (cat === 'Repos') {
       ll.push({ campo: 'telf', etiqueta: 'Teléfono Fijo', ok: telOk(prod.telf) })
       ll.push({ campo: 'numeroPedido', etiqueta: 'Nº Pedido Telefónica/Movistar', ok: pedidoOk(prod.numeroPedido) })
     } else if (cat === 'Suscripciones TV') {
       ll.push({ campo: 'telf', etiqueta: 'Teléfono Fijo', ok: telOk(prod.telf) })
+      ll.push({ campo: 'numeroPedido', etiqueta: 'Nº Pedido Telefónica/Movistar', ok: pedidoOk(prod.numeroPedido) })
     }
     return ll
   }
@@ -427,6 +430,7 @@ export default function NuevaVentaPage() {
           imei: '',
           numeroPedido: '',
           rentConCoste: '',
+          origenStock: '',
           seguro: '',
           seguroImporte: 0,
           fabricante: '',
@@ -458,6 +462,7 @@ export default function NuevaVentaPage() {
           imei: '',
           numeroPedido: '',
           rentConCoste: '',
+          origenStock: '',
           seguro: '',
           seguroImporte: 0,
           fabricante: '',
@@ -506,6 +511,7 @@ export default function NuevaVentaPage() {
             imei: '',
             numeroPedido: '',
             rentConCoste: '',
+            origenStock: '',
             seguro: '',
             seguroImporte: 0,
             fabricante: '',
@@ -548,6 +554,13 @@ export default function NuevaVentaPage() {
       return
     }
 
+    // En Rent es obligatorio indicar de dónde sale el terminal (stock).
+    if (formData.productos.some((p: any) => p.categoria === 'Rent' && p.producto && !p.origenStock)) {
+      setError('En los Rent debes seleccionar el Origen del terminal: 🏬 stock de tienda o 🚚 envío logístico.')
+      setLoading(false)
+      return
+    }
+
     const missingMotivos = formData.productos.some((p: any) => 
       p.categoria === 'Rent' && p.producto && p.showMotivoSinStock && !String(p.motivoSinStock || '').trim()
     )
@@ -570,7 +583,7 @@ export default function NuevaVentaPage() {
         setSelectedTienda('')
         setFormData({
           vendedor: '', nombreCliente: '', codigo: '', nif: '', telefonoMovil: '', telefonoFijo: '', fechaVenta: new Date().toISOString().slice(0, 10), anotaciones: '',
-          productos: [{ categoria: '', producto: '', telf: '', noCliente: '', pendiente: 'No', importe: '', imei: '', numeroPedido: '', rentConCoste: '', seguro: '', seguroImporte: 0, fabricante: '', subcategoria: '', gama: '', isLibre: false, isSwap: false, facturacionAnterior: '', facturacionNueva: '' }]
+          productos: [{ categoria: '', producto: '', telf: '', noCliente: '', pendiente: 'No', importe: '', imei: '', numeroPedido: '', rentConCoste: '', origenStock: '', seguro: '', seguroImporte: 0, fabricante: '', subcategoria: '', gama: '', isLibre: false, isSwap: false, facturacionAnterior: '', facturacionNueva: '' }]
         })
       } else {
         setError(data.error || 'Error al guardar la venta')
@@ -647,6 +660,11 @@ export default function NuevaVentaPage() {
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label" style={{ color: '#555' }}>NIF del Titular 🔑</label>
                   <input type="text" className="form-input" maxLength={9} value={formData.nif} onChange={e => handleInputChange('nif', e.target.value)} required placeholder="Llave de cruce con Telefónica/Movistar" style={estiloLlave(nifOk(formData.nif))} />
+                  {formData.nif.trim().length >= 9 && !nifOk(formData.nif) && (
+                    <div style={{ marginTop: 4, fontSize: 11.5, fontWeight: 'bold', color: '#D32F2F' }}>
+                      ⚠️ NIF/CIF no válido: la letra no corresponde al número. Revisa el documento del cliente — no se podrá confirmar la venta.
+                    </div>
+                  )}
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
@@ -805,7 +823,7 @@ export default function NuevaVentaPage() {
                         
                         <div className="form-group" style={{ marginBottom: 6 }}>
                           <label className="form-label" style={{ color: '#555' }}>{esLlave(prod, 'numeroPedido') ? 'Nº Pedido Telefónica/Movistar 🔑' : 'Nº Pedido Telefónica/Movistar'}</label>
-                          <input type="text" className="form-input" maxLength={20} value={prod.numeroPedido || ''} onChange={e => handleProductChange(index, 'numeroPedido', e.target.value.trim())} placeholder="Llave de cruce con Telefónica/Movistar" style={estiloCampo(prod, 'numeroPedido')} />
+                          <input type="text" className="form-input" maxLength={20} value={prod.numeroPedido || ''} onChange={e => handleProductChange(index, 'numeroPedido', e.target.value.trim().toUpperCase())} placeholder="Llave de cruce con Telefónica/Movistar" style={estiloCampo(prod, 'numeroPedido')} />
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '6px' }}>
                           <div>
@@ -839,6 +857,32 @@ export default function NuevaVentaPage() {
                               <option value="Si">Sí</option>
                             </select>
                           </div>
+                        </div>
+
+                        {/* Origen del terminal: obligatorio. LOGISTICO no descuenta stock
+                            de tienda (a veces se vende por envío aunque haya unidades). */}
+                        <div className="form-group" style={{ marginBottom: 6, marginTop: 6 }}>
+                          <label className="form-label" style={{ color: '#D32F2F', fontWeight: 'bold' }}>Origen del terminal (stock)</label>
+                          <select
+                            className="form-select"
+                            value={prod.origenStock || ''}
+                            required
+                            onChange={e => {
+                              const val = e.target.value
+                              handleProductChange(index, 'origenStock', val)
+                              if (val === 'LOGISTICO') {
+                                handleProductChange(index, 'showMotivoSinStock', false)
+                                handleProductChange(index, 'motivoSinStock', '')
+                              }
+                            }}
+                            style={prod.origenStock
+                              ? { backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A', width: '100%' }
+                              : { backgroundColor: '#FFF3E0', border: '2px solid #E65100', color: '#E65100', fontWeight: 'bold', width: '100%' }}
+                          >
+                            <option value="">Selecciona...</option>
+                            <option value="TIENDA">🏬 Stock de tienda (descuenta de tu stock)</option>
+                            <option value="LOGISTICO">🚚 Envío logístico (no descuenta)</option>
+                          </select>
                         </div>
 
                         <div style={{ marginTop: '8px' }}>
@@ -948,7 +992,7 @@ export default function NuevaVentaPage() {
                         </div>
                         <div>
                           <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>Nº Pedido Telefónica/Movistar 🔑</label>
-                          <input type="text" className="form-input" maxLength={20} value={prod.numeroPedido || ''} onChange={e => handleProductChange(index, 'numeroPedido', e.target.value.trim())} placeholder="Llave de cruce con Telefónica/Movistar" style={estiloCampo(prod, 'numeroPedido')} />
+                          <input type="text" className="form-input" maxLength={20} value={prod.numeroPedido || ''} onChange={e => handleProductChange(index, 'numeroPedido', e.target.value.trim().toUpperCase())} placeholder="Llave de cruce con Telefónica/Movistar" style={estiloCampo(prod, 'numeroPedido')} />
                         </div>
                       </div>
                     </div>
@@ -1091,7 +1135,7 @@ export default function NuevaVentaPage() {
                           {prod.categoria !== 'O2' && (
                             <div className="form-group" style={{ marginBottom: 0 }}>
                               <label className="form-label" style={{ color: '#555' }}>{esLlave(prod, 'numeroPedido') ? 'Nº Pedido Telefónica/Movistar 🔑' : 'Nº Pedido Telefónica/Movistar'}</label>
-                              <input type="text" className="form-input" maxLength={20} value={prod.numeroPedido || ''} onChange={e => handleProductChange(index, 'numeroPedido', e.target.value.trim())} placeholder="Llave de cruce con Telefónica/Movistar" style={estiloCampo(prod, 'numeroPedido')} />
+                              <input type="text" className="form-input" maxLength={20} value={prod.numeroPedido || ''} onChange={e => handleProductChange(index, 'numeroPedido', e.target.value.trim().toUpperCase())} placeholder="Llave de cruce con Telefónica/Movistar" style={estiloCampo(prod, 'numeroPedido')} />
                             </div>
                           )}
                         </div>

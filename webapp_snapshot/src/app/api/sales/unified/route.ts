@@ -94,6 +94,12 @@ export async function POST(request: Request) {
     const numValidProducts = data.productos.filter((p: any) => p.producto !== '').length
     if (numValidProducts === 0) return NextResponse.json({ success: false, error: 'Configura al menos un producto' }, { status: 400 })
 
+    // En Rent es obligatorio indicar el origen del terminal: TIENDA descuenta
+    // stock, LOGISTICO no (a veces se vende por envío aunque haya unidades).
+    if (data.productos.some((p: any) => p.producto !== '' && p.categoria === 'Rent' && !['TIENDA', 'LOGISTICO'].includes(String(p.origenStock || '')))) {
+      return NextResponse.json({ success: false, error: 'En los Rent debes seleccionar el Origen del terminal (stock de tienda o envío logístico).' }, { status: 400 })
+    }
+
     // --- REGLA ANTI-FRAUDE TRASLADOS MISTAR + SUSCRIPCIONES TV ---
     const hasSuscripcionTV = data.productos.some((p: any) => p.categoria === 'Suscripciones TV' && p.producto !== '');
     
@@ -202,6 +208,7 @@ export async function POST(request: Request) {
         detalle: prod.categoria || '',
         imei: prod.imei || null,
         numeroPedido: prod.numeroPedido || null,
+        origenStock: prod.categoria === 'Rent' ? (prod.origenStock || null) : null,
         rentConCoste: prod.rentConCoste || null,
         seguro: prod.seguro || null,
         seguroImporte: prod.seguroImporte ? parseFloat(prod.seguroImporte.toString().replace(',','.')) : null,
@@ -211,7 +218,8 @@ export async function POST(request: Request) {
       })
 
       // Queue stock decrement if it is Rent
-      if (prod.categoria === 'Rent' && data.codigo) {
+      // CANDADO: el envío logístico NO descuenta stock de tienda.
+      if (prod.categoria === 'Rent' && data.codigo && prod.origenStock !== 'LOGISTICO') {
         const storeField = getStoreField(data.codigo)
         if (storeField) {
           stockDecrements.push({

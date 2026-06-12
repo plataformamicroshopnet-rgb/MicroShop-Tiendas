@@ -110,12 +110,12 @@ const filterByTab = (sale: any, tabId: string): boolean => {
 const LLAVES_TAB: Record<string, string[]> = {
   contratos_movil: ['telf', 'pedido'],
   rent:            ['imei', 'pedido'],
-  seguro:          ['telf'],
+  seguro:          ['telf', 'pedido'],
   mimovi:          ['pedido'],
   traslado:        ['pedido'],
   resto:           ['pedido'],
   repos:           ['telf', 'pedido'],
-  tv:              ['telf'],
+  tv:              ['telf', 'pedido'],
 }
 const tdLlave = (filled: boolean): any => filled
   ? { background: '#E8F5E9', color: '#1B5E20', fontWeight: 700 }
@@ -123,6 +123,30 @@ const tdLlave = (filled: boolean): any => filled
 // Código de operación real de Movistar (CO + añomes + referencia): los
 // rellenos tipo "1111..." o CO mal tecleados se pintan en naranja.
 const coOk = (v: any) => /^CO\d{4}[A-Z0-9]{6,12}$/.test(String(v || '').trim().toUpperCase())
+// Documento real: DNI (letra mod-23), NIE y CIF (control).
+const docOk = (v: any): boolean => {
+  const s = String(v || '').trim().toUpperCase().replace(/[\s-]/g, '')
+  const LETRAS = 'TRWAGMYFPDXBNJZSQVHLCKE'
+  let m = s.match(/^(\d{8})([A-Z])$/)
+  if (m) return LETRAS[parseInt(m[1], 10) % 23] === m[2]
+  m = s.match(/^([XYZ])(\d{7})([A-Z])$/)
+  if (m) return LETRAS[parseInt(String('XYZ'.indexOf(m[1])) + m[2], 10) % 23] === m[3]
+  m = s.match(/^([ABCDEFGHJKLMNPQRSUVW])(\d{7})([0-9A-J])$/)
+  if (m) {
+    let suma = 0
+    for (let i = 0; i < 7; i++) {
+      let n = parseInt(m[2][i], 10)
+      if (i % 2 === 0) { n *= 2; n = Math.floor(n / 10) + (n % 10) }
+      suma += n
+    }
+    const digito = (10 - (suma % 10)) % 10
+    const letra = 'JABCDEFGHI'[digito]
+    if ('KPQS'.includes(m[1])) return m[3] === letra
+    if ('ABEH'.includes(m[1])) return m[3] === String(digito)
+    return m[3] === String(digito) || m[3] === letra
+  }
+  return false
+}
 
 // ── NIF grouping ──────────────────────────────────────────────────────
 interface SaleRow { sale: any }
@@ -250,7 +274,7 @@ function SectionTable({
                 const saleImporte = calcImporte ? calcImporte(sale) : Number(sale.cuota ?? 0)
                 return (
                   <tr key={`${gi}-${si}`} style={{ background: rowBg, borderBottom: isLast ? `2px solid ${badgeColor}30` : `1px dashed var(--border-color)`, verticalAlign: 'middle' }}>
-                    <td style={{ padding: '12px 14px', fontSize: 12, whiteSpace: 'nowrap', borderRight: '1px solid var(--border-color)', ...tdLlave(hayDato(group.nif)) }}>{hayDato(group.nif) ? group.nif : 'FALTA'}</td>
+                    <td style={{ padding: '12px 14px', fontSize: 12, whiteSpace: 'nowrap', borderRight: '1px solid var(--border-color)', ...tdLlave(docOk(group.nif)) }}>{hayDato(group.nif) ? group.nif : 'FALTA'}</td>
                     <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--light-text)', borderRight: '1px solid var(--border-color)' }}>{group.nombre || '—'}</td>
                     <td style={{ padding: '12px 14px', color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{sale.fecha || '—'}</td>
                     {telfEsLlave ? (
@@ -259,7 +283,7 @@ function SectionTable({
                       <td style={{ padding: '12px 14px', color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{sale.telf || '—'}</td>
                     )}
                     {conPedido && (
-                      <td style={{ padding: '12px 14px', whiteSpace: 'nowrap', fontSize: 12, ...tdLlave(coOk(sale.numeroPedido)) }}>{hayDato(sale.numeroPedido) ? sale.numeroPedido : 'FALTA'}</td>
+                      <td style={{ padding: '12px 14px', whiteSpace: 'nowrap', fontSize: 12, ...tdLlave(coOk(sale.numeroPedido)) }}>{hayDato(sale.numeroPedido) ? String(sale.numeroPedido).trim().toUpperCase() : 'FALTA'}</td>
                     )}
                     {conImei && (
                       <td style={{ padding: '12px 14px', whiteSpace: 'nowrap', fontSize: 12, ...tdLlave(hayDato(sale.imei)) }}>{hayDato(sale.imei) ? sale.imei : 'FALTA'}</td>

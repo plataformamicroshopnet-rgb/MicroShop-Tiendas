@@ -160,6 +160,7 @@ export async function GET(request: Request) {
         telefonoMovil: sale.telefonoMovil || '',
         imei: sale.imei || '',
         numeroPedido: (sale as any).numeroPedido || '',
+        origenStock: (sale as any).origenStock || '',
         motivoModificacion: ''
       }
     })
@@ -234,6 +235,7 @@ export async function PATCH(request: Request) {
     if (updates.detalle !== undefined) updateData.detalle = updates.detalle
     if (updates.numeroPedido !== undefined) updateData.numeroPedido = updates.numeroPedido || null
     if (updates.boletin !== undefined) updateData.boletin = updates.boletin || ''
+    if (updates.origenStock !== undefined) updateData.origenStock = updates.origenStock || null
     if (updates.imei !== undefined) updateData.imei = updates.imei || null
     if (updates.importe !== undefined) {
        updateData.cuota = updates.importe ? parseFloat(String(updates.importe).replace(',', '.')) : null

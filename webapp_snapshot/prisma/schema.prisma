@@ -96,6 +96,7 @@ model Sale {
   seguroImporte Float?
   isLibre       Boolean?
   isSwap        Boolean?
+  origenStock   String? // Rent: TIENDA (descuenta stock) o LOGISTICO (no descuenta)
   period        WorkPeriod? @relation(fields: [periodId], references: [id], onDelete: Cascade)
 }
 

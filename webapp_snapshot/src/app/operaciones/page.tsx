@@ -36,14 +36,14 @@ const LLAVES_DETALLE: Record<string, string[]> = {
   'contratos móvil': ['telf', 'pedido'],
   'contratos movil': ['telf', 'pedido'],
   'rent': ['imei', 'pedido'],
-  'seguro': ['telf'],
+  'seguro': ['telf', 'pedido'],
   'mimovistar': ['pedido'],
   'mimovi': ['pedido'],
   'resto baf': ['pedido'],
   'traslado mimovistar': ['pedido'],
   'repos': ['telf', 'pedido'],
-  'suscripciones tv': ['telf'],
-  'tv': ['telf'],
+  'suscripciones tv': ['telf', 'pedido'],
+  'tv': ['telf', 'pedido'],
 }
 const llavesDeVenta = (sale: any): string[] =>
   LLAVES_DETALLE[String(sale.detalle || '').toLowerCase().trim()] || []
@@ -62,6 +62,31 @@ const valorLlave = (esLlave: boolean, valor: any) => {
 // Código de operación real de Movistar (CO + añomes + referencia): los
 // rellenos tipo "1111..." o CO mal tecleados se pintan en naranja.
 const coOk = (v: any) => /^CO\d{4}[A-Z0-9]{6,12}$/.test(String(v || '').trim().toUpperCase())
+// Documento real: DNI (letra mod-23), NIE y CIF (control). Un NIF inventado
+// se pinta en naranja aunque tenga pinta de NIF.
+const docOk = (v: any): boolean => {
+  const s = String(v || '').trim().toUpperCase().replace(/[\s-]/g, '')
+  const LETRAS = 'TRWAGMYFPDXBNJZSQVHLCKE'
+  let m = s.match(/^(\d{8})([A-Z])$/)
+  if (m) return LETRAS[parseInt(m[1], 10) % 23] === m[2]
+  m = s.match(/^([XYZ])(\d{7})([A-Z])$/)
+  if (m) return LETRAS[parseInt(String('XYZ'.indexOf(m[1])) + m[2], 10) % 23] === m[3]
+  m = s.match(/^([ABCDEFGHJKLMNPQRSUVW])(\d{7})([0-9A-J])$/)
+  if (m) {
+    let suma = 0
+    for (let i = 0; i < 7; i++) {
+      let n = parseInt(m[2][i], 10)
+      if (i % 2 === 0) { n *= 2; n = Math.floor(n / 10) + (n % 10) }
+      suma += n
+    }
+    const digito = (10 - (suma % 10)) % 10
+    const letra = 'JABCDEFGHI'[digito]
+    if ('KPQS'.includes(m[1])) return m[3] === letra
+    if ('ABEH'.includes(m[1])) return m[3] === String(digito)
+    return m[3] === String(digito) || m[3] === letra
+  }
+  return false
+}
 
 const formatCurrency = (val: any) => {
   if (val === undefined || val === null || val === '') return '';
@@ -1279,13 +1304,15 @@ function OperationsContent() {
                       {sale.detalle === 'Ti' ? 'Contratos Móvil' : sale.detalle === 'O2' ? 'O2 MovilFree' : (sale.detalle || '-')}
                     </td>
                     <td style={{ padding: '4px 6px' }}>
+                      {sale.detalle === 'Rent' && sale.origenStock === 'LOGISTICO' && <span title="Envío logístico: no descontó stock de tienda">🚚 </span>}
+                      {sale.detalle === 'Rent' && sale.origenStock === 'TIENDA' && <span title="Salió del stock de la tienda">🏬 </span>}
                       {sale.producto}
                     </td>
                     <td style={{ padding: '4px 6px' }}>
                        {editingId === sale.id ? <input value={editForm.nombreCliente} onChange={e => handleEditChange('nombreCliente', e.target.value)} style={{ width: 80, padding: 4 }} /> : (sale.nombreCliente || '-')}
                     </td>
-                    <td style={{ padding: '4px 6px', ...tdLlave(llavesDeVenta(sale).length > 0, sale.nif) }}>
-                       {editingId === sale.id ? <input value={editForm.nif} onChange={e => handleEditChange('nif', e.target.value)} style={{ width: 90, padding: 4 }} /> : valorLlave(llavesDeVenta(sale).length > 0, sale.nif)}
+                    <td style={{ padding: '4px 6px', ...tdLlave(llavesDeVenta(sale).length > 0, docOk(sale.nif) ? sale.nif : '') }}>
+                       {editingId === sale.id ? <input value={editForm.nif} onChange={e => handleEditChange('nif', e.target.value)} style={{ width: 90, padding: 4 }} /> : (String(sale.nif || '').trim() || valorLlave(llavesDeVenta(sale).length > 0, ''))}
                     </td>
 
                     <td style={{ padding: '4px 6px', textAlign: 'center', ...tdLlave(llavesDeVenta(sale).includes('telf'), sale.telf) }}>
