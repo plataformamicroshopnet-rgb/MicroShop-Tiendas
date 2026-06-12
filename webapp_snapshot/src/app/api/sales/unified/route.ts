@@ -6,6 +6,32 @@ import { runExtrasEngine } from '@/lib/extrasEngine'
 
 const prisma = new PrismaClient()
 
+// Validación real del documento: DNI (letra mod-23), NIE y CIF (control).
+// Espejo del validador del formulario de Nueva Venta: doble candado.
+function documentoValido(v: string): boolean {
+  const s = String(v || '').trim().toUpperCase().replace(/[\s-]/g, '')
+  const LETRAS = 'TRWAGMYFPDXBNJZSQVHLCKE'
+  let m = s.match(/^(\d{8})([A-Z])$/)
+  if (m) return LETRAS[parseInt(m[1], 10) % 23] === m[2]
+  m = s.match(/^([XYZ])(\d{7})([A-Z])$/)
+  if (m) return LETRAS[parseInt(String('XYZ'.indexOf(m[1])) + m[2], 10) % 23] === m[3]
+  m = s.match(/^([ABCDEFGHJKLMNPQRSUVW])(\d{7})([0-9A-J])$/)
+  if (m) {
+    let suma = 0
+    for (let i = 0; i < 7; i++) {
+      let n = parseInt(m[2][i], 10)
+      if (i % 2 === 0) { n *= 2; n = Math.floor(n / 10) + (n % 10) }
+      suma += n
+    }
+    const digito = (10 - (suma % 10)) % 10
+    const letra = 'JABCDEFGHI'[digito]
+    if ('KPQS'.includes(m[1])) return m[3] === letra
+    if ('ABEH'.includes(m[1])) return m[3] === String(digito)
+    return m[3] === String(digito) || m[3] === letra
+  }
+  return false
+}
+
 function resolveGrupo(prod: any): string {
   const cat = prod.categoria || ''
   const prodName = prod.producto || ''
@@ -63,6 +89,7 @@ export async function POST(request: Request) {
     if (!data.vendedor) return NextResponse.json({ success: false, error: 'Selecciona el vendedor' }, { status: 400 })
     if (!data.nombreCliente) return NextResponse.json({ success: false, error: 'Indica el nombre del cliente' }, { status: 400 })
     if (!data.nif) return NextResponse.json({ success: false, error: 'Comprueba el NIF del Titular' }, { status: 400 })
+    if (!documentoValido(data.nif)) return NextResponse.json({ success: false, error: 'El NIF/CIF del titular no es válido (DNI, NIE o CIF). Comprueba el documento del cliente.' }, { status: 400 })
 
     const numValidProducts = data.productos.filter((p: any) => p.producto !== '').length
     if (numValidProducts === 0) return NextResponse.json({ success: false, error: 'Configura al menos un producto' }, { status: 400 })

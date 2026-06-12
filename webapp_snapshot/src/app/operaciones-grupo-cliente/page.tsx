@@ -120,6 +120,9 @@ const LLAVES_TAB: Record<string, string[]> = {
 const tdLlave = (filled: boolean): any => filled
   ? { background: '#E8F5E9', color: '#1B5E20', fontWeight: 700 }
   : { background: '#F57C00', color: '#FFFFFF', fontWeight: 800 }
+// Código de operación real de Movistar (CO + añomes + referencia): los
+// rellenos tipo "1111..." o CO mal tecleados se pintan en naranja.
+const coOk = (v: any) => /^CO\d{4}[A-Z0-9]{6,12}$/.test(String(v || '').trim().toUpperCase())
 
 // ── NIF grouping ──────────────────────────────────────────────────────
 interface SaleRow { sale: any }
@@ -256,7 +259,7 @@ function SectionTable({
                       <td style={{ padding: '12px 14px', color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{sale.telf || '—'}</td>
                     )}
                     {conPedido && (
-                      <td style={{ padding: '12px 14px', whiteSpace: 'nowrap', fontSize: 12, ...tdLlave(hayDato(sale.numeroPedido)) }}>{hayDato(sale.numeroPedido) ? sale.numeroPedido : 'FALTA'}</td>
+                      <td style={{ padding: '12px 14px', whiteSpace: 'nowrap', fontSize: 12, ...tdLlave(coOk(sale.numeroPedido)) }}>{hayDato(sale.numeroPedido) ? sale.numeroPedido : 'FALTA'}</td>
                     )}
                     {conImei && (
                       <td style={{ padding: '12px 14px', whiteSpace: 'nowrap', fontSize: 12, ...tdLlave(hayDato(sale.imei)) }}>{hayDato(sale.imei) ? sale.imei : 'FALTA'}</td>
@@ -778,7 +781,6 @@ function GrupoClienteContent() {
         { header: 'Producto Vendido', key: 'producto', width: 34 },
         { header: 'IMEI', key: 'imei', width: 18 },
         { header: 'COD_PEDIDO', key: 'pedido', width: 16 },
-        { header: 'Boletín', key: 'boletin', width: 14 },
       ]
       const hr = sheet.getRow(1)
       hr.font = { bold: true, color: { argb: 'FFFFFFFF' } }
@@ -793,7 +795,6 @@ function GrupoClienteContent() {
           producto: s.producto || '',
           imei: s.imei || '',
           pedido: s.numeroPedido || '',
-          boletin: s.boletin || '',
         })
       })
     })

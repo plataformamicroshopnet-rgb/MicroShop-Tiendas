@@ -25,7 +25,6 @@ export default function NuevaVentaPage() {
     nif: '',
     telefonoMovil: '',
     telefonoFijo: '',
-    boletin: '',
     // Fecha REAL de la venta (editable): por defecto hoy. Antes el servidor
     // ponía siempre la fecha de tecleo y las ventas apuntadas tarde caían
     // en el mes equivocado al cruzar con Telefónica.
@@ -68,9 +67,36 @@ export default function NuevaVentaPage() {
     color: '#FFFFFF',
     fontWeight: 'bold'
   })
-  const nifOk = (v: string) => /^[0-9]{8}[A-Za-z]$|^[A-Za-z][0-9]{7}[A-Za-z0-9]$/.test(String(v || '').trim())
+  // Validación REAL del documento: DNI (letra mod-23), NIE (X/Y/Z) y CIF
+  // (dígito/letra de control). Un documento inventado no pasa. El mensaje
+  // de error nunca revela la letra correcta (anti-invención).
+  const nifOk = (v: string): boolean => {
+    const s = String(v || '').trim().toUpperCase().replace(/[\s-]/g, '')
+    const LETRAS = 'TRWAGMYFPDXBNJZSQVHLCKE'
+    let m = s.match(/^(\d{8})([A-Z])$/)
+    if (m) return LETRAS[parseInt(m[1], 10) % 23] === m[2]
+    m = s.match(/^([XYZ])(\d{7})([A-Z])$/)
+    if (m) return LETRAS[parseInt(String('XYZ'.indexOf(m[1])) + m[2], 10) % 23] === m[3]
+    m = s.match(/^([ABCDEFGHJKLMNPQRSUVW])(\d{7})([0-9A-J])$/)
+    if (m) {
+      let suma = 0
+      for (let i = 0; i < 7; i++) {
+        let n = parseInt(m[2][i], 10)
+        if (i % 2 === 0) { n *= 2; n = Math.floor(n / 10) + (n % 10) }
+        suma += n
+      }
+      const digito = (10 - (suma % 10)) % 10
+      const letra = 'JABCDEFGHI'[digito]
+      if ('KPQS'.includes(m[1])) return m[3] === letra
+      if ('ABEH'.includes(m[1])) return m[3] === String(digito)
+      return m[3] === String(digito) || m[3] === letra
+    }
+    return false
+  }
   const telOk = (v: string) => /^[0-9]{9}$/.test(String(v || '').trim())
-  const pedidoOk = (v: string) => String(v || '').trim().length >= 5
+  // Código de operación real de Movistar: CO + añomes + referencia.
+  // Rellenos tipo "1111..." o códigos CO mal tecleados quedan en naranja.
+  const pedidoOk = (v: string) => /^CO\d{4}[A-Z0-9]{6,12}$/.test(String(v || '').trim().toUpperCase())
   const imeiOk = (v: string) => /^[0-9]{15}$/.test(String(v || '').trim())
 
   const llavesDeProducto = (prod: any): { campo: string; etiqueta: string; ok: boolean }[] => {
@@ -78,17 +104,17 @@ export default function NuevaVentaPage() {
     const ll: { campo: string; etiqueta: string; ok: boolean }[] = []
     if (cat === 'Rent') {
       ll.push({ campo: 'imei', etiqueta: 'IMEI', ok: imeiOk(prod.imei) })
-      ll.push({ campo: 'numeroPedido', etiqueta: 'Nº Pedido Movistar', ok: pedidoOk(prod.numeroPedido) })
+      ll.push({ campo: 'numeroPedido', etiqueta: 'Nº Pedido Telefónica/Movistar', ok: pedidoOk(prod.numeroPedido) })
     } else if (cat === 'miMovistar' || cat === 'Resto BAF' || cat === 'Traslado miMovistar') {
-      ll.push({ campo: 'numeroPedido', etiqueta: 'Nº Pedido Movistar', ok: pedidoOk(prod.numeroPedido) })
+      ll.push({ campo: 'numeroPedido', etiqueta: 'Nº Pedido Telefónica/Movistar', ok: pedidoOk(prod.numeroPedido) })
     } else if (cat === 'Ti') {
       ll.push({ campo: 'telf', etiqueta: 'Teléfono de la línea', ok: telOk(prod.telf) })
-      ll.push({ campo: 'numeroPedido', etiqueta: 'Nº Pedido Movistar', ok: pedidoOk(prod.numeroPedido) })
+      ll.push({ campo: 'numeroPedido', etiqueta: 'Nº Pedido Telefónica/Movistar', ok: pedidoOk(prod.numeroPedido) })
     } else if (cat === 'Seguro') {
       ll.push({ campo: 'telf', etiqueta: 'Teléfono', ok: telOk(prod.telf) })
     } else if (cat === 'Repos') {
       ll.push({ campo: 'telf', etiqueta: 'Teléfono Fijo', ok: telOk(prod.telf) })
-      ll.push({ campo: 'numeroPedido', etiqueta: 'Nº Pedido Movistar', ok: pedidoOk(prod.numeroPedido) })
+      ll.push({ campo: 'numeroPedido', etiqueta: 'Nº Pedido Telefónica/Movistar', ok: pedidoOk(prod.numeroPedido) })
     } else if (cat === 'Suscripciones TV') {
       ll.push({ campo: 'telf', etiqueta: 'Teléfono Fijo', ok: telOk(prod.telf) })
     }
@@ -515,6 +541,13 @@ export default function NuevaVentaPage() {
       return
     }
 
+    // Bloqueo duro: el documento debe ser un DNI, NIE o CIF real.
+    if (!nifOk(formData.nif)) {
+      setError('El NIF/CIF del titular no es válido (DNI, NIE o CIF). Comprueba el documento del cliente: sin un documento real no se puede registrar la venta.')
+      setLoading(false)
+      return
+    }
+
     const missingMotivos = formData.productos.some((p: any) => 
       p.categoria === 'Rent' && p.producto && p.showMotivoSinStock && !String(p.motivoSinStock || '').trim()
     )
@@ -536,7 +569,7 @@ export default function NuevaVentaPage() {
         setSuccess('¡VENTA AÑADIDA CON ÉXITO!')
         setSelectedTienda('')
         setFormData({
-          vendedor: '', nombreCliente: '', codigo: '', nif: '', telefonoMovil: '', telefonoFijo: '', boletin: '', fechaVenta: new Date().toISOString().slice(0, 10), anotaciones: '',
+          vendedor: '', nombreCliente: '', codigo: '', nif: '', telefonoMovil: '', telefonoFijo: '', fechaVenta: new Date().toISOString().slice(0, 10), anotaciones: '',
           productos: [{ categoria: '', producto: '', telf: '', noCliente: '', pendiente: 'No', importe: '', imei: '', numeroPedido: '', rentConCoste: '', seguro: '', seguroImporte: 0, fabricante: '', subcategoria: '', gama: '', isLibre: false, isSwap: false, facturacionAnterior: '', facturacionNueva: '' }]
         })
       } else {
@@ -613,7 +646,7 @@ export default function NuevaVentaPage() {
                 </div>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label" style={{ color: '#555' }}>NIF del Titular 🔑</label>
-                  <input type="text" className="form-input" maxLength={9} value={formData.nif} onChange={e => handleInputChange('nif', e.target.value)} required style={estiloLlave(nifOk(formData.nif))} />
+                  <input type="text" className="form-input" maxLength={9} value={formData.nif} onChange={e => handleInputChange('nif', e.target.value)} required placeholder="Llave de cruce con Telefónica/Movistar" style={estiloLlave(nifOk(formData.nif))} />
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
@@ -631,15 +664,9 @@ export default function NuevaVentaPage() {
             {/* COLUMNA 3: OPERACIÓN */}
             <div style={{ flex: '1.5', minWidth: '250px', backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <h4 style={{ margin: '0 0 4px 0', fontSize: '13px', fontWeight: 'bold', color: '#333' }}>Operación</h4>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ color: '#555' }} title="Debe ser la fecha real de tramitación en los sistemas de Movistar">Fecha de Venta (tramitación)</label>
-                  <input type="date" className="form-input" value={formData.fechaVenta} onChange={e => handleInputChange('fechaVenta', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
-                </div>
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ color: '#555' }}>Boletín</label>
-                  <input type="text" className="form-input" maxLength={16} value={formData.boletin} onChange={e => handleInputChange('boletin', e.target.value)} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
-                </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ color: '#555' }} title="Debe ser la fecha real de tramitación en los sistemas de Movistar">Fecha de Venta (tramitación)</label>
+                <input type="date" className="form-input" value={formData.fechaVenta} onChange={e => handleInputChange('fechaVenta', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
               </div>
               {/* Advertencia premium: solo cuando la fecha elegida NO es hoy.
                   Con fecha de hoy no se muestra nada (no estorba el flujo). */}
@@ -746,7 +773,7 @@ export default function NuevaVentaPage() {
                         </div>
                         <div>
                           <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>IMEI 🔑</label>
-                          <input type="text" className="form-input" maxLength={15} value={prod.imei} onChange={e => handleProductChange(index, 'imei', e.target.value.replace(/\D/g, ''))} required style={estiloLlave(imeiOk(prod.imei))} />
+                          <input type="text" className="form-input" maxLength={15} value={prod.imei} onChange={e => handleProductChange(index, 'imei', e.target.value.replace(/\D/g, ''))} required placeholder="Llave de cruce con Telefónica/Movistar" style={estiloLlave(imeiOk(prod.imei))} />
                         </div>
                         <div>
                           <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>Teléfono</label>
@@ -777,8 +804,8 @@ export default function NuevaVentaPage() {
                         <h5 style={{ margin: '0 0 6px 0', fontSize: '13px', fontWeight: 'bold', color: '#333' }}>Estado</h5>
                         
                         <div className="form-group" style={{ marginBottom: 6 }}>
-                          <label className="form-label" style={{ color: '#555' }}>{esLlave(prod, 'numeroPedido') ? 'Nº Pedido Movistar 🔑' : 'Nº Pedido Movistar'}</label>
-                          <input type="text" className="form-input" maxLength={20} value={prod.numeroPedido || ''} onChange={e => handleProductChange(index, 'numeroPedido', e.target.value.trim())} placeholder="Llave de cruce con Telefónica" style={estiloCampo(prod, 'numeroPedido')} />
+                          <label className="form-label" style={{ color: '#555' }}>{esLlave(prod, 'numeroPedido') ? 'Nº Pedido Telefónica/Movistar 🔑' : 'Nº Pedido Telefónica/Movistar'}</label>
+                          <input type="text" className="form-input" maxLength={20} value={prod.numeroPedido || ''} onChange={e => handleProductChange(index, 'numeroPedido', e.target.value.trim())} placeholder="Llave de cruce con Telefónica/Movistar" style={estiloCampo(prod, 'numeroPedido')} />
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '6px' }}>
                           <div>
@@ -920,8 +947,8 @@ export default function NuevaVentaPage() {
                           <input type="text" className="form-input" maxLength={9} value={prod.telf} onChange={e => handleProductChange(index, 'telf', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
                         </div>
                         <div>
-                          <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>Nº Pedido Movistar 🔑</label>
-                          <input type="text" className="form-input" maxLength={20} value={prod.numeroPedido || ''} onChange={e => handleProductChange(index, 'numeroPedido', e.target.value.trim())} placeholder="Llave de cruce con Telefónica" style={estiloCampo(prod, 'numeroPedido')} />
+                          <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>Nº Pedido Telefónica/Movistar 🔑</label>
+                          <input type="text" className="form-input" maxLength={20} value={prod.numeroPedido || ''} onChange={e => handleProductChange(index, 'numeroPedido', e.target.value.trim())} placeholder="Llave de cruce con Telefónica/Movistar" style={estiloCampo(prod, 'numeroPedido')} />
                         </div>
                       </div>
                     </div>
@@ -1057,13 +1084,14 @@ export default function NuevaVentaPage() {
                                 }
                               }}
                               required
+                              placeholder={esLlave(prod, 'telf') ? 'Llave de cruce con Telefónica/Movistar' : ''}
                               style={estiloCampo(prod, 'telf')}
                             />
                           </div>
                           {prod.categoria !== 'O2' && (
                             <div className="form-group" style={{ marginBottom: 0 }}>
-                              <label className="form-label" style={{ color: '#555' }}>{esLlave(prod, 'numeroPedido') ? 'Nº Pedido Movistar 🔑' : 'Nº Pedido Movistar'}</label>
-                              <input type="text" className="form-input" maxLength={20} value={prod.numeroPedido || ''} onChange={e => handleProductChange(index, 'numeroPedido', e.target.value.trim())} placeholder="Llave de cruce con Telefónica" style={estiloCampo(prod, 'numeroPedido')} />
+                              <label className="form-label" style={{ color: '#555' }}>{esLlave(prod, 'numeroPedido') ? 'Nº Pedido Telefónica/Movistar 🔑' : 'Nº Pedido Telefónica/Movistar'}</label>
+                              <input type="text" className="form-input" maxLength={20} value={prod.numeroPedido || ''} onChange={e => handleProductChange(index, 'numeroPedido', e.target.value.trim())} placeholder="Llave de cruce con Telefónica/Movistar" style={estiloCampo(prod, 'numeroPedido')} />
                             </div>
                           )}
                         </div>

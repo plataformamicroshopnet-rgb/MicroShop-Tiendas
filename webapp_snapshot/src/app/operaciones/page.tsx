@@ -59,6 +59,9 @@ const valorLlave = (esLlave: boolean, valor: any) => {
   if (v !== '' && v !== '-') return valor
   return esLlave ? 'FALTA' : (valor || '-')
 }
+// Código de operación real de Movistar (CO + añomes + referencia): los
+// rellenos tipo "1111..." o CO mal tecleados se pintan en naranja.
+const coOk = (v: any) => /^CO\d{4}[A-Z0-9]{6,12}$/.test(String(v || '').trim().toUpperCase())
 
 const formatCurrency = (val: any) => {
   if (val === undefined || val === null || val === '') return '';
@@ -1243,7 +1246,6 @@ function OperationsContent() {
 
                 <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Teléfono</th>
                 <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Nº Pedido 🔑</th>
-                <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Boletín</th>
                 <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Pte.</th>
                 <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Anul.</th>
                 <th style={{ padding: '4px 6px', textAlign: 'left', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px', minWidth: 120, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Anotaciones</th>
@@ -1254,7 +1256,7 @@ function OperationsContent() {
             <tbody>
               {displayedSales.length === 0 ? (
                 <tr>
-                  <td colSpan={16} style={{ padding: '24px', textAlign: 'center', color: '#555555' }}>
+                  <td colSpan={15} style={{ padding: '24px', textAlign: 'center', color: '#555555' }}>
                     {activeVendorFilter ? `No hay datos disponibles para ${activeVendorFilter}.` : 'No hay datos disponibles para tu rol o todavía no hay ventas registradas.'}
                   </td>
                 </tr>
@@ -1289,11 +1291,8 @@ function OperationsContent() {
                     <td style={{ padding: '4px 6px', textAlign: 'center', ...tdLlave(llavesDeVenta(sale).includes('telf'), sale.telf) }}>
                        {editingId === sale.id ? <input value={editForm.telf} onChange={e => handleEditChange('telf', e.target.value)} style={{ width: 90, padding: 4 }} /> : valorLlave(llavesDeVenta(sale).includes('telf'), sale.telf)}
                     </td>
-                    <td style={{ padding: '4px 6px', textAlign: 'center', ...tdLlave(llavesDeVenta(sale).includes('pedido'), sale.numeroPedido) }}>
-                       {editingId === sale.id ? <input value={editForm.numeroPedido || ''} onChange={e => handleEditChange('numeroPedido', e.target.value)} style={{ width: 90, padding: 4 }} /> : valorLlave(llavesDeVenta(sale).includes('pedido'), sale.numeroPedido)}
-                    </td>
-                    <td style={{ padding: '4px 6px', textAlign: 'center', fontSize: 11 }}>
-                       {editingId === sale.id ? <input value={editForm.boletin || ''} onChange={e => handleEditChange('boletin', e.target.value)} style={{ width: 110, padding: 4 }} /> : (sale.boletin || '—')}
+                    <td style={{ padding: '4px 6px', textAlign: 'center', ...tdLlave(llavesDeVenta(sale).includes('pedido'), coOk(sale.numeroPedido) ? sale.numeroPedido : '') }}>
+                       {editingId === sale.id ? <input value={editForm.numeroPedido || ''} onChange={e => handleEditChange('numeroPedido', e.target.value)} style={{ width: 110, padding: 4 }} /> : (String(sale.numeroPedido || '').trim() || valorLlave(llavesDeVenta(sale).includes('pedido'), ''))}
                     </td>
                     <td style={{ padding: '4px 6px', textAlign: 'center' }}>
                       {editingId === sale.id ? (
@@ -1366,7 +1365,6 @@ function OperationsContent() {
                   </td>
                   <td style={{ padding: '4px 6px', color: '#059669' }}>{ex.customerName}</td>
                   <td style={{ padding: '4px 6px', color: '#059669' }}>{ex.customerNif || '-'}</td>
-                  <td style={{ padding: '4px 6px', textAlign: 'center', color: '#059669' }}>-</td>
                   <td style={{ padding: '4px 6px', textAlign: 'center', color: '#059669' }}>-</td>
                   <td style={{ padding: '4px 6px', textAlign: 'center', color: '#059669' }}>-</td>
 
