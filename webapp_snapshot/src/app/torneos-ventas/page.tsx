@@ -1,9 +1,9 @@
-'use client'
+﻿'use client'
 
 import React, { useState, useEffect } from 'react'
 import { PageHeader } from '@/components/PageHeader'
 import { Trophy } from 'lucide-react'
-import { useComisionesData } from '@/hooks/useComisionesData'
+import { useComisionesData, matchTipoVenta, matchesRule, getValueForRule } from '@/hooks/useComisionesData'
 
 const getMedal = (pos: number) => {
   if (pos === 1) return '🥇';
@@ -58,7 +58,7 @@ const ChartBars = ({ data, maxValue, barColor }: { data: any[], maxValue: number
 }
 
 export default function TorneosVentasPage() {
-  const { sellerStats, loading } = useComisionesData();
+  const { sellerStats, loading, catalogs } = useComisionesData();
   const [trofeos, setTrofeos] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -85,39 +85,44 @@ export default function TorneosVentasPage() {
     );
   }
 
-  // Calculate Data
+  // Calculate Data — usa las MISMAS reglas que el panel de Comisiones
+  // (matchTipoVenta/getValueForRule) para que los torneos cuadren con él.
   const validSellers = sellerStats.filter(s => s.name !== 'Marta');
 
+  // Las anuladas no compiten en el ranking
+  const noAnulada = (rs: any) => {
+    const anul = String(rs.anulado || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+    const pend = String(rs.pendiente || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+    return anul !== 'si' && pend !== 'anulado';
+  };
+
+  // Col 1: Dispositivos + Seguros (Rent por cuota; Seguro por su valor anual de catálogo)
   let arr1 = validSellers.map(s => {
     let val = 0;
-    s.rawSales.forEach((rs: any) => {
-      const cat = rs.categoria || rs.detalle || rs.sheet || '';
-      if (cat === 'Rent' || cat === 'Seguro') {
-        let cuota = Number(rs.cuota) || 0;
-        val += cuota;
+    s.rawSales.filter(noAnulada).forEach((rs: any) => {
+      if (matchTipoVenta(rs, 'Dispositivos + Seguros')) {
+        val += getValueForRule(rs, 'Dispositivos + Seguros', catalogs);
       }
     });
     return { name: s.name, value: val };
   });
 
+  // Col 2: ARPU = Repos (sin Fútbol) + Suscripciones TV + Extra Repos destino Fútbol
   let arr2 = validSellers.map(s => {
     let val = 0;
-    s.rawSales.forEach((rs: any) => {
-      const cat = rs.categoria || rs.detalle || rs.sheet || '';
-      const prod = rs.producto || '';
-      if (cat === 'Repos' && !prod.includes('Fútbol')) {
-        let cuota = Number(rs.cuota) || 0;
-        val += cuota;
+    s.rawSales.filter(noAnulada).forEach((rs: any) => {
+      if (matchesRule(rs, 'ARPU', 'ARPU')) {
+        val += getValueForRule(rs, 'ARPU', catalogs);
       }
     });
     return { name: s.name, value: val };
   });
 
+  // Col 3: Alta BAF Convergente (miMovistar y convergentes FD/fibra+móvil)
   let arr3 = validSellers.map(s => {
     let count = 0;
-    s.rawSales.forEach((rs: any) => {
-      const cat = rs.categoria || rs.detalle || rs.sheet || '';
-      if (cat === 'miMovistar') {
+    s.rawSales.filter(noAnulada).forEach((rs: any) => {
+      if (matchTipoVenta(rs, 'Alta BAF Convergente')) {
         count++;
       }
     });
