@@ -233,6 +233,7 @@ export async function PATCH(request: Request) {
     if (updates.anotaciones !== undefined) updateData.anotaciones = updates.anotaciones
     if (updates.detalle !== undefined) updateData.detalle = updates.detalle
     if (updates.numeroPedido !== undefined) updateData.numeroPedido = updates.numeroPedido || null
+    if (updates.boletin !== undefined) updateData.boletin = updates.boletin || ''
     if (updates.imei !== undefined) updateData.imei = updates.imei || null
     if (updates.importe !== undefined) {
        updateData.cuota = updates.importe ? parseFloat(String(updates.importe).replace(',', '.')) : null
