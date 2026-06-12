@@ -26,6 +26,10 @@ export default function NuevaVentaPage() {
     telefonoMovil: '',
     telefonoFijo: '',
     boletin: '',
+    // Fecha REAL de la venta (editable): por defecto hoy. Antes el servidor
+    // ponía siempre la fecha de tecleo y las ventas apuntadas tarde caían
+    // en el mes equivocado al cruzar con Telefónica.
+    fechaVenta: new Date().toISOString().slice(0, 10),
     anotaciones: '',
     productos: [
       {
@@ -36,6 +40,7 @@ export default function NuevaVentaPage() {
         pendiente: 'No', // Si / No / Anulado
         importe: '',
         imei: '',
+        numeroPedido: '',
         rentConCoste: '',
         seguro: '',
         seguroImporte: 0,
@@ -321,6 +326,7 @@ export default function NuevaVentaPage() {
           pendiente: 'No',
           importe: '',
           imei: '',
+          numeroPedido: '',
           rentConCoste: '',
           seguro: '',
           seguroImporte: 0,
@@ -351,6 +357,7 @@ export default function NuevaVentaPage() {
           pendiente: 'No',
           importe: '',
           imei: '',
+          numeroPedido: '',
           rentConCoste: '',
           seguro: '',
           seguroImporte: 0,
@@ -398,6 +405,7 @@ export default function NuevaVentaPage() {
             pendiente: 'No',
             importe: isSuscTraslado ? '0' : '',
             imei: '',
+            numeroPedido: '',
             rentConCoste: '',
             seguro: '',
             seguroImporte: 0,
@@ -455,8 +463,8 @@ export default function NuevaVentaPage() {
         setSuccess('¡VENTA AÑADIDA CON ÉXITO!')
         setSelectedTienda('')
         setFormData({
-          vendedor: '', nombreCliente: '', codigo: '', nif: '', telefonoMovil: '', telefonoFijo: '', boletin: '', anotaciones: '',
-          productos: [{ categoria: '', producto: '', telf: '', noCliente: '', pendiente: 'No', importe: '', imei: '', rentConCoste: '', seguro: '', seguroImporte: 0, fabricante: '', subcategoria: '', gama: '', isLibre: false, isSwap: false, facturacionAnterior: '', facturacionNueva: '' }]
+          vendedor: '', nombreCliente: '', codigo: '', nif: '', telefonoMovil: '', telefonoFijo: '', boletin: '', fechaVenta: new Date().toISOString().slice(0, 10), anotaciones: '',
+          productos: [{ categoria: '', producto: '', telf: '', noCliente: '', pendiente: 'No', importe: '', imei: '', numeroPedido: '', rentConCoste: '', seguro: '', seguroImporte: 0, fabricante: '', subcategoria: '', gama: '', isLibre: false, isSwap: false, facturacionAnterior: '', facturacionNueva: '' }]
         })
       } else {
         setError(data.error || 'Error al guardar la venta')
@@ -550,9 +558,15 @@ export default function NuevaVentaPage() {
             {/* COLUMNA 3: OPERACIÓN */}
             <div style={{ flex: '1.5', minWidth: '250px', backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <h4 style={{ margin: '0 0 4px 0', fontSize: '13px', fontWeight: 'bold', color: '#333' }}>Operación</h4>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ color: '#555' }}>Boletín</label>
-                <input type="text" className="form-input" maxLength={16} value={formData.boletin} onChange={e => handleInputChange('boletin', e.target.value)} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ color: '#555' }}>Fecha de Venta</label>
+                  <input type="date" className="form-input" value={formData.fechaVenta} onChange={e => handleInputChange('fechaVenta', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ color: '#555' }}>Boletín</label>
+                  <input type="text" className="form-input" maxLength={16} value={formData.boletin} onChange={e => handleInputChange('boletin', e.target.value)} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
+                </div>
               </div>
               <div className="form-group" style={{ marginBottom: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <label className="form-label" style={{ color: '#555' }}>Anotaciones Generales</label>
@@ -677,6 +691,10 @@ export default function NuevaVentaPage() {
                       <div style={{ backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', flex: 1 }}>
                         <h5 style={{ margin: '0 0 6px 0', fontSize: '13px', fontWeight: 'bold', color: '#333' }}>Estado</h5>
                         
+                        <div className="form-group" style={{ marginBottom: 6 }}>
+                          <label className="form-label" style={{ color: '#555' }}>Nº Pedido Movistar</label>
+                          <input type="text" className="form-input" maxLength={20} value={prod.numeroPedido || ''} onChange={e => handleProductChange(index, 'numeroPedido', e.target.value.trim())} placeholder="Llave de cruce con Telefónica" style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
+                        </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '6px' }}>
                           <div>
                             <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>¿Pendiente?</label>
@@ -829,7 +847,12 @@ export default function NuevaVentaPage() {
 
                       <div style={{ backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', flex: 1 }}>
                         <h5 style={{ margin: '0 0 6px 0', fontSize: '13px', fontWeight: 'bold', color: '#333' }}>Estado</h5>
-                        
+
+                        <div className="form-group" style={{ marginBottom: 6 }}>
+                          <label className="form-label" style={{ color: '#555' }}>Nº Pedido Movistar</label>
+                          <input type="text" className="form-input" maxLength={20} value={prod.numeroPedido || ''} onChange={e => handleProductChange(index, 'numeroPedido', e.target.value.trim())} placeholder="Llave de cruce con Telefónica" style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
+                        </div>
+
                         <div>
                           <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>¿Pendiente?</label>
                           <select className="form-select" value={prod.pendiente} onChange={e => handleProductChange(index, 'pendiente', e.target.value)} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A', width: '100%' }}>
@@ -1024,6 +1047,10 @@ export default function NuevaVentaPage() {
                           </div>
                         )}
 
+                        <div className="form-group" style={{ marginBottom: 6 }}>
+                          <label className="form-label" style={{ color: '#555' }}>Nº Pedido Movistar</label>
+                          <input type="text" className="form-input" maxLength={20} value={prod.numeroPedido || ''} onChange={e => handleProductChange(index, 'numeroPedido', e.target.value.trim())} placeholder="Llave de cruce con Telefónica" style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
+                        </div>
                         <div className="form-group" style={{ marginBottom: 0 }}>
                           <label className="form-label" style={{ color: '#555' }}>¿Pendiente?</label>
                           <select className="form-select" value={prod.pendiente} onChange={e => handleProductChange(index, 'pendiente', e.target.value)} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>

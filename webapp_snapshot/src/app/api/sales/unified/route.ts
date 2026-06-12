@@ -117,12 +117,19 @@ export async function POST(request: Request) {
       const prod = data.productos[x]
       if (prod.producto === '') continue
 
-      // Pad date for dd/mm/yyyy format based on today
-      const now = new Date()
-      const d = String(now.getDate()).padStart(2, '0')
-      const m = String(now.getMonth() + 1).padStart(2, '0')
-      const y = now.getFullYear()
-      const fechaStr = `${d}/${m}/${y}`
+      // Fecha REAL de la venta: la elegida en el formulario (yyyy-mm-dd),
+      // convertida a dd/mm/yyyy. Si no llega (clientes antiguos), hoy.
+      let fechaStr: string
+      if (data.fechaVenta && /^\d{4}-\d{2}-\d{2}$/.test(data.fechaVenta)) {
+        const [fy, fm, fd] = data.fechaVenta.split('-')
+        fechaStr = `${fd}/${fm}/${fy}`
+      } else {
+        const now = new Date()
+        const d = String(now.getDate()).padStart(2, '0')
+        const m = String(now.getMonth() + 1).padStart(2, '0')
+        const y = now.getFullYear()
+        fechaStr = `${d}/${m}/${y}`
+      }
 
       let sheetCategory = 'OP'
       if (['Fija y Móvil', 'Ti', 'Rent', 'Micro'].includes(prod.categoria)) {
@@ -167,6 +174,7 @@ export async function POST(request: Request) {
           : (prod.importe ? parseFloat(prod.importe.toString().replace(',','.')) : null),
         detalle: prod.categoria || '',
         imei: prod.imei || null,
+        numeroPedido: prod.numeroPedido || null,
         rentConCoste: prod.rentConCoste || null,
         seguro: prod.seguro || null,
         seguroImporte: prod.seguroImporte ? parseFloat(prod.seguroImporte.toString().replace(',','.')) : null,

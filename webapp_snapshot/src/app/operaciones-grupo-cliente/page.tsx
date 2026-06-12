@@ -94,7 +94,7 @@ const filterByTab = (sale: any, tabId: string): boolean => {
     case 'o2':              return val === 'o2' || val === 'o2 movilfree'
     case 'seguro':          return val === 'seguro'
     case 'mimovi':          return val === 'mimovi' || val === 'mimovistar'
-    case 'tv':              return val === 'tv' || val === 'suscripciones TV'
+    case 'tv':              return val === 'tv' || val === 'suscripciones tv'
     case 'varios':          return val === 'varios'
     case 'repos':           return val === 'repos'
     case 'resto':           return val === 'resto baf'
@@ -705,6 +705,72 @@ function GrupoClienteContent() {
 
     return { globalCuotaTotal: cuotaSum, globalComisionTotal: comSum }
   }, [sales, extraAssignments, catalogs, plusDash, basicoDash, totalImporteTerritorial])
+
+  // ── Ventas huérfanas: sin pestaña reconocida ────────────────────────
+  // Si el 'detalle' de una venta no casa con ninguna pestaña, la venta no
+  // aparece en ningún sitio (ni totales ni exports). Aquí se detectan para
+  // avisar de forma visible en vez de morir en silencio.
+  const ventasHuerfanas = useMemo(() => {
+    return sales.filter(s => !TABS.find(t => filterByTab(s, t.id)))
+  }, [sales])
+
+  // ── Export "Revisión ERP": Excel para subir a mi-nuevo-erp tal cual ──
+  // Una fila por OPERACIÓN (sin agrupar) con las columnas exactas que el
+  // ERP espera para el cruce con Telefónica. Una hoja por palanca.
+  // Excluye anuladas y las pestañas internas (PRV Territorial, Bonos O2).
+  const exportRevisionERP = async () => {
+    const wb = new ExcelJS.Workbook()
+    const sheetName = (label: string) =>
+      label.replace(/[\/\\*?:\[\]]/g, '-').slice(0, 31).trim() || 'Hoja'
+
+    TABS.filter(t => t.id !== 'extras' && t.id !== 'bonos_o2').forEach(t => {
+      const rows = sales
+        .filter((s: any) => filterByTab(s, t.id))
+        .filter((s: any) => !s.anulado || s.anulado === 'No')
+      const sheet = wb.addWorksheet(sheetName(t.label))
+      sheet.columns = [
+        { header: 'Fecha', key: 'fecha', width: 12 },
+        { header: 'Comercial', key: 'comercial', width: 16 },
+        { header: 'Tienda', key: 'tienda', width: 16 },
+        { header: 'NIF', key: 'nif', width: 13 },
+        { header: 'Móvil', key: 'movil', width: 13 },
+        { header: 'Producto Vendido', key: 'producto', width: 34 },
+        { header: 'IMEI', key: 'imei', width: 18 },
+        { header: 'COD_PEDIDO', key: 'pedido', width: 16 },
+        { header: 'Boletín', key: 'boletin', width: 14 },
+      ]
+      const hr = sheet.getRow(1)
+      hr.font = { bold: true, color: { argb: 'FFFFFFFF' } }
+      hr.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00ADEF' } }
+      rows.forEach((s: any) => {
+        sheet.addRow({
+          fecha: s.fecha || '',
+          comercial: s.vendedor || '',
+          tienda: s.codigo || '',
+          nif: (s.nif || '').toUpperCase().trim(),
+          movil: s.telf || s.telefonoMovil || '',
+          producto: s.producto || '',
+          imei: s.imei || '',
+          pedido: s.numeroPedido || '',
+          boletin: s.boletin || '',
+        })
+      })
+    })
+
+    try {
+      const buffer = await wb.xlsx.writeBuffer()
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `REVISION_ERP_${periodLabel}.xlsx`
+      a.click()
+      window.URL.revokeObjectURL(url)
+    } catch (e) {
+      console.error(e)
+      alert('Error al exportar Excel')
+    }
+  }
 
   // ── Resolve extra channel code ──────────────────────────────────────
   const resolveExtraCode = (ea: any): string => {
@@ -1783,6 +1849,7 @@ function GrupoClienteContent() {
             { label: <><ExcelIcon size={16} /> Hoja por Grupo</>, desc: 'Una pestaña por cada grupo', fn: exportByGroup, color: '#107c41' },
             { label: <><ExcelIcon size={16} /> Todo en Una Hoja</>, desc: 'Todas las ventas juntas con columna Grupo', fn: exportAllInOne, color: '#107c41' },
             { label: <><ExcelIcon size={16} /> Resumen</>, desc: 'Totales por grupo: ventas, cuota y tramo', fn: exportSummary, color: '#107c41' },
+            { label: <><ExcelIcon size={16} /> Revisión ERP</>, desc: 'Excel para mi-nuevo-erp: una fila por operación, una hoja por palanca', fn: exportRevisionERP, color: '#0284C7' },
           ].map((btn, i) => (
             <button key={i} onClick={btn.fn} title={btn.desc} style={{
               display: 'flex', alignItems: 'center', gap: 8,
@@ -1846,6 +1913,19 @@ function GrupoClienteContent() {
           )
         })}
       </div>
+
+      {/* ── Aviso de ventas huérfanas (sin pestaña reconocida) ── */}
+      {!loading && ventasHuerfanas.length > 0 && (
+        <div style={{
+          background: 'rgba(245, 158, 11, 0.12)', border: '1px solid #F59E0B', borderRadius: 10,
+          padding: '10px 16px', marginBottom: 16, fontSize: 13, color: 'var(--light-text)'
+        }}>
+          ⚠️ <strong>{ventasHuerfanas.length} venta{ventasHuerfanas.length > 1 ? 's' : ''} sin pestaña reconocida</strong> — no aparecen en totales ni exportaciones.
+          Detalle: {Array.from(new Set(ventasHuerfanas.map((s: any) => `"${s.detalle || s.categoria || '(vacío)'}"`))).join(', ')}.
+          {' '}Cliente{ventasHuerfanas.length > 1 ? 's' : ''}: {Array.from(new Set(ventasHuerfanas.map((s: any) => s.nif || s.nombreCliente || '—'))).slice(0, 6).join(', ')}.
+          Corrige su categoría desde el Registro de Operaciones.
+        </div>
+      )}
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: 60, color: 'var(--medium-gray)' }}>Cargando operaciones...</div>

@@ -155,6 +155,11 @@ export async function GET(request: Request) {
         rentConCoste: sale.rentConCoste || 'No',
         seguro: sale.seguro || '',
         seguroImporte: (sale as any).seguroImporte ?? null,
+        boletin: sale.boletin || '',
+        telefonoFijo: sale.telefonoFijo || '',
+        telefonoMovil: sale.telefonoMovil || '',
+        imei: sale.imei || '',
+        numeroPedido: (sale as any).numeroPedido || '',
         motivoModificacion: ''
       }
     })
@@ -227,6 +232,8 @@ export async function PATCH(request: Request) {
     if (updates.anulado !== undefined) updateData.anulado = updates.anulado
     if (updates.anotaciones !== undefined) updateData.anotaciones = updates.anotaciones
     if (updates.detalle !== undefined) updateData.detalle = updates.detalle
+    if (updates.numeroPedido !== undefined) updateData.numeroPedido = updates.numeroPedido || null
+    if (updates.imei !== undefined) updateData.imei = updates.imei || null
     if (updates.importe !== undefined) {
        updateData.cuota = updates.importe ? parseFloat(String(updates.importe).replace(',', '.')) : null
     }

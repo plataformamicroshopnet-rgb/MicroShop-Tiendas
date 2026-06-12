@@ -90,6 +90,7 @@ model Sale {
   telefonoFijo  String?
   telefonoMovil String?
   imei          String?
+  numeroPedido  String? // Nº Pedido Movistar: llave de cruce con liquidaciones Telefónica
   rentConCoste  String?
   seguro        String?
   seguroImporte Float?
