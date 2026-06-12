@@ -660,9 +660,9 @@ export default function NuevaVentaPage() {
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label" style={{ color: '#555' }}>NIF del Titular 🔑</label>
                   <input type="text" className="form-input" maxLength={9} value={formData.nif} onChange={e => handleInputChange('nif', e.target.value)} required placeholder="Llave de cruce con Telefónica/Movistar" style={estiloLlave(nifOk(formData.nif))} />
-                  {formData.nif.trim().length >= 9 && !nifOk(formData.nif) && (
+                  {formData.nif.trim().length > 0 && !nifOk(formData.nif) && (
                     <div style={{ marginTop: 4, fontSize: 11.5, fontWeight: 'bold', color: '#D32F2F' }}>
-                      ⚠️ NIF/CIF no válido: la letra no corresponde al número. Revisa el documento del cliente — no se podrá confirmar la venta.
+                      ⚠️ NIF/CIF mal puesto o incompleto. Revisa el documento del cliente — no se podrá confirmar la venta.
                     </div>
                   )}
                 </div>
@@ -768,17 +768,44 @@ export default function NuevaVentaPage() {
                             <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#FF453A', fontWeight: 'bold' }}>
                               Motivo de venta sin stock (Obligatorio)
                             </label>
-                            <input 
-                              type="text" 
-                              className="form-input" 
-                              value={prod.motivoSinStock || ''} 
-                              onChange={e => handleProductChange(index, 'motivoSinStock', e.target.value)} 
-                              placeholder="Escribe el motivo..." 
-                              required 
+                            <input
+                              type="text"
+                              className="form-input"
+                              value={prod.motivoSinStock || ''}
+                              onChange={e => handleProductChange(index, 'motivoSinStock', e.target.value)}
+                              placeholder="Escribe el motivo..."
+                              required
                               style={{ backgroundColor: '#FFEBEB', border: '1px solid #FF8E8E', color: '#B71C1C' }}
                             />
                           </div>
                         )}
+                      </div>
+
+                      {/* Origen del terminal: obligatorio, justo debajo del Producto.
+                          LOGISTICO no descuenta stock de tienda (a veces se vende por
+                          envío aunque haya unidades, por color o reserva). */}
+                      <div>
+                        <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#D32F2F', fontWeight: 'bold' }}>Origen del terminal (stock)</label>
+                        <select
+                          className="form-select"
+                          value={prod.origenStock || ''}
+                          required
+                          onChange={e => {
+                            const val = e.target.value
+                            handleProductChange(index, 'origenStock', val)
+                            if (val === 'LOGISTICO') {
+                              handleProductChange(index, 'showMotivoSinStock', false)
+                              handleProductChange(index, 'motivoSinStock', '')
+                            }
+                          }}
+                          style={prod.origenStock
+                            ? { backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A', width: '100%' }
+                            : { backgroundColor: '#FFF3E0', border: '2px solid #E65100', color: '#E65100', fontWeight: 'bold', width: '100%' }}
+                        >
+                          <option value="">Selecciona...</option>
+                          <option value="TIENDA">🏬 Stock de tienda (descuenta de tu stock)</option>
+                          <option value="LOGISTICO">🚚 Envío logístico (no descuenta)</option>
+                        </select>
                       </div>
 
                       <div style={{ height: 1, backgroundColor: '#E0E0E0', margin: '8px 0' }}></div>
@@ -857,32 +884,6 @@ export default function NuevaVentaPage() {
                               <option value="Si">Sí</option>
                             </select>
                           </div>
-                        </div>
-
-                        {/* Origen del terminal: obligatorio. LOGISTICO no descuenta stock
-                            de tienda (a veces se vende por envío aunque haya unidades). */}
-                        <div className="form-group" style={{ marginBottom: 6, marginTop: 6 }}>
-                          <label className="form-label" style={{ color: '#D32F2F', fontWeight: 'bold' }}>Origen del terminal (stock)</label>
-                          <select
-                            className="form-select"
-                            value={prod.origenStock || ''}
-                            required
-                            onChange={e => {
-                              const val = e.target.value
-                              handleProductChange(index, 'origenStock', val)
-                              if (val === 'LOGISTICO') {
-                                handleProductChange(index, 'showMotivoSinStock', false)
-                                handleProductChange(index, 'motivoSinStock', '')
-                              }
-                            }}
-                            style={prod.origenStock
-                              ? { backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A', width: '100%' }
-                              : { backgroundColor: '#FFF3E0', border: '2px solid #E65100', color: '#E65100', fontWeight: 'bold', width: '100%' }}
-                          >
-                            <option value="">Selecciona...</option>
-                            <option value="TIENDA">🏬 Stock de tienda (descuenta de tu stock)</option>
-                            <option value="LOGISTICO">🚚 Envío logístico (no descuenta)</option>
-                          </select>
                         </div>
 
                         <div style={{ marginTop: '8px' }}>
