@@ -36,7 +36,7 @@ const LLAVES_DETALLE: Record<string, string[]> = {
   'contratos móvil': ['telf', 'pedido'],
   'contratos movil': ['telf', 'pedido'],
   'rent': ['imei', 'pedido'],
-  'seguro': ['telf', 'imei'],
+  'seguro': ['telf'],
   'mimovistar': ['pedido'],
   'mimovi': ['pedido'],
   'resto baf': ['pedido'],

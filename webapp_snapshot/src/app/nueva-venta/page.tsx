@@ -86,7 +86,6 @@ export default function NuevaVentaPage() {
       ll.push({ campo: 'numeroPedido', etiqueta: 'Nº Pedido Movistar', ok: pedidoOk(prod.numeroPedido) })
     } else if (cat === 'Seguro') {
       ll.push({ campo: 'telf', etiqueta: 'Teléfono', ok: telOk(prod.telf) })
-      ll.push({ campo: 'imei', etiqueta: 'IMEI del terminal', ok: imeiOk(prod.imei) })
     } else if (cat === 'Repos') {
       ll.push({ campo: 'telf', etiqueta: 'Teléfono Fijo', ok: telOk(prod.telf) })
       ll.push({ campo: 'numeroPedido', etiqueta: 'Nº Pedido Movistar', ok: pedidoOk(prod.numeroPedido) })
@@ -1068,12 +1067,6 @@ export default function NuevaVentaPage() {
                             </div>
                           )}
                         </div>
-                        {prod.categoria === 'Seguro' && (
-                          <div className="form-group" style={{ marginBottom: 0 }}>
-                            <label className="form-label" style={{ color: '#555' }}>IMEI del terminal asegurado 🔑</label>
-                            <input type="text" className="form-input" maxLength={15} value={prod.imei || ''} onChange={e => handleProductChange(index, 'imei', e.target.value.replace(/\D/g, ''))} placeholder="15 dígitos" style={estiloLlave(imeiOk(prod.imei))} />
-                          </div>
-                        )}
                     </div>
 
                     {/* COLUMNA 3: FINANZAS / ESTADO */}

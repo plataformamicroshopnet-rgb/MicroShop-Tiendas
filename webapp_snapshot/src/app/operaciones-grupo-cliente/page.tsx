@@ -110,7 +110,7 @@ const filterByTab = (sale: any, tabId: string): boolean => {
 const LLAVES_TAB: Record<string, string[]> = {
   contratos_movil: ['telf', 'pedido'],
   rent:            ['imei', 'pedido'],
-  seguro:          ['telf', 'imei'],
+  seguro:          ['telf'],
   mimovi:          ['pedido'],
   traslado:        ['pedido'],
   resto:           ['pedido'],
