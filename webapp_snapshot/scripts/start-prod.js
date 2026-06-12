@@ -38,6 +38,10 @@ try {
     console.log('[Boot] Corriendo limpieza de stock cruzado...');
     execSync('node scripts/clean_cross_stock_prod.js', { stdio: 'inherit' });
     console.log('[Boot] Limpieza de stock cruzado finalizada con éxito.');
+
+    // Migración idempotente: Boletín -> Nº Pedido (solo rellena vacíos)
+    console.log('[Boot] Migrando Boletín a Nº Pedido donde falte...');
+    execSync('node scripts/migrate_boletin_pedido.js', { stdio: 'inherit' });
 } catch (e) {
     console.error('[Boot] Error sincronizando bd o limpiando stock:', e.message);
 }
