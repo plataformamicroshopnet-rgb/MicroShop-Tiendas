@@ -43,6 +43,13 @@ model User {
   role            String
   permissions     String
   codigoComercial String?
+  // Marcha atrás en el tiempo (Gestión de Usuarios):
+  // - retroDiasCrear: días LABORABLES hacia atrás para registrar ventas
+  //   olvidadas (null = 5 por defecto, máx recomendado 5)
+  // - retroDiasModificar: días naturales hacia atrás para modificar
+  //   operaciones (null = 120 = 4 meses para quien tenga permiso de edición)
+  retroDiasCrear     Int?
+  retroDiasModificar Int?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }

@@ -26,6 +26,8 @@ export async function GET() {
       password: u.password,
       role: u.role,
       codigoComercial: u.codigoComercial || '',
+      retroDiasCrear: (u as any).retroDiasCrear ?? null,
+      retroDiasModificar: (u as any).retroDiasModificar ?? null,
       permissions: perms
     }
   })
@@ -97,7 +99,7 @@ export async function PATCH(request: Request) {
   }
 
   try {
-    const { oldUsername, newUsername, password, role, codigoComercial } = await request.json()
+    const { oldUsername, newUsername, password, role, codigoComercial, retroDiasCrear, retroDiasModificar } = await request.json()
 
     if (oldUsername !== newUsername) {
       const allUsers = await prisma.user.findMany()
@@ -111,6 +113,8 @@ export async function PATCH(request: Request) {
     if (password) updateData.password = password
     if (role) updateData.role = role
     if (codigoComercial !== undefined) updateData.codigoComercial = codigoComercial
+    if (retroDiasCrear !== undefined) updateData.retroDiasCrear = retroDiasCrear === null || retroDiasCrear === '' ? null : Math.max(0, parseInt(retroDiasCrear, 10) || 0)
+    if (retroDiasModificar !== undefined) updateData.retroDiasModificar = retroDiasModificar === null || retroDiasModificar === '' ? null : Math.max(0, parseInt(retroDiasModificar, 10) || 0)
 
     await prisma.user.update({
       where: { username: oldUsername },

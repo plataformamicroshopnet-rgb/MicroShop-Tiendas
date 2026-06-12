@@ -109,7 +109,7 @@ export default function AdminUsuariosPage() {
   const [activeTab, setActiveTab] = useState<'general' | 'seguridad'>('general')
 
   // Form State for "General" Tab
-  const [userForm, setUserForm] = useState({ username: '', password: '', role: 'COMERCIAL', codigoComercial: '' })
+  const [userForm, setUserForm] = useState({ username: '', password: '', role: 'COMERCIAL', codigoComercial: '', retroDiasCrear: '', retroDiasModificar: '' })
   const [isNewUser, setIsNewUser] = useState(false)
 
   useEffect(() => {
@@ -144,7 +144,9 @@ export default function AdminUsuariosPage() {
         username: u.username,
         password: u.password,
         role: u.role,
-        codigoComercial: u.codigoComercial || ''
+        codigoComercial: u.codigoComercial || '',
+        retroDiasCrear: u.retroDiasCrear === null || u.retroDiasCrear === undefined ? '' : String(u.retroDiasCrear),
+        retroDiasModificar: u.retroDiasModificar === null || u.retroDiasModificar === undefined ? '' : String(u.retroDiasModificar)
     })
     setActiveTab('general')
   }
@@ -152,7 +154,7 @@ export default function AdminUsuariosPage() {
   const handleCreateNew = () => {
     setSelectedUser({ username: 'Nuevo Usuario', role: 'COMERCIAL', permissions: [] })
     setIsNewUser(true)
-    setUserForm({ username: '', password: '', role: 'COMERCIAL', codigoComercial: '' })
+    setUserForm({ username: '', password: '', role: 'COMERCIAL', codigoComercial: '', retroDiasCrear: '', retroDiasModificar: '' })
     setActiveTab('general')
   }
 
@@ -169,7 +171,9 @@ export default function AdminUsuariosPage() {
             newUsername: userForm.username,
             password: userForm.password,
             role: userForm.role,
-            codigoComercial: userForm.codigoComercial
+            codigoComercial: userForm.codigoComercial,
+            retroDiasCrear: userForm.retroDiasCrear === '' ? null : Number(userForm.retroDiasCrear),
+            retroDiasModificar: userForm.retroDiasModificar === '' ? null : Number(userForm.retroDiasModificar)
           })
         })
         if (res.ok) {
@@ -416,11 +420,33 @@ export default function AdminUsuariosPage() {
                                         )}
 
                                         <label style={{ fontSize: 13, color: '#475569', fontWeight: 600 }}>Cód. Vendedor:</label>
-                                        <input 
-                                            type="text" 
+                                        <input
+                                            type="text"
                                             value={userForm.codigoComercial}
                                             onChange={e => setUserForm({...userForm, codigoComercial: e.target.value})}
                                             placeholder="Opcional"
+                                            style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #CBD5E1', fontSize: 14, outline: 'none' }}
+                                        />
+
+                                        <label style={{ fontSize: 13, color: '#475569', fontWeight: 600 }} title="Días LABORABLES hacia atrás que puede poner como Fecha de Venta al registrar una venta olvidada. Vacío = 5 (recomendado). 0 = solo hoy.">⏪ Añadir olvidadas (días laborables):</label>
+                                        <input
+                                            type="number"
+                                            min={0}
+                                            max={5}
+                                            value={userForm.retroDiasCrear}
+                                            onChange={e => setUserForm({...userForm, retroDiasCrear: e.target.value})}
+                                            placeholder="Vacío = 5"
+                                            style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #CBD5E1', fontSize: 14, outline: 'none' }}
+                                        />
+
+                                        <label style={{ fontSize: 13, color: '#475569', fontWeight: 600 }} title="Días naturales hacia atrás en los que puede MODIFICAR operaciones (con permiso de edición). Vacío = 120 (4 meses, máximo). 0 = no puede tocar el pasado.">⏪ Modificar operaciones (días, máx 120):</label>
+                                        <input
+                                            type="number"
+                                            min={0}
+                                            max={120}
+                                            value={userForm.retroDiasModificar}
+                                            onChange={e => setUserForm({...userForm, retroDiasModificar: e.target.value})}
+                                            placeholder="Vacío = 120 (4 meses)"
                                             style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #CBD5E1', fontSize: 14, outline: 'none' }}
                                         />
                                     </div>

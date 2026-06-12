@@ -136,11 +136,69 @@ export async function POST(request: Request) {
     }
     // -------------------------------------------------------------
 
-    let activePeriod = null
-    if (data.periodKey) {
-      activePeriod = await prisma.workPeriod.findUnique({
-        where: { period_key: data.periodKey }
-      })
+    // ── FECHA DE VENTA: validación, marcha atrás y ANCLA DE PERIODO ────
+    // La venta vive en el MES de su fecha de tramitación, no en el periodo
+    // activo de la interfaz: una venta de junio apuntada en julio cuenta
+    // solo en junio y no se duplica entre meses.
+    const ahora = new Date()
+    const hoyDate = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate())
+    let fechaVentaDate = hoyDate
+    let fechaStr = `${String(ahora.getDate()).padStart(2, '0')}/${String(ahora.getMonth() + 1).padStart(2, '0')}/${ahora.getFullYear()}`
+    if (data.fechaVenta && /^\d{4}-\d{2}-\d{2}$/.test(data.fechaVenta)) {
+      const [fy, fm, fd] = data.fechaVenta.split('-')
+      fechaStr = `${fd}/${fm}/${fy}`
+      fechaVentaDate = new Date(Number(fy), Number(fm) - 1, Number(fd))
+    }
+
+    if (fechaVentaDate.getTime() > hoyDate.getTime()) {
+      return NextResponse.json({ success: false, error: 'La Fecha de Venta no puede ser futura: pon la fecha real de tramitación en Movistar.' }, { status: 400 })
+    }
+
+    // Marcha atrás permitida para AÑADIR olvidadas (días laborables, por usuario)
+    const dbUserVenta = await prisma.user.findUnique({ where: { username: user.username || '' } })
+    const esAdminVenta = (dbUserVenta?.role || user.role) === 'ADMIN'
+    const margenCrear = esAdminVenta ? 99999 : (((dbUserVenta as any)?.retroDiasCrear ?? 5) as number)
+    let diasLaborablesAtras = 0
+    {
+      const d = new Date(fechaVentaDate)
+      while (d.getTime() < hoyDate.getTime()) {
+        d.setDate(d.getDate() + 1)
+        const dow = d.getDay()
+        if (dow !== 0 && dow !== 6) diasLaborablesAtras++
+      }
+    }
+    if (diasLaborablesAtras > margenCrear) {
+      return NextResponse.json({ success: false, error: `Solo puedes registrar ventas de hasta ${margenCrear} día(s) laborables atrás. Para una venta más antigua, avisa a un responsable con permiso de marcha atrás.` }, { status: 400 })
+    }
+
+    // Ancla de periodo: el WorkPeriod del mes/año de la fecha de tramitación
+    const anchorWp = await prisma.workPeriod.findFirst({
+      where: { month: fechaVentaDate.getMonth() + 1, year: fechaVentaDate.getFullYear() }
+    })
+
+    // ── AVISO DE POSIBLE DUPLICADO (mismo NIF + producto, ±7 días) ──────
+    if (!data.confirmarDuplicado) {
+      for (const prod of data.productos) {
+        if (!prod.producto) continue
+        const previas = await prisma.sale.findMany({
+          where: { nif: data.nif.toUpperCase(), producto: prod.producto },
+          select: { fecha: true, anulado: true, pendiente: true }
+        })
+        const hayDup = previas.some(p => {
+          if (String(p.anulado || '').toLowerCase().startsWith('s') || String(p.pendiente || '') === 'Anulado') return false
+          const partes = String(p.fecha || '').split('/')
+          if (partes.length !== 3) return false
+          const f = new Date(Number(partes[2]), Number(partes[1]) - 1, Number(partes[0]))
+          return !isNaN(f.getTime()) && Math.abs(f.getTime() - fechaVentaDate.getTime()) <= 7 * 86400000
+        })
+        if (hayDup) {
+          return NextResponse.json({
+            success: false,
+            duplicado: true,
+            error: `Ya existe una venta de este NIF con el mismo producto (${prod.producto}) en los últimos 7 días — ¿seguro que no está repetida?`
+          }, { status: 409 })
+        }
+      }
     }
 
     const salesToInsert = []
@@ -149,20 +207,6 @@ export async function POST(request: Request) {
     for (let x = 0; x < data.productos.length; x++) {
       const prod = data.productos[x]
       if (prod.producto === '') continue
-
-      // Fecha REAL de la venta: la elegida en el formulario (yyyy-mm-dd),
-      // convertida a dd/mm/yyyy. Si no llega (clientes antiguos), hoy.
-      let fechaStr: string
-      if (data.fechaVenta && /^\d{4}-\d{2}-\d{2}$/.test(data.fechaVenta)) {
-        const [fy, fm, fd] = data.fechaVenta.split('-')
-        fechaStr = `${fd}/${fm}/${fy}`
-      } else {
-        const now = new Date()
-        const d = String(now.getDate()).padStart(2, '0')
-        const m = String(now.getMonth() + 1).padStart(2, '0')
-        const y = now.getFullYear()
-        fechaStr = `${d}/${m}/${y}`
-      }
 
       let sheetCategory = 'OP'
       if (['Fija y Móvil', 'Ti', 'Rent', 'Micro'].includes(prod.categoria)) {
@@ -214,7 +258,8 @@ export async function POST(request: Request) {
         seguroImporte: prod.seguroImporte ? parseFloat(prod.seguroImporte.toString().replace(',','.')) : null,
         isLibre: prod.isLibre === true,
         isSwap: prod.isSwap === true,
-        periodId: activePeriod?.id || null
+        // Ancla al mes de la fecha de tramitación (no al periodo de la UI)
+        periodId: anchorWp?.id || null
       })
 
       // Queue stock decrement if it is Rent
@@ -259,8 +304,9 @@ export async function POST(request: Request) {
       }
 
       // Disparador Reactivo: Calcular Reglas Extra para el Mes de las ventas importadas
-      if (activePeriod?.id) {
-        await runExtrasEngine(activePeriod.id).catch(console.error)
+      if (anchorWp?.id) {
+        // Recalcular extras del mes al que pertenece la venta (puede ser el anterior)
+        await runExtrasEngine(anchorWp.id).catch(console.error)
       }
     }
     

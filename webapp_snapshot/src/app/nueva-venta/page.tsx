@@ -586,13 +586,28 @@ export default function NuevaVentaPage() {
     }
 
     try {
-      const res = await fetch('/api/sales/unified', {
+      let res = await fetch('/api/sales/unified', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...formData, periodKey: activePeriodKey, codigo: selectedTienda })
       })
 
-      const data = await res.json()
+      let data = await res.json()
+
+      // Posible duplicado: el servidor avisa (409) y el comercial decide
+      if (res.status === 409 && data.duplicado) {
+        if (!window.confirm(data.error + '\n\nPulsa Aceptar SOLO si es una venta nueva de verdad.')) {
+          setLoading(false)
+          return
+        }
+        res = await fetch('/api/sales/unified', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...formData, periodKey: activePeriodKey, codigo: selectedTienda, confirmarDuplicado: true })
+        })
+        data = await res.json()
+      }
+
       if (res.ok && data.success) {
         setSuccess('¡VENTA AÑADIDA CON ÉXITO!')
         setSelectedTienda('')
@@ -699,17 +714,20 @@ export default function NuevaVentaPage() {
               <h4 style={{ margin: '0 0 4px 0', fontSize: '13px', fontWeight: 'bold', color: '#333' }}>Operación</h4>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label" style={{ color: '#555' }} title="Debe ser la fecha real de tramitación en los sistemas de Movistar">Fecha de Venta (tramitación)</label>
-                <input type="date" className="form-input" value={formData.fechaVenta} onChange={e => handleInputChange('fechaVenta', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
+                <input type="date" className="form-input" value={formData.fechaVenta} max={hoyISO} onChange={e => handleInputChange('fechaVenta', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
               </div>
               {/* Advertencia premium: solo cuando la fecha elegida NO es hoy.
-                  Con fecha de hoy no se muestra nada (no estorba el flujo). */}
+                  Si además cae en OTRO MES, se avisa de que la venta contará
+                  en ese mes (es donde queda anclada para liquidar y comisionar). */}
               {formData.fechaVenta !== hoyISO && (
                 <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #EADFCB', borderLeft: '4px solid #C9A227', borderRadius: 8, padding: '8px 12px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
                   <div style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontSize: 13, fontWeight: 600, color: '#1B2A41', letterSpacing: '0.2px' }}>
-                    Has elegido una fecha distinta a hoy
+                    {formData.fechaVenta.slice(0, 7) !== hoyISO.slice(0, 7) ? '⚠️ Esta venta contará en otro mes' : 'Has elegido una fecha distinta a hoy'}
                   </div>
                   <div style={{ fontSize: 11.5, color: '#5A6B7F', lineHeight: 1.45 }}>
-                    Comprueba que es la fecha real en la que se tramitó la operación en Movistar; de ella depende el mes en que se reclama el cobro.
+                    {formData.fechaVenta.slice(0, 7) !== hoyISO.slice(0, 7)
+                      ? `OJO: con fecha ${formData.fechaVenta.split('-').reverse().join('/')}, la venta quedará anclada a ese mes (sus listados, comisiones y liquidación), no al mes actual. Asegúrate de que es la fecha real de tramitación.`
+                      : 'Comprueba que es la fecha real en la que se tramitó la operación en Movistar; de ella depende el mes en que se reclama el cobro.'}
                   </div>
                 </div>
               )}

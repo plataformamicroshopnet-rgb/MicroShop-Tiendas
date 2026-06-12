@@ -193,6 +193,36 @@ export async function PATCH(request: Request) {
     const existingSale = await prisma.sale.findUnique({ where: { id } })
     if (!existingSale) return NextResponse.json({ success: false, error: 'Operación no existe' })
 
+    // ── MARCHA ATRÁS PARA MODIFICAR (por usuario, máx 4 meses) ──────────
+    // Configurable en Gestión de Usuarios (retroDiasModificar, días naturales).
+    // Sin configurar: 120 días (4 meses) para quien tenga permiso de edición.
+    // El Admin no tiene límite.
+    const dbUserEdit = await prisma.user.findUnique({ where: { username: session.user.username || '' } })
+    if ((dbUserEdit?.role || session.user.role) !== 'ADMIN') {
+      const margenModificar = ((dbUserEdit as any)?.retroDiasModificar ?? 120) as number
+      const hoy = new Date(); hoy.setHours(0, 0, 0, 0)
+      const parseFecha = (f: any) => {
+        const p = String(f || '').split('/')
+        if (p.length !== 3) return null
+        const d = new Date(Number(p[2]), Number(p[1]) - 1, Number(p[0]))
+        return isNaN(d.getTime()) ? null : d
+      }
+      const limite = new Date(hoy); limite.setDate(limite.getDate() - margenModificar)
+      const fechaActual = parseFecha(existingSale.fecha)
+      if (fechaActual && fechaActual < limite) {
+        return NextResponse.json({ success: false, error: `No puedes modificar operaciones de hace más de ${margenModificar} días. Pide a un administrador que amplíe tu marcha atrás en Gestión de Usuarios.` }, { status: 403 })
+      }
+      if (updates.fecha !== undefined && updates.fecha) {
+        const fechaNueva = parseFecha(updates.fecha)
+        if (fechaNueva && fechaNueva > hoy) {
+          return NextResponse.json({ success: false, error: 'La fecha no puede ser futura.' }, { status: 400 })
+        }
+        if (fechaNueva && fechaNueva < limite) {
+          return NextResponse.json({ success: false, error: `No puedes mover una operación a hace más de ${margenModificar} días.` }, { status: 403 })
+        }
+      }
+    }
+
     const updateData: any = {}
     if (updates.vendedor !== undefined) updateData.vendedor = updates.vendedor
     
