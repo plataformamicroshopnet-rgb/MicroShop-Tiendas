@@ -95,9 +95,10 @@ export default function NuevaVentaPage() {
     return false
   }
   const telOk = (v: string) => /^[0-9]{9}$/.test(String(v || '').trim())
-  // Código de operación real de Movistar: CO + añomes + referencia.
-  // Rellenos tipo "1111..." o códigos CO mal tecleados quedan en naranja.
-  const pedidoOk = (v: string) => /^CO\d{4}[A-Z0-9]{6,12}$/.test(String(v || '').trim().toUpperCase())
+  // Códigos de operación reales de Movistar: CO+añomes+referencia
+  // (CO2511X8DKWOM2) o pedidos MD/MDN+dígitos (MD00021663, MDN00027659).
+  // Rellenos tipo "1111..." o códigos mal tecleados quedan en naranja.
+  const pedidoOk = (v: string) => /^(CO\d{4}[A-Z0-9]{6,12}|MDN?\d{6,10})$/.test(String(v || '').trim().toUpperCase())
   const imeiOk = (v: string) => /^[0-9]{15}$/.test(String(v || '').trim())
 
   const llavesDeProducto = (prod: any): { campo: string; etiqueta: string; ok: boolean }[] => {

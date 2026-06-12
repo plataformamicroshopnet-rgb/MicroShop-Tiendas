@@ -59,9 +59,9 @@ const valorLlave = (esLlave: boolean, valor: any) => {
   if (v !== '' && v !== '-') return valor
   return esLlave ? 'FALTA' : (valor || '-')
 }
-// Código de operación real de Movistar (CO + añomes + referencia): los
-// rellenos tipo "1111..." o CO mal tecleados se pintan en naranja.
-const coOk = (v: any) => /^CO\d{4}[A-Z0-9]{6,12}$/.test(String(v || '').trim().toUpperCase())
+// Códigos de operación reales de Movistar: CO+añomes+referencia o pedidos
+// MD/MDN+dígitos. Los rellenos o códigos mal tecleados se pintan en naranja.
+const coOk = (v: any) => /^(CO\d{4}[A-Z0-9]{6,12}|MDN?\d{6,10})$/.test(String(v || '').trim().toUpperCase())
 // Documento real: DNI (letra mod-23), NIE y CIF (control). Un NIF inventado
 // se pinta en naranja aunque tenga pinta de NIF.
 const docOk = (v: any): boolean => {

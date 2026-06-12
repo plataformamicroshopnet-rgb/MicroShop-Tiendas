@@ -120,9 +120,9 @@ const LLAVES_TAB: Record<string, string[]> = {
 const tdLlave = (filled: boolean): any => filled
   ? { background: '#E8F5E9', color: '#1B5E20', fontWeight: 700 }
   : { background: '#F57C00', color: '#FFFFFF', fontWeight: 800 }
-// Código de operación real de Movistar (CO + añomes + referencia): los
-// rellenos tipo "1111..." o CO mal tecleados se pintan en naranja.
-const coOk = (v: any) => /^CO\d{4}[A-Z0-9]{6,12}$/.test(String(v || '').trim().toUpperCase())
+// Códigos de operación reales de Movistar: CO+añomes+referencia o pedidos
+// MD/MDN+dígitos. Los rellenos o códigos mal tecleados se pintan en naranja.
+const coOk = (v: any) => /^(CO\d{4}[A-Z0-9]{6,12}|MDN?\d{6,10})$/.test(String(v || '').trim().toUpperCase())
 // Documento real: DNI (letra mod-23), NIE y CIF (control).
 const docOk = (v: any): boolean => {
   const s = String(v || '').trim().toUpperCase().replace(/[\s-]/g, '')
