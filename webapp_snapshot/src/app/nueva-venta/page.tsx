@@ -57,6 +57,80 @@ export default function NuevaVentaPage() {
 
   const [stockItems, setStockItems] = useState<any[]>([])
 
+  // ── Semáforo de llaves de cruce con Telefónica ──────────────────────
+  // Las "llaves" son los datos que permiten identificar la operación en la
+  // liquidación de Telefónica al cruzarla en el ERP. Naranja = falta el
+  // dato, verde = listo. Las casillas que no son llave conservan el azul.
+  const hoyISO = new Date().toISOString().slice(0, 10)
+  const estiloLlave = (ok: boolean): any => ({
+    backgroundColor: ok ? '#2E7D32' : '#F57C00',
+    border: ok ? '2px solid #1B5E20' : '2px solid #E65100',
+    color: '#FFFFFF',
+    fontWeight: 'bold'
+  })
+  const nifOk = (v: string) => /^[0-9]{8}[A-Za-z]$|^[A-Za-z][0-9]{7}[A-Za-z0-9]$/.test(String(v || '').trim())
+  const telOk = (v: string) => /^[0-9]{9}$/.test(String(v || '').trim())
+  const pedidoOk = (v: string) => String(v || '').trim().length >= 5
+  const imeiOk = (v: string) => /^[0-9]{15}$/.test(String(v || '').trim())
+
+  const llavesDeProducto = (prod: any): { campo: string; etiqueta: string; ok: boolean }[] => {
+    const cat = prod.categoria
+    const ll: { campo: string; etiqueta: string; ok: boolean }[] = []
+    if (cat === 'Rent') {
+      ll.push({ campo: 'imei', etiqueta: 'IMEI', ok: imeiOk(prod.imei) })
+      ll.push({ campo: 'numeroPedido', etiqueta: 'Nº Pedido Movistar', ok: pedidoOk(prod.numeroPedido) })
+    } else if (cat === 'miMovistar' || cat === 'Resto BAF' || cat === 'Traslado miMovistar') {
+      ll.push({ campo: 'numeroPedido', etiqueta: 'Nº Pedido Movistar', ok: pedidoOk(prod.numeroPedido) })
+    } else if (cat === 'Ti') {
+      ll.push({ campo: 'telf', etiqueta: 'Teléfono de la línea', ok: telOk(prod.telf) })
+      ll.push({ campo: 'numeroPedido', etiqueta: 'Nº Pedido Movistar', ok: pedidoOk(prod.numeroPedido) })
+    } else if (cat === 'Seguro') {
+      ll.push({ campo: 'telf', etiqueta: 'Teléfono', ok: telOk(prod.telf) })
+      ll.push({ campo: 'imei', etiqueta: 'IMEI del terminal', ok: imeiOk(prod.imei) })
+    } else if (cat === 'Repos') {
+      ll.push({ campo: 'telf', etiqueta: 'Teléfono Fijo', ok: telOk(prod.telf) })
+      ll.push({ campo: 'numeroPedido', etiqueta: 'Nº Pedido Movistar', ok: pedidoOk(prod.numeroPedido) })
+    } else if (cat === 'Suscripciones TV') {
+      ll.push({ campo: 'telf', etiqueta: 'Teléfono Fijo', ok: telOk(prod.telf) })
+    }
+    return ll
+  }
+  const esLlave = (prod: any, campo: string) => llavesDeProducto(prod).some(l => l.campo === campo)
+  const estiloCampo = (prod: any, campo: string): any => {
+    const ll = llavesDeProducto(prod).find(l => l.campo === campo)
+    return ll ? estiloLlave(ll.ok) : { backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }
+  }
+
+  // Cartel premium por producto: o falta alguna llave (aviso) o todo verde
+  const CartelLlaves = ({ prod }: { prod: any }) => {
+    const ll = llavesDeProducto(prod)
+    if (ll.length === 0 || !prod.producto) return null
+    const faltan = ll.filter(l => !l.ok).map(l => l.etiqueta)
+    if (!nifOk(formData.nif)) faltan.unshift('NIF del Titular')
+    if (faltan.length === 0) {
+      return (
+        <div style={{ marginTop: 12, backgroundColor: '#FFFFFF', border: '1px solid #C8E6C9', borderLeft: '5px solid #2E7D32', borderRadius: 10, padding: '12px 18px', boxShadow: '0 3px 14px rgba(46,125,50,0.12)', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 22 }}>🔐</span>
+          <div>
+            <div style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontSize: 15, color: '#1B5E20', fontWeight: 600, letterSpacing: '0.2px' }}>Operación identificada</div>
+            <div style={{ fontSize: 13, color: '#4E6151', lineHeight: 1.5 }}>Llaves completas: esta venta cruzará automáticamente con la liquidación de Telefónica.</div>
+          </div>
+        </div>
+      )
+    }
+    return (
+      <div style={{ marginTop: 12, backgroundColor: '#FFFFFF', border: '1px solid #EADFCB', borderLeft: '5px solid #C9A227', borderRadius: 10, padding: '12px 18px', boxShadow: '0 3px 14px rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <span style={{ fontSize: 22 }}>🔑</span>
+        <div>
+          <div style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontSize: 15, color: '#1B2A41', fontWeight: 600, letterSpacing: '0.2px' }}>Identifica esta operación</div>
+          <div style={{ fontSize: 13, color: '#5A6B7F', lineHeight: 1.5 }}>
+            Si no se rellena <strong style={{ color: '#B26A00' }}>{faltan.join(', ')}</strong>, no podremos identificar la operación en la liquidación de Telefónica y podría quedar sin cobrar.
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   useEffect(() => {
     fetch(`/api/catalogs?_t=${Date.now()}`)
       .then(res => res.json())
@@ -539,8 +613,8 @@ export default function NuevaVentaPage() {
                   <input type="text" className="form-input" maxLength={40} value={formData.nombreCliente} onChange={e => handleInputChange('nombreCliente', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
                 </div>
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ color: '#555' }}>NIF del Titular</label>
-                  <input type="text" className="form-input" maxLength={9} value={formData.nif} onChange={e => handleInputChange('nif', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
+                  <label className="form-label" style={{ color: '#555' }}>NIF del Titular 🔑</label>
+                  <input type="text" className="form-input" maxLength={9} value={formData.nif} onChange={e => handleInputChange('nif', e.target.value)} required style={estiloLlave(nifOk(formData.nif))} />
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
@@ -566,6 +640,17 @@ export default function NuevaVentaPage() {
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label" style={{ color: '#555' }}>Boletín</label>
                   <input type="text" className="form-input" maxLength={16} value={formData.boletin} onChange={e => handleInputChange('boletin', e.target.value)} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
+                </div>
+              </div>
+              {/* Advertencia premium: la fecha debe ser la de tramitación real en Movistar */}
+              <div style={{ backgroundColor: '#FFFFFF', border: formData.fechaVenta === hoyISO ? '1px solid #E3E8EF' : '1px solid #EADFCB', borderLeft: formData.fechaVenta === hoyISO ? '4px solid #90CAF9' : '4px solid #C9A227', borderRadius: 8, padding: '8px 12px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                <div style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontSize: 13, fontWeight: 600, color: '#1B2A41', letterSpacing: '0.2px' }}>
+                  {formData.fechaVenta === hoyISO ? '¿La operación se tramitó hoy?' : 'Has elegido una fecha distinta a hoy'}
+                </div>
+                <div style={{ fontSize: 11.5, color: '#5A6B7F', lineHeight: 1.45 }}>
+                  {formData.fechaVenta === hoyISO
+                    ? 'Si se tramitó otro día en los sistemas de Movistar, selecciona aquí la fecha de tramitación.'
+                    : 'Comprueba que es la fecha real en la que se tramitó la operación en Movistar; de ella depende el mes en que se reclama el cobro.'}
                 </div>
               </div>
               <div className="form-group" style={{ marginBottom: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -660,8 +745,8 @@ export default function NuevaVentaPage() {
                           <input type="text" className="form-input" value={prod.gama} readOnly style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
                         </div>
                         <div>
-                          <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>IMEI</label>
-                          <input type="text" className="form-input" maxLength={15} value={prod.imei} onChange={e => handleProductChange(index, 'imei', e.target.value.replace(/\D/g, ''))} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
+                          <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>IMEI 🔑</label>
+                          <input type="text" className="form-input" maxLength={15} value={prod.imei} onChange={e => handleProductChange(index, 'imei', e.target.value.replace(/\D/g, ''))} required style={estiloLlave(imeiOk(prod.imei))} />
                         </div>
                         <div>
                           <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>Teléfono</label>
@@ -692,8 +777,8 @@ export default function NuevaVentaPage() {
                         <h5 style={{ margin: '0 0 6px 0', fontSize: '13px', fontWeight: 'bold', color: '#333' }}>Estado</h5>
                         
                         <div className="form-group" style={{ marginBottom: 6 }}>
-                          <label className="form-label" style={{ color: '#555' }}>Nº Pedido Movistar</label>
-                          <input type="text" className="form-input" maxLength={20} value={prod.numeroPedido || ''} onChange={e => handleProductChange(index, 'numeroPedido', e.target.value.trim())} placeholder="Llave de cruce con Telefónica" style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
+                          <label className="form-label" style={{ color: '#555' }}>{esLlave(prod, 'numeroPedido') ? 'Nº Pedido Movistar 🔑' : 'Nº Pedido Movistar'}</label>
+                          <input type="text" className="form-input" maxLength={20} value={prod.numeroPedido || ''} onChange={e => handleProductChange(index, 'numeroPedido', e.target.value.trim())} placeholder="Llave de cruce con Telefónica" style={estiloCampo(prod, 'numeroPedido')} />
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '6px' }}>
                           <div>
@@ -849,8 +934,8 @@ export default function NuevaVentaPage() {
                         <h5 style={{ margin: '0 0 6px 0', fontSize: '13px', fontWeight: 'bold', color: '#333' }}>Estado</h5>
 
                         <div className="form-group" style={{ marginBottom: 6 }}>
-                          <label className="form-label" style={{ color: '#555' }}>Nº Pedido Movistar</label>
-                          <input type="text" className="form-input" maxLength={20} value={prod.numeroPedido || ''} onChange={e => handleProductChange(index, 'numeroPedido', e.target.value.trim())} placeholder="Llave de cruce con Telefónica" style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
+                          <label className="form-label" style={{ color: '#555' }}>{esLlave(prod, 'numeroPedido') ? 'Nº Pedido Movistar 🔑' : 'Nº Pedido Movistar'}</label>
+                          <input type="text" className="form-input" maxLength={20} value={prod.numeroPedido || ''} onChange={e => handleProductChange(index, 'numeroPedido', e.target.value.trim())} placeholder="Llave de cruce con Telefónica" style={estiloCampo(prod, 'numeroPedido')} />
                         </div>
 
                         <div>
@@ -954,14 +1039,14 @@ export default function NuevaVentaPage() {
                         </div>
                         <div className="form-group" style={{ marginBottom: 0 }}>
                           <label className="form-label" style={{ color: (prod.categoria === 'Repos' || prod.categoria === 'Suscripciones TV') ? '#D32F2F' : '#555', fontWeight: (prod.categoria === 'Repos' || prod.categoria === 'Suscripciones TV') ? 'bold' : 'normal' }}>
-                            {(prod.categoria === 'Repos' || prod.categoria === 'Suscripciones TV') ? 'Teléfono Fijo Obligatorio' : 'Teléfono'}
+                            {(prod.categoria === 'Repos' || prod.categoria === 'Suscripciones TV') ? 'Teléfono Fijo Obligatorio' : 'Teléfono'}{esLlave(prod, 'telf') ? ' 🔑' : ''}
                           </label>
-                          <input 
-                            type="text" 
-                            className="form-input" 
-                            maxLength={9} 
-                            value={prod.telf} 
-                            onChange={e => handleProductChange(index, 'telf', e.target.value)} 
+                          <input
+                            type="text"
+                            className="form-input"
+                            maxLength={9}
+                            value={prod.telf}
+                            onChange={e => handleProductChange(index, 'telf', e.target.value)}
                             onPaste={e => {
                               const pasted = e.clipboardData.getData('text');
                               if (pasted.length > 9) {
@@ -969,10 +1054,16 @@ export default function NuevaVentaPage() {
                                 handleProductChange(index, 'telf', pasted);
                               }
                             }}
-                            required 
-                            style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}
+                            required
+                            style={estiloCampo(prod, 'telf')}
                           />
                         </div>
+                        {prod.categoria === 'Seguro' && (
+                          <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label className="form-label" style={{ color: '#555' }}>IMEI del terminal asegurado 🔑</label>
+                            <input type="text" className="form-input" maxLength={15} value={prod.imei || ''} onChange={e => handleProductChange(index, 'imei', e.target.value.replace(/\D/g, ''))} placeholder="15 dígitos" style={estiloLlave(imeiOk(prod.imei))} />
+                          </div>
+                        )}
                     </div>
 
                     {/* COLUMNA 3: FINANZAS / ESTADO */}
@@ -1048,8 +1139,8 @@ export default function NuevaVentaPage() {
                         )}
 
                         <div className="form-group" style={{ marginBottom: 6 }}>
-                          <label className="form-label" style={{ color: '#555' }}>Nº Pedido Movistar</label>
-                          <input type="text" className="form-input" maxLength={20} value={prod.numeroPedido || ''} onChange={e => handleProductChange(index, 'numeroPedido', e.target.value.trim())} placeholder="Llave de cruce con Telefónica" style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
+                          <label className="form-label" style={{ color: '#555' }}>{esLlave(prod, 'numeroPedido') ? 'Nº Pedido Movistar 🔑' : 'Nº Pedido Movistar'}</label>
+                          <input type="text" className="form-input" maxLength={20} value={prod.numeroPedido || ''} onChange={e => handleProductChange(index, 'numeroPedido', e.target.value.trim())} placeholder="Llave de cruce con Telefónica" style={estiloCampo(prod, 'numeroPedido')} />
                         </div>
                         <div className="form-group" style={{ marginBottom: 0 }}>
                           <label className="form-label" style={{ color: '#555' }}>¿Pendiente?</label>
@@ -1065,6 +1156,7 @@ export default function NuevaVentaPage() {
 
                   </div>
                 )}
+                <CartelLlaves prod={prod} />
               </div>
             ))}
           </div>

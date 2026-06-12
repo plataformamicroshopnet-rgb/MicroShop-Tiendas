@@ -103,6 +103,24 @@ const filterByTab = (sale: any, tabId: string): boolean => {
   }
 }
 
+// ── Llaves de cruce con Telefónica por palanca (semáforo de columnas) ──
+// Mismo criterio que el formulario de Nueva Venta: estas columnas permiten
+// identificar la operación en la liquidación. Verde = dato presente,
+// naranja = falta (la operación solo podría cruzarse por NIF).
+const LLAVES_TAB: Record<string, string[]> = {
+  contratos_movil: ['telf', 'pedido'],
+  rent:            ['imei', 'pedido'],
+  seguro:          ['telf', 'imei'],
+  mimovi:          ['pedido'],
+  traslado:        ['pedido'],
+  resto:           ['pedido'],
+  repos:           ['telf', 'pedido'],
+  tv:              ['telf'],
+}
+const tdLlave = (filled: boolean): any => filled
+  ? { background: '#E8F5E9', color: '#1B5E20', fontWeight: 700 }
+  : { background: '#F57C00', color: '#FFFFFF', fontWeight: 800 }
+
 // ── NIF grouping ──────────────────────────────────────────────────────
 interface SaleRow { sale: any }
 interface NifGroup {
@@ -155,7 +173,7 @@ function calcNifTramo(subtotal: number, units: number, info: TramoInfo): number 
 
 // ── Section table ─────────────────────────────────────────────────────
 function SectionTable({
-  label, badge, badgeColor, groups, tabColor, isRent, calcCommission, importeLabel = 'Cuota Total (€)', calcImporte, showCuotaTotal = false
+  label, badge, badgeColor, groups, tabColor, isRent, calcCommission, importeLabel = 'Cuota Total (€)', calcImporte, showCuotaTotal = false, tabId = ''
 }: {
   label: string; badge: string; badgeColor: string
   groups: NifGroup[]; tabColor: string;
@@ -164,8 +182,15 @@ function SectionTable({
   importeLabel?: string;
   calcImporte?: (sale: any) => number;
   showCuotaTotal?: boolean;
+  tabId?: string;
 }) {
   if (groups.length === 0) return null
+
+  const llaves = LLAVES_TAB[tabId] || []
+  const telfEsLlave = llaves.includes('telf')
+  const conPedido = llaves.includes('pedido')
+  const conImei = llaves.includes('imei')
+  const hayDato = (v: any) => String(v || '').trim() !== '' && String(v || '').trim() !== '—' && String(v || '').toUpperCase() !== 'SIN NIF'
 
   const getSaleImporte = (sale: any) => calcImporte ? calcImporte(sale) : Number(sale.cuota ?? 0)
   const sectionTotal = groups.reduce((s, g) => s + g.sales.reduce((sum, sale) => sum + getSaleImporte(sale), 0), 0)
@@ -198,7 +223,10 @@ function SectionTable({
           <thead>
             <tr style={{ background: 'var(--active-bg)' }}>
               {(() => {
-                const headers = ['Cliente (NIF)', 'Nombre del Cliente', 'Fecha Tram.', 'Teléfono', 'Código', 'Comercial', 'Productos', 'Uds.'];
+                const headers = ['Cliente (NIF) 🔑', 'Nombre del Cliente', 'Fecha Tram.', telfEsLlave ? 'Teléfono 🔑' : 'Teléfono'];
+                if (conPedido) headers.push('Nº Pedido 🔑');
+                if (conImei) headers.push('IMEI 🔑');
+                headers.push('Código', 'Comercial', 'Productos', 'Uds.');
                 if (showCuotaTotal) headers.push(importeLabel);
                 headers.push('Comisión');
                 return headers.map((h, i) => (
@@ -219,10 +247,20 @@ function SectionTable({
                 const saleImporte = calcImporte ? calcImporte(sale) : Number(sale.cuota ?? 0)
                 return (
                   <tr key={`${gi}-${si}`} style={{ background: rowBg, borderBottom: isLast ? `2px solid ${badgeColor}30` : `1px dashed var(--border-color)`, verticalAlign: 'middle' }}>
-                    <td style={{ padding: '12px 14px', color: 'var(--medium-gray)', fontSize: 12, whiteSpace: 'nowrap', borderRight: '1px solid var(--border-color)' }}>{group.nif}</td>
+                    <td style={{ padding: '12px 14px', fontSize: 12, whiteSpace: 'nowrap', borderRight: '1px solid var(--border-color)', ...tdLlave(hayDato(group.nif)) }}>{hayDato(group.nif) ? group.nif : 'FALTA'}</td>
                     <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--light-text)', borderRight: '1px solid var(--border-color)' }}>{group.nombre || '—'}</td>
                     <td style={{ padding: '12px 14px', color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{sale.fecha || '—'}</td>
-                    <td style={{ padding: '12px 14px', color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{sale.telf || '—'}</td>
+                    {telfEsLlave ? (
+                      <td style={{ padding: '12px 14px', whiteSpace: 'nowrap', ...tdLlave(hayDato(sale.telf)) }}>{hayDato(sale.telf) ? sale.telf : 'FALTA'}</td>
+                    ) : (
+                      <td style={{ padding: '12px 14px', color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{sale.telf || '—'}</td>
+                    )}
+                    {conPedido && (
+                      <td style={{ padding: '12px 14px', whiteSpace: 'nowrap', fontSize: 12, ...tdLlave(hayDato(sale.numeroPedido)) }}>{hayDato(sale.numeroPedido) ? sale.numeroPedido : 'FALTA'}</td>
+                    )}
+                    {conImei && (
+                      <td style={{ padding: '12px 14px', whiteSpace: 'nowrap', fontSize: 12, ...tdLlave(hayDato(sale.imei)) }}>{hayDato(sale.imei) ? sale.imei : 'FALTA'}</td>
+                    )}
                     <td style={{ padding: '12px 14px', fontSize: 11.5, color: 'var(--medium-gray)', borderRight: '1px solid var(--border-color)' }}>{sale.codigo || '—'}</td>
                     <td style={{ padding: '12px 14px', fontWeight: 600, borderRight: '1px solid var(--border-color)' }}>{sale.vendedor || '—'}</td>
                     <td style={{ padding: '12px 14px', color: 'var(--light-text)', maxWidth: 280 }}>{sale.producto || '—'}</td>
@@ -1284,6 +1322,7 @@ function GrupoClienteContent() {
             Empresa: group.nombre || '—',
             'Fecha Tram.': s.fecha || '—',
             Telefono: s.telf || '—',
+            'Nº Pedido': s.numeroPedido || '—',
             Codigo: s.codigo || '—',
             Comercial: s.vendedor || '—',
             Producto: s.producto || '—',
@@ -1321,6 +1360,7 @@ function GrupoClienteContent() {
             Empresa: group.nombre || '—',
             'Fecha Tram.': fechas.length > 0 ? fechas.join(', ') : '—',
             Telefono: telefons.length > 0 ? telefons.join(', ') : '—',
+            'Nº Pedido': Array.from(new Set(pg.sales.map((s: any) => s.numeroPedido).filter(Boolean))).join(', ') || '—',
             Codigo: first.codigo || '—',
             Comercial: first.vendedor || '—',
             Producto: first.producto || '—',
@@ -1351,6 +1391,7 @@ function GrupoClienteContent() {
       { header: 'Empresa', key: 'Empresa', width: 28 },
       { header: 'Fecha Tram.', key: 'Fecha Tram.', width: 15 },
       { header: 'Teléfono', key: 'Telefono', width: 16 },
+      { header: 'Nº Pedido', key: 'Nº Pedido', width: 16 },
       { header: 'Código', key: 'Codigo', width: 12 },
       { header: 'Comercial', key: 'Comercial', width: 20 },
       { header: 'Producto', key: 'Producto', width: 26 },
@@ -2080,7 +2121,8 @@ function GrupoClienteContent() {
             badgeColor="#00ADEF" 
             groups={plusGroups} 
             tabColor={tab.color} 
-            isRent={tab.id === 'rent' || tab.id === 'seguro'} 
+            isRent={tab.id === 'rent' || tab.id === 'seguro'}
+            tabId={tab.id}
             calcCommission={getCommission}
             calcImporte={getSaleCuotaTotal}
             showCuotaTotal={showCuotaTotal}
@@ -2091,7 +2133,8 @@ function GrupoClienteContent() {
             badgeColor="#F59E0B" 
             groups={basicoGroups} 
             tabColor={tab.color} 
-            isRent={tab.id === 'rent' || tab.id === 'seguro'} 
+            isRent={tab.id === 'rent' || tab.id === 'seguro'}
+            tabId={tab.id}
             calcCommission={getCommission}
             calcImporte={getSaleCuotaTotal}
             showCuotaTotal={showCuotaTotal}
@@ -2102,7 +2145,8 @@ function GrupoClienteContent() {
             badgeColor="#6B7280" 
             groups={otrosGroups} 
             tabColor={tab.color} 
-            isRent={tab.id === 'rent' || tab.id === 'seguro'} 
+            isRent={tab.id === 'rent' || tab.id === 'seguro'}
+            tabId={tab.id}
             calcCommission={getCommission}
             calcImporte={getSaleCuotaTotal}
             showCuotaTotal={showCuotaTotal}

@@ -28,6 +28,38 @@ const LEVER_MAPPING: Record<string, string[]> = {
   'MPA': ['Alarma Directa']
 }
 
+// ── Llaves de cruce con Telefónica (semáforo de columnas) ─────────────
+// Mismo criterio que Nueva Venta y Op. Grupo Cliente: estos datos permiten
+// identificar la operación en la liquidación. Verde = presente, naranja = falta.
+const LLAVES_DETALLE: Record<string, string[]> = {
+  'ti': ['telf', 'pedido'],
+  'contratos móvil': ['telf', 'pedido'],
+  'contratos movil': ['telf', 'pedido'],
+  'rent': ['imei', 'pedido'],
+  'seguro': ['telf', 'imei'],
+  'mimovistar': ['pedido'],
+  'mimovi': ['pedido'],
+  'resto baf': ['pedido'],
+  'traslado mimovistar': ['pedido'],
+  'repos': ['telf', 'pedido'],
+  'suscripciones tv': ['telf'],
+  'tv': ['telf'],
+}
+const llavesDeVenta = (sale: any): string[] =>
+  LLAVES_DETALLE[String(sale.detalle || '').toLowerCase().trim()] || []
+const tdLlave = (esLlave: boolean, valor: any): any => {
+  if (!esLlave) return {}
+  const filled = String(valor || '').trim() !== '' && String(valor || '').trim() !== '-'
+  return filled
+    ? { backgroundColor: '#E8F5E9', color: '#1B5E20', fontWeight: 700 }
+    : { backgroundColor: '#F57C00', color: '#FFFFFF', fontWeight: 800 }
+}
+const valorLlave = (esLlave: boolean, valor: any) => {
+  const v = String(valor || '').trim()
+  if (v !== '' && v !== '-') return valor
+  return esLlave ? 'FALTA' : (valor || '-')
+}
+
 const formatCurrency = (val: any) => {
   if (val === undefined || val === null || val === '') return '';
   const strVal = String(val).trim();
@@ -419,9 +451,9 @@ function CommercialDashboard({ data, activeExtras = [], isComercial, isAdmin, ca
                   <td style={{ padding: '4px 6px', color: '#555555' }}>{sale.detalle === 'Ti' ? 'Contratos Móvil' : sale.detalle === 'O2' ? 'O2 MovilFree' : (sale.detalle || '-')}</td>
                   <td style={{ padding: '4px 6px' }}>{sale.producto}</td>
                   <td style={{ padding: '4px 6px' }}>{sale.nombreCliente || '-'}</td>
-                  <td style={{ padding: '4px 6px' }}>{sale.nif}</td>
+                  <td style={{ padding: '4px 6px', ...tdLlave(llavesDeVenta(sale).length > 0, sale.nif) }}>{valorLlave(llavesDeVenta(sale).length > 0, sale.nif)}</td>
 
-                  <td style={{ padding: '4px 6px', textAlign: 'center' }}>{sale.telf}</td>
+                  <td style={{ padding: '4px 6px', textAlign: 'center', ...tdLlave(llavesDeVenta(sale).includes('telf'), sale.telf) }}>{valorLlave(llavesDeVenta(sale).includes('telf'), sale.telf)}</td>
                   <td style={{ padding: '4px 6px', textAlign: 'center' }}>{sale.pendiente}</td>
                   <td style={{ padding: '4px 6px', textAlign: 'center' }}>{sale.anulado}</td>
                   <td style={{ padding: '4px 6px', color: '#555555', fontSize: 12 }}>{sale.anotaciones}</td>
@@ -1210,6 +1242,7 @@ function OperationsContent() {
                 <th style={{ padding: '4px 6px', textAlign: 'left', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>NIF</th>
 
                 <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Teléfono</th>
+                <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Nº Pedido 🔑</th>
                 <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Pte.</th>
                 <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Anul.</th>
                 <th style={{ padding: '4px 6px', textAlign: 'left', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px', minWidth: 120, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Anotaciones</th>
@@ -1220,7 +1253,7 @@ function OperationsContent() {
             <tbody>
               {displayedSales.length === 0 ? (
                 <tr>
-                  <td colSpan={13} style={{ padding: '24px', textAlign: 'center', color: '#555555' }}>
+                  <td colSpan={15} style={{ padding: '24px', textAlign: 'center', color: '#555555' }}>
                     {activeVendorFilter ? `No hay datos disponibles para ${activeVendorFilter}.` : 'No hay datos disponibles para tu rol o todavía no hay ventas registradas.'}
                   </td>
                 </tr>
@@ -1236,8 +1269,8 @@ function OperationsContent() {
                     <td style={{ padding: '4px 6px', color: '#0078D4', fontWeight: 600 }}>
                       {sale.codigo}
                     </td>
-                    <td style={{ padding: '4px 6px', color: '#555555', fontWeight: 600 }}>
-                      {editingId === sale.id ? <input value={editForm.imei || ''} onChange={e => handleEditChange('imei', e.target.value)} style={{ width: 80, padding: 4 }} /> : (sale.imei || '-')}
+                    <td style={{ padding: '4px 6px', color: '#555555', fontWeight: 600, ...tdLlave(llavesDeVenta(sale).includes('imei'), sale.imei) }}>
+                      {editingId === sale.id ? <input value={editForm.imei || ''} onChange={e => handleEditChange('imei', e.target.value)} style={{ width: 80, padding: 4 }} /> : valorLlave(llavesDeVenta(sale).includes('imei'), sale.imei)}
                     </td>
                     <td style={{ padding: '4px 6px', color: '#555555' }}>
                       {sale.detalle === 'Ti' ? 'Contratos Móvil' : sale.detalle === 'O2' ? 'O2 MovilFree' : (sale.detalle || '-')}
@@ -1248,12 +1281,15 @@ function OperationsContent() {
                     <td style={{ padding: '4px 6px' }}>
                        {editingId === sale.id ? <input value={editForm.nombreCliente} onChange={e => handleEditChange('nombreCliente', e.target.value)} style={{ width: 80, padding: 4 }} /> : (sale.nombreCliente || '-')}
                     </td>
-                    <td style={{ padding: '4px 6px' }}>
-                       {editingId === sale.id ? <input value={editForm.nif} onChange={e => handleEditChange('nif', e.target.value)} style={{ width: 90, padding: 4 }} /> : sale.nif}
+                    <td style={{ padding: '4px 6px', ...tdLlave(llavesDeVenta(sale).length > 0, sale.nif) }}>
+                       {editingId === sale.id ? <input value={editForm.nif} onChange={e => handleEditChange('nif', e.target.value)} style={{ width: 90, padding: 4 }} /> : valorLlave(llavesDeVenta(sale).length > 0, sale.nif)}
                     </td>
 
-                    <td style={{ padding: '4px 6px', textAlign: 'center' }}>
-                       {editingId === sale.id ? <input value={editForm.telf} onChange={e => handleEditChange('telf', e.target.value)} style={{ width: 90, padding: 4 }} /> : sale.telf}
+                    <td style={{ padding: '4px 6px', textAlign: 'center', ...tdLlave(llavesDeVenta(sale).includes('telf'), sale.telf) }}>
+                       {editingId === sale.id ? <input value={editForm.telf} onChange={e => handleEditChange('telf', e.target.value)} style={{ width: 90, padding: 4 }} /> : valorLlave(llavesDeVenta(sale).includes('telf'), sale.telf)}
+                    </td>
+                    <td style={{ padding: '4px 6px', textAlign: 'center', ...tdLlave(llavesDeVenta(sale).includes('pedido'), sale.numeroPedido) }}>
+                       {editingId === sale.id ? <input value={editForm.numeroPedido || ''} onChange={e => handleEditChange('numeroPedido', e.target.value)} style={{ width: 90, padding: 4 }} /> : valorLlave(llavesDeVenta(sale).includes('pedido'), sale.numeroPedido)}
                     </td>
                     <td style={{ padding: '4px 6px', textAlign: 'center' }}>
                       {editingId === sale.id ? (
@@ -1326,6 +1362,7 @@ function OperationsContent() {
                   </td>
                   <td style={{ padding: '4px 6px', color: '#059669' }}>{ex.customerName}</td>
                   <td style={{ padding: '4px 6px', color: '#059669' }}>{ex.customerNif || '-'}</td>
+                  <td style={{ padding: '4px 6px', textAlign: 'center', color: '#059669' }}>-</td>
                   <td style={{ padding: '4px 6px', textAlign: 'center', color: '#059669' }}>-</td>
 
                   <td style={{ padding: '4px 6px', textAlign: 'center', color: '#059669' }}>No</td>
