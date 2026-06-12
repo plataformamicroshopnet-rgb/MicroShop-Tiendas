@@ -123,6 +123,19 @@ const tdLlave = (filled: boolean): any => filled
 // Códigos de operación reales de Movistar: CO+añomes+referencia o pedidos
 // MD/MDN+dígitos. Los rellenos o códigos mal tecleados se pintan en naranja.
 const coOk = (v: any) => /^(CO\d{4}[A-Z0-9]{6,12}|MDN?\d{6,10})$/.test(String(v || '').trim().toUpperCase())
+// IMEI real: 15 dígitos con dígito de control (Luhn). Caza inventados,
+// incompletos o con un dígito mal tecleado: se pintan en naranja.
+const imeiValido = (v: any): boolean => {
+  const s = String(v || '').trim()
+  if (!/^[0-9]{15}$/.test(s)) return false
+  let suma = 0
+  for (let i = 0; i < 15; i++) {
+    let d = s.charCodeAt(i) - 48
+    if (i % 2 === 1) { d *= 2; if (d > 9) d -= 9 }
+    suma += d
+  }
+  return suma % 10 === 0
+}
 // Documento real: DNI (letra mod-23), NIE y CIF (control).
 const docOk = (v: any): boolean => {
   const s = String(v || '').trim().toUpperCase().replace(/[\s-]/g, '')
@@ -286,7 +299,7 @@ function SectionTable({
                       <td style={{ padding: '12px 14px', whiteSpace: 'nowrap', fontSize: 12, ...tdLlave(coOk(sale.numeroPedido)) }}>{hayDato(sale.numeroPedido) ? String(sale.numeroPedido).trim().toUpperCase() : 'FALTA'}</td>
                     )}
                     {conImei && (
-                      <td style={{ padding: '12px 14px', whiteSpace: 'nowrap', fontSize: 12, ...tdLlave(hayDato(sale.imei)) }}>{hayDato(sale.imei) ? sale.imei : 'FALTA'}</td>
+                      <td style={{ padding: '12px 14px', whiteSpace: 'nowrap', fontSize: 12, ...tdLlave(imeiValido(sale.imei)) }}>{hayDato(sale.imei) ? String(sale.imei).trim() : 'FALTA'}</td>
                     )}
                     {conImei && (
                       <td style={{ padding: '12px 14px', color: 'var(--medium-gray)', fontSize: 11.5, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={sale.anotaciones || ''}>{sale.anotaciones || '—'}</td>

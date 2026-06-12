@@ -62,6 +62,19 @@ const valorLlave = (esLlave: boolean, valor: any) => {
 // Códigos de operación reales de Movistar: CO+añomes+referencia o pedidos
 // MD/MDN+dígitos. Los rellenos o códigos mal tecleados se pintan en naranja.
 const coOk = (v: any) => /^(CO\d{4}[A-Z0-9]{6,12}|MDN?\d{6,10})$/.test(String(v || '').trim().toUpperCase())
+// IMEI real: 15 dígitos con dígito de control (Luhn). Caza inventados,
+// incompletos o con un dígito mal tecleado: se pintan en naranja.
+const imeiValido = (v: any): boolean => {
+  const s = String(v || '').trim()
+  if (!/^[0-9]{15}$/.test(s)) return false
+  let suma = 0
+  for (let i = 0; i < 15; i++) {
+    let d = s.charCodeAt(i) - 48
+    if (i % 2 === 1) { d *= 2; if (d > 9) d -= 9 }
+    suma += d
+  }
+  return suma % 10 === 0
+}
 // Documento real: DNI (letra mod-23), NIE y CIF (control). Un NIF inventado
 // se pinta en naranja aunque tenga pinta de NIF.
 const docOk = (v: any): boolean => {
@@ -1297,8 +1310,8 @@ function OperationsContent() {
                     <td style={{ padding: '4px 6px', color: '#0078D4', fontWeight: 600 }}>
                       {sale.codigo}
                     </td>
-                    <td style={{ padding: '4px 6px', color: '#555555', fontWeight: 600, ...tdLlave(llavesDeVenta(sale).includes('imei'), sale.imei) }}>
-                      {editingId === sale.id ? <input value={editForm.imei || ''} onChange={e => handleEditChange('imei', e.target.value)} style={{ width: 80, padding: 4 }} /> : valorLlave(llavesDeVenta(sale).includes('imei'), sale.imei)}
+                    <td style={{ padding: '4px 6px', color: '#555555', fontWeight: 600, ...tdLlave(llavesDeVenta(sale).includes('imei'), imeiValido(sale.imei) ? sale.imei : '') }}>
+                      {editingId === sale.id ? <input value={editForm.imei || ''} onChange={e => handleEditChange('imei', e.target.value)} style={{ width: 80, padding: 4 }} /> : (String(sale.imei || '').trim() && String(sale.imei).trim() !== '-' ? String(sale.imei).trim() : valorLlave(llavesDeVenta(sale).includes('imei'), ''))}
                     </td>
                     <td style={{ padding: '4px 6px', color: '#555555' }}>
                       {sale.detalle === 'Ti' ? 'Contratos Móvil' : sale.detalle === 'O2' ? 'O2 MovilFree' : (sale.detalle || '-')}

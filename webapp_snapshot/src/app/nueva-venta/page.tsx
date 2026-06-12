@@ -99,7 +99,19 @@ export default function NuevaVentaPage() {
   // (CO2511X8DKWOM2) o pedidos MD/MDN+dígitos (MD00021663, MDN00027659).
   // Rellenos tipo "1111..." o códigos mal tecleados quedan en naranja.
   const pedidoOk = (v: string) => /^(CO\d{4}[A-Z0-9]{6,12}|MDN?\d{6,10})$/.test(String(v || '').trim().toUpperCase())
-  const imeiOk = (v: string) => /^[0-9]{15}$/.test(String(v || '').trim())
+  // IMEI real: 15 dígitos donde el último es dígito de control (Luhn).
+  // Caza IMEIs inventados (111...), incompletos o con un dígito mal tecleado.
+  const imeiOk = (v: string) => {
+    const s = String(v || '').trim()
+    if (!/^[0-9]{15}$/.test(s)) return false
+    let suma = 0
+    for (let i = 0; i < 15; i++) {
+      let d = s.charCodeAt(i) - 48
+      if (i % 2 === 1) { d *= 2; if (d > 9) d -= 9 }
+      suma += d
+    }
+    return suma % 10 === 0
+  }
 
   const llavesDeProducto = (prod: any): { campo: string; etiqueta: string; ok: boolean }[] => {
     const cat = prod.categoria
