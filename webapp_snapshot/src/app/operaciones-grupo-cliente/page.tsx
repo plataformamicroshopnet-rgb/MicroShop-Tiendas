@@ -300,9 +300,15 @@ function SectionTable({
                     {conPedido && (
                       <td style={{ padding: '12px 14px', whiteSpace: 'nowrap', fontSize: 12, ...tdLlave(coOk(sale.numeroPedido)) }}>{hayDato(sale.numeroPedido) ? String(sale.numeroPedido).trim().toUpperCase() : 'FALTA'}</td>
                     )}
-                    {conImei && (
-                      <td style={{ padding: '12px 14px', whiteSpace: 'nowrap', fontSize: 12, ...tdLlave(imeiValido(sale.imei)) }}>{hayDato(sale.imei) ? String(sale.imei).trim() : 'FALTA'}</td>
-                    )}
+                    {conImei && (() => {
+                      // Rent por envío logístico: lo manda Telefónica, sin IMEI → no se exige (verde).
+                      const esLogistico = String(sale.origenStock || '') === 'LOGISTICO'
+                      return (
+                        <td style={{ padding: '12px 14px', whiteSpace: 'nowrap', fontSize: 12, ...tdLlave(imeiValido(sale.imei) || esLogistico) }}>
+                          {hayDato(sale.imei) ? String(sale.imei).trim() : (esLogistico ? '🚚 Logístico' : 'FALTA')}
+                        </td>
+                      )
+                    })()}
                     {conImei && (
                       <td style={{ padding: '12px 14px', color: 'var(--medium-gray)', fontSize: 11.5, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={sale.anotaciones || ''}>{sale.anotaciones || '—'}</td>
                     )}

@@ -119,7 +119,9 @@ export default function NuevaVentaPage() {
     const cat = prod.categoria
     const ll: { campo: string; etiqueta: string; ok: boolean }[] = []
     if (cat === 'Rent') {
-      ll.push({ campo: 'imei', etiqueta: 'IMEI', ok: imeiOk(prod.imei) })
+      // Envío logístico: el terminal lo manda Telefónica, no hay IMEI que
+      // teclear → la llave IMEI se da por buena (verde, no exigida).
+      ll.push({ campo: 'imei', etiqueta: 'IMEI', ok: imeiOk(prod.imei) || prod.origenStock === 'LOGISTICO' })
       ll.push({ campo: 'numeroPedido', etiqueta: 'Nº Pedido Telefónica/Movistar', ok: pedidoOk(prod.numeroPedido) })
     } else if (cat === 'miMovistar' || cat === 'Resto BAF' || cat === 'Traslado miMovistar') {
       ll.push({ campo: 'numeroPedido', etiqueta: 'Nº Pedido Telefónica/Movistar', ok: pedidoOk(prod.numeroPedido) })
@@ -829,6 +831,8 @@ export default function NuevaVentaPage() {
                             if (val === 'LOGISTICO') {
                               handleProductChange(index, 'showMotivoSinStock', false)
                               handleProductChange(index, 'motivoSinStock', '')
+                              // Logístico: lo envía Telefónica, no hay IMEI que teclear
+                              handleProductChange(index, 'imei', '')
                             }
                           }}
                           style={prod.origenStock
@@ -851,7 +855,17 @@ export default function NuevaVentaPage() {
                         </div>
                         <div>
                           <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>IMEI 🔑</label>
-                          <input type="text" className="form-input" maxLength={15} value={prod.imei} onChange={e => handleProductChange(index, 'imei', e.target.value.replace(/\D/g, ''))} required placeholder="Llave de cruce con Telefónica/Movistar" style={estiloLlave(imeiOk(prod.imei))} />
+                          <input
+                            type="text"
+                            className="form-input"
+                            maxLength={15}
+                            value={prod.origenStock === 'LOGISTICO' ? '' : prod.imei}
+                            onChange={e => handleProductChange(index, 'imei', e.target.value.replace(/\D/g, ''))}
+                            required={prod.origenStock !== 'LOGISTICO'}
+                            disabled={prod.origenStock === 'LOGISTICO'}
+                            placeholder={prod.origenStock === 'LOGISTICO' ? 'Lo envía Telefónica (sin IMEI)' : 'Llave de cruce con Telefónica/Movistar'}
+                            style={prod.origenStock === 'LOGISTICO' ? estiloLlave(true) : estiloLlave(imeiOk(prod.imei))}
+                          />
                         </div>
                         <div>
                           <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>Teléfono</label>

@@ -45,8 +45,13 @@ const LLAVES_DETALLE: Record<string, string[]> = {
   'suscripciones tv': ['telf', 'pedido'],
   'tv': ['telf', 'pedido'],
 }
-const llavesDeVenta = (sale: any): string[] =>
-  LLAVES_DETALLE[String(sale.detalle || '').toLowerCase().trim()] || []
+const llavesDeVenta = (sale: any): string[] => {
+  let ll = LLAVES_DETALLE[String(sale.detalle || '').toLowerCase().trim()] || []
+  // Rent por envío logístico: el terminal lo manda Telefónica, no hay IMEI
+  // que teclear → no se exige (no se marca en naranja aunque esté vacío).
+  if (String(sale.origenStock || '') === 'LOGISTICO') ll = ll.filter(k => k !== 'imei')
+  return ll
+}
 const tdLlave = (esLlave: boolean, valor: any): any => {
   if (!esLlave) return {}
   const filled = String(valor || '').trim() !== '' && String(valor || '').trim() !== '-'
