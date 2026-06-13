@@ -857,7 +857,7 @@ export default function NuevaVentaPage() {
                           <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>IMEI 🔑</label>
                           <input
                             type="text"
-                            className="form-input"
+                            className={prod.origenStock === 'LOGISTICO' ? 'form-input ph-blanco' : 'form-input'}
                             maxLength={15}
                             value={prod.origenStock === 'LOGISTICO' ? '' : prod.imei}
                             onChange={e => handleProductChange(index, 'imei', e.target.value.replace(/\D/g, ''))}
