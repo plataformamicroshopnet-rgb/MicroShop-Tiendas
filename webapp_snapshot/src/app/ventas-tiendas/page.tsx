@@ -101,7 +101,8 @@ export default function VentasTiendasPage() {
           }
         }
         
-        const results = Array.from(agrupados.values()).sort((a, b) => a.name.localeCompare(b.name))
+        // Orden por nº de operaciones Finalizadas (mes), de mayor a menor; desempate por nombre.
+        const results = Array.from(agrupados.values()).sort((a, b) => (b.mes - a.mes) || a.name.localeCompare(b.name))
         setComerciales(results)
       }
       setLoading(false)
@@ -184,13 +185,13 @@ export default function VentasTiendasPage() {
               </h2>
             </div>
             
-            {/* Main Metric (Finalizadas) */}
+            {/* Main Metric (Ventas Totales = Finalizadas + Pendientes) */}
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12 }}>
                 <div style={{ fontSize: 56, fontWeight: 900, color: '#0078D4', lineHeight: 0.85, letterSpacing: '-0.04em' }}>
-                    {c.mes}
+                    {c.mes + c.pendientes}
                 </div>
                 <div style={{ paddingBottom: 6, fontSize: 13, color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Finalizadas
+                    Ventas Totales
                 </div>
             </div>
 
