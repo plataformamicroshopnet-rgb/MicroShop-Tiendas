@@ -871,27 +871,25 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 9, justifyContent: 'flex-start' }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 14, alignItems: 'center', alignContent: 'center', justifyContent: 'center' }}>
             {ranking.conv.length === 0 ? (
-              <p style={{ margin: 'auto 0', fontSize: 14, color: 'var(--medium-gray)', textAlign: 'center' }}>Aún no hay altas convergentes este mes.</p>
+              <p style={{ margin: 'auto', fontSize: 14, color: 'var(--medium-gray)', textAlign: 'center' }}>Aún no hay altas convergentes este mes.</p>
             ) : ranking.conv.map((r, i) => {
               const lider = ranking.conv[0].value;
               const faltan = lider - r.value;
               return (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ width: 34, height: 34, borderRadius: '50%', overflow: 'hidden', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <img src={fotoSrc(r.name)} alt={r.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => fotoErr(e, r.name)} />
+                <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, width: 78 }}>
+                  <div style={{ position: 'relative', width: 50, height: 50, flexShrink: 0 }}>
+                    <div style={{ width: 50, height: 50, borderRadius: '50%', overflow: 'hidden', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', border: i === 0 ? '2px solid #f59e0b' : '2px solid transparent' }}>
+                      <img src={fotoSrc(r.name)} alt={r.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => fotoErr(e, r.name)} />
+                    </div>
+                    {i === 0 && <span style={{ position: 'absolute', top: -7, right: -5, fontSize: 15 }}>🏆</span>}
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</span>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: i === 0 ? '#10b981' : 'var(--medium-gray)', whiteSpace: 'nowrap', marginLeft: 8 }}>
-                        {i === 0 ? `🏆 Líder · ${r.value}` : (faltan > 0 ? `${r.value} · faltan ${faltan}` : `${r.value} · empatado`)}
-                      </span>
-                    </div>
-                    <div style={{ width: '100%', height: 8, background: 'var(--bg-input)', borderRadius: 4, overflow: 'hidden' }}>
-                      <div style={{ width: `${lider > 0 ? (r.value / lider) * 100 : 0}%`, height: '100%', background: 'linear-gradient(90deg, #10b981 0%, #34d399 100%)', borderRadius: 4 }} />
-                    </div>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-main)', maxWidth: 78, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</span>
+                  <span style={{ fontSize: 20, fontWeight: 900, color: '#10b981', lineHeight: 1 }}>{r.value}</span>
+                  <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{i === 0 ? 'Líder' : (faltan > 0 ? `faltan ${faltan}` : 'empatado')}</span>
+                  <div style={{ width: '100%', height: 6, background: 'var(--bg-input)', borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{ width: `${lider > 0 ? (r.value / lider) * 100 : 0}%`, height: '100%', background: 'linear-gradient(90deg, #10b981 0%, #34d399 100%)', borderRadius: 3 }} />
                   </div>
                 </div>
               );

@@ -101,8 +101,8 @@ export default function VentasTiendasPage() {
           }
         }
         
-        // Orden por nº de operaciones Finalizadas (mes), de mayor a menor; desempate por nombre.
-        const results = Array.from(agrupados.values()).sort((a, b) => (b.mes - a.mes) || a.name.localeCompare(b.name))
+        // Orden por Ventas Totales (Finalizadas + Pendientes), de mayor a menor; desempate por nombre.
+        const results = Array.from(agrupados.values()).sort((a, b) => ((b.mes + b.pendientes) - (a.mes + a.pendientes)) || a.name.localeCompare(b.name))
         setComerciales(results)
       }
       setLoading(false)
@@ -172,13 +172,23 @@ export default function VentasTiendasPage() {
             {/* Top Header: Avatar + Name */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <div style={{
-                  width: 52, height: 52, borderRadius: '16px',
+                  width: 52, height: 52, borderRadius: '16px', overflow: 'hidden', flexShrink: 0,
                   background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   color: '#0078D4', fontSize: 22, fontWeight: 800,
                   boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.8), 0 2px 4px rgba(0,0,0,0.05)'
               }}>
-                {c.name.charAt(0).toUpperCase()}
+                <img
+                  src={`/${c.name}.jpg`}
+                  alt={c.name}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={(e) => {
+                    const img = e.currentTarget as HTMLImageElement;
+                    if (!img.dataset.j) { img.dataset.j = '1'; img.src = `/${c.name}.jpeg`; return; }
+                    img.style.display = 'none';
+                    if (img.parentElement) img.parentElement.textContent = c.name.charAt(0).toUpperCase();
+                  }}
+                />
               </div>
               <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em' }}>
                   {c.name}
