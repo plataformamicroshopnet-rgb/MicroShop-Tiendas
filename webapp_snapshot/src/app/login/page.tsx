@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { LogIn, Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
 import './login.css'
 
 export default function LoginPage() {
@@ -42,12 +42,12 @@ export default function LoginPage() {
 
   return (
     <div className="login-container">
+      <div className="login-header">
+        <img src="/microshop-logo.png" alt="MicroShop" />
+        <h1>MicroShop <span className="text-cyan">Tiendas</span></h1>
+        <p>Plataforma de gestión de tiendas</p>
+      </div>
       <div className="login-card">
-        <div className="login-header">
-          <h1>MicroShop <span className="text-cyan">Tiendas</span></h1>
-          <p>Acceso a Plataforma de Gestión <strong style={{ color: 'orange', display: 'block', marginTop: 8 }}>BUILD TEST RAILWAY (SNAPSHOT) 2026-03-23-X</strong></p>
-        </div>
-        
         <form onSubmit={handleLogin} className="login-form">
           <div className="form-group">
             <label className="form-label">Usuario</label>
@@ -87,12 +87,7 @@ export default function LoginPage() {
           {error && <div className="login-error">{error}</div>}
           
           <button type="submit" className="btn-primary" disabled={loading}>
-            {loading ? 'Verificando...' : (
-              <>
-                <LogIn size={20} />
-                <span>Entrar</span>
-              </>
-            )}
+            {loading ? 'Verificando...' : <span>Entrar al Sistema →</span>}
           </button>
         </form>
       </div>

@@ -1,81 +1,150 @@
+/* Login MicroShop — mismo estilo en ERP, FFVV y Tiendas */
 .login-container {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
   width: 100vw;
-  background-color: var(--pure-black);
-  padding: 20px;
-  position: absolute; /* Cover entire screen including sidebar area */
+  padding: 24px;
+  position: absolute;
   top: 0;
   left: 0;
   z-index: 1000;
+  background:
+    radial-gradient(ellipse 65% 55% at 15% -5%, rgba(14, 165, 233, 0.22), transparent 60%),
+    radial-gradient(ellipse 55% 45% at 90% 105%, rgba(99, 102, 241, 0.20), transparent 60%),
+    radial-gradient(ellipse 40% 35% at 70% 20%, rgba(245, 158, 11, 0.07), transparent 60%),
+    linear-gradient(160deg, #0B1220 0%, #0F172A 55%, #131D35 100%);
 }
 
-.login-card {
-  width: 100%;
-  max-width: 400px;
-  background-color: var(--dark-gray);
-  border-radius: var(--border-radius-card);
-  padding: 40px 30px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  display: flex;
-  flex-direction: column;
-  gap: 30px;
+@keyframes loginFadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: none; }
 }
 
+/* Logo + título sobre el fondo (fuera de la tarjeta) */
 .login-header {
   text-align: center;
+  margin-bottom: 28px;
+  animation: loginFadeUp 0.5s ease both;
 }
-
+.login-header img {
+  width: 76px; height: 76px;
+  border-radius: 18px;
+  box-shadow: 0 12px 30px -8px rgba(0, 0, 0, 0.5);
+  margin-bottom: 18px;
+}
 .login-header h1 {
-  font-size: 28px;
+  font-size: 2.3rem;
   font-weight: 800;
-  margin-bottom: 8px;
   letter-spacing: -0.5px;
+  color: #F8FAFC;
+  margin: 0 0 10px;
+}
+.login-header h1 .text-cyan { color: #38BDF8 !important; }
+.login-header p {
+  color: #94A3B8;
+  font-size: 1.05rem;
+  margin: 0;
 }
 
-.login-header p {
-  color: var(--medium-gray);
-  font-size: 14px;
+/* Tarjeta blanca del formulario */
+.login-card {
+  width: 100%;
+  max-width: 460px;
+  background: #FFFFFF;
+  border-radius: 20px;
+  padding: 2.4rem 2.6rem 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 24px 70px -16px rgba(2, 6, 23, 0.65);
+  display: flex;
+  flex-direction: column;
+  animation: loginFadeUp 0.5s ease 0.08s both;
 }
 
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 16px;
+}
+.login-card .form-group { display: flex; flex-direction: column; }
+
+/* Etiquetas (scoped a la tarjeta — no afecta al resto de la app) */
+.login-card .form-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
 }
 
-.password-wrapper {
-  position: relative;
+/* Inputs (scoped) */
+.login-card .form-input {
   width: 100%;
+  height: 3.2rem;
+  border-radius: 12px;
+  background: #F8FAFC;
+  border: 1.5px solid #E2E8F0;
+  color: #0F172A;
+  font-size: 1.05rem;
+  padding: 0 14px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+.login-card .form-input::placeholder { color: #94A3B8; }
+.login-card .form-input:focus {
+  border-color: #0EA5E9;
+  background: #FFFFFF;
+  box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.18);
 }
 
+.password-wrapper { position: relative; width: 100%; }
 .password-toggle-btn {
   position: absolute;
-  right: 12px;
-  top: 50%;
+  right: 12px; top: 50%;
   transform: translateY(-50%);
-  background: none;
-  border: none;
-  color: var(--medium-gray);
+  background: none; border: none;
+  color: #64748B;
   cursor: pointer;
   padding: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   transition: color 0.2s ease;
 }
+.password-toggle-btn:hover { color: #0F172A; }
 
-.password-toggle-btn:hover {
-  color: var(--light-text);
+/* Botón entrar (scoped) */
+.login-card .btn-primary {
+  height: 3.4rem;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-top: 10px;
+  background: linear-gradient(135deg, #0EA5E9 0%, #2563EB 100%);
+  border: none;
+  color: #FFFFFF;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  box-shadow: 0 8px 20px -6px rgba(14, 165, 233, 0.45);
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
 }
+.login-card .btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px -8px rgba(37, 99, 235, 0.55);
+  filter: brightness(1.06);
+}
+.login-card .btn-primary:active { transform: translateY(0); }
+.login-card .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
 .login-error {
-  color: #FF453A;
-  font-size: 14px;
+  color: #DC2626;
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 0.9rem;
   text-align: center;
-  margin-top: -8px;
-  margin-bottom: 8px;
 }
