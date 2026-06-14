@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { FileText, BookOpen, Library, Trophy, Flame, Target, Award, Star, Zap, Clock, ShieldCheck, Crown, Wifi, Smartphone, Shield, TrendingUp, Tv, Layers } from 'lucide-react'
+import { FileText, BookOpen, Library, Trophy, Flame, Target, Award, Star, Zap, Crown, Wifi, Smartphone, Shield, TrendingUp, Tv, Layers } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
 import Link from 'next/link'
 import { usePeriod } from '@/components/PeriodProvider'
@@ -341,6 +341,65 @@ export default function DashboardPage() {
 
   const cuentaKms = getCuentaKilometros();
 
+  // ── Ranking por vendedor (Torneos · Cuenta Kilómetros · Medallas) ──
+  const ranking = (() => {
+    const activos = allSales.filter(s => s.anulado !== 'Si' && s.pendiente !== 'Anulado');
+    const byV: Record<string, any[]> = {};
+    activos.forEach(s => {
+      const v = String(s.vendedor || '').trim();
+      if (!v || v.toLowerCase() === 'marta') return;
+      (byV[v] = byV[v] || []).push(s);
+    });
+    const names = Object.keys(byV);
+
+    const dispSegVal = (ventas: any[]) => {
+      let total = 0;
+      ventas.forEach(s => {
+        if (matchTipoVenta(s, 'Dispositivos + Seguros')) {
+          let val = Number(s.cuota) || 0;
+          if (String(s.categoria || s.detalle || s.sheet).toLowerCase() === 'seguro') val = Number(s.seguroImporte) || Number(s.cuota) || 0;
+          total += val;
+        }
+        if (s.seguroImporte && Number(s.seguroImporte) > 0 && String(s.categoria || s.detalle || s.sheet).toLowerCase() !== 'seguro') {
+          const vs = { ...s, categoria: 'seguro', detalle: 'seguro', cuota: Number(s.seguroImporte) };
+          if (matchTipoVenta(vs, 'Dispositivos + Seguros')) total += Number(s.seguroImporte);
+        }
+      });
+      return total;
+    };
+    const convCount = (ventas: any[]) => ventas.filter(s => matchTipoVenta(s, 'Alta BAF Convergente')).length;
+    const pulpoCount = (ventas: any[]) => {
+      const nifs: Record<string, number> = {};
+      ventas.forEach(s => { const n = String(s.nif || '').trim().toUpperCase(); if (n) nifs[n] = (nifs[n] || 0) + 1; });
+      return Object.values(nifs).filter(c => c > 1).length;
+    };
+    const firstMin = (ventas: any[]): number | null => {
+      let best: number | null = null;
+      ventas.forEach(s => {
+        const t = s.createdAt ? new Date(s.createdAt) : null;
+        if (t && !isNaN(t.getTime())) { const m = t.getHours() * 60 + t.getMinutes(); if (best === null || m < best) best = m; }
+      });
+      return best;
+    };
+
+    const sortDesc = (f: (v: any[]) => number) => names.map(n => ({ name: n, value: f(byV[n]) })).filter(x => x.value > 0).sort((a, b) => b.value - a.value);
+    const dispSeg = sortDesc(dispSegVal);
+    const conv = sortDesc(convCount);
+    const pulpo = sortDesc(pulpoCount);
+    const madruga = names.map(n => ({ name: n, value: firstMin(byV[n]) })).filter(x => x.value != null).sort((a, b) => (a.value as number) - (b.value as number));
+    return { dispSeg, conv, pulpo, madruga };
+  })();
+  const fotoSrc = (n: string) => `/${n}.jpg`;
+  const hhmm = (mins: number) => `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
+  const eur = (v: number) => v.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+  const fotoErr = (e: any, name: string) => {
+    const img = e.currentTarget;
+    if (!img.dataset.triedJpeg) { img.dataset.triedJpeg = '1'; img.src = `/${name}.jpeg`; return; }
+    img.style.display = 'none';
+    const parent = img.parentElement;
+    if (parent) parent.innerHTML = `<span style="color:#fff; font-size:13px; font-weight:900">${name.charAt(0).toUpperCase()}</span>`;
+  };
+
   if (loading && allSales.length === 0) return <div style={{ padding: 20 }}>Cargando datos del Dashboard...</div>
 
   return (
@@ -356,22 +415,12 @@ export default function DashboardPage() {
       {/* FILA 1: TORNEOS Y MVP */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '16px' }}>
         <Link href="/torneos-ventas" style={{ textDecoration: 'none', display: 'block', marginBottom: '0', outline: 'none' }}>
-        <div 
+        <div
           style={{
-            background: 'linear-gradient(135deg, rgba(14, 165, 233, 0.1) 0%, rgba(14, 165, 233, 0.15) 100%)',
-            borderRadius: 12,
-            padding: '16px',
-            border: '1px solid rgba(14, 165, 233, 0.3)',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            textAlign: 'center',
-            height: '100%',
-            gap: '12px',
-            cursor: 'pointer',
-            transition: 'all 0.3s ease',
-            boxShadow: '0 4px 14px -5px rgba(0,0,0,0.05)'
+            background: 'linear-gradient(135deg, rgba(14, 165, 233, 0.08) 0%, rgba(14, 165, 233, 0.14) 100%)',
+            borderRadius: 12, padding: '16px', border: '1px solid rgba(14, 165, 233, 0.3)',
+            display: 'flex', flexDirection: 'column', height: '100%', gap: '14px', cursor: 'pointer',
+            transition: 'all 0.3s ease', boxShadow: '0 4px 14px -5px rgba(0,0,0,0.05)'
           }}
           onMouseEnter={e => {
             e.currentTarget.style.transform = 'translateY(-2px)'
@@ -384,12 +433,35 @@ export default function DashboardPage() {
             e.currentTarget.style.borderColor = 'rgba(14, 165, 233, 0.3)'
           }}
         >
-          <div style={{ backgroundColor: '#0ea5e9', padding: '12px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Trophy size={28} color="#fff" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ backgroundColor: '#0ea5e9', padding: '8px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Trophy size={20} color="#fff" />
+            </div>
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0ea5e9' }}>
+              Torneos de Ventas <span style={{ color: 'var(--text-main)' }}>· Ranking</span>
+            </h3>
           </div>
-          <div>
-            <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: 800, color: '#0ea5e9' }}>Torneos de Ventas</h3>
-            <p style={{ margin: 0, color: 'var(--text-main)', fontSize: '14px', fontWeight: 500 }}>Ranking en tiempo real, competición y medallas por objetivos.</p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+            {[
+              { titulo: 'Dispositivos + Seguros', data: ranking.dispSeg, fmt: (v: number) => eur(v) },
+              { titulo: 'Alta BAF Convergente', data: ranking.conv, fmt: (v: number) => String(v) },
+            ].map((col, ci) => (
+              <div key={ci}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8, textAlign: 'center', borderBottom: '2px solid rgba(14,165,233,0.2)', paddingBottom: 6 }}>{col.titulo}</div>
+                {col.data.slice(0, 3).map((r, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 6px', borderRadius: 8, background: i === 0 ? 'rgba(245,158,11,0.12)' : 'transparent', marginBottom: 3 }}>
+                    <span style={{ fontSize: 14 }}>{['🥇', '🥈', '🥉'][i]}</span>
+                    <div style={{ width: 26, height: 26, borderRadius: '50%', overflow: 'hidden', background: '#0ea5e9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <img src={fotoSrc(r.name)} alt={r.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => fotoErr(e, r.name)} />
+                    </div>
+                    <span style={{ flex: 1, fontSize: 12.5, fontWeight: 600, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</span>
+                    <span style={{ fontSize: 12.5, fontWeight: 800, color: '#0ea5e9', whiteSpace: 'nowrap' }}>{col.fmt(r.value)}</span>
+                  </div>
+                ))}
+                {col.data.length === 0 && <div style={{ fontSize: 12, color: 'var(--medium-gray)', textAlign: 'center', padding: 8 }}>Sin datos</div>}
+              </div>
+            ))}
           </div>
         </div>
       </Link>
@@ -794,37 +866,36 @@ export default function DashboardPage() {
             <div>
               <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: 'var(--text-main)' }}>Cuenta Kilómetros</h3>
               <p style={{ margin: 0, fontSize: '13px', color: 'var(--medium-gray)', fontWeight: 500 }}>
-                Objetivo: {cuentaKms.reglaNombre}
+                Carrera hacia Alta BAF Convergente
               </p>
             </div>
           </div>
 
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <p style={{ margin: '0 0 16px 0', fontSize: '15px', color: 'var(--text-main)', lineHeight: 1.4 }}>
-              {cuentaKms.faltan > 0 ? (
-                <>
-                  <strong style={{ color: 'var(--mercedes-cyan)' }}>{cuentaKms.vendedor}</strong>, estás a solo{' '}
-                  <strong style={{ color: '#10b981', fontSize: '18px' }}>
-                    {cuentaKms.isPercentage ? fmt(cuentaKms.faltan) : `${cuentaKms.faltan} uds`}
-                  </strong>{' '}
-                  de <strong style={{ color: 'var(--text-main)' }}>{cuentaKms.reglaNombre}</strong> para alcanzar tu tramo objetivo.
-                </>
-              ) : (
-                <>
-                  ¡Felicidades <strong style={{ color: 'var(--mercedes-cyan)' }}>{cuentaKms.vendedor}</strong>! Has superado el tramo objetivo de{' '}
-                  <strong style={{ color: 'var(--text-main)' }}>{cuentaKms.reglaNombre}</strong>.
-                </>
-              )}
-            </p>
-
-            {/* Progress Bar */}
-            <div style={{ width: '100%', height: '14px', background: 'var(--bg-input)', borderRadius: '7px', overflow: 'hidden', position: 'relative' }}>
-              <div style={{ width: `${Math.min(100, cuentaKms.progressPct)}%`, height: '100%', background: 'linear-gradient(90deg, #10b981 0%, #34d399 100%)', borderRadius: '7px', boxShadow: '0 0 10px rgba(16,185,129,0.5)' }} />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '13px', fontWeight: 700, color: 'var(--medium-gray)' }}>
-              <span>{cuentaKms.isPercentage ? fmt(cuentaKms.llevamos) : `${cuentaKms.llevamos} uds`}</span>
-              <span style={{ color: '#10b981' }}>Meta: {cuentaKms.isPercentage ? fmt(cuentaKms.target) : `${cuentaKms.target} uds`}</span>
-            </div>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 9, justifyContent: 'flex-start' }}>
+            {ranking.conv.length === 0 ? (
+              <p style={{ margin: 'auto 0', fontSize: 14, color: 'var(--medium-gray)', textAlign: 'center' }}>Aún no hay altas convergentes este mes.</p>
+            ) : ranking.conv.map((r, i) => {
+              const lider = ranking.conv[0].value;
+              const faltan = lider - r.value;
+              return (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 34, height: 34, borderRadius: '50%', overflow: 'hidden', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <img src={fotoSrc(r.name)} alt={r.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => fotoErr(e, r.name)} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: i === 0 ? '#10b981' : 'var(--medium-gray)', whiteSpace: 'nowrap', marginLeft: 8 }}>
+                        {i === 0 ? `🏆 Líder · ${r.value}` : (faltan > 0 ? `${r.value} · faltan ${faltan}` : `${r.value} · empatado`)}
+                      </span>
+                    </div>
+                    <div style={{ width: '100%', height: 8, background: 'var(--bg-input)', borderRadius: 4, overflow: 'hidden' }}>
+                      <div style={{ width: `${lider > 0 ? (r.value / lider) * 100 : 0}%`, height: '100%', background: 'linear-gradient(90deg, #10b981 0%, #34d399 100%)', borderRadius: 4 }} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -855,40 +926,24 @@ export default function DashboardPage() {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', flex: 1 }}>
-            
-            {/* Medalla 1: Oro */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', background: 'var(--bg-body)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
-              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(245, 158, 11, 0.4)' }}>
-                <ShieldCheck size={24} color="#fff" />
+            {[
+              { titulo: 'Rey de Dispositivos', sub: 'Líder en Dispositivos', holder: ranking.dispSeg[0], valor: (v: number) => eur(v), grad: 'linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%)', col: '#d97706', ring: 'rgba(245, 158, 11, 0.25)' },
+              { titulo: 'El Pulpo', sub: 'Más multi-paquete', holder: ranking.pulpo[0], valor: (v: number) => `${v} ops`, grad: 'linear-gradient(135deg, #fca5a5 0%, #ef4444 100%)', col: '#b91c1c', ring: 'rgba(239, 68, 68, 0.25)' },
+              { titulo: 'Madrugador', sub: '1ª venta más temprana', holder: ranking.madruga[0], valor: (v: number) => hhmm(v), grad: 'linear-gradient(135deg, #93c5fd 0%, #3b82f6 100%)', col: '#1d4ed8', ring: 'rgba(59, 130, 246, 0.25)' },
+            ].map((m, i) => (
+              <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', background: 'var(--bg-body)', padding: '12px', borderRadius: '12px', border: `1px solid ${m.ring}` }}>
+                <div style={{ width: 48, height: 48, borderRadius: '50%', overflow: 'hidden', background: m.grad, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 12px ${m.ring}` }}>
+                  {m.holder
+                    ? <img src={fotoSrc(m.holder.name)} alt={m.holder.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => fotoErr(e, m.holder!.name)} />
+                    : <Award size={22} color="#fff" />}
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 800, color: m.col, marginBottom: 2 }}>{m.titulo}</div>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-main)' }}>{m.holder ? m.holder.name : '—'}</div>
+                  <div style={{ fontSize: '10px', color: 'var(--medium-gray)' }}>{m.holder ? m.valor(m.holder.value as number) : m.sub}</div>
+                </div>
               </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '12px', fontWeight: 800, color: '#d97706', marginBottom: 2 }}>Rey del O2</div>
-                <div style={{ fontSize: '10px', color: 'var(--medium-gray)' }}>Liderando O2</div>
-              </div>
-            </div>
-
-            {/* Medalla 2: Plata */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', background: 'var(--bg-body)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(148, 163, 184, 0.3)' }}>
-              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(148, 163, 184, 0.4)' }}>
-                <Clock size={24} color="#fff" />
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '12px', fontWeight: 800, color: '#64748b', marginBottom: 2 }}>Madrugador</div>
-                <div style={{ fontSize: '10px', color: 'var(--medium-gray)' }}>1ª venta &lt; 10h</div>
-              </div>
-            </div>
-
-            {/* Medalla 3: Bronce/Cobre */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', background: 'var(--bg-body)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(217, 119, 6, 0.2)' }}>
-              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'linear-gradient(135deg, #fca5a5 0%, #ef4444 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.4)' }}>
-                <Zap size={24} color="#fff" />
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '12px', fontWeight: 800, color: '#b91c1c', marginBottom: 2 }}>El Pulpo</div>
-                <div style={{ fontSize: '10px', color: 'var(--medium-gray)' }}>Multi-paquete</div>
-              </div>
-            </div>
-
+            ))}
           </div>
         </div>
 
