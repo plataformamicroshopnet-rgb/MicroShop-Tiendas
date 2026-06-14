@@ -385,9 +385,11 @@ export default function DashboardPage() {
     const sortDesc = (f: (v: any[]) => number) => names.map(n => ({ name: n, value: f(byV[n]) })).filter(x => x.value > 0).sort((a, b) => b.value - a.value);
     const dispSeg = sortDesc(dispSegVal);
     const conv = sortDesc(convCount);
+    // Carrera "Cuenta Kilómetros": TODOS los vendedores, incluido quien lleva 0 (p.ej. Gabriel)
+    const convAll = names.map(n => ({ name: n, value: convCount(byV[n]) })).sort((a, b) => (b.value - a.value) || a.name.localeCompare(b.name));
     const pulpo = sortDesc(pulpoCount);
     const madruga = names.map(n => ({ name: n, value: firstMin(byV[n]) })).filter(x => x.value != null).sort((a, b) => (a.value as number) - (b.value as number));
-    return { dispSeg, conv, pulpo, madruga };
+    return { dispSeg, conv, convAll, pulpo, madruga };
   })();
   const fotoSrc = (n: string) => `/${n}.jpg`;
   const hhmm = (mins: number) => `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
@@ -874,10 +876,10 @@ export default function DashboardPage() {
           </div>
 
           <div style={{ flex: 1, display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 14, alignItems: 'center', alignContent: 'center', justifyContent: 'center' }}>
-            {ranking.conv.length === 0 ? (
+            {(ranking.convAll.length === 0 || ranking.convAll[0].value === 0) ? (
               <p style={{ margin: 'auto', fontSize: 14, color: 'var(--medium-gray)', textAlign: 'center' }}>Aún no hay altas convergentes este mes.</p>
-            ) : ranking.conv.map((r, i) => {
-              const lider = ranking.conv[0].value;
+            ) : ranking.convAll.map((r, i) => {
+              const lider = ranking.convAll[0].value;
               const faltan = lider - r.value;
               return (
                 <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, width: 78 }}>
@@ -927,21 +929,34 @@ export default function DashboardPage() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', flex: 1 }}>
             {[
-              { titulo: 'Rey de Dispositivos', sub: 'Líder en Dispositivos', holder: ranking.dispSeg[0], valor: (v: number) => eur(v), grad: 'linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%)', col: '#d97706', ring: 'rgba(245, 158, 11, 0.25)' },
-              { titulo: 'El Pulpo', sub: 'Más multi-paquete', holder: ranking.pulpo[0], valor: (v: number) => `${v} ops`, grad: 'linear-gradient(135deg, #fca5a5 0%, #ef4444 100%)', col: '#b91c1c', ring: 'rgba(239, 68, 68, 0.25)' },
-              { titulo: 'Madrugador', sub: '1ª venta más temprana', holder: ranking.madruga[0], valor: (v: number) => hhmm(v), grad: 'linear-gradient(135deg, #93c5fd 0%, #3b82f6 100%)', col: '#1d4ed8', ring: 'rgba(59, 130, 246, 0.25)' },
+              { titulo: 'Rey de Dispositivos', sub: 'Líder en Dispositivos', holder: ranking.dispSeg[0], second: ranking.dispSeg[1], valor: (v: number) => eur(v), grad: 'linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%)', col: '#d97706', ring: 'rgba(245, 158, 11, 0.25)' },
+              { titulo: 'El Pulpo', sub: 'Más multi-paquete', holder: ranking.pulpo[0], second: ranking.pulpo[1], valor: (v: number) => `${v} ops`, grad: 'linear-gradient(135deg, #fca5a5 0%, #ef4444 100%)', col: '#b91c1c', ring: 'rgba(239, 68, 68, 0.25)' },
+              { titulo: 'Madrugador', sub: '1ª venta más temprana', holder: ranking.madruga[0], second: ranking.madruga[1], valor: (v: number) => hhmm(v), grad: 'linear-gradient(135deg, #93c5fd 0%, #3b82f6 100%)', col: '#1d4ed8', ring: 'rgba(59, 130, 246, 0.25)' },
             ].map((m, i) => (
               <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', background: 'var(--bg-body)', padding: '12px', borderRadius: '12px', border: `1px solid ${m.ring}` }}>
-                <div style={{ width: 48, height: 48, borderRadius: '50%', overflow: 'hidden', background: m.grad, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 12px ${m.ring}` }}>
-                  {m.holder
-                    ? <img src={fotoSrc(m.holder.name)} alt={m.holder.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => fotoErr(e, m.holder!.name)} />
-                    : <Award size={22} color="#fff" />}
+                <div style={{ position: 'relative', width: 48, height: 48 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: '50%', overflow: 'hidden', background: m.grad, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 12px ${m.ring}` }}>
+                    {m.holder
+                      ? <img src={fotoSrc(m.holder.name)} alt={m.holder.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => fotoErr(e, m.holder!.name)} />
+                      : <Award size={22} color="#fff" />}
+                  </div>
+                  {m.holder && <span style={{ position: 'absolute', top: -6, right: -6, fontSize: 14 }}>🥇</span>}
                 </div>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: '12px', fontWeight: 800, color: m.col, marginBottom: 2 }}>{m.titulo}</div>
                   <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-main)' }}>{m.holder ? m.holder.name : '—'}</div>
                   <div style={{ fontSize: '10px', color: 'var(--medium-gray)' }}>{m.holder ? m.valor(m.holder.value as number) : m.sub}</div>
                 </div>
+                {m.second && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 'auto', paddingTop: 8, borderTop: '1px solid var(--border-light)', width: '100%', justifyContent: 'center' }}>
+                    <span style={{ fontSize: 11 }}>🥈</span>
+                    <div style={{ width: 20, height: 20, borderRadius: '50%', overflow: 'hidden', background: m.grad, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <img src={fotoSrc(m.second.name)} alt={m.second.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => fotoErr(e, m.second!.name)} />
+                    </div>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 52 }}>{m.second.name}</span>
+                    <span style={{ fontSize: 9.5, color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{m.valor(m.second.value as number)}</span>
+                  </div>
+                )}
               </div>
             ))}
           </div>
