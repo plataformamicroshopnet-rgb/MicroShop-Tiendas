@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Building2, User, ChevronDown, ChevronUp, BarChart2, Calendar } from 'lucide-react'
+import { ArrowLeft, Building2, User, ChevronDown, ChevronUp, BarChart2, Calendar, Wallet, ShoppingBag, Trophy } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
 import { usePeriod } from '@/components/PeriodProvider'
 import { calculateDynamicCommission, normalizeString, renderDashboardData } from '@/lib/salesUtils'
@@ -259,6 +259,11 @@ export default function RentabilidadTiendasPage() {
     return result
   }, [sales, pymeRows, captadorRows, catalogs, activePeriodObj])
 
+  const globalTotal = matrixData.reduce((s, t) => s + t.totalTienda, 0)
+  const globalUds = matrixData.reduce((s, t) => s + t.totalTiendaUds, 0)
+  const nTiendasActivas = matrixData.filter(t => t.totalTiendaUds > 0).length
+  const topTienda = matrixData[0]
+
   if (loading) {
     return <div style={{ padding: 40, textAlign: 'center', color: 'var(--mercedes-cyan)', fontWeight: 'bold' }}>Cargando Rentabilidad por Tiendas...</div>
   }
@@ -272,27 +277,57 @@ export default function RentabilidadTiendasPage() {
         backFallback="/liquidacion"
       />
 
+      {/* ── KPIs globales premium ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 16, marginTop: 20 }}>
+        {[
+          { icon: <Wallet size={24} color="#fff" />, label: 'Comisiones totales', value: formatEuro(globalTotal), grad: 'linear-gradient(135deg, #10b981, #059669)', glow: 'rgba(16,185,129,0.40)' },
+          { icon: <ShoppingBag size={24} color="#fff" />, label: 'Ventas totales', value: String(globalUds), sub: 'operaciones', grad: 'linear-gradient(135deg, #0ea5e9, #2563eb)', glow: 'rgba(14,165,233,0.40)' },
+          { icon: <Building2 size={24} color="#fff" />, label: 'Tiendas activas', value: String(nTiendasActivas), sub: `de ${matrixData.length}`, grad: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', glow: 'rgba(139,92,246,0.40)' },
+          { icon: <Trophy size={24} color="#fff" />, label: 'Tienda líder', value: topTienda ? topTienda.nombre : '—', sub: topTienda ? formatEuro(topTienda.totalTienda) : '', subColor: '#f59e0b', grad: 'linear-gradient(135deg, #f59e0b, #d97706)', glow: 'rgba(245,158,11,0.40)' },
+        ].map((k, i) => (
+          <div key={i} className="card" style={{ padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16, position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: -28, right: -28, width: 90, height: 90, borderRadius: '50%', background: k.glow, filter: 'blur(10px)', opacity: 0.55, pointerEvents: 'none' }} />
+            <div style={{ width: 48, height: 48, borderRadius: 14, background: k.grad, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 8px 18px -6px ${k.glow}` }}>{k.icon}</div>
+            <div style={{ minWidth: 0, position: 'relative' }}>
+              <div style={{ fontSize: 11, color: 'var(--medium-gray)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>{k.label}</div>
+              <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--light-text)', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{k.value}</div>
+              {k.sub && <div style={{ fontSize: 12, color: k.subColor || 'var(--medium-gray)', fontWeight: 700 }}>{k.sub}</div>}
+            </div>
+          </div>
+        ))}
+      </div>
+
       <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
-        {matrixData.map(tienda => (
-          <div key={tienda.nombre} className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            <div 
+        {matrixData.map((tienda, idx) => {
+          const share = globalTotal > 0 ? (tienda.totalTienda / globalTotal) * 100 : 0
+          const medal = ['🥇', '🥈', '🥉'][idx]
+          const rankBg = idx === 0 ? 'rgba(245,158,11,0.16)' : idx === 1 ? 'rgba(148,163,184,0.20)' : idx === 2 ? 'rgba(180,83,9,0.16)' : 'var(--section-bg)'
+          const accent = idx === 0 ? '#f59e0b' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#10b981'
+          const open = expandedTiendas[tienda.nombre]
+          return (
+          <div key={tienda.nombre} className="card" style={{ padding: 0, overflow: 'hidden', borderLeft: `4px solid ${accent}` }}>
+            <div
               onClick={() => toggleTienda(tienda.nombre)}
-              style={{ padding: '16px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: expandedTiendas[tienda.nombre] ? 'rgba(16, 185, 129, 0.05)' : 'transparent', borderBottom: expandedTiendas[tienda.nombre] ? '1px solid var(--border-color)' : 'none', transition: 'background-color 0.2s' }}
+              style={{ padding: '16px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, background: open ? 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(16,185,129,0.01))' : 'transparent', borderBottom: open ? '1px solid var(--border-color)' : 'none', transition: 'background 0.2s' }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                {expandedTiendas[tienda.nombre] ? <ChevronUp size={24} color="#10b981" /> : <ChevronDown size={24} color="var(--medium-gray)" />}
-                <div>
-                  <h3 style={{ margin: 0, fontSize: 18, color: 'var(--light-text)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {tienda.nombre}
-                  </h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1, minWidth: 0 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: medal ? 20 : 15, fontWeight: 900, background: rankBg, color: 'var(--medium-gray)', flexShrink: 0 }}>
+                  {medal || `#${idx + 1}`}
+                </div>
+                <Building2 size={20} color="var(--medium-gray)" style={{ flexShrink: 0 }} />
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--light-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tienda.nombre}</h3>
+                  <div style={{ marginTop: 7, height: 5, width: '100%', maxWidth: 240, background: 'var(--section-bg)', borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${Math.min(share, 100)}%`, background: 'linear-gradient(90deg, #10b981, #34d399)', borderRadius: 3, transition: 'width 0.6s ease' }} />
+                  </div>
                 </div>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 20, fontWeight: 800, color: '#10b981' }}><div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-                          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{tienda.totalTiendaUds} uds</span>
-                          <span>{formatEuro(tienda.totalTienda)}</span>
-                        </div></div>
-                <div style={{ fontSize: 13, color: 'var(--medium-gray)', fontWeight: 600 }}>{tienda.totalTiendaUds} VENTAS</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 22, fontWeight: 900, color: '#10b981', lineHeight: 1 }}>{formatEuro(tienda.totalTienda)}</div>
+                  <div style={{ fontSize: 12, color: 'var(--medium-gray)', fontWeight: 600, marginTop: 3 }}>{tienda.totalTiendaUds} ventas · {share.toFixed(0)}% del total</div>
+                </div>
+                {open ? <ChevronUp size={22} color="#10b981" /> : <ChevronDown size={22} color="var(--medium-gray)" />}
               </div>
             </div>
 
@@ -425,7 +460,8 @@ export default function RentabilidadTiendasPage() {
               </div>
             )}
           </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
