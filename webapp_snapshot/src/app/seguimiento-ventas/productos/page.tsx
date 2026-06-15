@@ -69,10 +69,10 @@ export default function AvancePalancasPage() {
                        {isMonetary ? formatCurrency(totalCount) : `${totalCount} uds`}
                     </span>
                  </div>
-                 <div style={{ height: 12, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 6, position: 'relative', overflow: 'hidden' }}>
-                    <div style={{ position: 'absolute', inset: 0, backgroundColor: color, borderRadius: 6, opacity: 0.15 }}></div>
+                 <div style={{ height: 24, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, position: 'relative', overflow: 'hidden' }}>
+                    <div style={{ position: 'absolute', inset: 0, backgroundColor: color, borderRadius: 12, opacity: 0.15 }}></div>
                     <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                       <span style={{ color: 'var(--light-text)', fontSize: 9, fontWeight: 900 }}>
+                       <span style={{ color: 'var(--light-text)', fontSize: 12, fontWeight: 900 }}>
                            {pje % 1 === 0 ? pje : pje.toFixed(1)}%
                        </span>
                     </div>
@@ -95,12 +95,12 @@ export default function AvancePalancasPage() {
                 </span>
              </div>
              
-             <div style={{ height: 12, backgroundColor: 'var(--section-bg)', borderRadius: 6, position: 'relative', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)' }}>
-                <div style={{ 
-                    height: '100%', 
-                    width: `${Math.min(pje, 100)}%`, 
-                    background: `linear-gradient(90deg, ${color}, ${colorEnd})`, 
-                    borderRadius: 6, 
+             <div style={{ height: 24, backgroundColor: 'var(--section-bg)', borderRadius: 12, position: 'relative', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)' }}>
+                <div style={{
+                    height: '100%',
+                    width: `${Math.min(pje, 100)}%`,
+                    background: `linear-gradient(90deg, ${color}, ${colorEnd})`,
+                    borderRadius: 12,
                     transition: 'width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)', 
                     display: 'flex', 
                     alignItems: 'center', 
@@ -115,10 +115,10 @@ export default function AvancePalancasPage() {
                     left: pje > 15 ? `calc(${Math.min(pje, 100)}% - 6px)` : `${Math.min(pje, 100)}%`, 
                     top: '50%', 
                     transform: pje > 15 ? 'translate(-100%, -50%)' : 'translate(6px, -50%)', 
-                    color: pje > 15 ? '#000' : 'var(--text-main)', 
-                    fontSize: 9, 
+                    color: pje > 15 ? '#fff' : 'var(--text-main)',
+                    fontSize: 12,
                     fontWeight: 900,
-                    textShadow: pje > 15 ? 'none' : '0 1px 2px rgba(0,0,0,0.5)'
+                    textShadow: pje > 15 ? '0 1px 3px rgba(0,0,0,0.75)' : '0 1px 2px rgba(0,0,0,0.4)'
                 }}>
                     {pje % 1 === 0 ? pje : pje.toFixed(1)}%
                 </span>
