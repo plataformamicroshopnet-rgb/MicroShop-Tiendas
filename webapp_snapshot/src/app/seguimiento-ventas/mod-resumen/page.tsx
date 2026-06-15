@@ -540,11 +540,13 @@ export default function ModResumenPage() {
       return (real / elapsed) * totalWorking;
     };
 
+    // "Tiendas Movistar + MovilFree + O2": comisión de tienda + margen MovilFree + comisión O2 directa.
+    // Es exactamente el importe de la pantalla MOD.
+    const tiendasMasMovilFreeMasO2Real = tiendasMovistarReal + movilFreeReal + o2Real;
+
     const rows = [
-      { name: 'O2', real: o2Real, projection: getProjection(o2Real) },
-      { name: 'Bonos O2', real: bonosO2Real, projection: getProjection(bonosO2Real) },
-      { name: 'MovilFree', real: movilFreeReal, projection: getProjection(movilFreeReal) },
-      { name: 'Tiendas Movistar', real: tiendasMovistarReal, projection: getProjection(tiendasMovistarReal) },
+      { name: 'Tiendas Movistar + MovilFree + O2', real: tiendasMasMovilFreeMasO2Real, projection: getProjection(tiendasMasMovilFreeMasO2Real) },
+      { name: 'PRV Territorial O2', real: bonosO2Real, projection: getProjection(bonosO2Real) },
       { name: 'PRV Territorial Tiendas', real: prvTerritorialTiendasReal, projection: getProjection(prvTerritorialTiendasReal) },
       { name: 'Varios', real: variosReal, projection: getProjection(variosReal) }
     ];

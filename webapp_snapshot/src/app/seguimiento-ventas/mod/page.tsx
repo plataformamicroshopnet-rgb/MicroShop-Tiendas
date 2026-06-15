@@ -82,8 +82,10 @@ export default function ModPage() {
             fetch(`/api/catalogs`).then(r => r.json()).catch(() => ({ catalogs: {} })),
             fetchConfigs(activePeriodKey),
             fetchConfigs(prevYearKey),
-            fetch(`/api/period`).then(r => r.json()).catch(() => ({ periods: [] }))
-        ]).then(([currSalesRes, prevSalesRes, catRes, currConfigs, prevConfigs, periodsRes]) => {
+            fetch(`/api/period`).then(r => r.json()).catch(() => ({ periods: [] })),
+            fetch(`/api/movilfree/sales`).then(r => r.json()).catch(() => []),
+            fetch(`/api/movilfree/products`).then(r => r.json()).catch(() => [])
+        ]).then(([currSalesRes, prevSalesRes, catRes, currConfigs, prevConfigs, periodsRes, mfSalesRes, mfProductsRes]) => {
             const currSalesRaw = currSalesRes.logs || [];
             const prevSalesRaw = prevSalesRes.logs || [];
             const catalogs = catRes.catalogs || {};
@@ -154,6 +156,30 @@ export default function ModPage() {
                 const importesPlus = plusData.importes || plusData.data || [];
                 const activeExtras = (extrasData.assignments || []).filter((ea: any) => ea.status !== 'CANCELLED');
 
+                // Extras NO territoriales: el TERRITORIAL O2 (PRV Territorial O2) NO suma en MOD,
+                // solo en el Resumen de Métricas MOD.
+                const nonTerritorialExtras = activeExtras.filter((ex: any) =>
+                    String(ex.customerNif || '').toUpperCase() !== 'TERRITORIAL' &&
+                    !String(ex.rule?.name || '').toUpperCase().includes('TERRITORIAL O2')
+                );
+
+                // MovilFree: margen neto (ingreso sin IVA − coste) de ventas COMPLETADAS del mes.
+                // SÍ suma en MOD.
+                const mfSalesMonth = (mfSalesRes || []).filter((s: any) => {
+                    const d = new Date(s.fechaVenta);
+                    return s.estado === 'COMPLETADA' && d.getFullYear() === y && (d.getMonth() + 1) === m;
+                });
+                const movilFreeReal = mfSalesMonth.reduce((acc: number, s: any) => {
+                    try {
+                        const list = JSON.parse(s.listaProductos);
+                        const cost = list.reduce((cAcc: number, item: any) => {
+                            const prodCost = item.coste !== undefined ? item.coste : ((mfProductsRes || []).find((p: any) => p.id === item.id)?.coste || 0);
+                            return cAcc + (prodCost * item.cantidad);
+                        }, 0);
+                        return acc + ((s.importeTotal / 1.21) - cost);
+                    } catch (e) { return acc; }
+                }, 0);
+
                 const salesList = salesListRaw.map(sanitizeSale);
                 let periodData = (periodsRes.periods || []).find((p: any) => p.period_key === periodKeyForConfig);
                 if (!periodData) {
@@ -187,6 +213,18 @@ export default function ModPage() {
                     if (saleDay === -1 && sale.fecha) {
                         const match = String(sale.fecha).match(/^(\d{1,2})\//);
                         if (match) saleDay = parseInt(match[1], 10);
+                    }
+                    // Fechas en formato ISO (YYYY-MM-DD) que el patrón anterior no captura
+                    if (saleDay === -1 && sale.fecha) {
+                        const iso = String(sale.fecha).match(/^\d{4}-\d{1,2}-(\d{1,2})/);
+                        if (iso) saleDay = parseInt(iso[1], 10);
+                    }
+                    // Último recurso: la operación pertenece al periodo (la API ya la filtró),
+                    // así que se cuenta usando el día de createdAt para no descuadrar el total
+                    // (las operaciones deben cuadrar con realizadas + pendientes en todo informe).
+                    if (saleDay === -1 && sale.timestamp) {
+                        const d = new Date(sale.timestamp);
+                        if (!isNaN(d.getTime())) saleDay = Math.min(Math.max(d.getDate(), 1), daysInMonth);
                     }
 
                     if (saleDay >= 1 && saleDay <= daysInMonth) {
@@ -312,7 +350,7 @@ export default function ModPage() {
                     });
 
                     const salesCommissions = salesForTable.reduce((acc: number, s: any) => acc + getCommission(s), 0);
-                    const telecomExtras = activeExtras.reduce((acc: number, ex: any) => acc + Number(ex.telecomRewardAmount || 0), 0);
+                    const telecomExtras = nonTerritorialExtras.reduce((acc: number, ex: any) => acc + Number(ex.telecomRewardAmount || 0), 0);
                     globalImporte = salesCommissions + telecomExtras;
                 } else {
                     // --- CÁLCULO ESTÁNDAR ORIGINAL ---
@@ -325,12 +363,15 @@ export default function ModPage() {
                         globalImporte += dashCaptador.totalImporte;
                     }
 
-                    // Añadir extras al total global
-                    activeExtras.forEach((ex: any) => {
+                    // Añadir extras (NO territoriales) al total global
+                    nonTerritorialExtras.forEach((ex: any) => {
                         const amount = Number(ex.amount || ex.telecomRewardAmount) || 0;
                         globalImporte += amount;
                     });
                 }
+
+                // MovilFree SÍ suma en MOD (margen neto del mes)
+                globalImporte += movilFreeReal;
 
                 // Prorratear el importe global sobre el número total de operaciones
                 let totalOpsGlobal = stats.reduce((acc, d) => acc + d.ops, 0);
