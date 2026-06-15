@@ -33,9 +33,12 @@ export default function RentabilidadTiendasPage() {
   const [pymeRows, setPymeRows] = useState<any[]>([])
   const [captadorRows, setCaptadorRows] = useState<any[]>([])
 
+  const [movilFreeSales, setMovilFreeSales] = useState<any[]>([])
+  const [movilFreeProducts, setMovilFreeProducts] = useState<any[]>([])
+
   const [expandedTiendas, setExpandedTiendas] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
-    Object.keys(TIENDAS_COMERCIALES).forEach(t => initial[t] = true);
+    Object.keys(TIENDAS_COMERCIALES).forEach(t => { initial[t === 'O2' ? 'O2 MovilFree' : t] = true });
     return initial;
   })
   const [expandedCell, setExpandedCell] = useState<string | null>(null) // "Tienda-Comercial-Tipo"
@@ -56,12 +59,14 @@ export default function RentabilidadTiendasPage() {
 
         if (!activePeriodKey) return;
 
-        const [salesRes, catRes, pymeRes, plusRes, objRes] = await Promise.all([
+        const [salesRes, catRes, pymeRes, plusRes, objRes, mfSalesRes, mfProductsRes] = await Promise.all([
           fetch(`/api/sales?periodKey=${activePeriodKey}&strictPeriod=1`).catch(() => null),
           fetch(`/api/catalogs?_t=${Date.now()}`).catch(() => null),
           fetch(`/api/importes-pyme?periodKey=${activePeriodKey}&strictPeriod=1`).catch(() => null),
           fetch(`/api/importes-plus?periodKey=${activePeriodKey}&strictPeriod=1`).catch(() => null),
-          fetch(`/api/objetivos?periodKey=${activePeriodKey}&strictPeriod=1`).catch(() => null)
+          fetch(`/api/objetivos?periodKey=${activePeriodKey}&strictPeriod=1`).catch(() => null),
+          fetch(`/api/movilfree/sales`).catch(() => null),
+          fetch(`/api/movilfree/products`).catch(() => null)
         ])
 
         const salesData = salesRes && salesRes.ok ? await salesRes.json() : { logs: [] }
@@ -69,10 +74,14 @@ export default function RentabilidadTiendasPage() {
         const pymeData = pymeRes && pymeRes.ok ? await pymeRes.json() : {}
         const plusData = plusRes && plusRes.ok ? await plusRes.json() : {}
         const objData = objRes && objRes.ok ? await objRes.json() : {}
+        const mfSalesData = mfSalesRes && mfSalesRes.ok ? await mfSalesRes.json() : []
+        const mfProductsData = mfProductsRes && mfProductsRes.ok ? await mfProductsRes.json() : []
 
         const fetchedSales = salesData.logs || []
         setSales(fetchedSales)
         setCatalogs(catData.catalogs || catData || {})
+        setMovilFreeSales(Array.isArray(mfSalesData) ? mfSalesData : (mfSalesData.sales || mfSalesData.data || []))
+        setMovilFreeProducts(Array.isArray(mfProductsData) ? mfProductsData : (mfProductsData.products || mfProductsData.data || []))
 
         const importesPyme = pymeData.importes || pymeData.data || []
         const importesPlus = plusData.importes || plusData.data || []
@@ -107,8 +116,9 @@ export default function RentabilidadTiendasPage() {
     }
 
     const salesWithCommission = sales.map(sale => {
-      if (sale.anulado === 'Si' || sale.pendiente === 'Anulado') {
-        return { ...sale, comisionReal: 0 }
+      // Anuladas fuera: el total de operaciones debe cuadrar con realizadas + pendientes (igual que MOD)
+      if (sale.anulado === 'Si' || sale.anulado === 'Sí' || sale.pendiente === 'Anulado') {
+        return null
       }
 
       const tipoVenta = (String(sale.sheet || '')).trim().toLowerCase()
@@ -162,9 +172,28 @@ export default function RentabilidadTiendasPage() {
       
       const dashboardRows = isPlus ? pymeRows : captadorRows;
       const det = (sale.detalle || '').toLowerCase();
-      
+
+      // Solar360: cuenta como operación pero NO suma comisión (igual que el Resumen/MOD, que lo excluye del importe)
+      const prodLower = String(sale.producto || '').toLowerCase();
+      const catLower = String(sale.categoria || '').toLowerCase();
+      if (prodLower.includes('solar360') || prodLower.includes('solar 360') || catLower.includes('solar') || det.includes('solar')) {
+          return { ...sale, comisionReal: 0 };
+      }
+
+      // Seguro: se paga la comisión del catálogo (no el importe), igual que el motor de liquidación
+      if (det === 'seguro') {
+          const list = catalogs['Seguro'] || [];
+          const found = list.find((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
+          if (found && found.comision) {
+              return { ...sale, comisionReal: parseToNumber(found.comision) };
+          }
+          return { ...sale, comisionReal: parseToNumber(sale.importe || sale.cuota || 0) };
+      }
+
       const isTV = det === 'suscripciones tv' || det === 'suscripcion tv';
-      if (det === 'o2' || det === 'seguro' || det === 'mimovistar' || det === 'repos' || det === 'varios' || isTV || det === 'prepago') {
+      // Mismos conceptos que el motor de liquidación (Resumen/MOD): se cobran por su importe directo.
+      // 'resto baf' y 'traslado mimovistar' faltaban aquí -> antes se pagaban de menos vía comisión dinámica.
+      if (det === 'o2' || det === 'mimovistar' || det === 'repos' || det === 'varios' || isTV || det === 'prepago' || det === 'resto baf' || det === 'traslado mimovistar') {
           return { ...sale, comisionReal: parseToNumber(sale.importe || sale.cuota || 0) };
       }
       
@@ -220,18 +249,25 @@ export default function RentabilidadTiendasPage() {
       
       const footerTotals = {} as Record<string, { total: number, uds: number }>
       TIPOS_VENTA.forEach(t => footerTotals[t] = { total: 0, uds: 0 })
-      
-      return { nombre: tiendaName, rows, footerTotals, totalTienda: 0, totalTiendaUds: 0 }
+
+      // La tienda "O2" (Marta) pasa a ser "O2 MovilFree": consolida TODAS las ventas O2 + margen MovilFree
+      const displayName = tiendaName === 'O2' ? 'O2 MovilFree' : tiendaName
+      return { nombre: displayName, rows, footerTotals, totalTienda: 0, totalTiendaUds: 0 }
     })
 
     salesWithCommission.forEach(s => {
       const vendedor = s.vendedor || 'Desconocido'
-      let tiendaObj = result.find(t => t.rows.some(r => r.nombre.toLowerCase() === vendedor.toLowerCase()))
-      
+      const det = (s.detalle || '').toLowerCase()
+      const isO2 = det === 'o2'
+
+      // Todas las ventas O2 (de cualquier vendedor) se consolidan en la tienda "O2 MovilFree"
+      let tiendaObj = isO2
+        ? result.find(t => t.nombre === 'O2 MovilFree')
+        : result.find(t => t.rows.some(r => r.nombre.toLowerCase() === vendedor.toLowerCase()))
+
       if (!tiendaObj) return;
 
       let tipo = 'Resto BAF'
-      const det = (s.detalle || '').toLowerCase()
       if (det === 'ti') tipo = 'Contratos Móvil'
       else if (det === 'tma' || det === 'rent') tipo = 'Rent'
       else if (det === 'o2') tipo = 'O2 MovilFree'
@@ -242,7 +278,14 @@ export default function RentabilidadTiendasPage() {
       else if (det === 'varios') tipo = 'Varios'
       else if (det === 'repos') tipo = 'Repos'
 
-      const row = tiendaObj.rows.find(r => r.nombre.toLowerCase() === vendedor.toLowerCase())
+      // Si la venta O2 es de un vendedor que no tiene fila en "O2 MovilFree", se la creamos
+      let row = tiendaObj.rows.find(r => r.nombre.toLowerCase() === vendedor.toLowerCase())
+      if (!row && isO2) {
+        const cells = {} as Record<string, { total: number, sales: any[] }>
+        TIPOS_VENTA.forEach(t => cells[t] = { total: 0, sales: [] })
+        row = { nombre: vendedor, cells, totalGlobal: 0, totalUdsGlobal: 0 }
+        tiendaObj.rows.push(row)
+      }
       if (row && row.cells[tipo]) {
           row.cells[tipo].sales.push(s)
           row.cells[tipo].total += s.comisionReal
@@ -255,9 +298,42 @@ export default function RentabilidadTiendasPage() {
       }
     })
 
+    // ── Margen MovilFree del mes (ingreso sin IVA − coste). Suma € pero NO operaciones. ──
+    const mfYear = activePeriodObj?.year
+    const mfMonth = activePeriodObj?.month
+    let movilFreeReal = 0
+    if (mfYear && mfMonth) {
+      movilFreeReal = movilFreeSales
+        .filter((s: any) => {
+          const d = new Date(s.fechaVenta)
+          return s.estado === 'COMPLETADA' && d.getFullYear() === mfYear && (d.getMonth() + 1) === mfMonth
+        })
+        .reduce((acc: number, s: any) => {
+          try {
+            const list = JSON.parse(s.listaProductos)
+            const cost = list.reduce((cAcc: number, item: any) => {
+              const prodCost = item.coste !== undefined ? item.coste : (movilFreeProducts.find((p: any) => p.id === item.id)?.coste || 0)
+              return cAcc + (prodCost * item.cantidad)
+            }, 0)
+            return acc + ((s.importeTotal / 1.21) - cost)
+          } catch (e) { return acc }
+        }, 0)
+    }
+
+    const o2Store = result.find(t => t.nombre === 'O2 MovilFree')
+    if (o2Store && movilFreeReal !== 0) {
+      const cells = {} as Record<string, { total: number, sales: any[] }>
+      TIPOS_VENTA.forEach(t => cells[t] = { total: 0, sales: [] })
+      cells['O2 MovilFree'].total = movilFreeReal
+      // Es margen, no operaciones: totalUdsGlobal = 0 para no inflar el conteo de ventas
+      o2Store.rows.push({ nombre: 'MovilFree (margen)', cells, totalGlobal: movilFreeReal, totalUdsGlobal: 0, esMargen: true } as any)
+      o2Store.footerTotals['O2 MovilFree'].total += movilFreeReal
+      o2Store.totalTienda += movilFreeReal
+    }
+
     result.sort((a, b) => b.totalTienda - a.totalTienda)
     return result
-  }, [sales, pymeRows, captadorRows, catalogs, activePeriodObj])
+  }, [sales, pymeRows, captadorRows, catalogs, activePeriodObj, movilFreeSales, movilFreeProducts])
 
   const globalTotal = matrixData.reduce((s, t) => s + t.totalTienda, 0)
   const globalUds = matrixData.reduce((s, t) => s + t.totalTiendaUds, 0)
