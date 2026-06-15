@@ -465,7 +465,7 @@ export default function TramitacionPage() {
                             <th colSpan={5} style={{ borderBottom: '1px solid rgba(255,255,255,0.2)', borderRight: '2px solid rgba(255,255,255,0.2)', padding: '8px 2px', textAlign: 'center', fontWeight: 600, color: 'white', whiteSpace: 'normal', lineHeight: 1.1 }}>Total Altas BAF (No trasl.)</th>
                             <th colSpan={5} style={{ borderBottom: '1px solid rgba(255,255,255,0.2)', borderRight: '2px solid rgba(255,255,255,0.2)', padding: '8px 2px', textAlign: 'center', fontWeight: 600, color: 'white', whiteSpace: 'normal', lineHeight: 1.1 }}>Altas BAF Movistar Conv.</th>
                             <th colSpan={4} style={{ borderBottom: '1px solid rgba(255,255,255,0.2)', borderRight: '2px solid rgba(255,255,255,0.2)', padding: '8px 2px', textAlign: 'center', fontWeight: 600, color: 'white', whiteSpace: 'normal', lineHeight: 1.1 }}>TV + Altas Futbol</th>
-                            <th colSpan={4} style={{ borderBottom: '1px solid rgba(255,255,255,0.2)', borderRight: '2px solid rgba(255,255,255,0.2)', padding: '8px 2px', textAlign: 'center', fontWeight: 600, color: 'white', whiteSpace: 'normal', lineHeight: 1.1 }}>Disp. + Seguro Móvil</th>
+                            <th colSpan={5} style={{ borderBottom: '1px solid rgba(255,255,255,0.2)', borderRight: '2px solid rgba(255,255,255,0.2)', padding: '8px 2px', textAlign: 'center', fontWeight: 600, color: 'white', whiteSpace: 'normal', lineHeight: 1.1 }}>Disp. + Seguro Móvil</th>
                             <th colSpan={4} style={{ borderBottom: '1px solid rgba(255,255,255,0.2)', borderRight: '2px solid rgba(255,255,255,0.2)', padding: '8px 2px', textAlign: 'center', fontWeight: 600, color: 'white', whiteSpace: 'normal', lineHeight: 1.1 }}>REPOS BAF ARPU&gt;0</th>
                             <th colSpan={4} style={{ borderBottom: '1px solid rgba(255,255,255,0.2)', borderRight: '2px solid rgba(255,255,255,0.2)', padding: '8px 2px', textAlign: 'center', fontWeight: 600, color: 'white', whiteSpace: 'normal', lineHeight: 1.1 }}>FTTR</th>
                             <th colSpan={4} style={{ borderBottom: '1px solid rgba(255,255,255,0.2)', padding: '8px 2px', textAlign: 'center', fontWeight: 600, color: 'white', whiteSpace: 'normal', lineHeight: 1.1 }}>ALARMAS MPA</th>
@@ -496,6 +496,7 @@ export default function TramitacionPage() {
                             <th style={{ padding: '8px 2px', textAlign: 'center', borderRight: '2px solid var(--border-color)' }}>%</th>
 
                             {/* Dispositivos € */}
+                            <th style={{ padding: '8px 2px', textAlign: 'center' }}>Obj2</th>
                             <th style={{ padding: '8px 2px', textAlign: 'center' }}>Obj</th>
                             <th style={{ padding: '8px 2px', textAlign: 'center' }}>Vent</th>
                             <th style={{ padding: '8px 2px', textAlign: 'center' }}>Proy</th>
@@ -548,6 +549,7 @@ export default function TramitacionPage() {
                                 <CellProjPct obj={r.tvFutbol_obj} proj={r.tvFutbol_proj} />
 
                                 {/* Disp € */}
+                                <td style={{ padding: '8px 2px', textAlign: 'center', fontWeight: 700, color: 'var(--mercedes-cyan)' }}>{formatNum(r.dispUnidades_vent)}</td>
                                 <td style={{ padding: '8px 2px', textAlign: 'center', backgroundColor: '#f3f4f6' }}>{formatNum(r.dispSegEuros_obj, true)}</td>
                                 <td style={{ padding: '8px 2px', textAlign: 'center', fontWeight: 600 }}>{formatNum(r.dispSegEuros_vent, true)}</td>
                                 <td style={{ padding: '8px 2px', textAlign: 'center', backgroundColor: '#e5e7eb', color: '#374151' }}>{formatNum(r.dispSegEuros_proj, true)}</td>
@@ -596,6 +598,7 @@ export default function TramitacionPage() {
                             <td style={{ padding: '8px 2px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.tvFutbol_proj)}</td>
                             <td style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}></td>
 
+                            <td style={{ padding: '8px 2px', textAlign: 'center', fontWeight: 700, color: 'var(--mercedes-cyan)' }}>{formatNum(totals.dispUnidades_vent)}</td>
                             <td style={{ padding: '8px 2px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.dispSegEuros_obj, true)}</td>
                             <td style={{ padding: '8px 2px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.dispSegEuros_vent, true)}</td>
                             <td style={{ padding: '8px 2px', textAlign: 'center', fontWeight: 700 }}>{formatNum(totals.dispSegEuros_proj, true)}</td>
@@ -623,7 +626,7 @@ export default function TramitacionPage() {
                             <td colSpan={5} style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}><DeficitRow obj={totals.bafNoTrasl_obj} vent={totals.bafNoTrasl_vent} tram={totals.bafNoTrasl_tram} /></td>
                             <td colSpan={5} style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}><DeficitRow obj={totals.bafConvMS_obj} vent={totals.bafConvMS_vent} tram={totals.bafConvMS_tram} /></td>
                             <td colSpan={4} style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}><DeficitRow obj={totals.tvFutbol_obj} vent={totals.tvFutbol_vent} /></td>
-                            <td colSpan={4} style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}><DeficitRow obj={totals.dispSegEuros_obj} vent={totals.dispSegEuros_vent} isEuro /></td>
+                            <td colSpan={5} style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}><DeficitRow obj={totals.dispSegEuros_obj} vent={totals.dispSegEuros_vent} isEuro /></td>
                             <td colSpan={4} style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}><DeficitRow obj={totals.repos_obj} vent={totals.repos_vent} /></td>
                             <td colSpan={4} style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}><DeficitRow obj={totals.fttr_obj} vent={totals.fttr_vent} /></td>
                             <td colSpan={4} style={{ padding: '0' }}><DeficitRow obj={totals.alarmas_obj} vent={totals.alarmas_vent} /></td>
@@ -635,7 +638,7 @@ export default function TramitacionPage() {
                             <td colSpan={5} style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}><PctRow obj={totals.bafNoTrasl_obj} proj={totals.bafNoTrasl_proj} /></td>
                             <td colSpan={5} style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}><PctRow obj={totals.bafConvMS_obj} proj={totals.bafConvMS_proj} /></td>
                             <td colSpan={4} style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}><PctRow obj={totals.tvFutbol_obj} proj={totals.tvFutbol_proj} /></td>
-                            <td colSpan={4} style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}><PctRow obj={totals.dispSegEuros_obj} proj={totals.dispSegEuros_proj} /></td>
+                            <td colSpan={5} style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}><PctRow obj={totals.dispSegEuros_obj} proj={totals.dispSegEuros_proj} /></td>
                             <td colSpan={4} style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}><PctRow obj={totals.repos_obj} proj={totals.repos_proj} /></td>
                             <td colSpan={4} style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}><PctRow obj={totals.fttr_obj} proj={totals.fttr_proj} /></td>
                             <td colSpan={4} style={{ padding: '0' }}><PctRow obj={totals.alarmas_obj} proj={totals.alarmas_proj} /></td>
@@ -647,7 +650,7 @@ export default function TramitacionPage() {
                             <td colSpan={5} style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}><MediaRow proj={totals.bafNoTrasl_proj} /></td>
                             <td colSpan={5} style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}><MediaRow proj={totals.bafConvMS_proj} /></td>
                             <td colSpan={4} style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}><MediaRow proj={totals.tvFutbol_proj} /></td>
-                            <td colSpan={4} style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}><MediaRow proj={totals.dispSegEuros_proj} isEuro /></td>
+                            <td colSpan={5} style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}><MediaRow proj={totals.dispSegEuros_proj} isEuro /></td>
                             <td colSpan={4} style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}><MediaRow proj={totals.repos_proj} /></td>
                             <td colSpan={4} style={{ padding: '0', borderRight: '2px solid var(--border-color)' }}><MediaRow proj={totals.fttr_proj} /></td>
                             <td colSpan={4} style={{ padding: '0' }}><MediaRow proj={totals.alarmas_proj} /></td>

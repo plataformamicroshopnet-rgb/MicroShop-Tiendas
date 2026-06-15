@@ -46,8 +46,10 @@ const isAlarmas = (sale: any) => {
 };
 
 const isDispositivos = (sale: any) => {
-    const p = sale.producto?.toLowerCase() || '';
-    return p.includes('dispositivo');
+    // Un dispositivo se identifica por la categoría 'rent' (igual que matchTipoVenta del
+    // dashboard); el 'producto' es el modelo (iPhone, Samsung…), no la palabra "dispositivo".
+    const cat = String(sale.categoria || sale.detalle || sale.sheet || '').trim().toLowerCase();
+    return cat === 'rent';
 };
 
 const isSeguros = (sale: any) => {
