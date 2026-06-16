@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState, useMemo } from 'react'
-import { Euro, Calendar, ArrowLeft, Save, ClipboardList, X, Trash2, Settings, Download, Briefcase, FileText, BarChart2, Repeat, Zap, Settings2, ArrowUp, ArrowDown, Users, RefreshCcw, Map, TrendingUp } from 'lucide-react'
+import { Euro, Calendar, ArrowLeft, Save, ClipboardList, X, Trash2, Settings, Download, Briefcase, FileText, BarChart2, Repeat, Zap, Settings2, ArrowUp, ArrowDown, Users, RefreshCcw, Map, TrendingUp, Search } from 'lucide-react'
 import { ExcelIcon } from '@/components/ActionIcons'
 import ExcelJS from 'exceljs'
 import { useSearchParams, useRouter } from 'next/navigation'
@@ -43,6 +43,7 @@ export default function LiquidacionesPage() {
     const [loading, setLoading] = useState(true)
     const [user, setUser] = useState<any>(null)
     const [currentView, setCurrentView] = useState<ViewType>('menu')
+    const [opSearch, setOpSearch] = useState('')   // buscador del Registro de Operaciones
 
     const { activePeriodKey, availablePeriods, isLoadingPeriods } = usePeriod()
     
@@ -1623,8 +1624,15 @@ export default function LiquidacionesPage() {
                    !d.includes('solar360') && !d.includes('solar 360')
         });
 
-        const tableTotal = salesForTable.reduce((acc, sale) => acc + getCuotaTotal(sale), 0) + activeExtras.reduce((acc, ex) => acc + (esAdmin ? (ex.telecomRewardAmount || 0) : (ex.sellerRewardAmount || 0)), 0);
-        const totalComisiones = salesForTable.reduce((acc, sale) => acc + getCommission(sale), 0) + activeExtras.reduce((acc, ex) => acc + (esAdmin ? (ex.telecomRewardAmount || 0) : (ex.sellerRewardAmount || 0)), 0);
+        // ── Buscador: filtra ventas y extras por cualquier campo visible (no afecta al export de Excel) ──
+        const opQuery = opSearch.trim().toLowerCase()
+        const matchOpSale = (s: any) => !opQuery || [s.fecha, s.vendedor, s.nif, s.nombreCliente, s.telf, s.codigo, s.detalle, s.producto, s.anotaciones].some(v => String(v ?? '').toLowerCase().includes(opQuery))
+        const matchOpExtra = (ex: any) => !opQuery || [ex.seller, ex.customerNif, ex.customerName, ex.rule?.name, ex.status].some(v => String(v ?? '').toLowerCase().includes(opQuery))
+        const salesView = salesForTable.filter(matchOpSale)
+        const extrasView = activeExtras.filter(matchOpExtra)
+
+        const tableTotal = salesView.reduce((acc, sale) => acc + getCuotaTotal(sale), 0) + extrasView.reduce((acc, ex) => acc + (esAdmin ? (ex.telecomRewardAmount || 0) : (ex.sellerRewardAmount || 0)), 0);
+        const totalComisiones = salesView.reduce((acc, sale) => acc + getCommission(sale), 0) + extrasView.reduce((acc, ex) => acc + (esAdmin ? (ex.telecomRewardAmount || 0) : (ex.sellerRewardAmount || 0)), 0);
 
         return (
             <>
@@ -1632,6 +1640,18 @@ export default function LiquidacionesPage() {
                     <div style={{ padding: '6px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.02)' }}>
                     <h3 style={{ margin: 0, fontSize: 14 }}>Registro de Operaciones{activePeriodObj?.name ? ` - ${activePeriodObj.name}` : ''}</h3>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                            <Search size={14} style={{ position: 'absolute', left: 9, color: 'var(--medium-gray)', pointerEvents: 'none' }} />
+                            <input
+                                value={opSearch}
+                                onChange={e => setOpSearch(e.target.value)}
+                                placeholder="Buscar cliente, NIF, teléfono, producto, vendedor..."
+                                style={{ padding: '5px 28px 5px 30px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--light-text)', fontSize: 12, width: 290, outline: 'none' }}
+                            />
+                            {opSearch && (
+                                <X size={14} onClick={() => setOpSearch('')} style={{ position: 'absolute', right: 9, color: 'var(--medium-gray)', cursor: 'pointer' }} />
+                            )}
+                        </div>
                         {(() => {
                             const hasExportPermission = can(user, 'EXPORT_EXCEL');
                             return (
@@ -1648,7 +1668,7 @@ export default function LiquidacionesPage() {
                             )
                         })()}
                         <span style={{ backgroundColor: 'var(--mercedes-cyan)', color: '#000', padding: '1px 8px', borderRadius: '8px', fontSize: 11, fontWeight: 800 }}>
-                            {salesForTable.length} VENTAS
+                            {salesView.length} VENTAS
                         </span>
                         <div style={{ backgroundColor: '#111827', color: '#F9FAFB', padding: '2px 12px', borderRadius: '8px', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
                             <span>TOTAL COMISIONES</span>
@@ -1675,7 +1695,7 @@ export default function LiquidacionesPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {salesForTable.length > 0 ? salesForTable.map((s, i) => {
+                            {salesView.length > 0 ? salesView.map((s, i) => {
                                 const isEditing = editingId === s.id;
 
                                 return (
@@ -1752,7 +1772,7 @@ export default function LiquidacionesPage() {
                                 )
                             }) : null}
                             
-                            {activeExtras.length > 0 && activeExtras.map((ex: any, i: number) => (
+                            {extrasView.length > 0 && extrasView.map((ex: any, i: number) => (
                                 <tr key={`extra-${ex.id || i}`} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: 'rgba(16, 185, 129, 0.05)' }}>
                                     <td style={{ color: '#059669' }}>{new Date(ex.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
                                     <td style={{ color: '#059669' }}>{ex.seller}</td>
@@ -1781,7 +1801,7 @@ export default function LiquidacionesPage() {
                                 </tr>
                             ))}
 
-                            {salesForTable.length === 0 && activeExtras.length === 0 && (
+                            {salesView.length === 0 && extrasView.length === 0 && (
                                 <tr>
                                     <td colSpan={11} style={{ padding: '40px', textAlign: 'center', color: 'var(--medium-gray)' }}>
                                         No hay operaciones registradas para el mes seleccionado.
