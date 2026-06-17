@@ -707,8 +707,8 @@ export default function ComisionesDashboardPage() {
                                                     try {
                                                         const conds = JSON.parse(rule.condicionantes);
                                                         if (Array.isArray(conds)) {
-                                                            isTeamObj2 = conds.some((c: any) => c.type === 'REQUIRE_TEAM_OBJ2');
-                                                            isTeamObj3 = conds.some((c: any) => c.type === 'REQUIRE_TEAM_OBJ3');
+                                                            isTeamObj2 = conds.some((c: any) => c.type === 'REQUIRE_TEAM_OBJ2' || c.type === 'REQUIRE_TEAM_OBJ23');
+                                                            isTeamObj3 = conds.some((c: any) => c.type === 'REQUIRE_TEAM_OBJ3' || c.type === 'REQUIRE_TEAM_OBJ23');
                                                         }
                                                     } catch(e) {}
                                                 }

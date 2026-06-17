@@ -595,6 +595,9 @@ export function useComisionesData(user?: any) {
                                     isTeamObj2 = true;
                                 } else if (cond.type === 'REQUIRE_TEAM_OBJ3') {
                                     isTeamObj3 = true;
+                                } else if (cond.type === 'REQUIRE_TEAM_OBJ23') {
+                                    isTeamObj2 = true;
+                                    isTeamObj3 = true;
                                 } else if (cond.type === 'ACCUMULATIVE_TRAMOS') {
                                     isAccumulative = true;
                                 } else if (cond.type === 'ACCUMULATIVE_FIXED_BASE') {
