@@ -9,3 +9,14 @@ build/
 *.sqlite-shm
 *.log
 .DS_Store
+
+# Scripts de depuración / scratch y artefactos locales (no forman parte de la app)
+scratch/
+check_*.js
+check_*.ts
+*.local-backup
+*.zip
+.claude/
+
+# Carpeta antigua duplicada de la app (la app real está en webapp_snapshot/)
+/webapp/
