@@ -1090,10 +1090,10 @@ function OperationsContent() {
 
       const mData: any[] = [];
       displayedSales.forEach((s) => {
+          const cuotaTotal = getCuotaTotal(s, catalogs);
           let rawValor = 0;
           if (Object.keys(importesPyme).length > 0 && Object.keys(importesPlus).length > 0) {
-              const dyn = getCalculatedCommission(s);
-              rawValor = dyn;
+              rawValor = getCalculatedCommission(s);
           } else {
               rawValor = s.importe || s.cuota || 0;
           }
@@ -1108,10 +1108,12 @@ function OperationsContent() {
               NIF: s.nif || '-',
 
               Teléfono: s.telf || '-',
+              NumeroPedido: s.numeroPedido || '-',
               Pte: s.pendiente === 'Si' && s.anulado !== 'Si' && s.pendiente !== 'Anulado' ? 'Si' : 'No',
               Anulado: (s.anulado === 'Si' || s.pendiente === 'Anulado') ? 'Si' : 'No',
               Anotaciones: s.anotaciones || '',
-              Valor: Number(rawValor)
+              CuotaTotal: cuotaTotal > 0 ? Number(cuotaTotal) : null,
+              Valor: Number(rawValor)   // solo se vuelca a Excel si isAdmin (columna Comisión)
           });
       });
 
@@ -1127,14 +1129,16 @@ function OperationsContent() {
               NIF: ex.customerNif || '-',
 
               Teléfono: '-',
+              NumeroPedido: '-',
               Pte: 'No',
               Anulado: 'No',
               Anotaciones: 'Extra Automático',
-              Valor: Number(ex.telecomRewardAmount || 0)
+              CuotaTotal: null,
+              Valor: Number(ex.telecomRewardAmount || 0)   // solo se vuelca a Excel si isAdmin
           });
       });
 
-      sheet.columns = [
+      const detailColumns: any[] = [
         { header: 'Vendedor', key: 'Vendedor', width: 15 },
         { header: 'Fecha', key: 'Fecha', width: 12 },
         { header: 'Tienda', key: 'Código', width: 15 },
@@ -1145,11 +1149,17 @@ function OperationsContent() {
         { header: 'NIF', key: 'NIF', width: 15 },
 
         { header: 'Teléfono', key: 'Teléfono', width: 15 },
+        { header: 'Nº Pedido', key: 'NumeroPedido', width: 18 },
         { header: 'Pte', key: 'Pte', width: 8 },
         { header: 'Anulado', key: 'Anulado', width: 10 },
         { header: 'Anotaciones', key: 'Anotaciones', width: 30 },
-        { header: 'Comisión (€)', key: 'Valor', width: 15 }
+        { header: 'Cuota Total (€)', key: 'CuotaTotal', width: 16 }
       ];
+      // Solo el Administrador ve la comisión; el resto (p. ej. Salva) NO
+      if (isAdmin) {
+        detailColumns.push({ header: 'Comisión (€)', key: 'Valor', width: 15 });
+      }
+      sheet.columns = detailColumns;
 
       // Formatear cabeceras
       sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
@@ -1158,8 +1168,9 @@ function OperationsContent() {
 
       sheet.addRows(mData);
 
-      // Aplicar formato de moneda a la columna Valor
-      sheet.getColumn('Valor').numFmt = '#,##0.00 €';
+      // Aplicar formato de moneda
+      sheet.getColumn('CuotaTotal').numFmt = '#,##0.00 €';
+      if (isAdmin) sheet.getColumn('Valor').numFmt = '#,##0.00 €';
 
       // Calcular dinámica del nombre
       const objDate = new Date();
