@@ -1535,6 +1535,19 @@ export default function LiquidacionesPage() {
                 return parse(sale.cuota || sale.importe || 0);
             }
             if (isRent) {
+                // Cuota Total = precio del dispositivo = 'anual' del catálogo (fuente fiable).
+                // Si no hay match en catálogo, se usa la cuota guardada en la venta.
+                const list = catalogs['Rent'] || [];
+                const matching = list.filter((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
+                let found = matching[0];
+                if (matching.length > 1) {
+                    const dated = matching.find((c: any) => isVentaWithinDates(sale.fecha, c.validFrom, c.validTo));
+                    if (dated) found = dated;
+                }
+                if (found && found.anual) {
+                    const v = parse(found.anual);
+                    if (v > 0) return v;
+                }
                 return parse(sale.cuota || sale.importe || 0);
             }
             return 0;
