@@ -41,7 +41,7 @@ export default function TerritorialTab() {
   const [fttrDiscount, setFttrDiscount] = useState<string>('910')
 
   // Modal para configurar "Por Tienda"
-  const [modalStoreTargets, setModalStoreTargets] = useState<{ ruleId: string, tramo: 1 | 2 } | null>(null)
+  const [modalStoreTargets, setModalStoreTargets] = useState<{ ruleId: string, tramo: 1 | 2 | 3 } | null>(null)
   const [modalSalesList, setModalSalesList] = useState<{ store: string, ruleName: string, logs: any[], isMoneyType: boolean } | null>(null)
 
   useEffect(() => {
@@ -169,7 +169,11 @@ export default function TerritorialTab() {
       obj2Type: 'global',
       obj2Global: '',
       obj2Stores: {},
-      importe2: ''
+      importe2: '',
+      obj3Type: 'global',
+      obj3Global: '',
+      obj3Stores: {},
+      importe3: ''
     }])
   }
 
@@ -204,18 +208,34 @@ export default function TerritorialTab() {
       isReached2 = target2 > 0 && salesTot >= target2;
     }
 
+    // Eval 3er Tramo
+    let target3 = 0;
+    let isReached3 = false;
+    if (rule.obj3Type === 'per_store') {
+      target3 = parseNumber(rule.obj3Stores?.[storeName] || '0');
+      isReached3 = target3 > 0 && salesCount >= target3;
+    } else {
+      target3 = parseNumber(rule.obj3Global);
+      isReached3 = target3 > 0 && salesTot >= target3;
+    }
+
     const import1Num = parseNumber(rule.importe1);
     const import2Num = parseNumber(rule.importe2);
+    const import3Num = parseNumber(rule.importe3);
 
     const isPct1 = String(rule.importe1).includes('%');
     const isPct2 = String(rule.importe2).includes('%');
+    const isPct3 = String(rule.importe3).includes('%');
 
-    // Si supera Tramo 2
-    if (isReached2) {
+    // El tramo más alto alcanzado manda y anula los inferiores
+    if (isReached3) {
+      if (isPct3) earned = salesCount * (import3Num / 100);
+      else earned = import3Num;
+    }
+    else if (isReached2) {
       if (isPct2) earned = salesCount * (import2Num / 100);
       else earned = import2Num;
-    } 
-    // Si no supera Tramo 2 pero supera Tramo 1
+    }
     else if (isReached1) {
       if (isPct1) earned = salesCount * (import1Num / 100);
       else earned = import1Num;
@@ -343,10 +363,12 @@ export default function TerritorialTab() {
               <tr style={{ background: '#0284c7', color: '#ffffff' }}>
                 <th style={{ padding: '6px 4px' }} title="Nombre descriptivo de la comisión">Nombre Comisión ℹ️</th>
                 <th style={{ padding: '6px 4px' }} title="El producto o grupo de ventas que se va a contar y a pagar.">Tipo de Venta ℹ️</th>
-                <th style={{ padding: '6px 4px' }} title="Objetivo mínimo a alcanzar. Puede ser 'Unif.' (la suma de todas las tiendas juntas debe llegar a este número) o 'Por T.' (cada tienda debe llegar a su propio número individual).">Obj. Primer Tramo ℹ️</th>
+                <th style={{ padding: '6px 4px' }} title="Objetivo mínimo a alcanzar. Puede ser 'Unif.' (la suma de todas las tiendas juntas debe llegar a este número) o 'Por T.' (cada tienda debe llegar a su propio número individual).">Obj. 1º Tramo ℹ️</th>
                 <th style={{ padding: '6px 4px' }} title="Lo que se paga si se llega al Primer Tramo. (Ej: '10' paga 10€ por venta, '10%' paga el 10% de lo recaudado).">Importe 1º ℹ️</th>
-                <th style={{ padding: '6px 4px' }} title="Objetivo más alto. Si se alcanza, anula el 1º y se paga este.">Obj. Segundo Tramo ℹ️</th>
+                <th style={{ padding: '6px 4px' }} title="Objetivo más alto que el 1º. Si se alcanza, anula el 1º y se paga este.">Obj. 2º Tramo ℹ️</th>
                 <th style={{ padding: '6px 4px' }} title="Lo que se paga si se llega al Segundo Tramo.">Importe 2º ℹ️</th>
+                <th style={{ padding: '6px 4px' }} title="Objetivo más alto que el 2º. Si se alcanza, anula el 1º y 2º y se paga este.">Obj. 3º Tramo ℹ️</th>
+                <th style={{ padding: '6px 4px' }} title="Lo que se paga si se llega al Tercer Tramo.">Importe 3º ℹ️</th>
                 <th style={{ padding: '6px 4px' }}>VENTAS AUXILIADORA 45</th>
                 <th style={{ padding: '6px 4px' }}>VENTAS CORREHUELA</th>
                 <th style={{ padding: '6px 4px' }}>VENTAS VILLAMAYOR</th>
@@ -370,8 +392,10 @@ export default function TerritorialTab() {
                 
                 const obj1Target = rule.obj1Type === 'global' ? parseNumber(rule.obj1Global) : 0;
                 const obj2Target = rule.obj2Type === 'global' ? parseNumber(rule.obj2Global) : 0;
+                const obj3Target = rule.obj3Type === 'global' ? parseNumber(rule.obj3Global) : 0;
                 let activeTramo = 0;
-                if (obj2Target > 0 && salesTot >= obj2Target) activeTramo = 2;
+                if (obj3Target > 0 && salesTot >= obj3Target) activeTramo = 3;
+                else if (obj2Target > 0 && salesTot >= obj2Target) activeTramo = 2;
                 else if (obj1Target > 0 && salesTot >= obj1Target) activeTramo = 1;
 
                 const impAux = calculateTiendaImporte(rule, 'Auxiliadora 45', salesAux, salesTot);
@@ -422,6 +446,22 @@ export default function TerritorialTab() {
                       </div>
                     </td>
                     <td style={{ padding: 4 }}><input value={rule.importe2} onChange={e => { const r = [...tiendasRules]; r[idx].importe2 = e.target.value; setTiendasRules(r); }} className="form-input" style={{ width: 60, backgroundColor: activeTramo === 2 ? '#dcfce7' : '', color: activeTramo === 2 ? '#166534' : '', fontWeight: activeTramo === 2 ? 'bold' : 'normal', borderColor: activeTramo === 2 ? '#22c55e' : '' }} placeholder="Ej: 30%" /></td>
+
+                    {/* Obj 3 */}
+                    <td style={{ padding: 4 }}>
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <select value={rule.obj3Type || 'global'} onChange={e => { const r = [...tiendasRules]; r[idx].obj3Type = e.target.value; setTiendasRules(r); }} className="form-input" style={{ width: 60, padding: 4 }}>
+                          <option value="global">Unif.</option>
+                          <option value="per_store">Por T.</option>
+                        </select>
+                        {(rule.obj3Type || 'global') === 'global' ? (
+                          <input value={rule.obj3Global || ''} onChange={e => { const r = [...tiendasRules]; r[idx].obj3Global = e.target.value; setTiendasRules(r); }} className="form-input" style={{ width: 60 }} />
+                        ) : (
+                          <button onClick={() => setModalStoreTargets({ ruleId: rule.id, tramo: 3 })} style={{ background: 'var(--mercedes-cyan)', color: 'var(--bg-card)', border: 'none', borderRadius: 4, padding: '4px 8px', cursor: 'pointer', fontSize: 11, fontWeight: 'bold' }}>Editar</button>
+                        )}
+                      </div>
+                    </td>
+                    <td style={{ padding: 4 }}><input value={rule.importe3 || ''} onChange={e => { const r = [...tiendasRules]; r[idx].importe3 = e.target.value; setTiendasRules(r); }} className="form-input" style={{ width: 60, backgroundColor: activeTramo === 3 ? '#dcfce7' : '', color: activeTramo === 3 ? '#166534' : '', fontWeight: activeTramo === 3 ? 'bold' : 'normal', borderColor: activeTramo === 3 ? '#22c55e' : '' }} placeholder="Ej: 40%" /></td>
 
                     {/* Resultados */}
                     <td style={{ padding: 4, textAlign: 'center', fontWeight: 'bold' }}>{renderSalesCell(salesAux, dataAux.logs, 'Auxiliadora 45', rule)}</td>
@@ -537,7 +577,7 @@ export default function TerritorialTab() {
         const ruleIdx = tiendasRules.findIndex(r => r.id === modalStoreTargets.ruleId);
         if (ruleIdx === -1) return null;
         const rule = tiendasRules[ruleIdx];
-        const storeKey = modalStoreTargets.tramo === 1 ? 'obj1Stores' : 'obj2Stores';
+        const storeKey = modalStoreTargets.tramo === 1 ? 'obj1Stores' : modalStoreTargets.tramo === 2 ? 'obj2Stores' : 'obj3Stores';
         const objStores = rule[storeKey] || {};
 
         const handleModalChange = (store: string, val: string) => {

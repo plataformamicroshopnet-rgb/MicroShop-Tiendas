@@ -425,6 +425,7 @@ export function useComisionesData(user?: any) {
         const groupPending: Record<string, number> = {};
         const groupObj1: Record<string, number> = {};
         const groupObj2: Record<string, number> = {};
+        const groupObj3: Record<string, number> = {};
         const groupComisions: Record<string, number> = {};
         const groupSales: Record<string, any[]> = {};
 
@@ -460,22 +461,27 @@ export function useComisionesData(user?: any) {
             const totalHoras = rule.totalHoras || 0;
             let valObj1 = 0;
             let valObj2 = 0;
+            let valObj3 = 0;
             if (totalHoras > 0 && horario > 0) {
                 valObj1 = (rule.objPrimerTramo / totalHoras) * horario;
                 valObj2 = (rule.objSegundoTramo / totalHoras) * horario;
+                valObj3 = ((rule.objTercerTramo || 0) / totalHoras) * horario;
             } else {
                 valObj1 = rule.objPrimerTramo || 0;
                 valObj2 = rule.objSegundoTramo || 0;
+                valObj3 = rule.objTercerTramo || 0;
             }
 
             // Aplicar descuento de 910€ por cada venta de FTTR para Dispositivos + Seguros
             if (!isO2 && ruleName === 'Dispositivos + Seguros') {
                 valObj1 = Math.max(0, valObj1 - fttrDiscount * fttrCount);
                 valObj2 = Math.max(0, valObj2 - fttrDiscount * fttrCount);
+                valObj3 = Math.max(0, valObj3 - fttrDiscount * fttrCount);
             }
 
             groupObj1[ruleName] = valObj1;
             groupObj2[ruleName] = valObj2;
+            groupObj3[ruleName] = valObj3;
         });
 
 
@@ -547,6 +553,7 @@ export function useComisionesData(user?: any) {
             const qtty = groupCounts[ruleName] || 0;
             const obj1 = groupObj1[ruleName] || 0;
             const obj2 = groupObj2[ruleName] || 0;
+            const obj3 = groupObj3[ruleName] || 0;
             
             let comisionCalculada = 0;
             const isPercentage = String(rule.importePrimerTramo || '').includes('%');
@@ -559,6 +566,7 @@ export function useComisionesData(user?: any) {
 
             const imp1 = parseImporte(rule.importePrimerTramo);
             const imp2 = parseImporte(rule.importeSegundoTramo);
+            const imp3 = parseImporte(rule.importeTercerTramo);
 
             const qttyPending = groupPending[ruleName] || 0;
             const qttyFinalizadas = groupCounts[ruleName] || 0;
@@ -624,7 +632,8 @@ export function useComisionesData(user?: any) {
                         activeImp = imp1;
                     }
                 } else {
-                    if (qttyTotal >= obj2 && obj2 > 0) activeImp = imp2;
+                    if (qttyTotal >= obj3 && obj3 > 0) activeImp = imp3;
+                    else if (qttyTotal >= obj2 && obj2 > 0) activeImp = imp2;
                     else if (qttyTotal >= obj1 && obj1 > 0) activeImp = imp1;
                     else activeImp = imp1; // Valorar siempre al Tramo 1 aunque no llegue al objetivo
                 }
@@ -1081,6 +1090,7 @@ export function useComisionesData(user?: any) {
             groupPending,
             groupObj1,
             groupObj2,
+            groupObj3,
             groupComisions,
             totalValueGroupsAmount,
             totalUnitGroupsAmount,

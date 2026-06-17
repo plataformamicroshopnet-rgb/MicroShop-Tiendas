@@ -17,6 +17,7 @@ export default function ComisionesJefeTiendasPage() {
 
     const [dispPct1, setDispPct1] = useState<number>(0.40)
     const [dispPct2, setDispPct2] = useState<number>(0.60)
+    const [dispPct3, setDispPct3] = useState<number>(0)
     const [arpuPct1, setArpuPct1] = useState<number>(4.00)
     const [arpuPct2, setArpuPct2] = useState<number>(6.00)
 
@@ -25,12 +26,14 @@ export default function ComisionesJefeTiendasPage() {
             fetch('/api/settings?key=COMISION_JEFE_DISP_PCT1').then(res => res.json()),
             fetch('/api/settings?key=COMISION_JEFE_DISP_PCT2').then(res => res.json()),
             fetch('/api/settings?key=COMISION_JEFE_ARPU_PCT1').then(res => res.json()),
-            fetch('/api/settings?key=COMISION_JEFE_ARPU_PCT2').then(res => res.json())
-        ]).then(([disp1, disp2, arpu1, arpu2]) => {
+            fetch('/api/settings?key=COMISION_JEFE_ARPU_PCT2').then(res => res.json()),
+            fetch('/api/settings?key=COMISION_JEFE_DISP_PCT3').then(res => res.json())
+        ]).then(([disp1, disp2, arpu1, arpu2, disp3]) => {
             if (disp1.success && disp1.value !== null) setDispPct1(Number(disp1.value))
             if (disp2.success && disp2.value !== null) setDispPct2(Number(disp2.value))
             if (arpu1.success && arpu1.value !== null) setArpuPct1(Number(arpu1.value))
             if (arpu2.success && arpu2.value !== null) setArpuPct2(Number(arpu2.value))
+            if (disp3 && disp3.success && disp3.value !== null) setDispPct3(Number(disp3.value))
         }).catch(err => console.error("Error loading settings", err))
     }, [])
 
@@ -46,9 +49,9 @@ export default function ComisionesJefeTiendasPage() {
         }
     }
 
-    const { tableData, totalDispVentas, totalArpuVentas, globalDispObj1, globalDispObj2, globalArpuObj1, globalArpuObj2 } = useMemo(() => {
+    const { tableData, totalDispVentas, totalArpuVentas, globalDispObj1, globalDispObj2, globalDispObj3, globalArpuObj1, globalArpuObj2 } = useMemo(() => {
         if (!sellerStats || sellerStats.length === 0) {
-            return { tableData: [], totalDispVentas: 0, totalArpuVentas: 0, globalDispObj1: 0, globalDispObj2: 0, globalArpuObj1: 0, globalArpuObj2: 0 }
+            return { tableData: [], totalDispVentas: 0, totalArpuVentas: 0, globalDispObj1: 0, globalDispObj2: 0, globalDispObj3: 0, globalArpuObj1: 0, globalArpuObj2: 0 }
         }
 
         const dispRule = tiendaRules?.find(r => r.nombre?.toLowerCase().includes('dispositivo') && r.nombre?.toLowerCase().includes('seguro'))
@@ -56,6 +59,7 @@ export default function ComisionesJefeTiendasPage() {
 
         const gDispObj1 = dispRule ? Number(dispRule.objPrimerTramo || 0) : 0
         const gDispObj2 = dispRule ? Number(dispRule.objSegundoTramo || 0) : 0
+        const gDispObj3 = dispRule ? Number(dispRule.objTercerTramo || 0) : 0
         const gArpuObj1 = arpuRule ? Number(arpuRule.objPrimerTramo || 0) : 0
         const gArpuObj2 = arpuRule ? Number(arpuRule.objSegundoTramo || 0) : 0
 
@@ -89,6 +93,7 @@ export default function ComisionesJefeTiendasPage() {
             totalArpuVentas: tArpu,
             globalDispObj1: gDispObj1,
             globalDispObj2: gDispObj2,
+            globalDispObj3: gDispObj3,
             globalArpuObj1: gArpuObj1,
             globalArpuObj2: gArpuObj2
         }
@@ -97,16 +102,18 @@ export default function ComisionesJefeTiendasPage() {
     // Cálculos de Avance
     const avanceDisp1 = totalDispVentas * (dispPct1 / 100)
     const avanceDisp2 = totalDispVentas * (dispPct2 / 100)
-    
+    const avanceDisp3 = totalDispVentas * (dispPct3 / 100)
+
     const avanceArpu1 = totalArpuVentas * (arpuPct1 / 100)
     const avanceArpu2 = totalArpuVentas * (arpuPct2 / 100)
 
-    // Total Condicionado (El máximo posible: Obj 2)
-    const totalCondicionado = avanceDisp2 + avanceArpu2
+    // Total Condicionado (El máximo posible: el tramo más alto configurado)
+    const totalCondicionado = (globalDispObj3 > 0 ? avanceDisp3 : avanceDisp2) + avanceArpu2
 
-    // Comisión Final (Real)
+    // Comisión Final (Real) - el tramo más alto alcanzado manda
     let finalDisp = 0
-    if (totalDispVentas >= globalDispObj2 && globalDispObj2 > 0) finalDisp = avanceDisp2
+    if (totalDispVentas >= globalDispObj3 && globalDispObj3 > 0) finalDisp = avanceDisp3
+    else if (totalDispVentas >= globalDispObj2 && globalDispObj2 > 0) finalDisp = avanceDisp2
     else if (totalDispVentas >= globalDispObj1 && globalDispObj1 > 0) finalDisp = avanceDisp1
 
     let finalArpu = 0
@@ -180,17 +187,19 @@ export default function ComisionesJefeTiendasPage() {
                     <table className="excel-table" style={{ width: 'auto', minWidth: 280 }}>
                         <thead>
                             <tr>
-                                <th colSpan={2} className="header-blue">Condiciones Disp+Seg</th>
+                                <th colSpan={3} className="header-blue">Condiciones Disp+Seg</th>
                             </tr>
                             <tr style={{ color: '#0078d4', fontWeight: 'bold' }}>
                                 <td>Objetivo 1</td>
                                 <td>Objetivo 2</td>
+                                <td>Objetivo 3</td>
                             </tr>
                         </thead>
                         <tbody>
                             <tr style={{ color: '#0078d4', fontWeight: 'bold' }}>
                                 <td>{globalDispObj1.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</td>
                                 <td>{globalDispObj2.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</td>
+                                <td>{globalDispObj3.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</td>
                             </tr>
                             <tr>
                                 <td>
@@ -217,6 +226,20 @@ export default function ComisionesJefeTiendasPage() {
                                             const v = Number(e.target.value);
                                             setDispPct2(v);
                                             handleSavePct('COMISION_JEFE_DISP_PCT2', v);
+                                        }}
+                                        style={{ opacity: isSuperAdmin ? 1 : 0.7 }}
+                                    /> %
+                                </td>
+                                <td>
+                                    <input
+                                        className="input-pct"
+                                        type="number" step="0.01"
+                                        value={dispPct3}
+                                        disabled={!isSuperAdmin}
+                                        onChange={e => {
+                                            const v = Number(e.target.value);
+                                            setDispPct3(v);
+                                            handleSavePct('COMISION_JEFE_DISP_PCT3', v);
                                         }}
                                         style={{ opacity: isSuperAdmin ? 1 : 0.7 }}
                                     /> %

@@ -62,12 +62,14 @@ export default function ProductosComisionanTab() {
       id: Date.now().toString(),
       nombre: '', 
       productosCuentan: '', 
-      objPrimerTramo: '', 
-      importePrimerTramo: '', 
-      objSegundoTramo: '', 
-      importeSegundoTramo: '', 
-      condicionantes: '', 
-      totalHoras: '' 
+      objPrimerTramo: '',
+      importePrimerTramo: '',
+      objSegundoTramo: '',
+      importeSegundoTramo: '',
+      objTercerTramo: '',
+      importeTercerTramo: '',
+      condicionantes: '',
+      totalHoras: ''
     }])
   }
 
@@ -100,8 +102,10 @@ export default function ProductosComisionanTab() {
           importePrimerTramo: parts[3] || '',
           objSegundoTramo: parts[4] ? parseFloat(parts[4].replace(',', '.')) || '' : '',
           importeSegundoTramo: parts[5] || '',
-          condicionantes: parts[6] || '',
-          totalHoras: parts[7] ? parseFloat(parts[7].replace(',', '.')) || '' : ''
+          objTercerTramo: parts[6] ? parseFloat(parts[6].replace(',', '.')) || '' : '',
+          importeTercerTramo: parts[7] || '',
+          condicionantes: parts[8] || '',
+          totalHoras: parts[9] ? parseFloat(parts[9].replace(',', '.')) || '' : ''
         });
       }
     });
@@ -167,7 +171,7 @@ export default function ProductosComisionanTab() {
           {showPasteModal && (
             <div style={{ background: '#FFF0F9', padding: 16, borderRadius: 12, marginBottom: 16, border: '1px solid #E91E97' }}>
               <h4 style={{ marginTop: 0, color: '#E91E97' }}>Importar Lista desde Excel</h4>
-              <p style={{ fontSize: 13, color: '#333' }}>Copia las filas desde tu Excel respetando el orden de estas 8 columnas: <strong>Nombre Comisión, Tipo de Venta, Obj. Primer Tramo, Importe 1º, Obj. Segundo Tramo, Importe 2º, Condicionantes, Total Horas</strong>. Pégalas aquí:</p>
+              <p style={{ fontSize: 13, color: '#333' }}>Copia las filas desde tu Excel respetando el orden de estas 10 columnas: <strong>Nombre Comisión, Tipo de Venta, Obj. Primer Tramo, Importe 1º, Obj. Segundo Tramo, Importe 2º, Obj. 3º Tramo, Importe 3º, Condicionantes, Total Horas</strong>. Pégalas aquí:</p>
               <textarea 
                 value={pasteText}
                 onChange={e => setPasteText(e.target.value)}
@@ -191,6 +195,8 @@ export default function ProductosComisionanTab() {
                   <th style={{ padding: '12px 8px' }}>Importe 1º</th>
                   <th style={{ padding: '12px 8px' }}>Obj. Segundo Tramo</th>
                   <th style={{ padding: '12px 8px' }}>Importe 2º</th>
+                  <th style={{ padding: '12px 8px' }}>Obj. 3º Tramo</th>
+                  <th style={{ padding: '12px 8px' }}>Importe 3º</th>
                   <th style={{ padding: '12px 8px' }}>Condicionantes</th>
                   <th style={{ padding: '12px 8px' }}>Total Horas</th>
                   {!isHistoric && <th style={{ padding: '12px 8px', width: 40 }}></th>}
@@ -239,7 +245,13 @@ export default function ProductosComisionanTab() {
                       <input type="text" disabled={isHistoric} value={rule.importeSegundoTramo || ''} onChange={e => updateRule(idx, 'importeSegundoTramo', e.target.value)} style={{ width: 80, padding: 6, backgroundColor: isHistoric ? 'transparent' : 'var(--app-bg)', color: 'var(--light-text)', border: isHistoric ? 'none' : '1px solid var(--border-color)', borderRadius: 4 }} placeholder="€ o %" />
                     </td>
                     <td style={{ padding: '8px' }}>
-                      <RuleConditionBuilder 
+                      <input type="number" step="0.01" disabled={isHistoric} value={rule.objTercerTramo ?? ''} onChange={e => updateRule(idx, 'objTercerTramo', e.target.value)} style={{ width: 80, padding: 6, backgroundColor: isHistoric ? 'transparent' : 'var(--app-bg)', color: 'var(--light-text)', border: isHistoric ? 'none' : '1px solid var(--border-color)', borderRadius: 4 }} />
+                    </td>
+                    <td style={{ padding: '8px' }}>
+                      <input type="text" disabled={isHistoric} value={rule.importeTercerTramo || ''} onChange={e => updateRule(idx, 'importeTercerTramo', e.target.value)} style={{ width: 80, padding: 6, backgroundColor: isHistoric ? 'transparent' : 'var(--app-bg)', color: 'var(--light-text)', border: isHistoric ? 'none' : '1px solid var(--border-color)', borderRadius: 4 }} placeholder="€ o %" />
+                    </td>
+                    <td style={{ padding: '8px' }}>
+                      <RuleConditionBuilder
                         disabled={isHistoric} 
                         value={rule.condicionantes || ''} 
                         onChange={val => updateRule(idx, 'condicionantes', val)} 

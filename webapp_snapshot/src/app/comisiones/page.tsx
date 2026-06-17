@@ -664,14 +664,17 @@ export default function ComisionesDashboardPage() {
                                                 borderBottom: 'none'
                                             }}>
                                                 <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 700 }}>Nombre Comisión</th>
-                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700 }}><AuditableCell metricKey="COMISION_INDIVIDUAL_TRAMO">Importe<br/>Primer Tramo</AuditableCell></th>
-                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700 }}><AuditableCell metricKey="COMISION_INDIVIDUAL_TRAMO">Importe<br/>Segundo Tramo</AuditableCell></th>
+                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700 }}><AuditableCell metricKey="COMISION_INDIVIDUAL_TRAMO">Imp. 1<br/>Tramo</AuditableCell></th>
+                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700 }}><AuditableCell metricKey="COMISION_INDIVIDUAL_TRAMO">Imp. 2<br/>Tramo</AuditableCell></th>
+                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700 }}><AuditableCell metricKey="COMISION_INDIVIDUAL_TRAMO">Imp. 3<br/>Tramo</AuditableCell></th>
                                                 <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700 }}>Ventas</th>
                                                 <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700 }}>Pte.</th>
                                                 <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700 }}>Obj. 1</th>
                                                 <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700 }}>Obj. 2</th>
+                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700 }}>Obj. 3</th>
                                                 <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700 }}>Falta 1</th>
                                                 <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700 }}>Falta 2</th>
+                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700 }}>Falta 3</th>
                                                 <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700 }}>Comisión</th>
                                             </tr>
                                         </thead>
@@ -687,6 +690,7 @@ export default function ComisionesDashboardPage() {
                                                 const totalQtty = qtty + pendingQtty
                                                 const obj1 = s.groupObj1[gName] || 0
                                                 const obj2 = s.groupObj2[gName] || 0
+                                                const obj3 = (s.groupObj3 && s.groupObj3[gName]) || 0
                                                 const isValueGroup = String(rule.importePrimerTramo || '').includes('%');
                                                 
                                                 const maxObj = obj2 > 0 ? obj2 : (obj1 > 0 ? obj1 : 0)
@@ -710,6 +714,7 @@ export default function ComisionesDashboardPage() {
                                                 let displayObj2 = obj2;
                                                 const falt1 = Math.max(0, obj1 - totalQtty)
                                                 let falt2 = Math.max(0, obj2 - totalQtty)
+                                                const falt3 = Math.max(0, obj3 - totalQtty)
                                                 if (isTeamObj2) {
                                                     const teamCount = s.activeTeamGroupCounts[gName] || 0;
                                                     const teamPending = s.activeTeamGroupPending[gName] || 0;
@@ -778,6 +783,9 @@ export default function ComisionesDashboardPage() {
                                                         <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5, color: '#334155' }}>
                                                             {formatImporteTramo(rule.importeSegundoTramo)}
                                                         </td>
+                                                        <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5, color: '#334155' }}>
+                                                            {formatImporteTramo(rule.importeTercerTramo)}
+                                                        </td>
                                                         <td
                                                              onClick={(e) => { e.stopPropagation(); const allSales = s.groupSales[gName] || []; const confirmed = allSales.filter((x:any) => String(x.pendiente||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim() !== 'si'); if(confirmed.length>0) setSalesModal({ title: `${s.name} · ${gName} — Ventas confirmadas`, sales: confirmed }); }}
                                                              style={{ padding: '8px 8px', textAlign: 'center', fontSize: 13.5, fontWeight: 800, color: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.05)', cursor: qtty > 0 ? 'pointer' : 'default', textDecoration: qtty > 0 ? 'underline' : 'none', textUnderlineOffset: 2 }}
@@ -798,15 +806,21 @@ export default function ComisionesDashboardPage() {
                                                         <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5 }}>
                                                             {displayObj2 === 0 ? '-' : <>{format(displayObj2)} {isTeamObj2 && <span style={{ fontSize: 10.5, color: 'var(--medium-gray)' }}>(Eq)</span>}</>}
                                                         </td>
+                                                        <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5 }}>
+                                                            {obj3 === 0 ? '-' : format(obj3)}
+                                                        </td>
                                                         <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5, fontWeight: 600 }}>
                                                             {obj1 === 0 ? '-' : (falt1 > 0 ? <span style={{ color: '#ef4444' }}>{format(falt1)}</span> : <span style={{ color: '#10b981' }}>✓</span>)}
                                                         </td>
                                                         <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5, fontWeight: 600 }}>
                                                             {displayObj2 === 0 ? '-' : (falt2 > 0 ? <span style={{ color: '#ef4444' }}>{format(falt2)} {isTeamObj2 ? 'entre todo el Equipo' : ''}</span> : <span style={{ color: '#10b981' }}>✓</span>)}
                                                         </td>
-                                                        <td style={{ 
-                                                            padding: '8px 10px', 
-                                                            textAlign: 'right', 
+                                                        <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5, fontWeight: 600 }}>
+                                                            {obj3 === 0 ? '-' : (falt3 > 0 ? <span style={{ color: '#ef4444' }}>{format(falt3)}</span> : <span style={{ color: '#10b981' }}>✓</span>)}
+                                                        </td>
+                                                        <td style={{
+                                                            padding: '8px 10px',
+                                                            textAlign: 'right',
                                                             fontSize: 13.5, 
                                                             fontWeight: 800, 
                                                             color: comisionCalculada > 0 ? (isConsolidada ? '#10b981' : '#d97706') : '#10b981',
@@ -870,7 +884,7 @@ export default function ComisionesDashboardPage() {
 
                                                         return (
                                                             <tr key={`terr-${rIdx}`} style={{ backgroundColor: '#ffffff' }}>
-                                                                <td colSpan={10} style={{ padding: '0 0 10px 0' }}>
+                                                                <td colSpan={13} style={{ padding: '0 0 10px 0' }}>
                                                                     <div style={{ margin: '0', border: '1px solid #38bdf8', borderRadius: '0' }}>
                                                                         <div style={{ backgroundColor: '#38bdf8', color: 'white', padding: '8px 12px', fontWeight: 800, fontSize: '12.5px', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                                             <span>TERRITORIAL O2 MOVILFREE</span>
@@ -913,7 +927,7 @@ export default function ComisionesDashboardPage() {
                                                     })}
                                                     </React.Fragment>
                                                 )
-                                            }) : <tr><td colSpan={10} style={{padding: 16, textAlign: 'center', color: '#64748b'}}>No hay reglas de comisión configuradas para este mes.</td></tr>
+                                            }) : <tr><td colSpan={13} style={{padding: 16, textAlign: 'center', color: '#64748b'}}>No hay reglas de comisión configuradas para este mes.</td></tr>
                                             })()}
                                             {s.extraGroups && s.extraGroups.length > 0 && s.extraGroups.filter((eg: any) => !String(eg.name).includes('TERRITORIAL O2 MOVILFREE')).map((eg: any, idx: number) => {
                                                 const safeName = eg.name || 'Bono Extra';
@@ -925,7 +939,7 @@ export default function ComisionesDashboardPage() {
                                                     <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 13.5, fontWeight: 800, color: '#10b981' }}>
                                                         {eg.count}
                                                     </td>
-                                                    <td colSpan={7} style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5, color: '#a7f3d0' }}>
+                                                    <td colSpan={10} style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5, color: '#a7f3d0' }}>
                                                         N/A
                                                     </td>
                                                     <td style={{ padding: '8px 10px', textAlign: 'right', fontSize: 13.5, fontWeight: 800, color: '#10b981' }}>
