@@ -702,19 +702,28 @@ export default function ComisionesDashboardPage() {
                                                 else if (totalQtty > 0 && obj1 === 0 && obj2 === 0) gradientColor = 'linear-gradient(90deg, #86efac, #22c55e)' // Verde Default (sin objetivos configurados)
                                                 
                                                 let isTeamObj2 = false;
+                                                let isTeamObj3 = false;
                                                 if (rule.condicionantes && rule.condicionantes.startsWith('[')) {
                                                     try {
                                                         const conds = JSON.parse(rule.condicionantes);
                                                         if (Array.isArray(conds)) {
                                                             isTeamObj2 = conds.some((c: any) => c.type === 'REQUIRE_TEAM_OBJ2');
+                                                            isTeamObj3 = conds.some((c: any) => c.type === 'REQUIRE_TEAM_OBJ3');
                                                         }
                                                     } catch(e) {}
                                                 }
-                                                
+
                                                 let displayObj2 = obj2;
+                                                let displayObj3 = obj3;
                                                 const falt1 = Math.max(0, obj1 - totalQtty)
                                                 let falt2 = Math.max(0, obj2 - totalQtty)
-                                                const falt3 = Math.max(0, obj3 - totalQtty)
+                                                let falt3 = Math.max(0, obj3 - totalQtty)
+                                                if (isTeamObj3) {
+                                                    const teamCount = s.activeTeamGroupCounts[gName] || 0;
+                                                    const teamPending = s.activeTeamGroupPending[gName] || 0;
+                                                    displayObj3 = Number(rule.objTercerTramo) || 0;
+                                                    falt3 = Math.max(0, displayObj3 - teamCount - teamPending);
+                                                }
                                                 if (isTeamObj2) {
                                                     const teamCount = s.activeTeamGroupCounts[gName] || 0;
                                                     const teamPending = s.activeTeamGroupPending[gName] || 0;
@@ -807,7 +816,7 @@ export default function ComisionesDashboardPage() {
                                                             {displayObj2 === 0 ? '-' : <>{format(displayObj2)} {isTeamObj2 && <span style={{ fontSize: 10.5, color: 'var(--medium-gray)' }}>(Eq)</span>}</>}
                                                         </td>
                                                         <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5 }}>
-                                                            {obj3 === 0 ? '-' : format(obj3)}
+                                                            {displayObj3 === 0 ? '-' : <>{format(displayObj3)} {isTeamObj3 && <span style={{ fontSize: 10.5, color: 'var(--medium-gray)' }}>(Eq)</span>}</>}
                                                         </td>
                                                         <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5, fontWeight: 600 }}>
                                                             {obj1 === 0 ? '-' : (falt1 > 0 ? <span style={{ color: '#ef4444' }}>{format(falt1)}</span> : <span style={{ color: '#10b981' }}>✓</span>)}
@@ -816,7 +825,7 @@ export default function ComisionesDashboardPage() {
                                                             {displayObj2 === 0 ? '-' : (falt2 > 0 ? <span style={{ color: '#ef4444' }}>{format(falt2)} {isTeamObj2 ? 'entre todo el Equipo' : ''}</span> : <span style={{ color: '#10b981' }}>✓</span>)}
                                                         </td>
                                                         <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5, fontWeight: 600 }}>
-                                                            {obj3 === 0 ? '-' : (falt3 > 0 ? <span style={{ color: '#ef4444' }}>{format(falt3)}</span> : <span style={{ color: '#10b981' }}>✓</span>)}
+                                                            {displayObj3 === 0 ? '-' : (falt3 > 0 ? <span style={{ color: '#ef4444' }}>{format(falt3)} {isTeamObj3 ? 'entre todo el Equipo' : ''}</span> : <span style={{ color: '#10b981' }}>✓</span>)}
                                                         </td>
                                                         <td style={{
                                                             padding: '8px 10px',

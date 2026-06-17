@@ -74,6 +74,8 @@ export async function POST(request: Request) {
           importePrimerTramo: r.importePrimerTramo || '',
           objSegundoTramo: r.objSegundoTramo !== undefined && r.objSegundoTramo !== '' ? Number(r.objSegundoTramo) : null,
           importeSegundoTramo: r.importeSegundoTramo || '',
+          objTercerTramo: r.objTercerTramo !== undefined && r.objTercerTramo !== '' ? Number(r.objTercerTramo) : null,
+          importeTercerTramo: r.importeTercerTramo || '',
           condicionantes: r.condicionantes || '',
           totalHoras: r.totalHoras !== undefined && r.totalHoras !== '' ? Number(r.totalHoras) : null,
           order: index,

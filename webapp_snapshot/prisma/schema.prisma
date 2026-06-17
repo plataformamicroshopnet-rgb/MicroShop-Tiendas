@@ -453,6 +453,8 @@ model TiendaCommissionRule {
   importePrimerTramo  String?
   objSegundoTramo     Float?
   importeSegundoTramo String?
+  objTercerTramo      Float?
+  importeTercerTramo  String?
   condicionantes      String?
   totalHoras          Float?
   order               Int      @default(0)

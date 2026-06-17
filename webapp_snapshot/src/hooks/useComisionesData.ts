@@ -273,7 +273,8 @@ export function useComisionesData(user?: any) {
         if (rule.nombre === 'Dispositivos + Seguros') {
             return {
                 ...rule,
-                objSegundoTramo: Math.max(0, (rule.objSegundoTramo || 0) - fttrDiscount * totalStoreFttrSales)
+                objSegundoTramo: Math.max(0, (rule.objSegundoTramo || 0) - fttrDiscount * totalStoreFttrSales),
+                objTercerTramo: Math.max(0, (Number(rule.objTercerTramo) || 0) - fttrDiscount * totalStoreFttrSales)
             };
         }
         return rule;
@@ -580,6 +581,7 @@ export function useComisionesData(user?: any) {
                 let activeImp = imp1;
                 let isConsolidado = (obj1 === 0 && obj2 === 0) || (qttyTotal >= obj1 && obj1 > 0);
                 let isTeamObj2 = false;
+                let isTeamObj3 = false;
                 let isAccumulative = false;
                 let isAccumulativeFixed = false;
 
@@ -591,6 +593,8 @@ export function useComisionesData(user?: any) {
                             for (const cond of conds) {
                                 if (cond.type === 'REQUIRE_TEAM_OBJ2') {
                                     isTeamObj2 = true;
+                                } else if (cond.type === 'REQUIRE_TEAM_OBJ3') {
+                                    isTeamObj3 = true;
                                 } else if (cond.type === 'ACCUMULATIVE_TRAMOS') {
                                     isAccumulative = true;
                                 } else if (cond.type === 'ACCUMULATIVE_FIXED_BASE') {
@@ -621,16 +625,17 @@ export function useComisionesData(user?: any) {
                     }
                 }
 
-                if (isTeamObj2) {
+                if (isTeamObj2 || isTeamObj3) {
+                    // Tramo 2 y/o 3 colectivos: se evalúan contra el total del Equipo (objetivo global, sin prorratear)
                     const globalObj2 = rule.objSegundoTramo || 0;
+                    const globalObj3 = Number(rule.objTercerTramo) || 0;
                     const teamTotal = (activeTeamGroupCounts[ruleName] || 0) + (activeTeamGroupPending[ruleName] || 0);
-                    if (teamTotal >= globalObj2 && globalObj2 > 0 && qttyTotal >= obj1 && obj1 > 0) {
-                        activeImp = imp2;
-                    } else if (qttyTotal >= obj1 && obj1 > 0) {
-                        activeImp = imp1;
-                    } else {
-                        activeImp = imp1;
-                    }
+                    const baseOk = qttyTotal >= obj1 && obj1 > 0;
+                    const reached3 = isTeamObj3 ? (globalObj3 > 0 && teamTotal >= globalObj3) : (obj3 > 0 && qttyTotal >= obj3);
+                    const reached2 = isTeamObj2 ? (globalObj2 > 0 && teamTotal >= globalObj2) : (obj2 > 0 && qttyTotal >= obj2);
+                    if (baseOk && reached3) activeImp = imp3;
+                    else if (baseOk && reached2) activeImp = imp2;
+                    else activeImp = imp1;
                 } else {
                     if (qttyTotal >= obj3 && obj3 > 0) activeImp = imp3;
                     else if (qttyTotal >= obj2 && obj2 > 0) activeImp = imp2;
