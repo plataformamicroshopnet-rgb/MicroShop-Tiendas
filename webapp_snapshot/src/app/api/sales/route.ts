@@ -161,6 +161,8 @@ export async function GET(request: Request) {
         imei: sale.imei || '',
         numeroPedido: (sale as any).numeroPedido || '',
         origenStock: (sale as any).origenStock || '',
+        isSwap: (sale as any).isSwap === true,
+        isLibre: (sale as any).isLibre === true,
         motivoModificacion: ''
       }
     })

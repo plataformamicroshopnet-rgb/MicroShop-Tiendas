@@ -1568,6 +1568,8 @@ export default function LiquidacionesPage() {
                 { header: 'Tipo de Venta', key: 'tipoVenta', width: 20 },
                 { header: 'Producto', key: 'producto', width: 30 },
                 { header: 'Cuota Total', key: 'cuotaTotal', width: 15 },
+                { header: 'Con Coste', key: 'conCoste', width: 10 },
+                { header: 'Swap', key: 'swap', width: 8 },
                 { header: 'Comisión (€)', key: 'comision', width: 15 },
                 { header: 'Varios', key: 'varios', width: 25 },
                 { header: 'Estado', key: 'estado', width: 15 }
@@ -1591,6 +1593,8 @@ export default function LiquidacionesPage() {
                     tipoVenta: sale.detalle === 'Ti' ? 'Contratos Móvil' : sale.detalle === 'O2' ? 'O2 MovilFree' : (sale.detalle || '-'),
                     producto: sale.producto || 'Sin especificar',
                     cuotaTotal: cuotaTotalEuros > 0 ? Number(cuotaTotalEuros) : null,
+                    conCoste: (() => { const d=String(sale.detalle||'').toLowerCase(); if(d!=='rent'&&d!=='tma') return '-'; const v=String(sale.rentConCoste||'').toLowerCase(); return (v==='si'||v==='sí')?'Sí':'No'; })(),
+                    swap: sale.isSwap === true ? 'Sí' : 'No',
                     comision: Number(comisionEuros),
                     varios: sale.anotaciones || '-',
                     estado: estadoText
@@ -1606,6 +1610,8 @@ export default function LiquidacionesPage() {
                     codigo: resolveExtraCode(ex) || 'MANUAL',
                     tipoVenta: 'EXTRA',
                     producto: ex.rule?.name || 'Incentivo Manual',
+                    conCoste: '-',
+                    swap: '-',
                     comision: Number(ex.telecomRewardAmount || 0),
                     varios: ex.customerName || '-',
                     estado: ex.status === 'PENDING' ? 'PED' : 'AUTO'
@@ -1701,6 +1707,8 @@ export default function LiquidacionesPage() {
                                 <th style={{ textAlign: 'left', color: 'var(--medium-gray)' }}>Tipo de Venta</th>
                                 <th style={{ textAlign: 'left', color: 'var(--medium-gray)' }}>Producto</th>
                                 <th style={{ textAlign: 'center', color: 'var(--medium-gray)' }}>Cuota Total</th>
+                                <th style={{ textAlign: 'center', color: 'var(--medium-gray)' }}>Con Coste</th>
+                                <th style={{ textAlign: 'center', color: 'var(--medium-gray)' }}>Swap</th>
                                 <th style={{ textAlign: 'center', color: 'var(--medium-gray)' }}>Comisión (€)</th>
                                 <th style={{ textAlign: 'left', color: 'var(--medium-gray)' }}>Varios</th>
                                 <th style={{ textAlign: 'center', color: 'var(--medium-gray)' }}>Estado</th>
@@ -1740,6 +1748,12 @@ export default function LiquidacionesPage() {
                                         </td>
                                         <td className="col-importe" style={{ textAlign: 'center', color: '#059669', fontWeight: 800 }}>
                                             {getCuotaTotal(s) > 0 ? `${getCuotaTotal(s).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : '—'}
+                                        </td>
+                                        <td style={{ textAlign: 'center' }}>
+                                            {(() => { const d = String(s.detalle || '').toLowerCase(); if (d !== 'rent' && d !== 'tma') return <span style={{ color: 'var(--text-muted)' }}>-</span>; const v = String(s.rentConCoste || '').toLowerCase(); return (v === 'si' || v === 'sí') ? <span style={{ color: '#059669', fontWeight: 700 }}>Sí</span> : <span style={{ color: 'var(--medium-gray)' }}>No</span>; })()}
+                                        </td>
+                                        <td style={{ textAlign: 'center' }}>
+                                            {s.isSwap === true ? <span style={{ color: '#059669', fontWeight: 700 }}>Sí</span> : <span style={{ color: 'var(--medium-gray)' }}>No</span>}
                                         </td>
                                         <td className="col-importe" style={{ textAlign: 'center', color: '#0000FF' }}>
                                             {isEditing ? <input className="form-input" style={{ padding: '0 4px', width: 70, textAlign: 'center', color: '#0000FF' }} value={editForm.importe || editForm.cuota || ''} onChange={e => setEditForm({ ...editForm, importe: e.target.value })} /> : `${getCommission(s).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`}
@@ -1796,6 +1810,8 @@ export default function LiquidacionesPage() {
                                     <td style={{ color: '#059669' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Zap size={14} /> {ex.rule?.name || 'Incentivo Manual'}</div>
                                     </td>
+                                    <td style={{ textAlign: 'center', color: '#059669' }}>-</td>
+                                    <td style={{ textAlign: 'center', color: '#059669' }}>-</td>
                                     <td style={{ textAlign: 'center', color: '#059669' }}>-</td>
                                     <td style={{ textAlign: 'center', color: '#10b981' }}>
                                         {`+ ${Number(ex.telecomRewardAmount).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`}

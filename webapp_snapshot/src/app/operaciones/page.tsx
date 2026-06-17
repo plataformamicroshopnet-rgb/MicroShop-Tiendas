@@ -1128,6 +1128,8 @@ function OperationsContent() {
               Anulado: (s.anulado === 'Si' || s.pendiente === 'Anulado') ? 'Si' : 'No',
               Anotaciones: s.anotaciones || '',
               CuotaTotal: cuotaTotal > 0 ? Number(cuotaTotal) : null,
+              ConCoste: (() => { const d=String(s.detalle||'').toLowerCase(); if(d!=='rent'&&d!=='tma') return '-'; const v=String(s.rentConCoste||'').toLowerCase(); return (v==='si'||v==='sí')?'Sí':'No'; })(),
+              Swap: s.isSwap === true ? 'Sí' : 'No',
               Valor: Number(rawValor)   // solo se vuelca a Excel si isAdmin (columna Comisión)
           });
       });
@@ -1149,6 +1151,8 @@ function OperationsContent() {
               Anulado: 'No',
               Anotaciones: 'Extra Automático',
               CuotaTotal: null,
+              ConCoste: '-',
+              Swap: '-',
               Valor: Number(ex.telecomRewardAmount || 0)   // solo se vuelca a Excel si isAdmin
           });
       });
@@ -1168,7 +1172,9 @@ function OperationsContent() {
         { header: 'Pte', key: 'Pte', width: 8 },
         { header: 'Anulado', key: 'Anulado', width: 10 },
         { header: 'Anotaciones', key: 'Anotaciones', width: 30 },
-        { header: 'Cuota Total (€)', key: 'CuotaTotal', width: 16 }
+        { header: 'Cuota Total (€)', key: 'CuotaTotal', width: 16 },
+        { header: 'Con Coste', key: 'ConCoste', width: 10 },
+        { header: 'Swap', key: 'Swap', width: 8 }
       ];
       // Solo el Administrador ve la comisión; el resto (p. ej. Salva) NO
       if (isAdmin) {
@@ -1321,13 +1327,15 @@ function OperationsContent() {
                 <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Anul.</th>
                 <th style={{ padding: '4px 6px', textAlign: 'left', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px', minWidth: 120, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Anotaciones</th>
                 <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Cuota Total</th>
+                <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Con Coste</th>
+                <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Swap</th>
                 <th style={{ padding: '4px 6px', textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {displayedSales.length === 0 ? (
                 <tr>
-                  <td colSpan={15} style={{ padding: '24px', textAlign: 'center', color: '#555555' }}>
+                  <td colSpan={17} style={{ padding: '24px', textAlign: 'center', color: '#555555' }}>
                     {activeVendorFilter ? `No hay datos disponibles para ${activeVendorFilter}.` : 'No hay datos disponibles para tu rol o todavía no hay ventas registradas.'}
                   </td>
                 </tr>
@@ -1397,6 +1405,23 @@ function OperationsContent() {
                     </td>
 
                     <td style={{ padding: '4px 6px', textAlign: 'center' }}>
+                      {(() => {
+                        const d = String(sale.detalle || '').toLowerCase();
+                        if (d !== 'rent' && d !== 'tma') return <span style={{ color: '#999' }}>-</span>;
+                        const v = String(sale.rentConCoste || '').toLowerCase();
+                        return (v === 'si' || v === 'sí')
+                          ? <span style={{ color: '#059669', fontWeight: 700 }}>Sí</span>
+                          : <span style={{ color: '#555' }}>No</span>;
+                      })()}
+                    </td>
+
+                    <td style={{ padding: '4px 6px', textAlign: 'center' }}>
+                      {sale.isSwap === true
+                        ? <span style={{ color: '#059669', fontWeight: 700 }}>Sí</span>
+                        : <span style={{ color: '#555' }}>No</span>}
+                    </td>
+
+                    <td style={{ padding: '4px 6px', textAlign: 'center' }}>
                       {editingId === sale.id ? (
                         <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
                           <button onClick={saveEdit} disabled={saving} style={{ background: 'var(--mercedes-cyan)', border: 'none', color: 'var(--bg-card)', padding: '6px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center' }} title="Guardar">
@@ -1445,6 +1470,8 @@ function OperationsContent() {
                   <td style={{ padding: '4px 6px', textAlign: 'center', color: '#059669' }}>No</td>
                   <td style={{ padding: '4px 6px', color: '#059669', fontSize: 12 }}>EXTRA TELEFÓNICA ({resolveRawCode(ex)})</td>
                   <td style={{ padding: '4px 6px', textAlign: 'center', color: '#059669' }}>—</td>
+                  <td style={{ padding: '4px 6px', textAlign: 'center', color: '#059669' }}>-</td>
+                  <td style={{ padding: '4px 6px', textAlign: 'center', color: '#059669' }}>-</td>
 
                   <td style={{ padding: '4px 6px', textAlign: 'center' }}>
                      <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
