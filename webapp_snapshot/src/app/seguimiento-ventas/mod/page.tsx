@@ -251,7 +251,7 @@ export default function ModPage() {
                     const pymeData = renderDashboardData('Pyme', importesPyme, pymeMonthObj, salesList, objGrupos, periodData);
                     const captadorData = renderDashboardData('Captador', importesPlus, captadorMonthObj, salesList, objGrupos, periodData);
 
-                    const getCommission = (sale: any) => {
+                    const getCommissionBase = (sale: any) => {
                         if (sale.anulado === 'Si' || sale.pendiente === 'Anulado') return 0;
 
                         let sMonth = ''
@@ -338,6 +338,9 @@ export default function ModPage() {
                         const dashboardRows = isPlus ? pymeData.rows : captadorData.rows;
                         return calculateDynamicCommission(sale, dashboardRows, overrideBaseValue);
                     };
+
+                    // La empresa cobra 15€ extra por cada Swap (venta con ¿Swap? marcado)
+                    const getCommission = (sale: any) => getCommissionBase(sale) + (sale.isSwap === true ? 15 : 0);
 
                     // Filter out Solar360 sales as done in the screen table of liquidacion
                     const salesForTable = salesList.filter((s: any) => {

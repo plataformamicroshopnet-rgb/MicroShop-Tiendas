@@ -1130,7 +1130,7 @@ function OperationsContent() {
               CuotaTotal: cuotaTotal > 0 ? Number(cuotaTotal) : null,
               ConCoste: (() => { const d=String(s.detalle||'').toLowerCase(); if(d!=='rent'&&d!=='tma') return '-'; const v=String(s.rentConCoste||'').toLowerCase(); return (v==='si'||v==='sí')?'Sí':'No'; })(),
               Swap: s.isSwap === true ? 'Sí' : 'No',
-              Valor: Number(rawValor)   // solo se vuelca a Excel si isAdmin (columna Comisión)
+              Valor: Number(rawValor) + (s.isSwap === true ? 15 : 0)   // comisión empresa (+15€ bono Swap); solo se vuelca a Excel si isAdmin
           });
       });
 

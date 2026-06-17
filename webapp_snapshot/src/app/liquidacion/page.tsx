@@ -1376,7 +1376,7 @@ export default function LiquidacionesPage() {
         const captadorData = renderDashboardData('Captador', importesPlus, captadorMonthObj, filteredSalesGlobal, objGrupos, activePeriodObj)
 
         // 2. Helper to get calculated commission for a specific operation
-        const getCommission = (sale: any) => {
+        const getCommissionBase = (sale: any) => {
             const parseSafeFloat = (val: any): number => {
                 if (val === null || val === undefined) return 0;
                 if (typeof val === 'number') return isNaN(val) ? 0 : val;
@@ -1507,6 +1507,9 @@ export default function LiquidacionesPage() {
             }
             return finalCommission;
         }
+
+        // La empresa cobra 15€ extra por cada Swap (venta con ¿Swap? marcado), además de la comisión normal de la operación
+        const getCommission = (sale: any) => getCommissionBase(sale) + (sale.isSwap === true ? 15 : 0);
 
         // Helper: Cuota Total del producto (para Seguros usa seguroImporte, para el resto cuota)
         const getCuotaTotal = (sale: any): number => {

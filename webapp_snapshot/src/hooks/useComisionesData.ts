@@ -71,6 +71,10 @@ export const matchTipoVenta = (sale: any, tipoVentaRaw: string) => {
                 case 'seguro':
                     matched = cat === 'seguro';
                     break;
+                case 'swap':
+                    // Un "Swap" es cualquier venta con el check ¿Swap? marcado (isSwap)
+                    matched = sale.isSwap === true || String(sale.isSwap).toLowerCase() === 'true';
+                    break;
                 case 'mpa':
                     matched = prod.includes('movistar prosegur alarmas') || prod.includes('mpa') || prod.includes('alarma');
                     break;

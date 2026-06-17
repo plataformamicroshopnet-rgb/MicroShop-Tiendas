@@ -357,7 +357,7 @@ export default function ModResumenPage() {
     }, 0);
 
     // --- 4. TIENDAS MOVISTAR ---
-    const getCommission = (sale: any) => {
+    const getCommissionBase = (sale: any) => {
       if (sale.anulado === 'Si' || sale.anulado === 'Sí' || sale.pendiente === 'Anulado') return 0;
 
       let sMonth = ''
@@ -449,6 +449,9 @@ export default function ModResumenPage() {
       const dashboardRows = isPlus ? pymeData.rows : captadorData.rows;
       return calculateDynamicCommission(sale, dashboardRows, overrideBaseValue);
     };
+
+    // La empresa cobra 15€ extra por cada Swap (venta con ¿Swap? marcado)
+    const getCommission = (sale: any) => getCommissionBase(sale) + (sale.isSwap === true ? 15 : 0);
 
     // Filter non-O2 sales
     const nonO2Sales = salesList.filter(s => {
