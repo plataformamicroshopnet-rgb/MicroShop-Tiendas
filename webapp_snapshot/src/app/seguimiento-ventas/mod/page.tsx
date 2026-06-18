@@ -8,6 +8,7 @@ import { TrendingUp, ArrowLeft, Globe, BarChart2, LineChart } from 'lucide-react
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useRouter } from 'next/navigation'
 import { renderDashboardData, calculateDynamicCommission, sanitizeSale, normalizeString, isVentaWithinDates } from '@/lib/salesUtils'
+import { getSaleCommissionBase } from '@/lib/saleCommission'
 
 export default function ModPage() {
     const router = useRouter()
@@ -251,93 +252,14 @@ export default function ModPage() {
                     const pymeData = renderDashboardData('Pyme', importesPyme, pymeMonthObj, salesList, objGrupos, periodData);
                     const captadorData = renderDashboardData('Captador', importesPlus, captadorMonthObj, salesList, objGrupos, periodData);
 
-                    const getCommissionBase = (sale: any) => {
-                        if (sale.anulado === 'Si' || sale.pendiente === 'Anulado') return 0;
-
-                        let sMonth = ''
-                        if (sale.fecha) {
-                           const parts = sale.fecha.split('/')
-                           if (parts.length === 3) sMonth = `${parts[2]}${parts[1]}`
-                           else if (sale.fecha.includes('-')) {
-                               const p = sale.fecha.split('-')
-                               if (p.length >= 2) sMonth = `${p[0]}${p[1]}`
-                           }
-                        }
-                        
-                        const getFallbackValue = () => {
-                             let val = sale.importe || sale.cuota || 0;
-                             const det = (sale.detalle || '').toLowerCase();
-                             if (!val && (det === 'ti' || det === 'tma' || det === 'rent' || det === 'micro')) {
-                                 let catalogKey = '';
-                                 if (det === 'ti') catalogKey = 'Ti';
-                                 if (det === 'tma' || det === 'rent') catalogKey = 'Rent';
-                                 if (det === 'micro') catalogKey = 'Micro';
-                                 
-                                 const list = catalogs[catalogKey] || [];
-                                 const found = list.find((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
-                                 if (found) {
-                                     val = parseSafeFloat(found.anual);
-                                 }
-                             }
-                             return parseSafeFloat(val);
-                        }
-
-                        if (!sMonth) return getFallbackValue();
-                        if (sMonth !== saleMonth) return getFallbackValue();
-                        
-                        const det = (sale.detalle || '').toLowerCase();
-                        const isTV = det === 'suscripciones tv' || det === 'suscripcion tv';
-                        
-                        if (det === 'o2' || det === 'seguro' || det === 'mimovistar' || det === 'repos' || det === 'varios' || isTV || det === 'prepago' || det === 'resto baf' || det === 'traslado mimovistar') {
-                            if (det === 'seguro') {
-                                const list = catalogs['Seguro'] || [];
-                                const found = list.find((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
-                                if (found && found.comision) {
-                                    return parseSafeFloat(found.comision);
-                                }
-                            }
-                            return parseSafeFloat(sale.importe || sale.cuota || 0);
-                        }
-                        
-                        let overrideBaseValue: number | undefined = undefined;
-                        if (det === 'ti' || det === 'tma' || det === 'rent' || det === 'micro') {
-                            let catalogKey = '';
-                            if (det === 'ti') catalogKey = 'Ti';
-                            if (det === 'tma' || det === 'rent') catalogKey = 'Rent';
-                            if (det === 'micro') catalogKey = 'Micro';
-                            
-                            const list = catalogs[catalogKey] || [];
-                            const matchingProducts = list.filter((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
-                            
-                            let found = matchingProducts[0];
-                            if (matchingProducts.length > 1) {
-                                const correctlyDated = matchingProducts.find((c: any) => isVentaWithinDates(sale.fecha, c.validFrom, c.validTo));
-                                if (correctlyDated) found = correctlyDated;
-                            }
-
-                            if (found) {
-                                overrideBaseValue = Number(String(found.anual || 0).replace(',','.'));
-                                
-                                if (det === 'ti') {
-                                    return overrideBaseValue;
-                                }
-                                
-                                if (det === 'tma' || det === 'rent') {
-                                    const isConCoste = sale.rentConCoste && (sale.rentConCoste.toLowerCase() === 'sí' || sale.rentConCoste.toLowerCase() === 'si');
-                                    if (isConCoste) {
-                                        return Number(String(found.comisionConCoste || 0).replace(',','.'));
-                                    } else {
-                                        return Number(String(found.comision || 0).replace(',','.'));
-                                    }
-                                }
-                            }
-                        }
-
-                        const plusCodesExact = ['plus 1ks', 'plus 1sk', 'plus nfg', 'plus n7d', 'plus k2z', 'plus zf7'];
-                        const isPlus = plusCodesExact.some(c => String(sale.codigo || '').toLowerCase().includes(c));
-                        const dashboardRows = isPlus ? pymeData.rows : captadorData.rows;
-                        return calculateDynamicCommission(sale, dashboardRows, overrideBaseValue);
-                    };
+                    // Delegado en la fuente unica lib/saleCommission (misma logica que antes,
+                    // sin el +15 de Swap, que lo anade getCommission mas abajo).
+                    const getCommissionBase = (sale: any) => getSaleCommissionBase(sale, {
+                        catalogs,
+                        dashRowsPlus: pymeData.rows,
+                        dashRowsBasico: captadorData.rows,
+                        viewingPeriod: saleMonth,
+                    });
 
                     // La empresa cobra 15€ extra por cada Swap (venta con ¿Swap? marcado)
                     const getCommission = (sale: any) => getCommissionBase(sale) + (sale.isSwap === true ? 15 : 0);

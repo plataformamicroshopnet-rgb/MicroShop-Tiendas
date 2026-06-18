@@ -11,6 +11,7 @@ import { PeriodSelector } from '@/components/PeriodSelector'
 import { usePeriod } from '@/components/PeriodProvider'
 import { OBJECTIVE_KEYS, OBJECTIVE_MAPPING } from '@/lib/constants'
 import { calculateDynamicCommission, sanitizeSale, normalizeString, getCurrentMonthString, isVentaWithinDates, renderDashboardData } from '@/lib/salesUtils'
+import { getSaleCommissionBase } from '@/lib/saleCommission'
 import { can, canEdit } from '@/lib/permissions'
 import { useGuard } from '@/hooks/useGuard'
 import { RepescaTrimestral } from './RepescaTrimestral'
@@ -1376,137 +1377,16 @@ export default function LiquidacionesPage() {
         const captadorData = renderDashboardData('Captador', importesPlus, captadorMonthObj, filteredSalesGlobal, objGrupos, activePeriodObj)
 
         // 2. Helper to get calculated commission for a specific operation
-        const getCommissionBase = (sale: any) => {
-            const parseSafeFloat = (val: any): number => {
-                if (val === null || val === undefined) return 0;
-                if (typeof val === 'number') return isNaN(val) ? 0 : val;
-                const clean = String(val).replace('€', '').replace(/\s/g, '').replace(',', '.').trim();
-                const num = parseFloat(clean);
-                return isNaN(num) ? 0 : num;
-            };
-
-            // Enforce unified state filter
-            if (sale.anulado === 'Si' || sale.pendiente === 'Anulado') return 0;
-
-            const tipoVenta = (String(sale.sheet || '')).trim().toLowerCase();
-            const codigo = (String(sale.codigo || '')).trim().toLowerCase();
-
-            const prod = (String(sale.producto || '')).trim().toLowerCase();
-            const cat = (String(sale.categoria || '')).trim().toLowerCase();
-
-            const codigoLower = String(sale.codigo || '').trim().toLowerCase();
-
-            const isBasico = codigoLower.includes('básico xcu') || codigoLower.includes('basico xcu');
-            
-            const plusCodesExact = ['plus 1ks', 'plus 1sk', 'plus nfg', 'plus n7d', 'plus k2z', 'plus zf7'];
-            const isPlus = plusCodesExact.some(c => codigoLower.includes(c));
-            
-            // Check if sale date matches the active selectedMonth (which is what dashboard is computing for)
-            let saleMonth = ''
-            if (sale.fecha) {
-               const parts = sale.fecha.split('/')
-               if (parts.length === 3) saleMonth = `${parts[2]}${parts[1]}`
-               else if (sale.fecha.includes('-')) {
-                   const p = sale.fecha.split('-')
-                   if (p.length >= 2) saleMonth = `${p[0]}${p[1]}`
-               }
-            }
-            // Helper to pull fallback value if empty
-            const getFallbackValue = () => {
-                 let val = sale.importe || sale.cuota || 0;
-                 const det = (sale.detalle || '').toLowerCase();
-                 if (!val && (det === 'ti' || det === 'tma' || det === 'rent' || det === 'micro')) {
-                     let catalogKey = '';
-                     if (det === 'ti') catalogKey = 'Ti';
-                     if (det === 'tma' || det === 'rent') catalogKey = 'Rent';
-                     if (det === 'micro') catalogKey = 'Micro';
-                     
-                     const list = catalogs[catalogKey] || [];
-                     const found = list.find((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
-                     if (found) {
-                         val = parseSafeFloat(found.anual);
-                     }
-                 }
-                 return parseSafeFloat(val);
-            }
-
-            if (!saleMonth) return getFallbackValue();
-
-            // Compare against the selected viewing period (not today's calendar month)
-            // This ensures April sales show correct commissions even when viewed on May 1st
-            const viewingPeriod = activePeriodObj
+        // Delegado en la fuente única lib/saleCommission (misma lógica que antes,
+        // sin el +15 de Swap, que lo añade getCommission más abajo).
+        const getCommissionBase = (sale: any) => getSaleCommissionBase(sale, {
+            catalogs,
+            dashRowsPlus: pymeData.rows,
+            dashRowsBasico: captadorData.rows,
+            viewingPeriod: activePeriodObj
                 ? `${activePeriodObj.year}${String(activePeriodObj.month).padStart(2, '0')}`
-                : getCurrentMonthString();
-            if (saleMonth !== viewingPeriod) return getFallbackValue();
-            
-            const dashboardRows = isPlus ? pymeData.rows : captadorData.rows;
-
-            // Fetch catalog override value for technical products if it exists
-            const det = (sale.detalle || '').toLowerCase();
-            
-            const isTV = det === 'suscripciones tv' || det === 'suscripcion tv';
-            // O2, Seguro, miMovistar and new standalone categories store their commission directly in importe/cuota
-            if (det === 'o2' || det === 'seguro' || det === 'mimovistar' || det === 'repos' || det === 'varios' || isTV || det === 'prepago' || det === 'resto baf' || det === 'traslado mimovistar') {
-                if (det === 'seguro') {
-                    const seguroList = catalogs['Seguro'] || [];
-                    const foundSeguro = seguroList.find((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
-                    if (foundSeguro && foundSeguro.comision) {
-                        return parseSafeFloat(foundSeguro.comision);
-                    }
-                }
-                return parseSafeFloat(sale.importe || sale.cuota || 0);
-            }
-            
-            let overrideBaseValue: number | undefined = undefined;
-            if (det === 'ti' || det === 'tma' || det === 'rent' || det === 'micro') {
-                // Ensure we map back to the EXACT object key in catalogs since it stores as 'Ti', 'Rent', 'Micro'
-                let catalogKey = '';
-                if (det === 'ti') catalogKey = 'Ti';
-                if (det === 'tma' || det === 'rent') catalogKey = 'Rent';
-                if (det === 'micro') catalogKey = 'Micro';
-                
-                const list = catalogs[catalogKey] || [];
-                const matchingProducts = list.filter((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
-                
-                let found = matchingProducts[0]; // fallback/default to the first one available
-                
-                // If there are multiple versions of the same product, apply validity window filtering
-                if (matchingProducts.length > 1) {
-                    const correctlyDated = matchingProducts.find((c: any) => isVentaWithinDates(sale.fecha, c.validFrom, c.validTo));
-                    if (correctlyDated) {
-                        found = correctlyDated;
-                    }
-                }
-
-                if (found) {
-                    overrideBaseValue = Number(String(found.anual || 0).replace(',','.'));
-                    console.log(`[Calc Commission] Match found for ${sale.producto} (Date: ${sale.fecha})! Base Value set to: ${overrideBaseValue}`);
-                    
-                    // Direct override para Contratos Móvil (Ti), usamos directamente la Comisión del catálogo
-                    if (det === 'ti') {
-                        return overrideBaseValue; // overrideBaseValue is already parsed from found.anual
-                    }
-                    
-                    // Direct override para RENT (TMA), verificando si la venta lleva seguro con coste
-                    if (det === 'tma' || det === 'rent') {
-                        const isConCoste = sale.rentConCoste && (sale.rentConCoste.toLowerCase() === 'sí' || sale.rentConCoste.toLowerCase() === 'si');
-                        if (isConCoste) {
-                            return Number(String(found.comisionConCoste || 0).replace(',','.'));
-                        } else {
-                            return Number(String(found.comision || 0).replace(',','.'));
-                        }
-                    }
-                } else {
-                    console.log(`[Calc Commission] No match found in catalog for ${sale.producto}`);
-                }
-            }
-
-            const finalCommission = calculateDynamicCommission(sale, dashboardRows, overrideBaseValue);
-            if (det === 'tma' || det === 'micro') {
-                 console.log(`[Calc Commission] FINAL PAYOUT for ${sale.producto}: ${finalCommission}€`);
-            }
-            return finalCommission;
-        }
+                : getCurrentMonthString(),
+        });
 
         // La empresa cobra 15€ extra por cada Swap (venta con ¿Swap? marcado), además de la comisión normal de la operación
         const getCommission = (sale: any) => getCommissionBase(sale) + (sale.isSwap === true ? 15 : 0);
