@@ -206,12 +206,17 @@ export default function MovilFreeApp() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ products: newProducts, tienda: selectedTienda })
       })
-      if (!res.ok) throw new Error('Error al guardar en masa')
-      
+      const out = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(out?.error || 'Error al guardar en masa')
+
       setShowPasteModal(false)
       setPasteText('')
       fetch('/api/movilfree/products').then(r => r.json()).then(d => { if(Array.isArray(d)) setProducts(d) })
-      alert(`¡Se han añadido ${newProducts.length} productos correctamente para la tienda ${selectedTienda === 'O2' ? 'Movilfree' : selectedTienda}!`)
+      const añadidos = typeof out?.count === 'number' ? out.count : newProducts.length
+      const avisos = Array.isArray(out?.errores) && out.errores.length
+        ? `\n\n⚠️ Avisos (no añadidos):\n- ${out.errores.join('\n- ')}`
+        : ''
+      alert(`Se han añadido ${añadidos} producto(s) para la tienda ${selectedTienda === 'O2' ? 'Movilfree' : selectedTienda}.${avisos}`)
     } catch(e: any) {
       alert(e.message)
     }
@@ -467,13 +472,18 @@ export default function MovilFreeApp() {
 
   const handleCreateProduct = async () => {
     if(!newProd.nombre) return alert('El nombre es obligatorio')
-    const res = await fetch('/api/movilfree/products', { 
-      method: 'POST', 
+    // Un terminal con IMEI es una unidad serializada: el IMEI debe tener 15 dígitos.
+    if(newProd.categoria === 'Terminal' && newProd.imei && newProd.imei.replace(/\D/g, '').length !== 15)
+      return alert('El IMEI debe tener 15 dígitos.')
+    const res = await fetch('/api/movilfree/products', {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...newProd, tienda: selectedTienda }) 
+      body: JSON.stringify({ ...newProd, tienda: selectedTienda })
     })
-    const created = await res.json()
-    setProducts([created, ...products])
+    const result = await res.json().catch(() => ({}))
+    if(!res.ok) return alert(result?.error || 'No se pudo añadir el producto.')
+    // Refrescamos la lista en vez de insertar a mano (evita filas duplicadas por id).
+    fetch('/api/movilfree/products').then(r => r.json()).then(d => { if(Array.isArray(d)) setProducts(d) })
     setNewProd({ nombre: '', categoria: 'Accesorio', precio: 0, coste: 0, stock: 0, imei: '' })
   }
   const updateStock = async (id: string, newStock: number) => {
@@ -1207,7 +1217,7 @@ export default function MovilFreeApp() {
               {showPasteModal && (
                 <div style={{ background: '#e8f5e9', padding: 16, borderRadius: 12, marginBottom: 24, border: '1px solid #4CAF50' }}>
                   <h3 style={{ marginTop: 0, color: '#2e7d32' }}>Importar desde Excel</h3>
-                  <p style={{ fontSize: 13, color: '#333' }}>Copia las filas desde tu Excel respetando el orden de estas 7 columnas: <strong>Nombre, Categoría, Coste, Precio, PVP, Stock, IMEI</strong>. Pégalas aquí:</p>
+                  <p style={{ fontSize: 13, color: '#333' }}>Copia las filas desde tu Excel respetando el orden de estas 6 columnas: <strong>Nombre, Categoría, Coste (sin IVA), PVP (con IVA), Stock, IMEI</strong>. Pégalas aquí:<br/><span style={{ fontSize: 12, color: '#888' }}>En los <strong>Terminal</strong> con IMEI, cada IMEI (15 dígitos) entra como una unidad propia; la columna Stock se ignora.</span></p>
                   <textarea 
                     value={pasteText}
                     onChange={e => setPasteText(e.target.value)}
