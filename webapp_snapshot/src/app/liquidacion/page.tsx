@@ -649,8 +649,8 @@ export default function LiquidacionesPage() {
                         )}
                     </div>
                 </div>
-                <div style={{ overflowX: 'auto' }}>
-                    <table className="tabla-liquidacion-compacta" style={{ minWidth: 920, width: '100%', borderCollapse: 'collapse', fontSize: 7 }}>
+                <div className="tabla-movil-wrap" style={{ overflowX: 'auto' }}>
+                    <table className="tabla-liquidacion-compacta tabla-movil" style={{ minWidth: 920, width: '100%', borderCollapse: 'collapse', fontSize: 7 }}>
                         <thead>
                             <tr style={{ backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
                                 <th style={{ width: '47px', minWidth: '47px', maxWidth: '47px', padding: 0, overflow: 'hidden' }}>GRUPO</th>
@@ -1062,8 +1062,8 @@ export default function LiquidacionesPage() {
                         <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--light-text)' }}>VENTAS vs IMPORTES PLUS y BÁSICO</span>
                         <span style={{ fontSize: 12, color: 'var(--medium-gray)' }}>Fórmula por canal · Operaciones por Grupo Cliente</span>
                     </div>
-                    <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <div className="tabla-movil-wrap" style={{ overflowX: 'auto' }}>
+                        <table className="tabla-movil" style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead>
                                 <tr style={{ backgroundColor: 'var(--active-bg)' }}>
                                     <th style={{ ...thStyle(), textAlign: 'left' as const }}>Bloque</th>
@@ -1578,8 +1578,8 @@ export default function LiquidacionesPage() {
                         </div>
                     </div>
                 </div>
-                <div style={{ overflowX: 'auto' }}>
-                    <table className="tabla-liquidacion-compacta" style={{ minWidth: 900, width: '100%', borderCollapse: 'collapse' }}>
+                <div className="tabla-movil-wrap" style={{ overflowX: 'auto' }}>
+                    <table className="tabla-liquidacion-compacta tabla-movil" style={{ minWidth: 900, width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
                             <tr style={{ backgroundColor: 'var(--active-bg)', borderBottom: '2px solid var(--border-color)' }}>
                                 <th style={{ textAlign: 'left', color: 'var(--medium-gray)' }}>Fecha</th>
@@ -1787,6 +1787,47 @@ export default function LiquidacionesPage() {
                     margin: 0 !important;
                     line-height: 1px !important;
                     font-size: 0px !important;
+                }
+
+                /* ─── MÓVIL: tablas densas usables (1ª columna fija + cabecera pegajosa) ─── */
+                @media (max-width: 767px) {
+                    .tabla-movil-wrap {
+                        max-height: 70vh;
+                        overflow: auto;
+                        -webkit-overflow-scrolling: touch;
+                        border-radius: 12px;
+                    }
+                    /* Una regla global pone las tablas en display:block; overflow:auto
+                       (scroll propio), lo que ancla el sticky a la tabla y no al wrap.
+                       Devolvemos la tabla a display:table para que el contenedor que
+                       desliza sea .tabla-movil-wrap y el sticky funcione. Además
+                       border-collapse:collapse rompe el sticky en Chromium → separate. */
+                    .tabla-movil {
+                        display: table !important;
+                        overflow: visible !important;
+                        border-collapse: separate !important;
+                        border-spacing: 0 !important;
+                    }
+                    /* Cabecera pegada arriba al hacer scroll vertical */
+                    .tabla-movil thead th {
+                        position: sticky;
+                        top: 0;
+                        z-index: 3;
+                        background: var(--bg-card) !important;
+                    }
+                    /* Primera columna pegada a la izquierda al deslizar en horizontal */
+                    .tabla-movil th:first-child,
+                    .tabla-movil td:first-child {
+                        position: sticky;
+                        left: 0;
+                        z-index: 2;
+                        background: var(--bg-card) !important;
+                        box-shadow: 2px 0 5px rgba(0,0,0,0.18);
+                    }
+                    /* La esquina superior-izquierda manda sobre ambas */
+                    .tabla-movil thead th:first-child {
+                        z-index: 4;
+                    }
                 }
 
                 /* PREMIUM SAAS DESIGN SYSTEM CLASSES */
