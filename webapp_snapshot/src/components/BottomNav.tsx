@@ -41,6 +41,7 @@ export default function BottomNav() {
     { name: 'Inicio', href: '/', icon: LayoutDashboard, permission: 'MODULE_TIENDAS', matchPaths: ['/'] },
     { name: 'Tiendas Hub', href: '/tiendas', icon: Briefcase, permission: 'MODULE_TIENDAS', matchPaths: ['/tiendas'] },
     { name: 'MovilFree', href: '/movilfree', icon: Smartphone, permission: 'MODULE_MOVILFREE', matchPaths: ['/movilfree'] },
+    { name: 'Dirección Tiendas', href: '/direccion-tiendas', icon: Building2, permission: 'MODULE_DIRECCION', matchPaths: ['/direccion-tiendas'] },
     { name: 'Jefe Tiendas', href: '/seguimiento-ventas', icon: LineChart, permission: 'MODULE_JEFE_TIENDAS', matchPaths: ['/seguimiento-ventas'] },
     { name: 'Back Office', href: '/back-office', icon: FolderOpen, permission: 'MODULE_BACK_OFFICE', matchPaths: ['/back-office'] },
     { name: 'Liquidaciones', href: '/liquidacion', icon: Euro, permission: 'MODULE_LIQUIDACION', matchPaths: ['/liquidacion'] },
