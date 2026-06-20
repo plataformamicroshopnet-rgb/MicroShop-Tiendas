@@ -82,6 +82,12 @@ export default function GananciasPage() {
     // "TOTAL COBRADO sin IVA" se calcula = IVA Inc / 1,21. Meses sin dato: del Excel.
     const [cobradoOverride, setCobradoOverride] = useState<Record<number, number> | null>(null)
 
+    // ── Tentáculo: "Producción Plus" / "Producción Básico" en vivo = "Total Acumulado
+    // PLUS/BÁSICO" de la Liquidación (Operaciones Telefónica) de MicroShop FFVV, por mes,
+    // DESDE ABRIL 2026. La FFVV lo publica en /api/produccion-feed; aquí se lee.
+    const PRODUCCION_FROM = '2026_04'
+    const [produccionOverride, setProduccionOverride] = useState<Record<number, { plus: number; basico: number }> | null>(null)
+
     useEffect(() => {
         setGastosOverride(null)
         if (Number(year) < LIVE_FROM_YEAR) return
@@ -247,10 +253,31 @@ export default function GananciasPage() {
         return () => { cancel = true }
     }, [year])
 
+    useEffect(() => {
+        setProduccionOverride(null)
+        const yNum = Number(year)
+        let cancel = false
+        fetch('/api/produccion-feed', { cache: 'no-store' })
+            .then(r => r.json())
+            .then(d => {
+                if (cancel || !d?.success || !d.data) return
+                const ov: Record<number, { plus: number; basico: number }> = {}
+                for (let m = 1; m <= 12; m++) {
+                    const key = `${yNum}_${String(m).padStart(2, '0')}`
+                    if (key < PRODUCCION_FROM) continue   // desde Abril 2026
+                    const v = d.data[key]
+                    if (v && typeof v === 'object') ov[m] = { plus: Number(v.plus) || 0, basico: Number(v.basico) || 0 }
+                }
+                if (Object.keys(ov).length) setProduccionOverride(ov)
+            })
+            .catch(() => {})
+        return () => { cancel = true }
+    }, [year])
+
     const rows = baseData[year] || []
 
     const displayRows: GananciaRow[] = useMemo(() => {
-        if (!gastosOverride && !cajaModOverride && !comisLocalesOverride && !prvOverride && !cobradoOverride) return rows
+        if (!gastosOverride && !cajaModOverride && !comisLocalesOverride && !prvOverride && !cobradoOverride && !produccionOverride) return rows
         const build = (months: number[]) => {
             const total = months.reduce((a, b) => a + b, 0)
             const active = months.filter(m => m !== 0).length
@@ -273,6 +300,12 @@ export default function GananciasPage() {
             if (comisLocalesOverride && row.label === 'Comisiones Tiendas Locales') return applyMonthly(row, comisLocalesOverride)
             if (prvOverride && row.label === 'PRV') return applyMonthly(row, prvOverride)
             if (cobradoOverride && row.label === 'TOTAL COBRADO IVA Inc') return applyMonthly(row, cobradoOverride)
+            if (produccionOverride && (row.label === 'Producción Plus' || row.label === 'Producción Básico')) {
+                const field: 'plus' | 'basico' = row.label === 'Producción Plus' ? 'plus' : 'basico'
+                const ov: Record<number, number> = {}
+                for (const m in produccionOverride) ov[Number(m)] = produccionOverride[Number(m)][field]
+                return applyMonthly(row, ov)
+            }
             return row
         })
 
@@ -322,7 +355,7 @@ export default function GananciasPage() {
             if (sinIvaMonths && row.label === 'TOTAL COBRADO sin IVA') return totalize(row.label, sinIvaMonths)
             return row
         })
-    }, [rows, gastosOverride, cajaModOverride, comisLocalesOverride, prvOverride, cobradoOverride])
+    }, [rows, gastosOverride, cajaModOverride, comisLocalesOverride, prvOverride, cobradoOverride, produccionOverride])
 
     const gTiendas = findTotal(rows, /real ganancias tiendas/i)
     const gFFVV = findTotal(rows, /real ganancias ffvv/i)
