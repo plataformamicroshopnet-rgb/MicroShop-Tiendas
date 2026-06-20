@@ -516,9 +516,9 @@ export default function GananciasPage() {
                         <thead>
                             <tr style={{ background: 'linear-gradient(90deg, #0ea5e9, #0284c7)', color: '#fff' }}>
                                 <th style={{ padding: '7px 12px', textAlign: 'left', position: 'sticky', left: 0, background: '#0ea5e9', minWidth: 210 }}>Concepto</th>
-                                {MESES.map(m => <th key={m} style={{ padding: '7px 8px', textAlign: 'right', fontWeight: 700 }}>{m}</th>)}
-                                <th style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 800, borderLeft: '2px solid rgba(255,255,255,0.25)' }}>Total</th>
-                                <th style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 700 }}>Media</th>
+                                {MESES.map(m => <th key={m} style={{ padding: '7px 8px', textAlign: 'center', fontWeight: 700 }}>{m}</th>)}
+                                <th style={{ padding: '7px 10px', textAlign: 'center', fontWeight: 800, borderLeft: '2px solid rgba(255,255,255,0.25)' }}>Total</th>
+                                <th style={{ padding: '7px 10px', textAlign: 'center', fontWeight: 700 }}>Media</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -577,8 +577,8 @@ export default function GananciasPage() {
                             <thead>
                                 <tr style={{ background: 'linear-gradient(90deg, #0ea5e9, #0284c7)', color: '#fff' }}>
                                     <th style={{ padding: '7px 12px', textAlign: 'left', minWidth: 210 }}>Concepto</th>
-                                    {MESES.map(m => <th key={m} style={{ padding: '7px 6px', textAlign: 'right', fontWeight: 700 }}>{m}</th>)}
-                                    <th style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 800 }}>Total</th>
+                                    {MESES.map(m => <th key={m} style={{ padding: '7px 6px', textAlign: 'center', fontWeight: 700 }}>{m}</th>)}
+                                    <th style={{ padding: '7px 10px', textAlign: 'center', fontWeight: 800 }}>Total</th>
                                     <th style={{ padding: '7px 8px' }}></th>
                                 </tr>
                             </thead>
