@@ -6266,8 +6266,8 @@ export const GANANCIAS_DATA: Record<string, GananciaRow[]> = {
     16020.0,
     16020.0,
     16020.0,
-    null,
-    null,
+    16020.0,
+    16020.0,
     null,
     null,
     null,
@@ -6275,8 +6275,8 @@ export const GANANCIAS_DATA: Record<string, GananciaRow[]> = {
     null,
     null
    ],
-   "total": 64080.0,
-   "media": 12816.0
+   "total": 96120.0,
+   "media": 16020.0
   },
   {
    "label": "Gastos FFVV",

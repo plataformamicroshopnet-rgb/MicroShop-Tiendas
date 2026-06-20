@@ -292,13 +292,16 @@ export default function GananciasPage() {
             const active = months.filter(m => m !== null && m !== undefined && m !== 0).length
             return { label: row.label, months, total, media: active ? total / active : null }
         }
+        // El PRV del ERP (Retribución Variable) es SOLO el de Tiendas; la fila "PRV" de la
+        // sección FFVV es un valor propio (16.020) y NO debe pisarse con el override.
+        const ffvvStart = rows.findIndex(r => r.label === 'Total Ingresos FFVV')
         // 1) Override de filas individuales.
-        const overridden: GananciaRow[] = rows.map(row => {
+        const overridden: GananciaRow[] = rows.map((row, i) => {
             if (gastosOverride && row.label === 'Gastos Tiendas') return { label: row.label, ...build(gastosOverride.tiendas) }
             if (gastosOverride && row.label === 'Gastos FFVV') return { label: row.label, ...build(gastosOverride.ffvv) }
             if (cajaModOverride && row.label === 'Caja Tiendas') return applyMonthly(row, cajaModOverride)
             if (comisLocalesOverride && row.label === 'Comisiones Tiendas Locales') return applyMonthly(row, comisLocalesOverride)
-            if (prvOverride && row.label === 'PRV') return applyMonthly(row, prvOverride)
+            if (prvOverride && row.label === 'PRV' && (ffvvStart < 0 || i < ffvvStart)) return applyMonthly(row, prvOverride)
             if (cobradoOverride && row.label === 'TOTAL COBRADO IVA Inc') return applyMonthly(row, cobradoOverride)
             if (produccionOverride && (row.label === 'Producción Plus' || row.label === 'Producción Básico')) {
                 const field: 'plus' | 'basico' = row.label === 'Producción Plus' ? 'plus' : 'basico'
@@ -348,18 +351,38 @@ export default function GananciasPage() {
             ? ivaIncRow.months.map(v => (v === null || v === undefined) ? v : v / 1.21)
             : null
 
+        // "Real Ganancias" y "Total Ganancias" también se recalculan en vivo; si no, no
+        // cuadran en cuanto un ingreso/gasto viene de un override (Caja, Gastos, Producción…):
+        //   Real Ganancias Tiendas = Total Ingresos Tiendas − Gastos Tiendas − Comisiones Tiendas
+        //   Real Ganancias FFVV    = Total Ingresos FFVV − Gastos FFVV
+        //   Total Ganancias        = Real Ganancias Tiendas + Real Ganancias FFVV
+        const monthsOf = (label: string): (number | null)[] => {
+            const r = overridden.find(x => x.label === label)
+            return r ? r.months : new Array(12).fill(null)
+        }
+        const n0 = (x: number | null | undefined) => (x === null || x === undefined) ? 0 : x
+        const gastosTM = monthsOf('Gastos Tiendas')
+        const comisTM = monthsOf('Comisiones Tiendas')
+        const gastosFM = monthsOf('Gastos FFVV')
+        const rgTiendasMonths: (number | null)[] = ttMonths.map((v, i) => n0(v) - n0(gastosTM[i]) - n0(comisTM[i]))
+        const rgFFVVMonths: (number | null)[] = tfMonths.map((v, i) => n0(v) - n0(gastosFM[i]))
+        const totGanMonths: (number | null)[] = rgTiendasMonths.map((v, i) => n0(v) + n0(rgFFVVMonths[i]))
+
         return overridden.map(row => {
             if (row.label === 'Total Ingresos Tiendas') return totalize(row.label, ttMonths)
             if (row.label === 'Total Ingresos FFVV') return totalize(row.label, tfMonths)
             if (row.label === 'Total Ingresos Tiendas+FFVV') return totalize(row.label, bothMonths)
             if (sinIvaMonths && row.label === 'TOTAL COBRADO sin IVA') return totalize(row.label, sinIvaMonths)
+            if (row.label === 'Real Ganancias Tiendas') return totalize(row.label, rgTiendasMonths)
+            if (row.label === 'Real Ganancias FFVV') return totalize(row.label, rgFFVVMonths)
+            if (/^Total Ganancias/i.test(row.label)) return totalize(row.label, totGanMonths)
             return row
         })
     }, [rows, gastosOverride, cajaModOverride, comisLocalesOverride, prvOverride, cobradoOverride, produccionOverride])
 
-    const gTiendas = findTotal(rows, /real ganancias tiendas/i)
-    const gFFVV = findTotal(rows, /real ganancias ffvv/i)
-    const gTotal = findTotal(rows, /^total ganancias/i)
+    const gTiendas = findTotal(displayRows, /real ganancias tiendas/i)
+    const gFFVV = findTotal(displayRows, /real ganancias ffvv/i)
+    const gTotal = findTotal(displayRows, /^total ganancias/i)
         ?? ((gTiendas || 0) + (gFFVV || 0))
 
     if (authorized === null) {
