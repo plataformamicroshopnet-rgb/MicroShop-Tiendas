@@ -432,7 +432,7 @@ export default function TerritorialPdvPage() {
               borderTop: '2px solid var(--border-strong)',
               fontWeight: 800
             }}>
-              <td colSpan={2} style={{ padding: '12px 12px', fontSize: '13px', color: 'var(--text-main)' }}>Total Consolidado Tiendas</td>
+              <td colSpan={2} style={{ padding: '12px 12px', fontSize: '13px', color: 'var(--text-main)' }}>TERRITORIAL PDV Importe ({currYearLabel})</td>
               <td colSpan={7}></td>
               <td style={{ padding: '12px 12px', textAlign: 'right', fontSize: '14px', color: '#34c759', fontWeight: 900 }}>
                 {formatCurrency(totalImporteTerritorial)}
@@ -504,34 +504,6 @@ export default function TerritorialPdvPage() {
             </div>
           </div>
 
-          {/* Fila Importe Mensual MOD */}
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center', 
-            padding: '10px 14px', 
-            backgroundColor: 'rgba(255, 255, 255, 0.01)', 
-            borderRadius: '8px', 
-            border: '1px solid var(--border-light)' 
-          }}>
-            <div>
-              <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '12px' }}>
-                Importe Mensual MOD ({currYearLabel})
-              </div>
-              <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                Importe mensual calculado para el mes en vigor según la pantalla MOD.
-              </div>
-            </div>
-            
-            <div style={{ 
-              fontWeight: 900, 
-              color: '#34c759', 
-              fontSize: '16px', 
-              paddingRight: '18px'
-            }}>
-              {formatCurrency(modImporte)}
-            </div>
-          </div>
         </div>
       </div>
       
