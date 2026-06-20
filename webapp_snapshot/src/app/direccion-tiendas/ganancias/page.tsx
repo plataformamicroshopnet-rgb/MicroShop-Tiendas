@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { Wallet, TrendingUp, TrendingDown, Building2, Briefcase } from 'lucide-react'
 import { GANANCIAS_DATA, GananciaRow } from './data'
 import { computeMonthMetrics } from '@/lib/modMetrics'
+import { computeTerritorialTotal } from '@/lib/territorialConsolidado'
 
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 
@@ -42,6 +43,13 @@ export default function GananciasPage() {
     const CAJA_FROM_YEAR = 2026
     const CAJA_FROM_MONTH = 6
     const [cajaModOverride, setCajaModOverride] = useState<Record<number, number> | null>(null)
+
+    // ── Tentáculo: "Comisiones Tiendas Locales" en vivo = "Total Consolidado Tiendas" de
+    // Territorial PDV de cada mes, desde Junio 2026. Misma fuente única que la página
+    // Territorial (lib/territorialConsolidado → computeTerritorialTotal): por cada mes se
+    // piden ventas + reglas tienda/territorial + catálogos y se suma el importe de las
+    // palancas. Meses Ene-May 2026 y años previos siguen con el dato estático del Excel.
+    const [comisLocalesOverride, setComisLocalesOverride] = useState<Record<number, number> | null>(null)
 
     useEffect(() => {
         setGastosOverride(null)
@@ -122,28 +130,71 @@ export default function GananciasPage() {
         return () => { cancel = true }
     }, [year])
 
+    useEffect(() => {
+        setComisLocalesOverride(null)
+        const yNum = Number(year)
+        if (yNum < CAJA_FROM_YEAR) return
+        const now = new Date()
+        const isCurrentYear = yNum === now.getFullYear()
+        const lastMonth = isCurrentYear ? (now.getMonth() + 1) : 12
+        const startMonth = yNum === CAJA_FROM_YEAR ? CAJA_FROM_MONTH : 1
+        const months: number[] = []
+        for (let m = startMonth; m <= lastMonth; m++) months.push(m)
+        if (months.length === 0) return
+
+        let cancel = false
+        const j = (r: Response) => r.json()
+        ;(async () => {
+            try {
+                const catRes = await fetch('/api/catalogs', { cache: 'no-store' }).then(j).catch(() => ({ catalogs: {} }))
+                const result: Record<number, number> = {}
+                for (const m of months) {
+                    const pk = `${yNum}_${String(m).padStart(2, '0')}`
+                    const [salesRes, tiendasRes, territorialRes] = await Promise.all([
+                        fetch(`/api/sales?periodKey=${pk}&dashboard=true`, { cache: 'no-store' }).then(j).catch(() => ({ logs: [] })),
+                        fetch(`/api/tiendas-comisiones?periodKey=${pk}`, { cache: 'no-store' }).then(j).catch(() => ({ rules: [] })),
+                        fetch(`/api/territorial?periodKey=${pk}`, { cache: 'no-store' }).then(j).catch(() => ({ tiendas: [] })),
+                    ])
+                    if (cancel) return
+                    result[m] = computeTerritorialTotal({
+                        sales: salesRes.logs || [],
+                        tiendaRules: tiendasRes.rules || [],
+                        territorialRules: territorialRes.tiendas || [],
+                        catalogs: catRes.catalogs || {},
+                    })
+                }
+                if (!cancel) setComisLocalesOverride(result)
+            } catch { /* sin conexión: se queda el dato del Excel */ }
+        })()
+        return () => { cancel = true }
+    }, [year])
+
     const rows = GANANCIAS_DATA[year] || []
 
     const displayRows: GananciaRow[] = useMemo(() => {
-        if (!gastosOverride && !cajaModOverride) return rows
+        if (!gastosOverride && !cajaModOverride && !comisLocalesOverride) return rows
         const build = (months: number[]) => {
             const total = months.reduce((a, b) => a + b, 0)
             const active = months.filter(m => m !== 0).length
             return { months, total, media: active ? total / active : null }
         }
+        // Sustituye, mes a mes, los valores del Excel por los del override (solo los meses
+        // que tienen dato en vivo; el resto se queda como estaba) y recalcula Total/Media.
+        const applyMonthly = (row: GananciaRow, ov: Record<number, number>): GananciaRow => {
+            const months = row.months.map((v, i) => ov[i + 1] !== undefined ? ov[i + 1] : v)
+            const nums = months.filter((x): x is number => x !== null && x !== undefined)
+            const total = nums.reduce((a, b) => a + b, 0)
+            const active = months.filter(m => m !== null && m !== undefined && m !== 0).length
+            return { label: row.label, months, total, media: active ? total / active : null }
+        }
         return rows.map(row => {
             if (gastosOverride && row.label === 'Gastos Tiendas') return { label: row.label, ...build(gastosOverride.tiendas) }
             if (gastosOverride && row.label === 'Gastos FFVV') return { label: row.label, ...build(gastosOverride.ffvv) }
-            if (cajaModOverride && row.label === 'Caja Tiendas') {
-                const months = row.months.map((v, i) => cajaModOverride[i + 1] !== undefined ? cajaModOverride[i + 1] : v)
-                const nums = months.filter((x): x is number => x !== null && x !== undefined)
-                const total = nums.reduce((a, b) => a + b, 0)
-                const active = months.filter(m => m !== null && m !== undefined && m !== 0).length
-                return { label: row.label, months, total, media: active ? total / active : null }
-            }
+            if (cajaModOverride && row.label === 'Caja Tiendas') return applyMonthly(row, cajaModOverride)
+            if (comisLocalesOverride && row.label === 'Comisiones Tiendas Locales') return applyMonthly(row, comisLocalesOverride)
             return row
         })
-    }, [rows, gastosOverride, cajaModOverride])
+    }, [rows, gastosOverride, cajaModOverride, comisLocalesOverride])
 
     const gTiendas = findTotal(rows, /real ganancias tiendas/i)
     const gFFVV = findTotal(rows, /real ganancias ffvv/i)
@@ -214,7 +265,7 @@ export default function GananciasPage() {
                 {kpi(`Total Ganancias ${year}`, gTotal, (gTotal ?? 0) >= 0 ? TrendingUp : TrendingDown, '#22c55e')}
             </div>
 
-            {(gastosOverride || cajaModOverride) && (
+            {(gastosOverride || cajaModOverride || comisLocalesOverride) && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontSize: 12, color: '#0369a1', fontWeight: 600 }}>
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
                     Ingresos Gastos ({year})
@@ -245,6 +296,8 @@ export default function GananciasPage() {
                                     ? (gastosOverride ? 'En vivo de «Informes de Gastos»: Comerciales (Total gastos Fijos + Variables)' : 'Dato del Excel «Ganancias 2014-2026»')
                                     : row.label === 'Caja Tiendas'
                                     ? (cajaModOverride ? 'En vivo de «MOD» (Media Operaciones Diaria): Importe Mensual del mes (comisiones reales + MovilFree)' : 'Dato del Excel «Ganancias 2014-2026»')
+                                    : row.label === 'Comisiones Tiendas Locales'
+                                    ? (comisLocalesOverride ? 'En vivo de «Territorial PDV»: Total Consolidado Tiendas (suma de las palancas territoriales)' : 'Dato del Excel «Ganancias 2014-2026»')
                                     : row.label === 'Comisiones Tiendas'
                                     ? 'Dato del Excel «Ganancias 2014-2026»'
                                     : undefined
