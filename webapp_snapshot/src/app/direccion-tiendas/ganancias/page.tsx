@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useGuard } from '@/hooks/useGuard'
 import { PageHeader } from '@/components/PageHeader'
-import { Wallet, TrendingUp, TrendingDown, Building2, Briefcase } from 'lucide-react'
+import { Wallet, TrendingUp, TrendingDown, Building2, Briefcase, Pencil, Save, X, Plus, Trash2, CalendarPlus } from 'lucide-react'
 import { GANANCIAS_DATA, GananciaRow } from './data'
 import { computeMonthMetrics } from '@/lib/modMetrics'
 import { computeTerritorialTotal } from '@/lib/territorialConsolidado'
@@ -21,11 +21,30 @@ const findTotal = (rows: GananciaRow[], re: RegExp) => {
 export default function GananciasPage() {
     const { authorized } = useGuard('MODULE_DIRECCION')
 
+    // Versión EDITABLE guardada en BD (si existe) sustituye al Excel estático como base.
+    // Encima se aplican las cifras en vivo (Caja, Comisiones, PRV, Totales).
+    const [storedData, setStoredData] = useState<Record<string, GananciaRow[]> | null>(null)
+    const [editMode, setEditMode] = useState(false)
+    const [draft, setDraft] = useState<Record<string, GananciaRow[]> | null>(null)
+    const [saving, setSaving] = useState(false)
+
+    useEffect(() => {
+        fetch('/api/ganancias-data', { cache: 'no-store' })
+            .then(r => r.json())
+            .then(d => { if (d?.success && d.data && typeof d.data === 'object') setStoredData(d.data) })
+            .catch(() => {})
+    }, [])
+
+    const baseData = storedData ?? GANANCIAS_DATA
     const years = useMemo(
-        () => Object.keys(GANANCIAS_DATA).sort((a, b) => Number(b) - Number(a)),
-        []
+        () => Object.keys(baseData).sort((a, b) => Number(b) - Number(a)),
+        [baseData]
     )
-    const [year, setYear] = useState<string>(years[0])
+    const [year, setYear] = useState<string>(
+        Object.keys(GANANCIAS_DATA).sort((a, b) => Number(b) - Number(a))[0]
+    )
+    // Si el año seleccionado deja de existir (tras cargar/editar), saltar al más reciente.
+    useEffect(() => { if (years.length && !years.includes(year)) setYear(years[0]) }, [years, year])
 
     // ── Tentáculo: para el año conectado (>=2026) los GASTOS se traen EN VIVO de
     // "Informes de Gastos" (/api/gastos). Cada partida guarda por mes importe_c
@@ -203,7 +222,7 @@ export default function GananciasPage() {
         return () => { cancel = true }
     }, [year])
 
-    const rows = GANANCIAS_DATA[year] || []
+    const rows = baseData[year] || []
 
     const displayRows: GananciaRow[] = useMemo(() => {
         if (!gastosOverride && !cajaModOverride && !comisLocalesOverride && !prvOverride) return rows
@@ -302,6 +321,54 @@ export default function GananciasPage() {
         </div>
     )
 
+    // ── Edición ──────────────────────────────────────────────────────────────
+    const enterEdit = () => { setDraft(JSON.parse(JSON.stringify(baseData))); setEditMode(true) }
+    const cancelEdit = () => { setDraft(null); setEditMode(false) }
+    const saveEdit = async () => {
+        if (!draft) return
+        setSaving(true)
+        try {
+            const res = await fetch('/api/ganancias-data', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ data: draft }),
+            })
+            const d = await res.json()
+            if (d?.success) { setStoredData(draft); setEditMode(false); setDraft(null) }
+            else alert('Error al guardar: ' + (d?.error || 'desconocido'))
+        } catch { alert('Error de conexión al guardar.') }
+        setSaving(false)
+    }
+    const mutateYear = (fn: (rows: GananciaRow[]) => GananciaRow[]) =>
+        setDraft(prev => prev ? { ...prev, [year]: fn(prev[year] || []) } : prev)
+    const recalc = (months: (number | null)[]) => {
+        const nums = months.filter((x): x is number => x !== null && x !== undefined)
+        const total = nums.reduce((a, b) => a + b, 0)
+        const active = months.filter(m => m !== null && m !== undefined && m !== 0).length
+        return { total, media: active ? total / active : null }
+    }
+    const addRow = () => mutateYear(rs => [...rs, { label: 'Nuevo concepto', months: new Array(12).fill(null), total: null, media: null }])
+    const deleteRow = (idx: number) => mutateYear(rs => rs.filter((_, i) => i !== idx))
+    const updateRowLabel = (idx: number, label: string) => mutateYear(rs => rs.map((r, i) => i === idx ? { ...r, label } : r))
+    const updateRowCell = (idx: number, mi: number, raw: string) => mutateYear(rs => rs.map((r, i) => {
+        if (i !== idx) return r
+        const months = [...r.months]
+        const clean = raw.replace(/[^\d,.\-]/g, '').replace(/\./g, '').replace(',', '.')
+        months[mi] = raw.trim() === '' ? null : (isNaN(Number(clean)) ? r.months[mi] : Number(clean))
+        return { ...r, months, ...recalc(months) }
+    }))
+    const addYear = () => {
+        const maxY = years.length ? Math.max(...years.map(Number)) : new Date().getFullYear()
+        const input = window.prompt('¿Qué año quieres añadir? (misma estructura, importes vacíos)', String(maxY + 1))
+        if (!input) return
+        const ny = input.trim()
+        if (!/^\d{4}$/.test(ny)) { alert('Pon un año de 4 cifras.'); return }
+        if (draft && draft[ny]) { alert('Ese año ya existe.'); return }
+        const template = (draft?.[year] || baseData[year] || []).map(r => ({ label: r.label, months: new Array(12).fill(null) as (number | null)[], total: null, media: null }))
+        setDraft(prev => ({ ...(prev || {}), [ny]: template }))
+        setYear(ny)
+    }
+    const editRows = (draft?.[year] || [])
+
     return (
         <div style={{ padding: '20px 24px', backgroundColor: 'var(--bg-app)', minHeight: '100vh' }}>
             <PageHeader
@@ -309,11 +376,27 @@ export default function GananciasPage() {
                 subtitle="Ingresos, gastos y rentabilidad por año (Tiendas + FFVV)"
                 showBack={true}
                 backFallback="/direccion-tiendas"
+                headerActions={
+                    editMode ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <button onClick={cancelEdit} title="Cancelar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: '50%', background: 'transparent', border: '1px solid var(--border-strong)', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                                <X size={20} />
+                            </button>
+                            <button onClick={saveEdit} disabled={saving} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 16px', height: 40, borderRadius: 20, background: '#10b981', border: 'none', color: '#fff', fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>
+                                <Save size={18} /> {saving ? 'Guardando...' : 'Guardar'}
+                            </button>
+                        </div>
+                    ) : (
+                        <button onClick={enterEdit} title="Editar (añadir años, filas, importes)" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: '50%', background: 'transparent', border: '1px solid var(--border-strong)', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                            <Pencil size={18} />
+                        </button>
+                    )
+                }
             />
 
             {/* Selector de años */}
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '20px 0' }}>
-                {years.map(y => {
+                {(editMode && draft ? Object.keys(draft).sort((a, b) => Number(b) - Number(a)) : years).map(y => {
                     const active = y === year
                     return (
                         <button
@@ -332,23 +415,35 @@ export default function GananciasPage() {
                         </button>
                     )
                 })}
+                {editMode && (
+                    <button
+                        onClick={addYear}
+                        title="Añadir un año nuevo"
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 20, fontWeight: 700, fontSize: 14, cursor: 'pointer', border: '1px dashed var(--mercedes-cyan)', background: 'transparent', color: 'var(--mercedes-cyan)' }}
+                    >
+                        <CalendarPlus size={16} /> Añadir año
+                    </button>
+                )}
             </div>
 
-            {/* KPIs del año */}
+            {/* KPIs del año (solo vista) */}
+            {!editMode && (
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
                 {kpi('Real Ganancias Tiendas', gTiendas, Building2, '#a855f7')}
                 {gFFVV !== null && kpi('Real Ganancias FFVV', gFFVV, Briefcase, '#0ea5e9')}
                 {kpi(`Total Ganancias ${year}`, gTotal, (gTotal ?? 0) >= 0 ? TrendingUp : TrendingDown, '#22c55e')}
             </div>
+            )}
 
-            {(gastosOverride || cajaModOverride || comisLocalesOverride || prvOverride) && (
+            {!editMode && (gastosOverride || cajaModOverride || comisLocalesOverride || prvOverride) && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontSize: 12, color: '#0369a1', fontWeight: 600 }}>
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
                     Ingresos Gastos ({year})
                 </div>
             )}
 
-            {/* Tabla detalle mensual */}
+            {/* Tabla detalle mensual (modo vista) */}
+            {!editMode && (
             <div style={{ background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border-light)', overflow: 'hidden', boxShadow: '0 4px 12px rgba(15,23,42,0.05)' }}>
                 <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, whiteSpace: 'nowrap', minWidth: 1100 }}>
@@ -406,9 +501,60 @@ export default function GananciasPage() {
                     </table>
                 </div>
             </div>
+            )}
+
+            {/* Tabla EDITABLE */}
+            {editMode && (
+                <div style={{ background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border-light)', overflow: 'hidden', boxShadow: '0 4px 12px rgba(15,23,42,0.05)' }}>
+                    <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, whiteSpace: 'nowrap', minWidth: 1100 }}>
+                            <thead>
+                                <tr style={{ background: 'linear-gradient(90deg, #0ea5e9, #0284c7)', color: '#fff' }}>
+                                    <th style={{ padding: '7px 12px', textAlign: 'left', minWidth: 210 }}>Concepto</th>
+                                    {MESES.map(m => <th key={m} style={{ padding: '7px 6px', textAlign: 'right', fontWeight: 700 }}>{m}</th>)}
+                                    <th style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 800 }}>Total</th>
+                                    <th style={{ padding: '7px 8px' }}></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {editRows.map((row, ri) => (
+                                    <tr key={ri} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                                        <td style={{ padding: '3px 6px' }}>
+                                            <input value={row.label} onChange={e => updateRowLabel(ri, e.target.value)}
+                                                style={{ width: 200, padding: '4px 6px', border: '1px solid var(--border-strong)', borderRadius: 5, fontSize: 12, fontWeight: 600, background: 'var(--bg-input)', color: 'var(--text-main)' }} />
+                                        </td>
+                                        {row.months.map((v, mi) => (
+                                            <td key={mi} style={{ padding: '3px 2px' }}>
+                                                <input value={v ?? ''} onChange={e => updateRowCell(ri, mi, e.target.value)}
+                                                    style={{ width: 64, padding: '4px 4px', textAlign: 'right', border: '1px solid var(--border-light)', borderRadius: 5, fontSize: 12, background: 'var(--bg-input)', color: 'var(--text-main)' }} />
+                                            </td>
+                                        ))}
+                                        <td style={{ padding: '3px 10px', textAlign: 'right', fontWeight: 700, color: 'var(--text-muted)' }}>{eur(row.total)}</td>
+                                        <td style={{ padding: '3px 8px', textAlign: 'center' }}>
+                                            <button onClick={() => deleteRow(ri)} title="Borrar fila" style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', display: 'flex' }}>
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {editRows.length === 0 && (
+                                    <tr><td colSpan={15} style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)' }}>Año sin filas. Pulsa «Añadir fila».</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style={{ padding: 12, borderTop: '1px solid var(--border-light)' }}>
+                        <button onClick={addRow} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--active-bg)', border: '1px solid var(--border-strong)', padding: '6px 12px', borderRadius: 6, cursor: 'pointer', color: 'var(--text-main)', fontSize: 13, fontWeight: 700 }}>
+                            <Plus size={16} /> Añadir fila
+                        </button>
+                    </div>
+                </div>
+            )}
 
             <p style={{ marginTop: 16, fontSize: 12, color: 'var(--text-muted)' }}>
-                Fase 1: cifras importadas del Excel «Ganancias 2014-2026». En la Fase 2 se automatizarán desde la base de datos.
+                {editMode
+                    ? 'Modo edición: añade años/filas, edita importes y guarda. Las filas en vivo (Caja, Comisiones, PRV, Totales) se recalculan solas en la vista.'
+                    : 'Cifras del Excel «Ganancias 2014-2026» (editables con el lápiz). Las filas conectadas se actualizan solas.'}
             </p>
         </div>
     )
