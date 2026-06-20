@@ -470,7 +470,7 @@ export default function GananciasPage() {
                                     : row.label === 'Comisiones Tiendas Locales'
                                     ? (comisLocalesOverride ? 'En vivo de «Territorial PDV»: Total Consolidado Tiendas (suma de las palancas territoriales)' : 'Dato del Excel «Ganancias 2014-2026»')
                                     : row.label === 'PRV'
-                                    ? (prvOverride ? 'En vivo del ERP «mi-nuevo-erp»: Retribución Variable (PRV), Beneficio Neto Total del mes' : 'Dato del Excel «Ganancias 2014-2026»')
+                                    ? (prvOverride ? 'En vivo del ERP «mi-nuevo-erp»: Retribución Variable (PRV), Desglose Mensual Interactivo del mes' : 'Dato del Excel «Ganancias 2014-2026»')
                                     : row.label === 'Comisiones Tiendas'
                                     ? 'Dato del Excel «Ganancias 2014-2026»'
                                     : undefined
