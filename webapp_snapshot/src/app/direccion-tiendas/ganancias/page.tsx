@@ -110,12 +110,13 @@ export default function GananciasPage() {
                 const result: Record<number, number> = {}
                 for (const m of months) {
                     const pk = `${yNum}_${String(m).padStart(2, '0')}`
-                    const [salesRes, objData, pymeData, plusData, extrasData] = await Promise.all([
+                    const [salesRes, objData, pymeData, plusData, extrasData, terrRes] = await Promise.all([
                         fetch(`/api/sales?periodKey=${pk}`, { cache: 'no-store' }).then(j).catch(() => ({ logs: [] })),
                         fetch(`/api/objetivos?periodKey=${pk}&strictPeriod=1`, { cache: 'no-store' }).then(j).catch(() => ({})),
                         fetch(`/api/importes-pyme?periodKey=${pk}&strictPeriod=1`, { cache: 'no-store' }).then(j).catch(() => ({})),
                         fetch(`/api/importes-plus?periodKey=${pk}&strictPeriod=1`, { cache: 'no-store' }).then(j).catch(() => ({})),
                         fetch(`/api/extras/assignments?periodKey=${pk}`, { cache: 'no-store' }).then(j).catch(() => ({})),
+                        fetch(`/api/territorial?periodKey=${pk}`, { cache: 'no-store' }).then(j).catch(() => ({ o2: [] })),
                     ])
                     if (cancel) return
                     const metrics = computeMonthMetrics({
@@ -128,7 +129,10 @@ export default function GananciasPage() {
                         year: yNum,
                         month: m,
                         periodKeyForConfig: pk,
+                        o2Rules: terrRes.o2 || [],
                     })
+                    // Caja Tiendas = "Resumen de Métricas MOD": el Importe Mensual del MOD ya
+                    // incluye Tiendas Movistar + MovilFree + O2 + PRV Territorial O2.
                     result[m] = metrics.totalImporte
                 }
                 if (!cancel) setCajaModOverride(result)
@@ -217,12 +221,53 @@ export default function GananciasPage() {
             const active = months.filter(m => m !== null && m !== undefined && m !== 0).length
             return { label: row.label, months, total, media: active ? total / active : null }
         }
-        return rows.map(row => {
+        // 1) Override de filas individuales.
+        const overridden: GananciaRow[] = rows.map(row => {
             if (gastosOverride && row.label === 'Gastos Tiendas') return { label: row.label, ...build(gastosOverride.tiendas) }
             if (gastosOverride && row.label === 'Gastos FFVV') return { label: row.label, ...build(gastosOverride.ffvv) }
             if (cajaModOverride && row.label === 'Caja Tiendas') return applyMonthly(row, cajaModOverride)
             if (comisLocalesOverride && row.label === 'Comisiones Tiendas Locales') return applyMonthly(row, comisLocalesOverride)
             if (prvOverride && row.label === 'PRV') return applyMonthly(row, prvOverride)
+            return row
+        })
+
+        // 2) Recalcular las filas de TOTAL como suma de sus componentes. Se usan rangos por
+        //    sección para distinguir las DOS filas "PRV" (una en Tiendas, otra en FFVV):
+        //    Total Ingresos Tiendas = Caja Tiendas + Comisiones Tiendas Locales + PRV;
+        //    Total Ingresos FFVV    = Caja FFVV + Producción Plus + Producción Básico + PRV;
+        //    Total Ingresos Tiendas+FFVV = los dos anteriores.
+        const idxTT = overridden.findIndex(r => r.label === 'Total Ingresos Tiendas')
+        const idxTF = overridden.findIndex(r => r.label === 'Total Ingresos FFVV')
+        if (idxTT < 0 || idxTF < 0) return overridden
+
+        const sumRange = (labels: string[], from: number, to: number): (number | null)[] => {
+            const set = new Set(labels)
+            const months: (number | null)[] = new Array(12).fill(null)
+            for (let i = from; i < to; i++) {
+                if (!set.has(overridden[i].label)) continue
+                overridden[i].months.forEach((v, mi) => { if (v !== null && v !== undefined) months[mi] = (months[mi] || 0) + v })
+            }
+            return months
+        }
+        const totalize = (label: string, months: (number | null)[]): GananciaRow => {
+            const nums = months.filter((x): x is number => x !== null && x !== undefined)
+            const total = nums.reduce((a, b) => a + b, 0)
+            const active = months.filter(m => m !== null && m !== undefined && m !== 0).length
+            return { label, months, total, media: active ? total / active : null }
+        }
+
+        const ttMonths = sumRange(['Caja Tiendas', 'Comisiones Tiendas Locales', 'PRV'], idxTT + 1, idxTF)
+        const tfMonths = sumRange(['Caja FFVV', 'Producción Plus', 'Producción Básico', 'PRV'], idxTF + 1, overridden.length)
+        const bothMonths: (number | null)[] = ttMonths.map((v, i) => {
+            const b = tfMonths[i]
+            if ((v === null || v === undefined) && (b === null || b === undefined)) return null
+            return (v || 0) + (b || 0)
+        })
+
+        return overridden.map(row => {
+            if (row.label === 'Total Ingresos Tiendas') return totalize(row.label, ttMonths)
+            if (row.label === 'Total Ingresos FFVV') return totalize(row.label, tfMonths)
+            if (row.label === 'Total Ingresos Tiendas+FFVV') return totalize(row.label, bothMonths)
             return row
         })
     }, [rows, gastosOverride, cajaModOverride, comisLocalesOverride, prvOverride])
@@ -326,7 +371,7 @@ export default function GananciasPage() {
                                     : row.label === 'Gastos FFVV'
                                     ? (gastosOverride ? 'En vivo de «Informes de Gastos»: Comerciales (Total gastos Fijos + Variables)' : 'Dato del Excel «Ganancias 2014-2026»')
                                     : row.label === 'Caja Tiendas'
-                                    ? (cajaModOverride ? 'En vivo de «MOD» (Media Operaciones Diaria): Importe Mensual del mes (comisiones reales + MovilFree)' : 'Dato del Excel «Ganancias 2014-2026»')
+                                    ? (cajaModOverride ? 'En vivo del «Resumen de Métricas MOD»: Tiendas Movistar + MovilFree + O2 + PRV Territorial O2' : 'Dato del Excel «Ganancias 2014-2026»')
                                     : row.label === 'Comisiones Tiendas Locales'
                                     ? (comisLocalesOverride ? 'En vivo de «Territorial PDV»: Total Consolidado Tiendas (suma de las palancas territoriales)' : 'Dato del Excel «Ganancias 2014-2026»')
                                     : row.label === 'PRV'

@@ -136,6 +136,28 @@ export function calculateTiendaImporte(rule: any, storeName: string, salesCount:
   return earned
 }
 
+// Importe del bono O2 de una regla según las ventas O2 (tramos mes/trim + conectividad).
+// Idéntico a calculateO2Importe de TerritorialTab / mod-resumen.
+export function calculateO2Importe(rule: any, totalSales: number): number {
+  const TRAMOS_MES = [
+    { key: '4_10', min: 4 }, { key: '11_14', min: 11 }, { key: '15_20', min: 15 },
+    { key: '21_30', min: 21 }, { key: '31_40', min: 31 }, { key: '41_plus', min: 41 }
+  ]
+  const TRAMOS_TRIM = [{ key: '5_9', min: 5 }, { key: '10_plus', min: 10 }]
+  let bonus = 0
+  for (const t of [...TRAMOS_MES].reverse()) { if (totalSales >= t.min) { bonus += parseNumber(rule.tramosMes?.[t.key] || '0'); break } }
+  for (const t of [...TRAMOS_TRIM].reverse()) { if (totalSales >= t.min) { bonus += parseNumber(rule.tramosTrim?.[t.key] || '0'); break } }
+  if (totalSales > 0) bonus += parseNumber(rule.conectividad || '0')
+  return bonus
+}
+
+// "PRV Territorial O2" del mes = TOTAL O2 de la Entrada de Datos = Σ del bono O2 de cada
+// regla O2 sobre sus ventas O2 (fibra/interna). Se SUMA a la Caja Tiendas en Ganancias.
+export function computeBonosO2(sales: any[], o2Rules: any[]): number {
+  return (o2Rules || []).reduce((acc: number, rule: any) =>
+    acc + calculateO2Importe(rule, getSalesDataForStoreAndType(sales, 'O2', rule.tipoVenta).value), 0)
+}
+
 // matching palanca -> regla de la Entrada de Datos. Prioriza el match EXACTO para no
 // confundir nombres donde uno es subcadena de otro (p. ej. "Altas BAF" vs "Altas BAF
 // Movistar Convergente").

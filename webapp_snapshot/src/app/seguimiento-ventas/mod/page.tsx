@@ -86,8 +86,9 @@ export default function ModPage() {
             fetchConfigs(prevYearKey),
             fetch(`/api/period`).then(r => r.json()).catch(() => ({ periods: [] })),
             fetch(`/api/movilfree/sales`).then(r => r.json()).catch(() => []),
-            fetch(`/api/movilfree/products`).then(r => r.json()).catch(() => [])
-        ]).then(([currSalesRes, prevSalesRes, catRes, currConfigs, prevConfigs, periodsRes, mfSalesRes, mfProductsRes]) => {
+            fetch(`/api/movilfree/products`).then(r => r.json()).catch(() => []),
+            fetch(`/api/territorial?periodKey=${activePeriodKey}`).then(r => r.json()).catch(() => ({ o2: [] }))
+        ]).then(([currSalesRes, prevSalesRes, catRes, currConfigs, prevConfigs, periodsRes, mfSalesRes, mfProductsRes, territorialRes]) => {
             const currSalesRaw = currSalesRes.logs || [];
             const prevSalesRaw = prevSalesRes.logs || [];
             const catalogs = catRes.catalogs || {};
@@ -105,6 +106,7 @@ export default function ModPage() {
                     year: y,
                     month: m,
                     periodKeyForConfig,
+                    o2Rules: territorialRes.o2 || [],
                 });
 
             const currMetrics = processMetrics(currSalesRaw, currConfigs, year, month, activePeriodKey);

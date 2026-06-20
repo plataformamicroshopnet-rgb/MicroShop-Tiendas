@@ -4,6 +4,7 @@
 
 import { renderDashboardData, sanitizeSale } from '@/lib/salesUtils'
 import { getSaleCommissionBase } from '@/lib/saleCommission'
+import { computeBonosO2 } from '@/lib/territorialConsolidado'
 
 // Festivos de Salamanca (excluye sábados, domingos y festivos locales/regionales)
 export const isHolidaySalamanca = (y: number, m: number, d: number) => {
@@ -62,11 +63,12 @@ export interface ModMonthInput {
     year: number
     month: number
     periodKeyForConfig: string
+    o2Rules?: any[]   // reglas O2 de la Entrada de Datos (/api/territorial -> o2) para el bono PRV Territorial O2
 }
 
 // Reproduce EXACTAMENTE el processMetrics de la página MOD para un mes dado.
 export function computeMonthMetrics(input: ModMonthInput) {
-    const { salesRaw, configs, catalogs, periods, mfSales, mfProducts, year: y, month: m, periodKeyForConfig } = input
+    const { salesRaw, configs, catalogs, periods, mfSales, mfProducts, year: y, month: m, periodKeyForConfig, o2Rules } = input
     const daysInMonth = new Date(y, m, 0).getDate()
 
     const [objData, pymeData, plusData, extrasData] = configs
@@ -183,6 +185,10 @@ export function computeMonthMetrics(input: ModMonthInput) {
     }
 
     globalImporte += movilFreeReal
+
+    // PRV Territorial O2 (bono O2 del mes): SÍ suma en el MOD, para que su Importe Mensual
+    // coincida con el "Resumen de Métricas MOD" y con la Caja Tiendas de Ganancias.
+    globalImporte += computeBonosO2(salesRaw, o2Rules || [])
 
     const totalOpsGlobal = stats.reduce((acc, d) => acc + d.ops, 0)
     const avgImportePerOp = totalOpsGlobal > 0 ? (globalImporte / totalOpsGlobal) : 0
