@@ -77,6 +77,11 @@ export default function GananciasPage() {
     const PRV_FROM_MONTH = 9
     const [prvOverride, setPrvOverride] = useState<Record<number, number> | null>(null)
 
+    // ── Tentáculo: "TOTAL COBRADO IVA Inc" en vivo = "Resumen Evolutivo: Ingresos Totales
+    // Telefónica/Movistar" del ERP (mi-nuevo-erp), por mes de VENTAS, vía /api/cobrado-feed.
+    // "TOTAL COBRADO sin IVA" se calcula = IVA Inc / 1,21. Meses sin dato: del Excel.
+    const [cobradoOverride, setCobradoOverride] = useState<Record<number, number> | null>(null)
+
     useEffect(() => {
         setGastosOverride(null)
         if (Number(year) < LIVE_FROM_YEAR) return
@@ -222,10 +227,30 @@ export default function GananciasPage() {
         return () => { cancel = true }
     }, [year])
 
+    useEffect(() => {
+        setCobradoOverride(null)
+        const yNum = Number(year)
+        let cancel = false
+        fetch('/api/cobrado-feed', { cache: 'no-store' })
+            .then(r => r.json())
+            .then(d => {
+                if (cancel || !d?.success || !d.data) return
+                const ov: Record<number, number> = {}
+                for (let m = 1; m <= 12; m++) {
+                    const key = `${yNum}_${String(m).padStart(2, '0')}`
+                    const v = d.data[key]
+                    if (v !== undefined && v !== null && !isNaN(Number(v))) ov[m] = Number(v)
+                }
+                if (Object.keys(ov).length) setCobradoOverride(ov)
+            })
+            .catch(() => {})
+        return () => { cancel = true }
+    }, [year])
+
     const rows = baseData[year] || []
 
     const displayRows: GananciaRow[] = useMemo(() => {
-        if (!gastosOverride && !cajaModOverride && !comisLocalesOverride && !prvOverride) return rows
+        if (!gastosOverride && !cajaModOverride && !comisLocalesOverride && !prvOverride && !cobradoOverride) return rows
         const build = (months: number[]) => {
             const total = months.reduce((a, b) => a + b, 0)
             const active = months.filter(m => m !== 0).length
@@ -247,6 +272,7 @@ export default function GananciasPage() {
             if (cajaModOverride && row.label === 'Caja Tiendas') return applyMonthly(row, cajaModOverride)
             if (comisLocalesOverride && row.label === 'Comisiones Tiendas Locales') return applyMonthly(row, comisLocalesOverride)
             if (prvOverride && row.label === 'PRV') return applyMonthly(row, prvOverride)
+            if (cobradoOverride && row.label === 'TOTAL COBRADO IVA Inc') return applyMonthly(row, cobradoOverride)
             return row
         })
 
@@ -283,13 +309,20 @@ export default function GananciasPage() {
             return (v || 0) + (b || 0)
         })
 
+        // "TOTAL COBRADO sin IVA" = "TOTAL COBRADO IVA Inc" / 1,21 (quita el 21% de IVA).
+        const ivaIncRow = overridden.find(r => r.label === 'TOTAL COBRADO IVA Inc')
+        const sinIvaMonths: (number | null)[] | null = ivaIncRow
+            ? ivaIncRow.months.map(v => (v === null || v === undefined) ? v : v / 1.21)
+            : null
+
         return overridden.map(row => {
             if (row.label === 'Total Ingresos Tiendas') return totalize(row.label, ttMonths)
             if (row.label === 'Total Ingresos FFVV') return totalize(row.label, tfMonths)
             if (row.label === 'Total Ingresos Tiendas+FFVV') return totalize(row.label, bothMonths)
+            if (sinIvaMonths && row.label === 'TOTAL COBRADO sin IVA') return totalize(row.label, sinIvaMonths)
             return row
         })
-    }, [rows, gastosOverride, cajaModOverride, comisLocalesOverride, prvOverride])
+    }, [rows, gastosOverride, cajaModOverride, comisLocalesOverride, prvOverride, cobradoOverride])
 
     const gTiendas = findTotal(rows, /real ganancias tiendas/i)
     const gFFVV = findTotal(rows, /real ganancias ffvv/i)
