@@ -69,6 +69,15 @@ export default function DireccionTiendasPage() {
       color: 'rgba(168, 85, 247, 0.1)',
       textColor: '#a855f7',
       permission: 'CARD_DIR_RENTABILIDAD'
+    },
+    {
+      title: 'Ganancias desde el 2014',
+      description: 'Ingresos, gastos y rentabilidad por año (Tiendas + FFVV), desde 2014.',
+      icon: Wallet,
+      action: () => router.push('/direccion-tiendas/ganancias'),
+      color: 'rgba(0, 173, 239, 0.1)',
+      textColor: 'var(--mercedes-cyan)',
+      permission: 'CARD_DIR_GANANCIAS'
     }
   ]
 
