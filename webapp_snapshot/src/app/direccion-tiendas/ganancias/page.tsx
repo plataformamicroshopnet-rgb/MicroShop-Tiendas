@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useGuard } from '@/hooks/useGuard'
 import { PageHeader } from '@/components/PageHeader'
 import { Wallet, TrendingUp, TrendingDown, Building2, Briefcase } from 'lucide-react'
@@ -25,7 +25,55 @@ export default function GananciasPage() {
     )
     const [year, setYear] = useState<string>(years[0])
 
+    // ── Tentáculo: para el año conectado (>=2026) los GASTOS se traen EN VIVO de
+    // "Informes de Gastos" (/api/gastos). Cada partida guarda por mes importe_c
+    // (Comerciales), importe_r (Tiendas) e importe_dif (Movilfree) de los grupos
+    // Gastos Fijos + Variables. => Gastos Tiendas = Tiendas+Movilfree (r+dif);
+    // Gastos FFVV = Comerciales (c). Se recalcula al abrir/cambiar de año.
+    const LIVE_FROM_YEAR = 2026
+    const [gastosOverride, setGastosOverride] = useState<{ tiendas: number[]; ffvv: number[] } | null>(null)
+
+    useEffect(() => {
+        setGastosOverride(null)
+        if (Number(year) < LIVE_FROM_YEAR) return
+        let cancel = false
+        fetch(`/api/gastos?year=${year}`, { cache: 'no-store' })
+            .then(r => r.json())
+            .then(d => {
+                if (cancel || !d?.success || !Array.isArray(d.data)) return
+                const tiendas = new Array(12).fill(0)
+                const ffvv = new Array(12).fill(0)
+                let any = false
+                d.data.forEach((g: any) => {
+                    if (g.grupo === 'Gastos Fijos' || g.grupo === 'Gastos Variables') {
+                        const m = (Number(g.month) || 1) - 1
+                        if (m < 0 || m > 11) return
+                        tiendas[m] += (Number(g.importe_r) || 0) + (Number(g.importe_dif) || 0)
+                        ffvv[m] += (Number(g.importe_c) || 0)
+                        any = true
+                    }
+                })
+                if (any) setGastosOverride({ tiendas, ffvv })
+            })
+            .catch(() => {})
+        return () => { cancel = true }
+    }, [year])
+
     const rows = GANANCIAS_DATA[year] || []
+
+    const displayRows: GananciaRow[] = useMemo(() => {
+        if (!gastosOverride) return rows
+        const build = (months: number[]) => {
+            const total = months.reduce((a, b) => a + b, 0)
+            const active = months.filter(m => m !== 0).length
+            return { months, total, media: active ? total / active : null }
+        }
+        return rows.map(row => {
+            if (row.label === 'Gastos Tiendas') return { label: row.label, ...build(gastosOverride.tiendas) }
+            if (row.label === 'Gastos FFVV') return { label: row.label, ...build(gastosOverride.ffvv) }
+            return row
+        })
+    }, [rows, gastosOverride])
 
     const gTiendas = findTotal(rows, /real ganancias tiendas/i)
     const gFFVV = findTotal(rows, /real ganancias ffvv/i)
@@ -96,6 +144,13 @@ export default function GananciasPage() {
                 {kpi(`Total Ganancias ${year}`, gTotal, (gTotal ?? 0) >= 0 ? TrendingUp : TrendingDown, '#22c55e')}
             </div>
 
+            {gastosOverride && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontSize: 12, color: '#0369a1', fontWeight: 600 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+                    Gastos Tiendas y Gastos FFVV en vivo desde «Informes de Gastos» ({year})
+                </div>
+            )}
+
             {/* Tabla detalle mensual */}
             <div style={{ background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border-light)', overflow: 'hidden', boxShadow: '0 4px 12px rgba(15,23,42,0.05)' }}>
                 <div style={{ overflowX: 'auto' }}>
@@ -109,7 +164,7 @@ export default function GananciasPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {rows.map((row, ri) => {
+                            {displayRows.map((row, ri) => {
                                 const gan = isGanancia(row.label)
                                 const sub = isSubtotal(row.label)
                                 const cobrado = /total cobrado/i.test(row.label)
