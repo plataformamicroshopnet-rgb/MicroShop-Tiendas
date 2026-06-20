@@ -119,16 +119,16 @@ export default function GananciasPage() {
                                     : 'var(--text-main)'
                                 return (
                                     <tr key={ri} style={{ background: bg, borderBottom: '1px solid var(--border-light)' }}>
-                                        <td style={{ padding: '3px 12px', textAlign: 'left', fontWeight: gan ? 800 : 600, color: 'var(--text-main)', position: 'sticky', left: 0, background: gan ? '#dcfce7' : (sub ? '#e0f2fe' : (cobrado ? '#bfdbfe' : 'var(--bg-card)')) }}>
+                                        <td style={{ padding: '4px 12px', textAlign: 'left', fontWeight: gan ? 800 : 600, color: 'var(--text-main)', position: 'sticky', left: 0, background: gan ? '#dcfce7' : (sub ? '#e0f2fe' : (cobrado ? '#bfdbfe' : 'var(--bg-card)')) }}>
                                             {row.label}
                                         </td>
                                         {row.months.map((v, mi) => (
-                                            <td key={mi} style={{ padding: '3px 8px', textAlign: 'right', color: gan ? totalColor : 'var(--text-muted)', fontWeight: gan ? 700 : 400 }}>
+                                            <td key={mi} style={{ padding: '4px 8px', textAlign: 'right', color: gan ? totalColor : 'var(--text-muted)', fontWeight: gan ? 700 : 400 }}>
                                                 {eur(v)}
                                             </td>
                                         ))}
-                                        <td style={{ padding: '3px 10px', textAlign: 'right', fontWeight: 800, color: totalColor, borderLeft: '2px solid var(--border-light)' }}>{eur(row.total)}</td>
-                                        <td style={{ padding: '3px 10px', textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600 }}>{eur(row.media)}</td>
+                                        <td style={{ padding: '4px 10px', textAlign: 'right', fontWeight: 800, color: totalColor, borderLeft: '2px solid var(--border-light)' }}>{eur(row.total)}</td>
+                                        <td style={{ padding: '4px 10px', textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600 }}>{eur(row.media)}</td>
                                     </tr>
                                 )
                             })}
