@@ -147,7 +147,7 @@ export default function GananciasPage() {
             {gastosOverride && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontSize: 12, color: '#0369a1', fontWeight: 600 }}>
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
-                    Gastos Tiendas y Gastos FFVV en vivo desde «Informes de Gastos» ({year})
+                    Ingresos Gastos ({year})
                 </div>
             )}
 
@@ -168,22 +168,34 @@ export default function GananciasPage() {
                                 const gan = isGanancia(row.label)
                                 const sub = isSubtotal(row.label)
                                 const cobrado = /total cobrado/i.test(row.label)
+                                const rojo = ['Gastos Tiendas', 'Comisiones Tiendas', 'Gastos FFVV'].includes(row.label)
+                                const tip = row.label === 'Gastos Tiendas'
+                                    ? (gastosOverride ? 'En vivo de «Informes de Gastos»: Tiendas + Movilfree (Total gastos Fijos + Variables)' : 'Dato del Excel «Ganancias 2014-2026»')
+                                    : row.label === 'Gastos FFVV'
+                                    ? (gastosOverride ? 'En vivo de «Informes de Gastos»: Comerciales (Total gastos Fijos + Variables)' : 'Dato del Excel «Ganancias 2014-2026»')
+                                    : row.label === 'Comisiones Tiendas'
+                                    ? 'Dato del Excel «Ganancias 2014-2026»'
+                                    : undefined
                                 const bg = gan ? 'rgba(34,197,94,0.10)' : (sub ? 'rgba(2,132,199,0.06)' : (cobrado ? '#bfdbfe' : (ri % 2 === 0 ? 'transparent' : 'var(--active-bg)')))
                                 const totalColor = (gan || sub)
                                     ? ((row.total ?? 0) >= 0 ? '#16a34a' : '#dc2626')
                                     : 'var(--text-main)'
                                 return (
                                     <tr key={ri} style={{ background: bg, borderBottom: '1px solid var(--border-light)' }}>
-                                        <td style={{ padding: '4px 12px', textAlign: 'left', fontWeight: gan ? 800 : 600, color: 'var(--text-main)', position: 'sticky', left: 0, background: gan ? '#dcfce7' : (sub ? '#e0f2fe' : (cobrado ? '#bfdbfe' : 'var(--bg-card)')) }}>
+                                        <td title={tip} style={{ padding: '4px 12px', textAlign: 'left', fontWeight: gan ? 800 : 600, color: rojo ? '#dc2626' : 'var(--text-main)', position: 'sticky', left: 0, background: gan ? '#dcfce7' : (sub ? '#e0f2fe' : (cobrado ? '#bfdbfe' : 'var(--bg-card)')), cursor: tip ? 'help' : undefined }}>
                                             {row.label}
                                         </td>
-                                        {row.months.map((v, mi) => (
-                                            <td key={mi} style={{ padding: '4px 8px', textAlign: 'right', color: gan ? totalColor : 'var(--text-muted)', fontWeight: gan ? 700 : 400 }}>
-                                                {eur(v)}
-                                            </td>
-                                        ))}
-                                        <td style={{ padding: '4px 10px', textAlign: 'right', fontWeight: 800, color: totalColor, borderLeft: '2px solid var(--border-light)' }}>{eur(row.total)}</td>
-                                        <td style={{ padding: '4px 10px', textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600 }}>{eur(row.media)}</td>
+                                        {row.months.map((v, mi) => {
+                                            const neg = v != null && v < 0
+                                            const c = (rojo || neg) ? '#dc2626' : (gan ? '#16a34a' : 'var(--text-muted)')
+                                            return (
+                                                <td key={mi} style={{ padding: '4px 8px', textAlign: 'right', color: c, fontWeight: (gan || rojo) ? 700 : 400 }}>
+                                                    {eur(v)}
+                                                </td>
+                                            )
+                                        })}
+                                        <td style={{ padding: '4px 10px', textAlign: 'right', fontWeight: 800, color: (rojo || (row.total != null && row.total < 0)) ? '#dc2626' : totalColor, borderLeft: '2px solid var(--border-light)' }}>{eur(row.total)}</td>
+                                        <td style={{ padding: '4px 10px', textAlign: 'right', color: (rojo || (row.media != null && row.media < 0)) ? '#dc2626' : 'var(--text-muted)', fontWeight: 600 }}>{eur(row.media)}</td>
                                     </tr>
                                 )
                             })}
