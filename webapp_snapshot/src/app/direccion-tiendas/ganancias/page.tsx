@@ -51,6 +51,13 @@ export default function GananciasPage() {
     // palancas. Meses Ene-May 2026 y años previos siguen con el dato estático del Excel.
     const [comisLocalesOverride, setComisLocalesOverride] = useState<Record<number, number> | null>(null)
 
+    // ── Tentáculo: fila "PRV" en vivo desde el ERP (mi-nuevo-erp). El scheduler del ERP
+    // publica el "Beneficio Neto Total" mensual del PRV en /api/prv-feed (POST con secreto)
+    // y aquí se lee (GET). Aplica desde Septiembre 2025. Meses previos: dato del Excel.
+    const PRV_FROM_YEAR = 2025
+    const PRV_FROM_MONTH = 9
+    const [prvOverride, setPrvOverride] = useState<Record<number, number> | null>(null)
+
     useEffect(() => {
         setGastosOverride(null)
         if (Number(year) < LIVE_FROM_YEAR) return
@@ -169,10 +176,33 @@ export default function GananciasPage() {
         return () => { cancel = true }
     }, [year])
 
+    useEffect(() => {
+        setPrvOverride(null)
+        const yNum = Number(year)
+        if (yNum < PRV_FROM_YEAR) return
+        let cancel = false
+        fetch('/api/prv-feed', { cache: 'no-store' })
+            .then(r => r.json())
+            .then(d => {
+                if (cancel || !d?.success || !d.data) return
+                const ov: Record<number, number> = {}
+                for (let m = 1; m <= 12; m++) {
+                    // Respetar "desde Septiembre 2025"
+                    if (yNum === PRV_FROM_YEAR && m < PRV_FROM_MONTH) continue
+                    const key = `${yNum}_${String(m).padStart(2, '0')}`
+                    const v = d.data[key]
+                    if (v !== undefined && v !== null && !isNaN(Number(v))) ov[m] = Number(v)
+                }
+                if (Object.keys(ov).length) setPrvOverride(ov)
+            })
+            .catch(() => {})
+        return () => { cancel = true }
+    }, [year])
+
     const rows = GANANCIAS_DATA[year] || []
 
     const displayRows: GananciaRow[] = useMemo(() => {
-        if (!gastosOverride && !cajaModOverride && !comisLocalesOverride) return rows
+        if (!gastosOverride && !cajaModOverride && !comisLocalesOverride && !prvOverride) return rows
         const build = (months: number[]) => {
             const total = months.reduce((a, b) => a + b, 0)
             const active = months.filter(m => m !== 0).length
@@ -192,9 +222,10 @@ export default function GananciasPage() {
             if (gastosOverride && row.label === 'Gastos FFVV') return { label: row.label, ...build(gastosOverride.ffvv) }
             if (cajaModOverride && row.label === 'Caja Tiendas') return applyMonthly(row, cajaModOverride)
             if (comisLocalesOverride && row.label === 'Comisiones Tiendas Locales') return applyMonthly(row, comisLocalesOverride)
+            if (prvOverride && row.label === 'PRV') return applyMonthly(row, prvOverride)
             return row
         })
-    }, [rows, gastosOverride, cajaModOverride, comisLocalesOverride])
+    }, [rows, gastosOverride, cajaModOverride, comisLocalesOverride, prvOverride])
 
     const gTiendas = findTotal(rows, /real ganancias tiendas/i)
     const gFFVV = findTotal(rows, /real ganancias ffvv/i)
@@ -265,7 +296,7 @@ export default function GananciasPage() {
                 {kpi(`Total Ganancias ${year}`, gTotal, (gTotal ?? 0) >= 0 ? TrendingUp : TrendingDown, '#22c55e')}
             </div>
 
-            {(gastosOverride || cajaModOverride || comisLocalesOverride) && (
+            {(gastosOverride || cajaModOverride || comisLocalesOverride || prvOverride) && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontSize: 12, color: '#0369a1', fontWeight: 600 }}>
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
                     Ingresos Gastos ({year})
@@ -298,6 +329,8 @@ export default function GananciasPage() {
                                     ? (cajaModOverride ? 'En vivo de «MOD» (Media Operaciones Diaria): Importe Mensual del mes (comisiones reales + MovilFree)' : 'Dato del Excel «Ganancias 2014-2026»')
                                     : row.label === 'Comisiones Tiendas Locales'
                                     ? (comisLocalesOverride ? 'En vivo de «Territorial PDV»: Total Consolidado Tiendas (suma de las palancas territoriales)' : 'Dato del Excel «Ganancias 2014-2026»')
+                                    : row.label === 'PRV'
+                                    ? (prvOverride ? 'En vivo del ERP «mi-nuevo-erp»: Retribución Variable (PRV), Beneficio Neto Total del mes' : 'Dato del Excel «Ganancias 2014-2026»')
                                     : row.label === 'Comisiones Tiendas'
                                     ? 'Dato del Excel «Ganancias 2014-2026»'
                                     : undefined

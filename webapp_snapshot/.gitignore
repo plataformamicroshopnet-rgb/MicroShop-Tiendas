@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# feed del PRV escrito en runtime (volumen)
+prv_feed.json
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
