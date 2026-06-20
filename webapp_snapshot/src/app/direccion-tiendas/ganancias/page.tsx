@@ -102,32 +102,33 @@ export default function GananciasPage() {
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, whiteSpace: 'nowrap', minWidth: 1100 }}>
                         <thead>
                             <tr style={{ background: 'linear-gradient(90deg, #0ea5e9, #0284c7)', color: '#fff' }}>
-                                <th style={{ padding: '10px 14px', textAlign: 'left', position: 'sticky', left: 0, background: '#0ea5e9', minWidth: 210 }}>Concepto</th>
-                                {MESES.map(m => <th key={m} style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 700 }}>{m}</th>)}
-                                <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 800, borderLeft: '2px solid rgba(255,255,255,0.25)' }}>Total</th>
-                                <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700 }}>Media</th>
+                                <th style={{ padding: '7px 12px', textAlign: 'left', position: 'sticky', left: 0, background: '#0ea5e9', minWidth: 210 }}>Concepto</th>
+                                {MESES.map(m => <th key={m} style={{ padding: '7px 8px', textAlign: 'right', fontWeight: 700 }}>{m}</th>)}
+                                <th style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 800, borderLeft: '2px solid rgba(255,255,255,0.25)' }}>Total</th>
+                                <th style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 700 }}>Media</th>
                             </tr>
                         </thead>
                         <tbody>
                             {rows.map((row, ri) => {
                                 const gan = isGanancia(row.label)
                                 const sub = isSubtotal(row.label)
-                                const bg = gan ? 'rgba(34,197,94,0.10)' : (sub ? 'rgba(2,132,199,0.06)' : (ri % 2 === 0 ? 'transparent' : 'var(--active-bg)'))
+                                const cobrado = /total cobrado/i.test(row.label)
+                                const bg = gan ? 'rgba(34,197,94,0.10)' : (sub ? 'rgba(2,132,199,0.06)' : (cobrado ? '#bfdbfe' : (ri % 2 === 0 ? 'transparent' : 'var(--active-bg)')))
                                 const totalColor = (gan || sub)
                                     ? ((row.total ?? 0) >= 0 ? '#16a34a' : '#dc2626')
                                     : 'var(--text-main)'
                                 return (
                                     <tr key={ri} style={{ background: bg, borderBottom: '1px solid var(--border-light)' }}>
-                                        <td style={{ padding: '8px 14px', textAlign: 'left', fontWeight: gan ? 800 : 600, color: 'var(--text-main)', position: 'sticky', left: 0, background: gan ? '#dcfce7' : (sub ? '#e0f2fe' : 'var(--bg-card)') }}>
+                                        <td style={{ padding: '3px 12px', textAlign: 'left', fontWeight: gan ? 800 : 600, color: 'var(--text-main)', position: 'sticky', left: 0, background: gan ? '#dcfce7' : (sub ? '#e0f2fe' : (cobrado ? '#bfdbfe' : 'var(--bg-card)')) }}>
                                             {row.label}
                                         </td>
                                         {row.months.map((v, mi) => (
-                                            <td key={mi} style={{ padding: '8px 8px', textAlign: 'right', color: gan ? totalColor : 'var(--text-muted)', fontWeight: gan ? 700 : 400 }}>
+                                            <td key={mi} style={{ padding: '3px 8px', textAlign: 'right', color: gan ? totalColor : 'var(--text-muted)', fontWeight: gan ? 700 : 400 }}>
                                                 {eur(v)}
                                             </td>
                                         ))}
-                                        <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, color: totalColor, borderLeft: '2px solid var(--border-light)' }}>{eur(row.total)}</td>
-                                        <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600 }}>{eur(row.media)}</td>
+                                        <td style={{ padding: '3px 10px', textAlign: 'right', fontWeight: 800, color: totalColor, borderLeft: '2px solid var(--border-light)' }}>{eur(row.total)}</td>
+                                        <td style={{ padding: '3px 10px', textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600 }}>{eur(row.media)}</td>
                                     </tr>
                                 )
                             })}
