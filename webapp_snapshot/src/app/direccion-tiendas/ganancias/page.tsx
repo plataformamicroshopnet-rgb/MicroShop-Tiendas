@@ -5,6 +5,7 @@ import { useGuard } from '@/hooks/useGuard'
 import { PageHeader } from '@/components/PageHeader'
 import { Wallet, TrendingUp, TrendingDown, Building2, Briefcase } from 'lucide-react'
 import { GANANCIAS_DATA, GananciaRow } from './data'
+import { computeMonthMetrics } from '@/lib/modMetrics'
 
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 
@@ -33,6 +34,15 @@ export default function GananciasPage() {
     const LIVE_FROM_YEAR = 2026
     const [gastosOverride, setGastosOverride] = useState<{ tiendas: number[]; ffvv: number[] } | null>(null)
 
+    // ── Tentáculo: "Caja Tiendas" en vivo = Importe Mensual del MOD (Media Operaciones
+    // Diaria) de cada mes, desde Junio 2026. Se calcula con la MISMA fuente única que la
+    // página MOD (lib/modMetrics → computeMonthMetrics): para cada mes se piden ventas +
+    // configs de ese periodo y se obtiene totalImporte. Meses Ene-May 2026 y años previos
+    // siguen con el dato estático del Excel.
+    const CAJA_FROM_YEAR = 2026
+    const CAJA_FROM_MONTH = 6
+    const [cajaModOverride, setCajaModOverride] = useState<Record<number, number> | null>(null)
+
     useEffect(() => {
         setGastosOverride(null)
         if (Number(year) < LIVE_FROM_YEAR) return
@@ -59,21 +69,81 @@ export default function GananciasPage() {
         return () => { cancel = true }
     }, [year])
 
+    useEffect(() => {
+        setCajaModOverride(null)
+        const yNum = Number(year)
+        if (yNum < CAJA_FROM_YEAR) return
+        const now = new Date()
+        const isCurrentYear = yNum === now.getFullYear()
+        const lastMonth = isCurrentYear ? (now.getMonth() + 1) : 12
+        const startMonth = yNum === CAJA_FROM_YEAR ? CAJA_FROM_MONTH : 1
+        const months: number[] = []
+        for (let m = startMonth; m <= lastMonth; m++) months.push(m)
+        if (months.length === 0) return
+
+        let cancel = false
+        const j = (r: Response) => r.json()
+        ;(async () => {
+            try {
+                // Datos compartidos (no dependen del mes)
+                const [catRes, periodsRes, mfSales, mfProducts] = await Promise.all([
+                    fetch('/api/catalogs', { cache: 'no-store' }).then(j).catch(() => ({ catalogs: {} })),
+                    fetch('/api/period', { cache: 'no-store' }).then(j).catch(() => ({ periods: [] })),
+                    fetch('/api/movilfree/sales', { cache: 'no-store' }).then(j).catch(() => []),
+                    fetch('/api/movilfree/products', { cache: 'no-store' }).then(j).catch(() => []),
+                ])
+                const result: Record<number, number> = {}
+                for (const m of months) {
+                    const pk = `${yNum}_${String(m).padStart(2, '0')}`
+                    const [salesRes, objData, pymeData, plusData, extrasData] = await Promise.all([
+                        fetch(`/api/sales?periodKey=${pk}`, { cache: 'no-store' }).then(j).catch(() => ({ logs: [] })),
+                        fetch(`/api/objetivos?periodKey=${pk}&strictPeriod=1`, { cache: 'no-store' }).then(j).catch(() => ({})),
+                        fetch(`/api/importes-pyme?periodKey=${pk}&strictPeriod=1`, { cache: 'no-store' }).then(j).catch(() => ({})),
+                        fetch(`/api/importes-plus?periodKey=${pk}&strictPeriod=1`, { cache: 'no-store' }).then(j).catch(() => ({})),
+                        fetch(`/api/extras/assignments?periodKey=${pk}`, { cache: 'no-store' }).then(j).catch(() => ({})),
+                    ])
+                    if (cancel) return
+                    const metrics = computeMonthMetrics({
+                        salesRaw: salesRes.logs || [],
+                        configs: [objData, pymeData, plusData, extrasData],
+                        catalogs: catRes.catalogs || {},
+                        periods: periodsRes.periods || [],
+                        mfSales: mfSales || [],
+                        mfProducts: mfProducts || [],
+                        year: yNum,
+                        month: m,
+                        periodKeyForConfig: pk,
+                    })
+                    result[m] = metrics.totalImporte
+                }
+                if (!cancel) setCajaModOverride(result)
+            } catch { /* sin conexión: se queda el dato del Excel */ }
+        })()
+        return () => { cancel = true }
+    }, [year])
+
     const rows = GANANCIAS_DATA[year] || []
 
     const displayRows: GananciaRow[] = useMemo(() => {
-        if (!gastosOverride) return rows
+        if (!gastosOverride && !cajaModOverride) return rows
         const build = (months: number[]) => {
             const total = months.reduce((a, b) => a + b, 0)
             const active = months.filter(m => m !== 0).length
             return { months, total, media: active ? total / active : null }
         }
         return rows.map(row => {
-            if (row.label === 'Gastos Tiendas') return { label: row.label, ...build(gastosOverride.tiendas) }
-            if (row.label === 'Gastos FFVV') return { label: row.label, ...build(gastosOverride.ffvv) }
+            if (gastosOverride && row.label === 'Gastos Tiendas') return { label: row.label, ...build(gastosOverride.tiendas) }
+            if (gastosOverride && row.label === 'Gastos FFVV') return { label: row.label, ...build(gastosOverride.ffvv) }
+            if (cajaModOverride && row.label === 'Caja Tiendas') {
+                const months = row.months.map((v, i) => cajaModOverride[i + 1] !== undefined ? cajaModOverride[i + 1] : v)
+                const nums = months.filter((x): x is number => x !== null && x !== undefined)
+                const total = nums.reduce((a, b) => a + b, 0)
+                const active = months.filter(m => m !== null && m !== undefined && m !== 0).length
+                return { label: row.label, months, total, media: active ? total / active : null }
+            }
             return row
         })
-    }, [rows, gastosOverride])
+    }, [rows, gastosOverride, cajaModOverride])
 
     const gTiendas = findTotal(rows, /real ganancias tiendas/i)
     const gFFVV = findTotal(rows, /real ganancias ffvv/i)
@@ -144,7 +214,7 @@ export default function GananciasPage() {
                 {kpi(`Total Ganancias ${year}`, gTotal, (gTotal ?? 0) >= 0 ? TrendingUp : TrendingDown, '#22c55e')}
             </div>
 
-            {gastosOverride && (
+            {(gastosOverride || cajaModOverride) && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontSize: 12, color: '#0369a1', fontWeight: 600 }}>
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
                     Ingresos Gastos ({year})
@@ -173,6 +243,8 @@ export default function GananciasPage() {
                                     ? (gastosOverride ? 'En vivo de «Informes de Gastos»: Tiendas + Movilfree (Total gastos Fijos + Variables)' : 'Dato del Excel «Ganancias 2014-2026»')
                                     : row.label === 'Gastos FFVV'
                                     ? (gastosOverride ? 'En vivo de «Informes de Gastos»: Comerciales (Total gastos Fijos + Variables)' : 'Dato del Excel «Ganancias 2014-2026»')
+                                    : row.label === 'Caja Tiendas'
+                                    ? (cajaModOverride ? 'En vivo de «MOD» (Media Operaciones Diaria): Importe Mensual del mes (comisiones reales + MovilFree)' : 'Dato del Excel «Ganancias 2014-2026»')
                                     : row.label === 'Comisiones Tiendas'
                                     ? 'Dato del Excel «Ganancias 2014-2026»'
                                     : undefined
