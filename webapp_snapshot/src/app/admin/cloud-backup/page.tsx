@@ -44,10 +44,10 @@ export default function CloudBackupPage() {
       const res = await fetch('/api/admin/ftp-backup', { method: 'POST' })
       const data = await res.json()
       if (data.success) {
-        alert('✅ Copia creada y subida al QNAP exitosamente.')
+        alert('✅ Copia creada y subida a la nube (B2) correctamente.')
         fetchBackups() // Refrescar lista
       } else {
-        alert('❌ Error al subir por FTP: ' + data.error)
+        alert('❌ Error al subir la copia: ' + data.error)
       }
     } catch (err) {
       alert('Error de conexión al lanzar backup.')
@@ -115,8 +115,8 @@ export default function CloudBackupPage() {
   return (
     <div style={{ padding: 20, maxWidth: 1000, margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
       <PageHeader 
-        title={<><Cloud color="#2563eb" size={28} /> Nube de Respaldo QNAP (FTP)</>}
-        subtitle="Automatización Server-Side de copias de seguridad desconectadas de tu red local."
+        title={<><Cloud color="#2563eb" size={28} /> Nube de Respaldo (Backblaze B2)</>}
+        subtitle="Copia de seguridad automática a la nube. El QNAP luego sincroniza el bucket a tu NAS."
         showBack={true}
         backFallback="/admin"
         helpContent={
@@ -182,10 +182,10 @@ export default function CloudBackupPage() {
           <div style={{ padding: '20px 24px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f9fafb' }}>
              <div>
                 <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 4px 0', color: '#111827', fontSize: 18 }}>
-                <HardDriveDownload size={20} color="#2563eb" /> Historial de Copias en QNAP
+                <HardDriveDownload size={20} color="#2563eb" /> Historial de Copias en la Nube (B2)
                 </h3>
                 <p style={{ color: '#6b7280', fontSize: 13, margin: 0 }}>
-                Las copias se generan automáticamente cada madrugada y se retienen 14 días.
+                Las copias se generan automáticamente cada madrugada y se retienen 31 días. El QNAP las baja al NAS.
                 </p>
              </div>
              <button onClick={handleManualBackup} disabled={backingUp || downloadingFTP} style={{ padding: '10px 20px', background: '#111827', color: '#ffffff', border: 'none', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: 8, fontSize: '13px', fontWeight: 600, transition: 'all 0.2s ease', cursor: (backingUp || downloadingFTP) ? 'wait' : 'pointer' }}>
@@ -211,13 +211,13 @@ export default function CloudBackupPage() {
                     <tr>
                       <td colSpan={4} style={{ padding: 32, textAlign: 'center', color: '#6b7280' }}>
                          <RefreshCw className="animate-spin" size={24} style={{ margin: '0 auto 12px' }}/>
-                         Conectando con Servidor FTP QNAP...
+                         Cargando copias de la nube (B2)...
                       </td>
                     </tr>
                   ) : backups.length === 0 ? (
                     <tr>
                       <td colSpan={4} style={{ padding: 32, textAlign: 'center', color: '#6b7280' }}>
-                         No se encontraron copias en la carpeta remota del QNAP.
+                         Aún no hay copias en la nube (B2). Pulsa «Lanzar Copia Manual» o espera al backup programado.
                       </td>
                     </tr>
                   ) : (

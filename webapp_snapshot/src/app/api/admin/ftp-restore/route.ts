@@ -5,6 +5,7 @@ import path from 'path'
 import { PrismaClient } from '@prisma/client'
 import AdmZip from 'adm-zip'
 import { downloadFromFTP } from '@/lib/ftpClient'
+import { isB2Configured, downloadFromB2 } from '@/lib/b2Client'
 import { getDbPaths } from '@/lib/dbPath'
 
 export const dynamic = 'force-dynamic'
@@ -21,7 +22,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'FileId (nombre) no proporcionado.' }, { status: 400 })
     }
 
-    const buffer = await downloadFromFTP(fileId)
+    const buffer = isB2Configured() ? await downloadFromB2(fileId) : await downloadFromFTP(fileId)
     
     // Descompresión a Cuarentena
     const zip = new AdmZip(buffer)
