@@ -301,7 +301,7 @@ export default function GananciasPage() {
             if (gastosOverride && row.label === 'Gastos FFVV') return { label: row.label, ...build(gastosOverride.ffvv) }
             if (cajaModOverride && row.label === 'Caja Tiendas') return applyMonthly(row, cajaModOverride)
             if (comisLocalesOverride && row.label === 'Comisiones Tiendas Locales') return applyMonthly(row, comisLocalesOverride)
-            if (prvOverride && row.label === 'PRV' && (ffvvStart < 0 || i < ffvvStart)) return applyMonthly(row, prvOverride)
+            if (prvOverride && (row.label === 'PRV' || row.label === 'PRV Tiendas') && (ffvvStart < 0 || i < ffvvStart)) return applyMonthly(row, prvOverride)
             if (cobradoOverride && row.label === 'TOTAL COBRADO IVA Inc') return applyMonthly(row, cobradoOverride)
             if (produccionOverride && (row.label === 'Producción Plus' || row.label === 'Producción Básico')) {
                 const field: 'plus' | 'basico' = row.label === 'Producción Plus' ? 'plus' : 'basico'
@@ -337,8 +337,8 @@ export default function GananciasPage() {
             return { label, months, total, media: active ? total / active : null }
         }
 
-        const ttMonths = sumRange(['Caja Tiendas', 'Comisiones Tiendas Locales', 'PRV'], idxTT + 1, idxTF)
-        const tfMonths = sumRange(['Caja FFVV', 'Producción Plus', 'Producción Básico', 'PRV'], idxTF + 1, overridden.length)
+        const ttMonths = sumRange(['Caja Tiendas', 'Comisiones Tiendas Locales', 'PRV', 'PRV Tiendas'], idxTT + 1, idxTF)
+        const tfMonths = sumRange(['Caja FFVV', 'Producción Plus', 'Producción Básico', 'PRV', 'PRV FFVV'], idxTF + 1, overridden.length)
         const bothMonths: (number | null)[] = ttMonths.map((v, i) => {
             const b = tfMonths[i]
             if ((v === null || v === undefined) && (b === null || b === undefined)) return null
@@ -558,7 +558,7 @@ export default function GananciasPage() {
                                     ? (cajaModOverride ? 'En vivo del «Resumen de Métricas MOD»: Tiendas Movistar + MovilFree + O2 + PRV Territorial O2' : 'Dato del Excel «Ganancias 2014-2026»')
                                     : row.label === 'Comisiones Tiendas Locales'
                                     ? (comisLocalesOverride ? 'En vivo de «Territorial PDV»: Total Consolidado Tiendas (suma de las palancas territoriales)' : 'Dato del Excel «Ganancias 2014-2026»')
-                                    : row.label === 'PRV'
+                                    : (row.label === 'PRV' || row.label === 'PRV Tiendas')
                                     ? (prvOverride ? 'En vivo del ERP «mi-nuevo-erp»: Retribución Variable (PRV), Desglose Mensual Interactivo del mes' : 'Dato del Excel «Ganancias 2014-2026»')
                                     : row.label === 'Comisiones Tiendas'
                                     ? 'Dato del Excel «Ganancias 2014-2026»'

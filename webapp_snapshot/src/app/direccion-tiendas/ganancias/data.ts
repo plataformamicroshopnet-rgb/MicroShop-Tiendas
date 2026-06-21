@@ -6108,7 +6108,7 @@ export const GANANCIAS_DATA: Record<string, GananciaRow[]> = {
    "media": 5539.6
   },
   {
-   "label": "PRV",
+   "label": "PRV Tiendas",
    "months": [
     17659.0,
     17659.0,
@@ -6260,7 +6260,7 @@ export const GANANCIAS_DATA: Record<string, GananciaRow[]> = {
    "media": 2396.98
   },
   {
-   "label": "PRV",
+   "label": "PRV FFVV",
    "months": [
     16020.0,
     16020.0,
