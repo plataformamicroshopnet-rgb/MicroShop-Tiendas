@@ -3,6 +3,7 @@ import { getSession } from '@/lib/auth'
 import fs from 'fs'
 import AdmZip from 'adm-zip'
 import { uploadToFTP, cleanupOldBackups } from '@/lib/ftpClient'
+import { isB2Configured, uploadToB2, cleanupOldB2 } from '@/lib/b2Client'
 import { getDbPaths } from '@/lib/dbPath'
 
 export async function POST(request: Request) {
@@ -43,18 +44,24 @@ export async function POST(request: Request) {
 
     const now = new Date()
     const dateStr = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2,'0')}${now.getDate().toString().padStart(2,'0')}_${now.getHours().toString().padStart(2,'0')}${now.getMinutes().toString().padStart(2,'0')}`
-    const filename = `MicroShop_QNAP_Backup_${dateStr}.zip`
+    const filename = `MicroShop_Tiendas_Backup_${dateStr}.zip`
 
-    // Subida FTP
-    const fileId = await uploadToFTP(filename, zipBuffer)
+    // Método principal: subida a la nube (Backblaze B2). Robusto desde Railway.
+    // Si B2 no está configurado todavía, cae al FTP→QNAP heredado.
+    let fileId = ''
+    let deletedCount = 0
+    let destino = ''
+    if (isB2Configured()) {
+        fileId = await uploadToB2(filename, zipBuffer)
+        deletedCount = await cleanupOldB2(31).catch(e => { console.error('Limpieza B2 falló:', e); return 0 })
+        destino = 'Backblaze B2'
+    } else {
+        fileId = await uploadToFTP(filename, zipBuffer)
+        deletedCount = await cleanupOldBackups(14).catch(e => { console.error('Limpieza FTP falló:', e); return 0 })
+        destino = 'QNAP (FTP)'
+    }
 
-    // Limpieza (Rutina Mantenimiento a 14 días)
-    const deletedCount = await cleanupOldBackups(14).catch(e => {
-        console.error("No se pudieron limpiar las copias antiguas FTP:", e)
-        return 0
-    });
-
-    return NextResponse.json({ success: true, message: 'Copia inyectada con éxito en tu QNAP.', fileId, deletedOld: deletedCount })
+    return NextResponse.json({ success: true, message: `Copia subida con éxito a ${destino}.`, destino, fileId, deletedOld: deletedCount })
 
   } catch (err: any) {
     console.error('Error in ftp-backup (QNAP generator):', err)
