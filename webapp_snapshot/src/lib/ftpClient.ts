@@ -96,11 +96,12 @@ export async function downloadFromFTP(fileName: string): Promise<Buffer> {
   }
 }
 
-export async function cleanupOldBackups(retentionDays = 14) {
+export async function cleanupOldBackups(retentionDays = 14, prefix = '') {
   const client = await getConnectedClient()
   try {
     const list = await client.list()
-    const zipFiles = list.filter(f => f.name.endsWith('.zip'))
+    // Solo .zip y, si se indica, solo los de ESTA app (evita borrar copias de otra app que comparta carpeta)
+    const zipFiles = list.filter(f => f.name.endsWith('.zip') && (!prefix || f.name.startsWith(prefix)))
     
     const limitDate = new Date()
     limitDate.setDate(limitDate.getDate() - retentionDays)

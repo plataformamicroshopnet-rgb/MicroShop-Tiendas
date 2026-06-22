@@ -17,12 +17,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Unauthorized Access' }, { status: 401 })
     }
 
-    const { fileId } = await req.json()
+    const { fileId, source } = await req.json()
     if (!fileId) {
       return NextResponse.json({ success: false, error: 'FileId (nombre) no proporcionado.' }, { status: 400 })
     }
 
-    const buffer = isB2Configured() ? await downloadFromB2(fileId) : await downloadFromFTP(fileId)
+    // source: 'nas' (FTP→QNAP) | 'b2' (nube). Por defecto B2 si está configurado.
+    const buffer = source === 'nas'
+      ? await downloadFromFTP(fileId)
+      : (isB2Configured() ? await downloadFromB2(fileId) : await downloadFromFTP(fileId))
     
     // Descompresión a Cuarentena
     const zip = new AdmZip(buffer)

@@ -5,7 +5,8 @@ import { Cloud, CloudUpload, HardDriveDownload, AlertTriangle, CheckCircle, Chev
 import Link from 'next/link'
 import { PageHeader } from '@/components/PageHeader'
 export default function CloudBackupPage() {
-  const [backups, setBackups] = useState<any[]>([])
+  const [b2List, setB2List] = useState<any[]>([])
+  const [nasList, setNasList] = useState<any[]>([])
   const [loadingList, setLoadingList] = useState(true)
   const [backingUp, setBackingUp] = useState(false)
   
@@ -27,9 +28,10 @@ export default function CloudBackupPage() {
       const res = await fetch('/api/admin/ftp-list?t=' + Date.now())
       const data = await res.json()
       if (data.success) {
-        setBackups(data.files)
+        setB2List(data.b2 || [])
+        setNasList(data.nas || [])
       } else {
-        console.error("Error cargando listado FTP:", data.error)
+        console.error("Error cargando listado de copias:", data.error)
       }
     } catch (err) {
       console.error(err)
@@ -44,10 +46,10 @@ export default function CloudBackupPage() {
       const res = await fetch('/api/admin/ftp-backup', { method: 'POST' })
       const data = await res.json()
       if (data.success) {
-        alert('✅ Copia creada y subida a la nube (B2) correctamente.')
-        fetchBackups() // Refrescar lista
+        alert('✅ ' + (data.message || 'Copia creada (Nube B2 + NAS).'))
+        fetchBackups() // Refrescar listas
       } else {
-        alert('❌ Error al subir la copia: ' + data.error)
+        alert('❌ Error al subir la copia: ' + (data.error || data.message))
       }
     } catch (err) {
       alert('Error de conexión al lanzar backup.')
@@ -56,17 +58,17 @@ export default function CloudBackupPage() {
     }
   }
 
-  const handlePrepareRestore = async (fileId: string) => {
-    if (!confirm('¿Seguro que quieres descargar y poner en cuarentena esta copia del QNAP? Se machacará cualquier otra copia en cuarentena.')) return
-    
+  const handlePrepareRestore = async (fileId: string, source: 'b2' | 'nas') => {
+    if (!confirm('¿Seguro que quieres descargar y poner en cuarentena esta copia? Se machacará cualquier otra copia en cuarentena.')) return
+
     setDownloadingFTP(true)
     setBackupReady(false)
-    
+
     try {
       const res = await fetch('/api/admin/ftp-restore', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileId })
+        body: JSON.stringify({ fileId, source })
       })
       const data = await res.json()
       if (data.success) {
@@ -111,6 +113,71 @@ export default function CloudBackupPage() {
       setConfirmText('')
     }
   }
+
+  const renderPanel = (opts: {
+    title: string; subtitle: string; icon: any; list: any[];
+    source: 'b2' | 'nas'; restoreLabel: string; emptyMsg: string; loadingMsg: string; showManual?: boolean;
+  }) => (
+    <div className="card" style={{ padding: 0, backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+      <div style={{ padding: '20px 24px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f9fafb' }}>
+        <div>
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 4px 0', color: '#111827', fontSize: 18 }}>
+            {opts.icon} {opts.title}
+          </h3>
+          <p style={{ color: '#6b7280', fontSize: 13, margin: 0 }}>{opts.subtitle}</p>
+        </div>
+        {opts.showManual && (
+          <button onClick={handleManualBackup} disabled={backingUp || downloadingFTP} style={{ padding: '10px 20px', background: '#111827', color: '#ffffff', border: 'none', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: 8, fontSize: '13px', fontWeight: 600, cursor: (backingUp || downloadingFTP) ? 'wait' : 'pointer' }}>
+            <CloudUpload size={16} /> {backingUp ? 'Subiendo...' : 'Lanzar Copia Manual Ahora'}
+          </button>
+        )}
+      </div>
+      <div style={{ padding: 24 }}>
+        <div style={{ border: '1px solid #e5e7eb', borderRadius: 12, overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
+            <thead style={{ backgroundColor: '#f3f4f6' }}>
+              <tr>
+                <th style={{ padding: '12px 16px', color: '#4b5563', fontWeight: 600 }}>Cápsula de Datos</th>
+                <th style={{ padding: '12px 16px', color: '#4b5563', fontWeight: 600 }}>Fecha / Hora</th>
+                <th style={{ padding: '12px 16px', color: '#4b5563', fontWeight: 600 }}>Peso</th>
+                <th style={{ padding: '12px 16px', textAlign: 'right', color: '#4b5563', fontWeight: 600 }}>Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loadingList ? (
+                <tr><td colSpan={4} style={{ padding: 32, textAlign: 'center', color: '#6b7280' }}>
+                  <RefreshCw className="animate-spin" size={24} style={{ margin: '0 auto 12px' }} />{opts.loadingMsg}
+                </td></tr>
+              ) : opts.list.length === 0 ? (
+                <tr><td colSpan={4} style={{ padding: 32, textAlign: 'center', color: '#6b7280' }}>{opts.emptyMsg}</td></tr>
+              ) : (
+                opts.list.map(file => {
+                  const dateObj = new Date(file.createdTime)
+                  const formattedDate = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString()
+                  return (
+                    <tr key={opts.source + file.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                      <td style={{ padding: '16px', fontWeight: 600, color: '#111827', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <FileArchive size={16} color="#6b7280" /> {file.name}
+                      </td>
+                      <td style={{ padding: '16px', color: '#4b5563' }}>{formattedDate}</td>
+                      <td style={{ padding: '16px', color: '#4b5563' }}>{file.sizeMB} MB</td>
+                      <td style={{ padding: '16px', textAlign: 'right' }}>
+                        <button onClick={() => handlePrepareRestore(file.id, opts.source)} disabled={downloadingFTP || backingUp}
+                          style={{ padding: '8px 16px', background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: '8px', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>
+                          <HardDriveDownload size={14} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />
+                          {opts.restoreLabel}
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
 
   return (
     <div style={{ padding: 20, maxWidth: 1000, margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
@@ -174,85 +241,20 @@ export default function CloudBackupPage() {
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr)', gap: 24 }}>
-        
-        {/* PANEL ARCHIVOS Y LANZAMIENTO */}
-        <div className="card" style={{ padding: 0, backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-          
-          {/* Cabecera del Panel */}
-          <div style={{ padding: '20px 24px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f9fafb' }}>
-             <div>
-                <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 4px 0', color: '#111827', fontSize: 18 }}>
-                <HardDriveDownload size={20} color="#2563eb" /> Historial de Copias en la Nube (B2)
-                </h3>
-                <p style={{ color: '#6b7280', fontSize: 13, margin: 0 }}>
-                Las copias se generan automáticamente cada madrugada y se retienen 31 días. El QNAP las baja al NAS.
-                </p>
-             </div>
-             <button onClick={handleManualBackup} disabled={backingUp || downloadingFTP} style={{ padding: '10px 20px', background: '#111827', color: '#ffffff', border: 'none', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: 8, fontSize: '13px', fontWeight: 600, transition: 'all 0.2s ease', cursor: (backingUp || downloadingFTP) ? 'wait' : 'pointer' }}>
-                <CloudUpload size={16} /> 
-                {backingUp ? 'Subiendo a Nube...' : 'Lanzar Copia Manual Ahora'}
-             </button>
-          </div>
-
-          {/* Tabla de Archivos */}
-          <div style={{ padding: 24 }}>
-            <div style={{ border: '1px solid #e5e7eb', borderRadius: 12, overflow: 'hidden' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
-                <thead style={{ backgroundColor: '#f3f4f6' }}>
-                  <tr>
-                    <th style={{ padding: '12px 16px', color: '#4b5563', fontWeight: 600 }}>Cápsula de Datos</th>
-                    <th style={{ padding: '12px 16px', color: '#4b5563', fontWeight: 600 }}>Fecha / Hora</th>
-                    <th style={{ padding: '12px 16px', color: '#4b5563', fontWeight: 600 }}>Peso</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'right', color: '#4b5563', fontWeight: 600 }}>Acción</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loadingList ? (
-                    <tr>
-                      <td colSpan={4} style={{ padding: 32, textAlign: 'center', color: '#6b7280' }}>
-                         <RefreshCw className="animate-spin" size={24} style={{ margin: '0 auto 12px' }}/>
-                         Cargando copias de la nube (B2)...
-                      </td>
-                    </tr>
-                  ) : backups.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} style={{ padding: 32, textAlign: 'center', color: '#6b7280' }}>
-                         Aún no hay copias en la nube (B2). Pulsa «Lanzar Copia Manual» o espera al backup programado.
-                      </td>
-                    </tr>
-                  ) : (
-                    backups.map(file => {
-                        const dateObj = new Date(file.createdTime)
-                        const formattedDate = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString()
-                        
-                        return (
-                        <tr key={file.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                           <td style={{ padding: '16px', fontWeight: 600, color: '#111827', display: 'flex', alignItems: 'center', gap: 8 }}>
-                             <FileArchive size={16} color="#6b7280" /> {file.name}
-                           </td>
-                           <td style={{ padding: '16px', color: '#4b5563' }}>{formattedDate}</td>
-                           <td style={{ padding: '16px', color: '#4b5563' }}>{file.sizeMB} MB</td>
-                           <td style={{ padding: '16px', textAlign: 'right' }}>
-                             <button 
-                               onClick={() => handlePrepareRestore(file.id)}
-                               disabled={downloadingFTP || backingUp}
-                               style={{ padding: '8px 16px', background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: '8px', fontWeight: 600, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s' }}
-                             >
-                                <HardDriveDownload size={14} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: 4 }} />
-                                Restaurar desde Nube
-                             </button>
-                           </td>
-                        </tr>
-                      )
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-        </div>
-
+        {renderPanel({
+          title: 'Copias en la Nube (Backblaze B2)',
+          subtitle: 'Offsite, fuera de tu red. Se generan cada madrugada y se retienen 31 días.',
+          icon: <Cloud size={20} color="#2563eb" />, list: b2List, source: 'b2',
+          restoreLabel: 'Restaurar desde Nube', emptyMsg: 'Aún no hay copias en la nube (B2). Pulsa «Lanzar Copia Manual» o espera al backup programado.',
+          loadingMsg: 'Cargando copias de la nube (B2)...', showManual: true,
+        })}
+        {renderPanel({
+          title: 'Copias en el NAS (FTP → QNAP)',
+          subtitle: 'Onsite, en tu NAS local. Se generan cada madrugada junto a la copia en la nube.',
+          icon: <HardDriveDownload size={20} color="#16a34a" />, list: nasList, source: 'nas',
+          restoreLabel: 'Restaurar desde NAS', emptyMsg: 'Aún no hay copias en el NAS (revisa que el FTP del QNAP esté configurado).',
+          loadingMsg: 'Cargando copias del NAS...',
+        })}
       </div>
     </div>
   )

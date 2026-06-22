@@ -46,22 +46,30 @@ export async function POST(request: Request) {
     const dateStr = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2,'0')}${now.getDate().toString().padStart(2,'0')}_${now.getHours().toString().padStart(2,'0')}${now.getMinutes().toString().padStart(2,'0')}`
     const filename = `MicroShop_Tiendas_Backup_${dateStr}.zip`
 
-    // Método principal: subida a la nube (Backblaze B2). Robusto desde Railway.
-    // Si B2 no está configurado todavía, cae al FTP→QNAP heredado.
-    let fileId = ''
-    let deletedCount = 0
-    let destino = ''
+    // Subimos a LAS DOS: nube (B2, offsite) Y NAS (FTP→QNAP, onsite). Independientes:
+    // si una falla, la otra se conserva.
+    let b2Ok = false, nasOk = false
+    let b2Err = '', nasErr = ''
     if (isB2Configured()) {
-        fileId = await uploadToB2(filename, zipBuffer)
-        deletedCount = await cleanupOldB2(31).catch(e => { console.error('Limpieza B2 falló:', e); return 0 })
-        destino = 'Backblaze B2'
-    } else {
-        fileId = await uploadToFTP(filename, zipBuffer)
-        deletedCount = await cleanupOldBackups(14).catch(e => { console.error('Limpieza FTP falló:', e); return 0 })
-        destino = 'QNAP (FTP)'
+        try {
+            await uploadToB2(filename, zipBuffer)
+            await cleanupOldB2(31).catch(e => { console.error('Limpieza B2 falló:', e); return 0 })
+            b2Ok = true
+        } catch (e: any) { b2Err = e.message; console.error('Backup B2 falló:', e) }
     }
+    try {
+        await uploadToFTP(filename, zipBuffer)
+        await cleanupOldBackups(31, 'MicroShop_Tiendas_').catch(e => { console.error('Limpieza FTP falló:', e); return 0 })
+        nasOk = true
+    } catch (e: any) { nasErr = e.message; console.error('Backup NAS (FTP) falló:', e) }
 
-    return NextResponse.json({ success: true, message: `Copia subida con éxito a ${destino}.`, destino, fileId, deletedOld: deletedCount })
+    const destinos = [b2Ok ? 'Nube B2' : null, nasOk ? 'NAS' : null].filter(Boolean).join(' + ')
+    const success = b2Ok || nasOk
+    const message = success
+        ? `Copia subida con éxito a: ${destinos}.` + (b2Err ? ` (B2 falló: ${b2Err})` : '') + (nasErr ? ` (NAS falló: ${nasErr})` : '')
+        : `No se pudo subir la copia. B2: ${b2Err || 'no configurado'}. NAS: ${nasErr}.`
+
+    return NextResponse.json({ success, message, b2: b2Ok, nas: nasOk, filename })
 
   } catch (err: any) {
     console.error('Error in ftp-backup (QNAP generator):', err)

@@ -12,21 +12,26 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Método principal: nube (Backblaze B2). FTP heredado como respaldo.
-    let files
+    // Devolvemos LAS DOS listas: nube (B2, offsite) y NAS (FTP→QNAP, onsite).
+    let b2files: any[] = []
+    let nasfiles: any[] = []
     if (isB2Configured()) {
-      const b2 = await listB2Backups()
-      files = b2.map(b => ({
-        id: b.key,
-        name: b.key.split('/').pop() || b.key,
-        createdTime: b.date.toISOString(),
-        sizeMB: b.sizeMb,
-      }))
-    } else {
-      files = await listFTPFiles()
+      try {
+        const b2 = await listB2Backups()
+        b2files = b2.map(b => ({
+          id: b.key,
+          name: b.key.split('/').pop() || b.key,
+          createdTime: b.date.toISOString(),
+          sizeMB: b.sizeMb,
+        }))
+      } catch (e: any) { console.error('Listado B2 falló:', e?.message) }
     }
+    try {
+      nasfiles = await listFTPFiles()
+    } catch (e: any) { console.error('Listado NAS (FTP) falló:', e?.message) }
 
-    return NextResponse.json({ success: true, files })
+    // 'files' se mantiene por compatibilidad (= B2 si hay, si no NAS).
+    return NextResponse.json({ success: true, b2: b2files, nas: nasfiles, files: b2files.length ? b2files : nasfiles })
   } catch (err: any) {
     console.error('Error in ftp-list:', err)
     return NextResponse.json({ success: false, error: err.message }, { status: 500 })
