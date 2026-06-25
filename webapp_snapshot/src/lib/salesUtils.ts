@@ -278,13 +278,13 @@ export function renderDashboardData(
 
                     // Exact Category Matching Logic (Structural)
                     if (monGroup === 'TMA') {
-                        return distincDet === 'tma' && s.pendiente !== 'Anulado'
+                        return distincDet === 'tma' && (s.anulado !== 'Si' && s.pendiente !== 'Anulado')
                     }
                     if (monGroup === 'TI') {
-                        return distincDet === 'ti' && s.pendiente !== 'Anulado'
+                        return distincDet === 'ti' && (s.anulado !== 'Si' && s.pendiente !== 'Anulado')
                     }
                     if (monGroup === 'MICRO' || monGroup === 'MIC') {
-                        return distincDet === 'micro' && s.pendiente !== 'Anulado'
+                        return distincDet === 'micro' && (s.anulado !== 'Si' && s.pendiente !== 'Anulado')
                     }
 
                     // Special hardcoded match for "Dispositivos + Seguros" to mirror main dashboard logic
@@ -293,14 +293,14 @@ export function renderDashboardData(
                         const det = String(s.detalle || '').trim().toLowerCase();
                         const sheet = String(s.sheet || '').trim().toLowerCase();
                         if (['rent', 'seguro'].includes(cat) || det.includes('seguro') || sheet.includes('seguro')) {
-                            return s.pendiente !== 'Anulado';
+                            return (s.anulado !== 'Si' && s.pendiente !== 'Anulado');
                         }
                     }
 
                     // Fallback to previous mapped logic for others
                     if (!s.producto && !s.categoria) return false
                     const saleProd = String(s.producto || s.categoria).normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase()
-                    return mappedProducts.includes(saleProd) && s.pendiente !== 'Anulado'
+                    return mappedProducts.includes(saleProd) && (s.anulado !== 'Si' && s.pendiente !== 'Anulado')
                 })
 
             // Separate confirmed vs pending for display — both still shown in table
@@ -370,7 +370,7 @@ export function renderDashboardData(
                 if (!s.producto) return false
                 if (!filterByGroup(s)) return false;
                 const saleProd = String(s.producto).normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase()
-                return mappedProducts.includes(saleProd) && s.pendiente !== 'Anulado'
+                return mappedProducts.includes(saleProd) && (s.anulado !== 'Si' && s.pendiente !== 'Anulado')
             })
             matchedOpsPending = allMatched.filter(s => s.estado === 'Pendiente' || s.pendiente === 'Si')
             matchedOps = allMatched.filter(s => s.estado !== 'Pendiente' && s.pendiente !== 'Si')
