@@ -12,6 +12,7 @@ import { useGuard } from '@/hooks/useGuard'
 import { usePeriod } from '@/components/PeriodProvider'
 import { normalizeRole } from '@/lib/appConfig'
 import { ExcelIcon } from '@/components/ActionIcons'
+import { getSaleCommission } from '@/lib/saleCommission'
 
 const LEVER_MAPPING: Record<string, string[]> = {
   'FD': ['Alta FD Total', 'Alta FD Total NC', 'Migra FD Total', 'Alta FD Flex', 'Alta FD Flex NC', 'Migra FD Flex'],
@@ -856,55 +857,23 @@ function OperationsContent() {
       return calculateDynamicCommission(sale, dashboardCache.current[cacheKey]);
   }
 
-  displayedSales = displayedSales.map(sale => {
-      let finalImporte = sale.importe || sale.cuota || 0;
-      let bypassCommissionCalc = false;
-      
-      // Override for Technical products: fetch exact value from Catalog based on active name
-      const det = sale.detalle || '';
-      
-      if (det === 'O2' || det === 'Seguro' || det === 'miMovistar') {
-         bypassCommissionCalc = true;
-         if (det === 'Seguro') {
-            const list = catalogs['Seguro'] || [];
-            const found = list.find((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
-            if (found && found.comision) {
-                finalImporte = parseFloat(String(found.comision).replace('€', '').replace(/\s/g, '').replace(',', '.').trim()) || 0;
-            } else {
-                finalImporte = Number(sale.importe || sale.cuota || 0);
-            }
-         } else {
-            finalImporte = Number(sale.importe || sale.cuota || 0);
-         }
-      } else if (det === 'Ti' || det === 'TMA' || det === 'Micro' || det === 'Rent') {
-         bypassCommissionCalc = true;
-         const catalogKey = det === 'TMA' ? 'Rent' : det;
-         const list = catalogs[catalogKey] || [];
-         const foundList = list.filter((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
-         if (foundList.length > 0) {
-            let found = foundList[0];
-            if (foundList.length > 1) {
-               const properlyDated = foundList.find((c: any) => isVentaWithinDates(sale.fecha, c.validFrom, c.validTo));
-               if (properlyDated) found = properlyDated;
-            }
-            if (det === 'TMA' || det === 'Rent') {
-                const isConCoste = sale.rentConCoste && (sale.rentConCoste.toLowerCase() === 'sí' || sale.rentConCoste.toLowerCase() === 'si');
-                if (isConCoste) {
-                    finalImporte = Number(String(found.comisionConCoste || 0).replace(',','.'));
-                } else {
-                    finalImporte = Number(String(found.comision || 0).replace(',','.'));
-                }
-            } else {
-                finalImporte = Number(String(found.anual || 0).replace(',','.'));
-            }
-         }
-      }
+  // ── Comisión unificada: fuente única lib/saleCommission (misma lógica que Liquidaciones,
+  //    Rentabilidad y Operaciones por Grupo Cliente). Antes esta vista usaba su propia
+  //    getCalculatedCommission, que detectaba Plus/Básico por `codigo`; pero en Tiendas el
+  //    `codigo` es el nombre de la tienda, así que caía a `cuota` y mostraba el precio del
+  //    dispositivo como comisión. getSaleCommission lo resuelve por catálogo (comisionConCoste). ──
+  const _viewPeriod = activePeriodKey ? String(activePeriodKey).replace(/[_-]/g, '') : getCurrentMonthString();
+  const _commissionCtx = {
+      catalogs,
+      dashRowsPlus: renderDashboardData('Pyme', importesPyme, objetivos?.Pyme?.[_viewPeriod] || {}, sales, objGrupos).rows,
+      dashRowsBasico: renderDashboardData('Captador', importesPlus, objetivos?.Captador?.[_viewPeriod] || {}, sales, objGrupos).rows,
+      viewingPeriod: _viewPeriod,
+  };
 
-      return {
-          ...sale,
-          dynamicCommission: bypassCommissionCalc ? finalImporte : getCalculatedCommission(sale)
-      };
-  });
+  displayedSales = displayedSales.map(sale => ({
+      ...sale,
+      dynamicCommission: getSaleCommission(sale, _commissionCtx)   // base + 15€ de Swap incluidos
+  }));
 
   const resolveRawCode = (ea: any): string => {
       let resolvedCode = ea.rule?.channelType || 'EXTRA';
@@ -1106,12 +1075,8 @@ function OperationsContent() {
       const mData: any[] = [];
       displayedSales.forEach((s) => {
           const cuotaTotal = getCuotaTotal(s, catalogs);
-          let rawValor = 0;
-          if (Object.keys(importesPyme).length > 0 && Object.keys(importesPlus).length > 0) {
-              rawValor = getCalculatedCommission(s);
-          } else {
-              rawValor = s.importe || s.cuota || 0;
-          }
+          // Comisión = la ya enriquecida con la fuente única lib/saleCommission (incluye el +15€ de Swap)
+          const rawValor = Number(s.dynamicCommission || 0);
           mData.push({
               Vendedor: s.vendedor || '-',
               Fecha: s.fecha || '-',
@@ -1130,7 +1095,7 @@ function OperationsContent() {
               CuotaTotal: cuotaTotal > 0 ? Number(cuotaTotal) : null,
               ConCoste: (() => { const d=String(s.detalle||'').toLowerCase(); if(d!=='rent'&&d!=='tma') return '-'; const v=String(s.rentConCoste||'').toLowerCase(); return (v==='si'||v==='sí')?'Sí':'No'; })(),
               Swap: s.isSwap === true ? 'Sí' : 'No',
-              Valor: Number(rawValor) + (s.isSwap === true ? 15 : 0)   // comisión empresa (+15€ bono Swap); solo se vuelca a Excel si isAdmin
+              Valor: Number(rawValor)   // comisión empresa (ya incluye el +15€ de Swap); solo se vuelca a Excel si isAdmin
           });
       });
 
