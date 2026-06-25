@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
-import { Package, LineChart, Building2, Target, TrendingUp, DollarSign, Wallet, ClipboardPaste, Settings2, X, Save, ArrowUp, ArrowDown } from 'lucide-react'
+import { Package, LineChart, Building2, Target, TrendingUp, DollarSign, Wallet, ClipboardPaste, Settings2, X, Save, ArrowUp, ArrowDown, Scale } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useGuard } from '@/hooks/useGuard'
 import { PageHeader } from '@/components/PageHeader'
@@ -78,6 +78,14 @@ export default function DireccionTiendasPage() {
       color: 'rgba(0, 173, 239, 0.1)',
       textColor: 'var(--mercedes-cyan)',
       permission: 'CARD_DIR_GANANCIAS'
+    },
+    {
+      title: 'Comisiones Personal Tiendas VS Comisiones de la Empresa',
+      description: 'Por comercial: lo que gana la empresa (Liquidaciones) frente a lo que se paga al comercial (Panel de Comisiones), grupo a grupo.',
+      icon: Scale,
+      action: () => router.push('/direccion-tiendas/comisiones-vs'),
+      color: 'rgba(34, 197, 94, 0.1)',
+      textColor: '#22c55e'
     }
   ]
 
