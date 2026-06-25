@@ -293,8 +293,12 @@ export function useComisionesData(user?: any) {
     o2Rules.forEach(rule => { o2TeamGroupCounts[rule.nombre] = 0; o2TeamGroupPending[rule.nombre] = 0; });
 
     monthSales.forEach(s => {
+        // Las ANULADAS no cuentan en los agregados de equipo (objetivos \u00ab(Eq)\u00bb / \u00abFalta entre todo el Equipo\u00bb)
+        const _anT = String(s.anulado || '').toLowerCase().trim();
+        const _peT = String(s.pendiente || '').toLowerCase().trim();
+        if (_anT === 'si' || _anT === 's\u00ed' || _peT === 'anulado') return;
         const isPending = String(s.pendiente || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === 'si';
-        
+
         // Movistar
         if (!String(s.vendedor).toLowerCase().includes('marta')) {
             adjustedTiendaRules.forEach(rule => {
