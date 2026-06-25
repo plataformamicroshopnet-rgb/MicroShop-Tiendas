@@ -8,6 +8,8 @@ import { usePeriod } from '@/components/PeriodProvider'
 import { TIENDAS_COMERCIALES } from '@/lib/constants'
 import ProductTreeSelector from '@/components/ProductTreeSelector'
 import { matchTipoVenta } from '@/hooks/useComisionesData'
+import { getSaleCommission } from '@/lib/saleCommission'
+import { renderDashboardData, getCurrentMonthString } from '@/lib/salesUtils'
 
 // Tramos para O2 MovilFree
 const TRAMOS_MES = [
@@ -40,6 +42,13 @@ export default function TerritorialTab() {
   const [o2Rules, setO2Rules] = useState<any[]>([])
   const [fttrDiscount, setFttrDiscount] = useState<string>('910')
 
+  // Para el condicionante "% sobre comisiones" (getSaleCommission necesita el ctx).
+  const [catalogs, setCatalogs] = useState<Record<string, any[]>>({})
+  const [objetivos, setObjetivos] = useState<Record<string, any>>({ Pyme: {}, Captador: {} })
+  const [objGrupos, setObjGrupos] = useState<Record<string, any>>({ Pyme: {}, Captador: {} })
+  const [importesPyme, setImportesPyme] = useState<any[]>([])
+  const [importesPlus, setImportesPlus] = useState<any[]>([])
+
   // Modal para configurar "Por Tienda"
   const [modalStoreTargets, setModalStoreTargets] = useState<{ ruleId: string, tramo: 1 | 2 | 3 } | null>(null)
   const [modalSalesList, setModalSalesList] = useState<{ store: string, ruleName: string, logs: any[], isMoneyType: boolean } | null>(null)
@@ -51,9 +60,13 @@ export default function TerritorialTab() {
     Promise.all([
       fetch(`/api/sales?periodKey=${activePeriodKey}`).then(r => r.json()),
       fetch(`/api/territorial?periodKey=${activePeriodKey}`).then(r => r.json()),
-      fetch(`/api/settings?key=fttr_discount_${activePeriodKey}`).then(r => r.json()).catch(() => ({ value: null }))
+      fetch(`/api/settings?key=fttr_discount_${activePeriodKey}`).then(r => r.json()).catch(() => ({ value: null })),
+      fetch(`/api/objetivos?periodKey=${activePeriodKey}&strictPeriod=1`).then(r => r.json()).catch(() => ({ success: true, objetivos: { Pyme: {}, Captador: {} } })),
+      fetch(`/api/importes-pyme?periodKey=${activePeriodKey}&strictPeriod=1`).then(r => r.json()).catch(() => ({})),
+      fetch(`/api/importes-plus?periodKey=${activePeriodKey}&strictPeriod=1`).then(r => r.json()).catch(() => ({})),
+      fetch(`/api/catalogs?_t=${Date.now()}`).then(r => r.json()).catch(() => ({}))
     ])
-    .then(([salesRes, rulesRes, settingRes]) => {
+    .then(([salesRes, rulesRes, settingRes, objData, pymeData, plusData, catData]) => {
       if (salesRes.success) setSales(salesRes.logs || [])
       if (rulesRes.success) {
         setTiendasRules(rulesRes.tiendas || [])
@@ -64,6 +77,13 @@ export default function TerritorialTab() {
       } else {
         setFttrDiscount('910')
       }
+      if (objData && objData.success && objData.objetivos) {
+        setObjetivos(objData.objetivos)
+        if (objData.grupos) setObjGrupos(objData.grupos)
+      }
+      if (pymeData && pymeData.success) setImportesPyme(pymeData.importes || pymeData.data || [])
+      if (plusData && plusData.success) setImportesPlus(plusData.importes || plusData.data || [])
+      if (catData && catData.success) setCatalogs(catData.catalogs || {})
       setLoading(false)
     })
     .catch(err => {
@@ -103,6 +123,26 @@ export default function TerritorialTab() {
   }
 
   // --- Helpers Ventas ---
+  // Contexto para getSaleCommission (misma fuente que Liquidaciones). Necesario para el
+  // condicionante "% sobre comisiones" de las palancas (p. ej. Altas BAF).
+  const _viewPeriod = activePeriodKey ? String(activePeriodKey).replace(/[_-]/g, '') : getCurrentMonthString();
+  const _commissionCtx = useMemo(() => ({
+    catalogs,
+    dashRowsPlus: renderDashboardData('Pyme', importesPyme, objetivos?.Pyme?.[_viewPeriod] || {}, sales, objGrupos).rows,
+    dashRowsBasico: renderDashboardData('Captador', importesPlus, objetivos?.Captador?.[_viewPeriod] || {}, sales, objGrupos).rows,
+    viewingPeriod: _viewPeriod
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [catalogs, importesPyme, importesPlus, objetivos, objGrupos, sales, activePeriodKey]);
+
+  // Σ de comisiones por venta (€) de una lista de ventas — base del % cuando la palanca
+  // tiene activo el condicionante baseComision. Excluye las ventas O2 (detalle='o2'):
+  // pertenecen a la palanca O2 (que ya cobra en su propio territorial) y matchTipoVenta
+  // las arrastra por nombre de producto (fibra+móvil). Así la base = los mismos grupos de
+  // Operaciones por Grupo Cliente (Convergente → miMovistar; Altas BAF → Resto BAF + miMovistar).
+  const comisionBaseDe = (logs: any[]) => (logs || [])
+    .filter(s => String(s.detalle || s.categoria || '').toLowerCase().trim() !== 'o2')
+    .reduce((acc, s) => acc + getSaleCommission(s, _commissionCtx), 0);
+
   const getSalesDataForStoreAndType = (storeName: string, tipoVenta: string) => {
     if (!tipoVenta) return { value: 0, logs: [] };
     
@@ -142,12 +182,30 @@ export default function TerritorialTab() {
     return { value: filtered.length, logs: filtered };
   }
 
-  const renderSalesCell = (value: number, logs: any[], storeName: string, rule: any) => {
+  const fmtEUR = (n: number) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(n);
+
+  const renderSalesCell = (value: number, logs: any[], storeName: string, rule: any, comision?: number) => {
     const isMoney = String(rule.tipoVenta).toLowerCase().includes('dispositivos');
-    const displayVal = isMoney ? new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(value) : value;
+
+    // Palanca con "% sobre comisiones €": € grande (la base del %) + uds pequeñas (el
+    // objetivo se sigue evaluando por unidades). El € ya excluye las ventas O2.
+    if (rule.baseComision) {
+      if (value === 0 && (comision || 0) === 0) return <span style={{ color: 'var(--medium-gray)' }}>—</span>;
+      return (
+        <span
+          onClick={() => setModalSalesList({ store: storeName, ruleName: rule.nombre || rule.tipoVenta, logs, isMoneyType: false })}
+          style={{ cursor: 'pointer', color: '#0284c7', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.05 }}
+        >
+          <span style={{ fontWeight: 700, textDecoration: 'underline' }}>{fmtEUR(comision || 0)}</span>
+          <span style={{ fontSize: 9, color: 'var(--medium-gray)', fontWeight: 400 }}>{value} uds</span>
+        </span>
+      );
+    }
+
+    const displayVal = isMoney ? fmtEUR(value) : value;
     if (value === 0) return <span>{displayVal}</span>;
     return (
-      <span 
+      <span
         onClick={() => setModalSalesList({ store: storeName, ruleName: rule.nombre || rule.tipoVenta, logs, isMoneyType: isMoney })}
         style={{ cursor: 'pointer', color: '#0284c7', textDecoration: 'underline' }}
       >
@@ -173,7 +231,8 @@ export default function TerritorialTab() {
       obj3Type: 'global',
       obj3Global: '',
       obj3Stores: {},
-      importe3: ''
+      importe3: '',
+      baseComision: false
     }])
   }
 
@@ -183,7 +242,7 @@ export default function TerritorialTab() {
     return parseFloat(s) || 0;
   }
 
-  const calculateTiendaImporte = (rule: any, storeName: string, salesCount: number, salesTot: number) => {
+  const calculateTiendaImporte = (rule: any, storeName: string, salesCount: number, salesTot: number, comisionBase: number = 0) => {
     let earned = 0;
     
     // Eval 1er Tramo
@@ -227,17 +286,21 @@ export default function TerritorialTab() {
     const isPct2 = String(rule.importe2).includes('%');
     const isPct3 = String(rule.importe3).includes('%');
 
+    // Base del % en tramos porcentuales: condicionante baseComision => Σ comisiones (€);
+    // por defecto => unidades. El tramo alcanzado se sigue evaluando por unidades.
+    const pctBase = rule.baseComision ? comisionBase : salesCount;
+
     // El tramo más alto alcanzado manda y anula los inferiores
     if (isReached3) {
-      if (isPct3) earned = salesCount * (import3Num / 100);
+      if (isPct3) earned = pctBase * (import3Num / 100);
       else earned = import3Num;
     }
     else if (isReached2) {
-      if (isPct2) earned = salesCount * (import2Num / 100);
+      if (isPct2) earned = pctBase * (import2Num / 100);
       else earned = import2Num;
     }
     else if (isReached1) {
-      if (isPct1) earned = salesCount * (import1Num / 100);
+      if (isPct1) earned = pctBase * (import1Num / 100);
       else earned = import1Num;
     }
 
@@ -384,10 +447,18 @@ export default function TerritorialTab() {
                 const dataCor = getSalesDataForStoreAndType('Correhuela', rule.tipoVenta);
                 const dataVil = getSalesDataForStoreAndType('Villamayor', rule.tipoVenta);
                 const dataBej = getSalesDataForStoreAndType('Béjar', rule.tipoVenta);
-                const salesAux = dataAux.value;
-                const salesCor = dataCor.value;
-                const salesVil = dataVil.value;
-                const salesBej = dataBej.value;
+                // Palanca "% sobre comisiones €": excluye las ventas O2 (su territorial es
+                // aparte; matchTipoVenta las arrastra por nombre de producto) tanto en
+                // unidades como en €, para espejar el grupo de Operaciones por Grupo Cliente.
+                const _notO2 = (s: any) => String(s.detalle || s.categoria || '').toLowerCase().trim() !== 'o2';
+                const logsAux = rule.baseComision ? dataAux.logs.filter(_notO2) : dataAux.logs;
+                const logsCor = rule.baseComision ? dataCor.logs.filter(_notO2) : dataCor.logs;
+                const logsVil = rule.baseComision ? dataVil.logs.filter(_notO2) : dataVil.logs;
+                const logsBej = rule.baseComision ? dataBej.logs.filter(_notO2) : dataBej.logs;
+                const salesAux = rule.baseComision ? logsAux.length : dataAux.value;
+                const salesCor = rule.baseComision ? logsCor.length : dataCor.value;
+                const salesVil = rule.baseComision ? logsVil.length : dataVil.value;
+                const salesBej = rule.baseComision ? logsBej.length : dataBej.value;
                 const salesTot = salesAux + salesCor + salesVil + salesBej;
                 
                 const obj1Target = rule.obj1Type === 'global' ? parseNumber(rule.obj1Global) : 0;
@@ -398,15 +469,27 @@ export default function TerritorialTab() {
                 else if (obj2Target > 0 && salesTot >= obj2Target) activeTramo = 2;
                 else if (obj1Target > 0 && salesTot >= obj1Target) activeTramo = 1;
 
-                const impAux = calculateTiendaImporte(rule, 'Auxiliadora 45', salesAux, salesTot);
-                const impCor = calculateTiendaImporte(rule, 'Correhuela', salesCor, salesTot);
-                const impVil = calculateTiendaImporte(rule, 'Villamayor', salesVil, salesTot);
-                const impBej = calculateTiendaImporte(rule, 'Béjar', salesBej, salesTot);
+                // Base de comisiones por tienda (solo se usa si rule.baseComision está activo).
+                const comAux = rule.baseComision ? comisionBaseDe(dataAux.logs) : 0;
+                const comCor = rule.baseComision ? comisionBaseDe(dataCor.logs) : 0;
+                const comVil = rule.baseComision ? comisionBaseDe(dataVil.logs) : 0;
+                const comBej = rule.baseComision ? comisionBaseDe(dataBej.logs) : 0;
+
+                const impAux = calculateTiendaImporte(rule, 'Auxiliadora 45', salesAux, salesTot, comAux);
+                const impCor = calculateTiendaImporte(rule, 'Correhuela', salesCor, salesTot, comCor);
+                const impVil = calculateTiendaImporte(rule, 'Villamayor', salesVil, salesTot, comVil);
+                const impBej = calculateTiendaImporte(rule, 'Béjar', salesBej, salesTot, comBej);
                 const totalImporte = impAux + impCor + impVil + impBej;
 
                 return (
                   <tr key={rule.id} style={{ borderBottom: '1px solid var(--border-color)', background: idx % 2 === 0 ? 'var(--bg-card)' : 'var(--section-bg)', position: 'relative', zIndex: 1000 - idx }}>
-                    <td style={{ padding: 4 }}><input value={rule.nombre} onChange={e => { const r = [...tiendasRules]; r[idx].nombre = e.target.value; setTiendasRules(r); }} className="form-input" style={{ width: '100%', minWidth: 120 }} placeholder="Ej: Altas BAF" /></td>
+                    <td style={{ padding: 4 }}>
+                      <input value={rule.nombre} onChange={e => { const r = [...tiendasRules]; r[idx].nombre = e.target.value; setTiendasRules(r); }} className="form-input" style={{ width: '100%', minWidth: 120 }} placeholder="Ej: Altas BAF" />
+                      <label title="Si se marca, los tramos en % se aplican sobre la SUMA de comisiones (€) de las ventas de esta palanca (la misma comisión de Liquidaciones), no sobre el nº de unidades. El objetivo/tramo se sigue contando por unidades." style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, fontSize: 10, color: 'var(--light-text)', cursor: 'pointer', userSelect: 'none' }}>
+                        <input type="checkbox" checked={!!rule.baseComision} onChange={e => { const r = [...tiendasRules]; r[idx].baseComision = e.target.checked; setTiendasRules(r); }} style={{ cursor: 'pointer' }} />
+                        % sobre comisiones €
+                      </label>
+                    </td>
                     <td style={{ padding: 4 }}>
                       <ProductTreeSelector
                         value={rule.tipoVenta || ''} 
@@ -464,11 +547,18 @@ export default function TerritorialTab() {
                     <td style={{ padding: 4 }}><input value={rule.importe3 || ''} onChange={e => { const r = [...tiendasRules]; r[idx].importe3 = e.target.value; setTiendasRules(r); }} className="form-input" style={{ width: 60, backgroundColor: activeTramo === 3 ? '#dcfce7' : '', color: activeTramo === 3 ? '#166534' : '', fontWeight: activeTramo === 3 ? 'bold' : 'normal', borderColor: activeTramo === 3 ? '#22c55e' : '' }} placeholder="Ej: 40%" /></td>
 
                     {/* Resultados */}
-                    <td style={{ padding: 4, textAlign: 'center', fontWeight: 'bold', fontSize: 11 }}>{renderSalesCell(salesAux, dataAux.logs, 'Auxiliadora 45', rule)}</td>
-                    <td style={{ padding: 4, textAlign: 'center', fontWeight: 'bold', fontSize: 11 }}>{renderSalesCell(salesCor, dataCor.logs, 'Correhuela', rule)}</td>
-                    <td style={{ padding: 4, textAlign: 'center', fontWeight: 'bold', fontSize: 11 }}>{renderSalesCell(salesVil, dataVil.logs, 'Villamayor', rule)}</td>
-                    <td style={{ padding: 4, textAlign: 'center', fontWeight: 'bold', fontSize: 11 }}>{renderSalesCell(salesBej, dataBej.logs, 'Béjar', rule)}</td>
-                    <td style={{ padding: 4, textAlign: 'center', fontWeight: 'bold', color: 'var(--mercedes-cyan)', fontSize: 11 }}>{String(rule.tipoVenta).toLowerCase().includes('dispositivos') ? `${new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(salesTot)}` : salesTot}</td>
+                    <td style={{ padding: 4, textAlign: 'center', fontWeight: 'bold', fontSize: 11 }}>{renderSalesCell(salesAux, logsAux, 'Auxiliadora 45', rule, comAux)}</td>
+                    <td style={{ padding: 4, textAlign: 'center', fontWeight: 'bold', fontSize: 11 }}>{renderSalesCell(salesCor, logsCor, 'Correhuela', rule, comCor)}</td>
+                    <td style={{ padding: 4, textAlign: 'center', fontWeight: 'bold', fontSize: 11 }}>{renderSalesCell(salesVil, logsVil, 'Villamayor', rule, comVil)}</td>
+                    <td style={{ padding: 4, textAlign: 'center', fontWeight: 'bold', fontSize: 11 }}>{renderSalesCell(salesBej, logsBej, 'Béjar', rule, comBej)}</td>
+                    <td style={{ padding: 4, textAlign: 'center', fontWeight: 'bold', color: 'var(--mercedes-cyan)', fontSize: 11 }}>
+                      {rule.baseComision ? (
+                        <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.05 }}>
+                          <span style={{ fontWeight: 700 }}>{fmtEUR(comAux + comCor + comVil + comBej)}</span>
+                          <span style={{ fontSize: 9, color: 'var(--medium-gray)', fontWeight: 400 }}>{salesTot} uds</span>
+                        </span>
+                      ) : (String(rule.tipoVenta).toLowerCase().includes('dispositivos') ? fmtEUR(salesTot) : salesTot)}
+                    </td>
                     <td style={{ padding: 4, textAlign: 'center', fontWeight: 'bold', color: '#10b981', fontSize: 14 }}>{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(totalImporte)}</td>
                     
                     <td style={{ padding: 4, textAlign: 'center' }}>

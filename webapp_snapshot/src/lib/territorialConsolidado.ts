@@ -7,6 +7,7 @@
 
 import { matchTipoVenta } from '@/hooks/useComisionesData'
 import { TIENDAS_COMERCIALES } from '@/lib/constants'
+import { getSaleCommission } from '@/lib/saleCommission'
 
 export const TIENDAS_FISICAS = ['Auxiliadora 45', 'Correhuela', 'Villamayor', 'Béjar']
 
@@ -107,7 +108,7 @@ export function getSalesDataForStoreAndType(sales: any[], storeName: string, tip
 
 // Importe ganado por UNA tienda física para una regla (tramos en % o plano; el tramo más
 // alto alcanzado manda). Igual que calculateTiendaImporte de TerritorialTab.
-export function calculateTiendaImporte(rule: any, storeName: string, salesCount: number, salesTot: number): number {
+export function calculateTiendaImporte(rule: any, storeName: string, salesCount: number, salesTot: number, comisionBase: number = 0): number {
   let earned = 0
 
   let target1 = 0, isReached1 = false
@@ -129,9 +130,16 @@ export function calculateTiendaImporte(rule: any, storeName: string, salesCount:
   const isPct2 = String(rule.importe2).includes('%')
   const isPct3 = String(rule.importe3).includes('%')
 
-  if (isReached3) { earned = isPct3 ? salesCount * (import3Num / 100) : import3Num }
-  else if (isReached2) { earned = isPct2 ? salesCount * (import2Num / 100) : import2Num }
-  else if (isReached1) { earned = isPct1 ? salesCount * (import1Num / 100) : import1Num }
+  // Base sobre la que se aplica el % en los tramos porcentuales:
+  //  - condicionante `baseComision` activo => Σ de comisiones (€) de las ventas de la
+  //    palanca (p. ej. Altas BAF: Telefónica liquida el 20%/30% de TODAS las comisiones).
+  //  - por defecto => nº de unidades (comportamiento histórico). El tramo alcanzado se
+  //    sigue determinando por unidades en ambos casos.
+  const pctBase = rule.baseComision ? comisionBase : salesCount
+
+  if (isReached3) { earned = isPct3 ? pctBase * (import3Num / 100) : import3Num }
+  else if (isReached2) { earned = isPct2 ? pctBase * (import2Num / 100) : import2Num }
+  else if (isReached1) { earned = isPct1 ? pctBase * (import1Num / 100) : import1Num }
 
   return earned
 }
@@ -186,9 +194,30 @@ export function computeTerritorialRows(input: TerritorialInput): any[] {
     }
 
     // Ventas por tienda física + total, y el importe sumado (método Entrada de Datos).
-    const perStore = TIENDAS_FISICAS.map(store => getSalesDataForStoreAndType(sales, store, terrRule.tipoVenta).value)
+    // En palancas con `baseComision` se excluyen las ventas O2 (su territorial es aparte)
+    // también del conteo, para espejar el grupo de Operaciones por Grupo Cliente.
+    const _notO2 = (s: any) => String(s.detalle || s.categoria || '').toLowerCase().trim() !== 'o2'
+    const perStoreData = TIENDAS_FISICAS.map(store => getSalesDataForStoreAndType(sales, store, terrRule.tipoVenta))
+    const perStore = perStoreData.map(d => terrRule.baseComision ? d.logs.filter(_notO2).length : d.value)
     const salesTot = perStore.reduce((a, b) => a + b, 0)
-    const importe = TIENDAS_FISICAS.reduce((acc, store, i) => acc + calculateTiendaImporte(terrRule, store, perStore[i], salesTot), 0)
+
+    // Condicionante `baseComision`: el % se aplica sobre la Σ de comisiones por venta
+    // (misma fuente que Liquidaciones, getSaleCommission), no sobre las unidades.
+    const ctx = {
+      catalogs: (input as any).catalogs || {},
+      dashRowsPlus: (input as any).dashRowsPlus || [],
+      dashRowsBasico: (input as any).dashRowsBasico || [],
+      viewingPeriod: (input as any).viewingPeriod || ''
+    }
+    const importe = TIENDAS_FISICAS.reduce((acc, store, i) => {
+      // Excluye ventas O2 (detalle='o2'): pertenecen a la palanca O2 (propio territorial);
+      // matchTipoVenta las arrastra por nombre de producto. Así la base = los grupos de
+      // Operaciones por Grupo Cliente (Convergente → miMovistar; Altas BAF → Resto BAF + miMovistar).
+      const comisionBase = terrRule.baseComision
+        ? perStoreData[i].logs.filter(_notO2).reduce((a: number, s: any) => a + getSaleCommission(s, ctx), 0)
+        : 0
+      return acc + calculateTiendaImporte(terrRule, store, perStore[i], salesTot, comisionBase)
+    }, 0)
 
     // Objetivo/tramo para mostrar (objetivo global de tramo 1; en per_store no hay global).
     const obj1Target = terrRule.obj1Type === 'global' ? parseNumber(terrRule.obj1Global) : 0
