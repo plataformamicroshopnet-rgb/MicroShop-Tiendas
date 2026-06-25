@@ -14,12 +14,12 @@ const GROUPS = [
   { id: 'rent', label: 'Rent', icon: '🔄' },
   { id: 'o2', label: 'O2 MovilFree', icon: '🌐' },
   { id: 'seguro', label: 'Seguro', icon: '🛡️' },
-  { id: 'mimovistar', label: 'miMovistar', icon: '🏠' },
+  { id: 'mimovistar', label: 'Alta BAF Convergente (miMovistar)', icon: '🏠' },
   { id: 'tv', label: 'Suscripciones TV', icon: '📺' },
   { id: 'prepago', label: 'Prepago', icon: '💳' },
   { id: 'varios', label: 'Varios', icon: '📦' },
   { id: 'repos', label: 'Repos', icon: '🔁' },
-  { id: 'resto_baf', label: 'Resto BAF', icon: '📡' },
+  { id: 'resto_baf', label: 'Resto BAF (Alta BAF Total)', icon: '📡' },
   { id: 'traslado_mimovistar', label: 'Traslado miMovistar', icon: '🚚' },
   { id: 'extras', label: 'Extras', icon: '⚡' },
 ]
@@ -90,7 +90,8 @@ export default function ComisionesVsPage() {
       GROUPS.forEach(g => { comercial[g.id] = 0 })
       comercial.rent = totVal > 0 ? ds * (rentVal / totVal) : ds
       comercial.seguro = totVal > 0 ? ds * (segVal / totVal) : 0
-      comercial.resto_baf = sumRules(k => k.includes('baf'))       // Alta BAF Total + Convergente
+      comercial.resto_baf = sumRules(k => k.includes('baf') && k.includes('total'))         // Alta BAF Total → Resto BAF
+      comercial.mimovistar = sumRules(k => k.includes('baf') && k.includes('convergente'))  // Alta BAF Convergente → miMovistar
       comercial.repos = sumRules(k => k.includes('repos') || k.includes('arpu') || k.includes('fútbol') || k.includes('futbol'))
       comercial.varios = sumRules(k => k.includes('fttr') || k.includes('mpa') || k.includes('solar') || k === 'swap')
       comercial.o2 = sumRules(k => k.includes('fibra'))            // Altas/Portas Fibra + Internas Fibra (O2/Marta)
