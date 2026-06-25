@@ -362,7 +362,7 @@ export default function TerritorialTab() {
             <thead>
               <tr style={{ background: '#0284c7', color: '#ffffff' }}>
                 <th style={{ padding: '6px 4px' }} title="Nombre descriptivo de la comisión">Nombre Comisión ℹ️</th>
-                <th style={{ padding: '6px 4px' }} title="El producto o grupo de ventas que se va a contar y a pagar.">Tipo de Venta ℹ️</th>
+                <th style={{ padding: '6px 2px', fontSize: 11, width: 118 }} title="El producto o grupo de ventas que se va a contar y a pagar.">Tipo de Venta ℹ️</th>
                 <th style={{ padding: '6px 4px' }} title="Objetivo mínimo a alcanzar. Puede ser 'Unif.' (la suma de todas las tiendas juntas debe llegar a este número) o 'Por T.' (cada tienda debe llegar a su propio número individual).">Obj. 1º Tramo ℹ️</th>
                 <th style={{ padding: '6px 4px' }} title="Lo que se paga si se llega al Primer Tramo. (Ej: '10' paga 10€ por venta, '10%' paga el 10% de lo recaudado).">Importe 1º ℹ️</th>
                 <th style={{ padding: '6px 4px' }} title="Objetivo más alto que el 1º. Si se alcanza, anula el 1º y se paga este.">Obj. 2º Tramo ℹ️</th>
@@ -407,8 +407,8 @@ export default function TerritorialTab() {
                 return (
                   <tr key={rule.id} style={{ borderBottom: '1px solid var(--border-color)', background: idx % 2 === 0 ? 'var(--bg-card)' : 'var(--section-bg)', position: 'relative', zIndex: 1000 - idx }}>
                     <td style={{ padding: 4 }}><input value={rule.nombre} onChange={e => { const r = [...tiendasRules]; r[idx].nombre = e.target.value; setTiendasRules(r); }} className="form-input" style={{ width: '100%', minWidth: 120 }} placeholder="Ej: Altas BAF" /></td>
-                    <td style={{ padding: 4 }}>
-                      <ProductTreeSelector 
+                    <td style={{ padding: 4, width: 118, maxWidth: 118, fontSize: 11 }}>
+                      <ProductTreeSelector
                         value={rule.tipoVenta || ''} 
                         onChange={val => { const r = [...tiendasRules]; r[idx].tipoVenta = val; setTiendasRules(r); }} 
                         placeholder="Tipo de Venta..." 
@@ -464,11 +464,11 @@ export default function TerritorialTab() {
                     <td style={{ padding: 4 }}><input value={rule.importe3 || ''} onChange={e => { const r = [...tiendasRules]; r[idx].importe3 = e.target.value; setTiendasRules(r); }} className="form-input" style={{ width: 60, backgroundColor: activeTramo === 3 ? '#dcfce7' : '', color: activeTramo === 3 ? '#166534' : '', fontWeight: activeTramo === 3 ? 'bold' : 'normal', borderColor: activeTramo === 3 ? '#22c55e' : '' }} placeholder="Ej: 40%" /></td>
 
                     {/* Resultados */}
-                    <td style={{ padding: 4, textAlign: 'center', fontWeight: 'bold' }}>{renderSalesCell(salesAux, dataAux.logs, 'Auxiliadora 45', rule)}</td>
-                    <td style={{ padding: 4, textAlign: 'center', fontWeight: 'bold' }}>{renderSalesCell(salesCor, dataCor.logs, 'Correhuela', rule)}</td>
-                    <td style={{ padding: 4, textAlign: 'center', fontWeight: 'bold' }}>{renderSalesCell(salesVil, dataVil.logs, 'Villamayor', rule)}</td>
-                    <td style={{ padding: 4, textAlign: 'center', fontWeight: 'bold' }}>{renderSalesCell(salesBej, dataBej.logs, 'Béjar', rule)}</td>
-                    <td style={{ padding: 4, textAlign: 'center', fontWeight: 'bold', color: 'var(--mercedes-cyan)' }}>{String(rule.tipoVenta).toLowerCase().includes('dispositivos') ? `${new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(salesTot)}` : salesTot}</td>
+                    <td style={{ padding: 4, textAlign: 'center', fontWeight: 'bold', fontSize: 11 }}>{renderSalesCell(salesAux, dataAux.logs, 'Auxiliadora 45', rule)}</td>
+                    <td style={{ padding: 4, textAlign: 'center', fontWeight: 'bold', fontSize: 11 }}>{renderSalesCell(salesCor, dataCor.logs, 'Correhuela', rule)}</td>
+                    <td style={{ padding: 4, textAlign: 'center', fontWeight: 'bold', fontSize: 11 }}>{renderSalesCell(salesVil, dataVil.logs, 'Villamayor', rule)}</td>
+                    <td style={{ padding: 4, textAlign: 'center', fontWeight: 'bold', fontSize: 11 }}>{renderSalesCell(salesBej, dataBej.logs, 'Béjar', rule)}</td>
+                    <td style={{ padding: 4, textAlign: 'center', fontWeight: 'bold', color: 'var(--mercedes-cyan)', fontSize: 11 }}>{String(rule.tipoVenta).toLowerCase().includes('dispositivos') ? `${new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(salesTot)}` : salesTot}</td>
                     <td style={{ padding: 4, textAlign: 'center', fontWeight: 'bold', color: '#10b981', fontSize: 14 }}>{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(totalImporte)}</td>
                     
                     <td style={{ padding: 4, textAlign: 'center' }}>
@@ -529,8 +529,8 @@ export default function TerritorialTab() {
                 return (
                   <tr key={rule.id} style={{ borderBottom: '1px solid var(--border-color)', background: idx % 2 === 0 ? 'var(--bg-card)' : 'var(--section-bg)', position: 'relative', zIndex: 1000 - idx }}>
                     <td style={{ padding: 4 }}><input value={rule.nombre} onChange={e => { const r = [...o2Rules]; r[idx].nombre = e.target.value; setO2Rules(r); }} className="form-input" style={{ width: '100%', minWidth: 100 }} /></td>
-                    <td style={{ padding: 4 }}>
-                      <ProductTreeSelector 
+                    <td style={{ padding: 4, width: 118, maxWidth: 118, fontSize: 11 }}>
+                      <ProductTreeSelector
                         value={rule.tipoVenta || ''} 
                         onChange={val => { const r = [...o2Rules]; r[idx].tipoVenta = val; setO2Rules(r); }} 
                         placeholder="Tipo de Venta..." 
@@ -553,7 +553,7 @@ export default function TerritorialTab() {
                        <input value={rule.conectividad || ''} onChange={e => { const r = [...o2Rules]; r[idx].conectividad = e.target.value; setO2Rules(r); }} className="form-input" style={{ width: 50, backgroundColor: totalSales > 0 && parseNumber(rule.conectividad) > 0 ? '#dcfce7' : '', color: totalSales > 0 && parseNumber(rule.conectividad) > 0 ? '#166534' : '', fontWeight: totalSales > 0 && parseNumber(rule.conectividad) > 0 ? 'bold' : 'normal', borderColor: totalSales > 0 && parseNumber(rule.conectividad) > 0 ? '#22c55e' : '' }} placeholder="€" />
                     </td>
 
-                    <td style={{ padding: 4, textAlign: 'center', fontWeight: 'bold', color: 'var(--mercedes-cyan)' }}>{renderSalesCell(totalSales, dataO2.logs, 'O2', rule)}</td>
+                    <td style={{ padding: 4, textAlign: 'center', fontWeight: 'bold', color: 'var(--mercedes-cyan)', fontSize: 11 }}>{renderSalesCell(totalSales, dataO2.logs, 'O2', rule)}</td>
                     <td style={{ padding: 4, textAlign: 'center', fontWeight: 'bold', color: '#10b981', fontSize: 14 }}>{new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(totalImporte)}</td>
                     
                     <td style={{ padding: 4, textAlign: 'center' }}>
