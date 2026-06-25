@@ -495,6 +495,11 @@ export function useComisionesData(user?: any) {
 
         // COUNTING LOGIC BASED ON RULES
         sSales.forEach(s => {
+            // Las ANULADAS no cuentan (ni en volumen ni en comisión), igual que el resto de vistas.
+            // Antes este bucle no las filtraba y se colaban en el volumen (p.ej. Dispositivos + Seguros).
+            const _an = String(s.anulado || '').toLowerCase().trim();
+            const _pe = String(s.pendiente || '').toLowerCase().trim();
+            if (_an === 'si' || _an === 'sí' || _pe === 'anulado') return;
             // Un producto puede contar para multiples reglas si encaja en el Tipo de Venta
             activeTiendaRules.forEach(rule => {
                 if (matchesRule(s, rule.nombre, rule.productosCuentan)) {
