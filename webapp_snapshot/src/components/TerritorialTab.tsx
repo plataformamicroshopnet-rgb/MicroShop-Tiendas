@@ -358,7 +358,7 @@ export default function TerritorialTab() {
           TERRITORIAL TIENDAS
         </div>
         <div style={{ overflow: 'visible' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 1200 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 1040 }}>
             <thead>
               <tr style={{ background: '#0284c7', color: '#ffffff' }}>
                 <th style={{ padding: '6px 4px' }} title="Nombre descriptivo de la comisión">Nombre Comisión ℹ️</th>
@@ -369,11 +369,11 @@ export default function TerritorialTab() {
                 <th style={{ padding: '6px 4px' }} title="Lo que se paga si se llega al Segundo Tramo.">Importe 2º ℹ️</th>
                 <th style={{ padding: '6px 4px' }} title="Objetivo más alto que el 2º. Si se alcanza, anula el 1º y 2º y se paga este.">Obj. 3º Tramo ℹ️</th>
                 <th style={{ padding: '6px 4px' }} title="Lo que se paga si se llega al Tercer Tramo.">Importe 3º ℹ️</th>
-                <th style={{ padding: '6px 4px' }}>VENTAS AUXILIADORA 45</th>
-                <th style={{ padding: '6px 4px' }}>VENTAS CORREHUELA</th>
-                <th style={{ padding: '6px 4px' }}>VENTAS VILLAMAYOR</th>
-                <th style={{ padding: '6px 4px' }}>VENTAS BEJAR</th>
-                <th style={{ padding: '6px 4px' }}>VENTAS TOTAL</th>
+                <th style={{ padding: '6px 2px', fontSize: 10, fontWeight: 600, whiteSpace: 'normal', lineHeight: 1.15, width: 58 }}>VENTAS AUXILIADORA 45</th>
+                <th style={{ padding: '6px 2px', fontSize: 10, fontWeight: 600, whiteSpace: 'normal', lineHeight: 1.15, width: 58 }}>VENTAS CORREHUELA</th>
+                <th style={{ padding: '6px 2px', fontSize: 10, fontWeight: 600, whiteSpace: 'normal', lineHeight: 1.15, width: 58 }}>VENTAS VILLAMAYOR</th>
+                <th style={{ padding: '6px 2px', fontSize: 10, fontWeight: 600, whiteSpace: 'normal', lineHeight: 1.15, width: 58 }}>VENTAS BEJAR</th>
+                <th style={{ padding: '6px 2px', fontSize: 10, fontWeight: 600, whiteSpace: 'normal', lineHeight: 1.15, width: 58 }}>VENTAS TOTAL</th>
                 <th style={{ padding: '6px 4px' }}>IMPORTE</th>
                 <th style={{ padding: '6px 4px' }}></th>
               </tr>
@@ -493,7 +493,7 @@ export default function TerritorialTab() {
           TERRITORIAL O2 MOVILFREE
         </div>
         <div style={{ overflow: 'visible' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 1200 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 1040 }}>
             <thead>
               <tr style={{ background: '#0284c7', color: '#ffffff' }}>
                 <th style={{ padding: '6px 4px' }} title="Nombre descriptivo de la comisión">Nombre Comisión ℹ️</th>
