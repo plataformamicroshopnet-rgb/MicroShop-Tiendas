@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import { PageHeader } from '@/components/PageHeader'
 import { useGuard } from '@/hooks/useGuard'
 import { useComisionesData } from '@/hooks/useComisionesData'
@@ -58,6 +58,7 @@ const eur = (v: number) => (Math.abs(v) < 0.005 ? '—' : `${v.toLocaleString('e
 export default function ComisionesVsPage() {
   const { authorized } = useGuard('MODULE_DIRECCION')
   const { loading, sellerStats, catalogs, activePeriodKey } = useComisionesData()
+  const [expanded, setExpanded] = useState<string | null>(null)   // `${comercial}|${grupo}` desplegado
 
   const ctx = useMemo(() => ({
     catalogs: catalogs || {},
@@ -102,7 +103,7 @@ export default function ComisionesVsPage() {
       comercial.extras = Math.max(0, num(s.totalComision) - mapped)
       const totalComercial = mapped + comercial.extras
 
-      return { name: s.name, empresa, comercial, totalEmpresa, totalComercial }
+      return { name: s.name, empresa, comercial, totalEmpresa, totalComercial, sales: s.rawSales || [] }
     }).filter((b: any) => b.totalEmpresa > 0.005 || b.totalComercial > 0.005)
   }, [sellerStats, ctx])
 
@@ -156,12 +157,66 @@ export default function ComisionesVsPage() {
                     const e = b.empresa[g.id] || 0
                     const c = b.comercial[g.id] || 0
                     if (e < 0.005 && c < 0.005) return null
+                    const key = `${b.name}|${g.id}`
+                    const isOpen = expanded === key
+                    const ops = isOpen ? (b.sales || []).filter((s: any) => getSaleGroupId(s) === g.id) : []
                     return (
-                      <tr key={g.id} style={{ borderBottom: '1px solid var(--border-light)' }}>
-                        <td style={{ padding: '8px 18px' }}>{g.icon} {g.label}</td>
-                        <td style={{ padding: '8px 18px', textAlign: 'right', fontWeight: 700, color: '#0078D4' }}>{eur(e)}</td>
-                        <td style={{ padding: '8px 18px', textAlign: 'right', fontWeight: 700, color: '#16a34a' }}>{eur(c)}</td>
-                      </tr>
+                      <React.Fragment key={g.id}>
+                        <tr
+                          style={{ borderBottom: '1px solid var(--border-light)', cursor: 'pointer', background: isOpen ? 'var(--active-bg)' : 'transparent' }}
+                          onClick={() => setExpanded(isOpen ? null : key)}
+                          title="Ver operaciones de este grupo"
+                        >
+                          <td style={{ padding: '8px 18px', fontWeight: 600 }}>
+                            <span style={{ color: 'var(--mercedes-cyan)', marginRight: 6, display: 'inline-block', width: 10 }}>{isOpen ? '▾' : '▸'}</span>
+                            {g.icon} {g.label}
+                          </td>
+                          <td style={{ padding: '8px 18px', textAlign: 'right', fontWeight: 700, color: '#0078D4' }}>{eur(e)}</td>
+                          <td style={{ padding: '8px 18px', textAlign: 'right', fontWeight: 700, color: '#16a34a' }}>{eur(c)}</td>
+                        </tr>
+                        {isOpen && (
+                          <tr>
+                            <td colSpan={3} style={{ padding: '0 18px 12px', background: 'var(--active-bg)' }}>
+                              {ops.length === 0 ? (
+                                <div style={{ padding: 10, color: 'var(--text-muted)', fontSize: 12 }}>Sin operaciones en este grupo.</div>
+                              ) : (
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, background: 'var(--bg-card)', borderRadius: 8, overflow: 'hidden' }}>
+                                  <thead>
+                                    <tr style={{ color: 'var(--text-muted)', textAlign: 'left' }}>
+                                      <th style={{ padding: '6px 8px' }}>Fecha</th>
+                                      <th style={{ padding: '6px 8px' }}>Cliente</th>
+                                      <th style={{ padding: '6px 8px' }}>NIF</th>
+                                      <th style={{ padding: '6px 8px' }}>Producto</th>
+                                      <th style={{ padding: '6px 8px', textAlign: 'right' }}>Cuota</th>
+                                      <th style={{ padding: '6px 8px', textAlign: 'right' }}>Comisión Empresa</th>
+                                      <th style={{ padding: '6px 8px', textAlign: 'center' }}>Estado</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {ops.map((s: any, i: number) => {
+                                      const an = isAnul(s)
+                                      const comm = an ? 0 : getSaleCommission(s, ctx)
+                                      const estado = an ? 'Anulada' : (String(s.pendiente || '').toLowerCase() === 'si' ? 'Pendiente' : 'OK')
+                                      const col = an ? '#ef4444' : (estado === 'Pendiente' ? '#f59e0b' : '#16a34a')
+                                      return (
+                                        <tr key={i} style={{ borderTop: '1px solid var(--border-light)', opacity: an ? 0.55 : 1 }}>
+                                          <td style={{ padding: '5px 8px', whiteSpace: 'nowrap' }}>{s.fecha || '—'}</td>
+                                          <td style={{ padding: '5px 8px' }}>{s.nombreCliente || '—'}</td>
+                                          <td style={{ padding: '5px 8px' }}>{s.nif || '—'}</td>
+                                          <td style={{ padding: '5px 8px' }}>{s.producto || '—'}</td>
+                                          <td style={{ padding: '5px 8px', textAlign: 'right' }}>{eur(num(s.cuota))}</td>
+                                          <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 700, color: '#0078D4' }}>{eur(comm)}</td>
+                                          <td style={{ padding: '5px 8px', textAlign: 'center', fontWeight: 700, color: col }}>{estado}</td>
+                                        </tr>
+                                      )
+                                    })}
+                                  </tbody>
+                                </table>
+                              )}
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     )
                   })}
                   <tr style={{ background: 'var(--active-bg)', fontWeight: 800 }}>
