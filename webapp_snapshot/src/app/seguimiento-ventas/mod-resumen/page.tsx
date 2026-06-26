@@ -233,7 +233,7 @@ export default function ModResumenPage() {
   };
 
   const tableData = useMemo<{
-    rows: { name: string; real: number; projection: number; }[];
+    rows: { name: string; real: number; projection: number; isSubtotal?: boolean; }[];
     totalReal: number;
     totalProjection: number;
     workingDaysElapsed: number;
@@ -404,8 +404,10 @@ export default function ModResumenPage() {
     // --- 5. PRV TERRITORIAL TIENDAS (motor único, idéntico a la Entrada de Datos) ---
     // Antes había una réplica local que quedó desfasada (no aplicaba el condicionante
     // "% sobre comisiones" ni excluía O2). Ahora delega en computeTerritorialTotal.
+    // OJO: 'sales' RAW (sin sanitizeSale). sanitizeSale altera 'detalle' y rompe
+    // matchTipoVenta/comisionBase -> dejaba solo el Fútbol (2.000) en vez de los ~9.053.
     const prvTerritorialTiendasReal = computeTerritorialTotal({
-      sales: salesList,
+      sales,
       territorialRules: territorialTiendasRules,
       catalogs,
       viewingPeriod: saleMonth
@@ -423,17 +425,26 @@ export default function ModResumenPage() {
     };
 
     // MovilFree (margen de la tienda MovilFree) y O2 (comisión O2 directa) en filas separadas.
-    const rows = [
+    // Los 4 grupos operativos (= Importe Mensual de la MOD); el PRV Territorial Tiendas va aparte.
+    const operationalRows = [
       { name: 'Tiendas Movistar', real: tiendasMovistarReal, projection: getProjection(tiendasMovistarReal) },
       { name: 'MovilFree', real: movilFreeReal, projection: getProjection(movilFreeReal) },
       { name: 'O2', real: o2Real, projection: getProjection(o2Real) },
       { name: 'PRV Territorial O2', real: bonosO2Real, projection: getProjection(bonosO2Real) },
+    ];
+    const subtotalReal = operationalRows.reduce((acc, r) => acc + r.real, 0);
+    const subtotalProjection = operationalRows.reduce((acc, r) => acc + r.projection, 0);
+
+    const rows = [
+      ...operationalRows,
+      { name: 'Subtotal Operativo', real: subtotalReal, projection: subtotalProjection, isSubtotal: true },
       { name: 'PRV Territorial Tiendas', real: prvTerritorialTiendasReal, projection: getProjection(prvTerritorialTiendasReal) },
       { name: 'Varios', real: variosReal, projection: getProjection(variosReal) }
     ];
 
-    const totalReal = rows.reduce((acc, r) => acc + r.real, 0);
-    const totalProjection = rows.reduce((acc, r) => acc + r.projection, 0);
+    // El TOTAL excluye la fila de subtotal para no duplicar.
+    const totalReal = rows.filter(r => !(r as any).isSubtotal).reduce((acc, r) => acc + r.real, 0);
+    const totalProjection = rows.filter(r => !(r as any).isSubtotal).reduce((acc, r) => acc + r.projection, 0);
 
     return {
       rows,
@@ -532,19 +543,20 @@ export default function ModResumenPage() {
               `
             }} />
             {tableData.rows.map((row) => (
-              <tr 
-                key={row.name} 
+              <tr
+                key={row.name}
                 className="row-hover"
-                style={{ 
-                  borderBottom: '1px solid var(--border-light)', 
-                  backgroundColor: 'transparent'
+                style={{
+                  borderBottom: row.isSubtotal ? '1px solid var(--border-strong)' : '1px solid var(--border-light)',
+                  borderTop: row.isSubtotal ? '1px solid var(--border-strong)' : undefined,
+                  backgroundColor: row.isSubtotal ? 'rgba(100, 116, 139, 0.10)' : 'transparent'
                 }}
               >
-                <td style={{ padding: '12px 16px', fontWeight: 700, color: 'var(--text-main)' }}>{row.name}</td>
-                <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, color: 'var(--text-main)' }}>
+                <td style={{ padding: '12px 16px', fontWeight: row.isSubtotal ? 800 : 700, fontStyle: row.isSubtotal ? 'italic' : 'normal', color: 'var(--text-main)' }}>{row.name}</td>
+                <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: row.isSubtotal ? 800 : 700, color: 'var(--text-main)' }}>
                   {formatCurrency(row.real)}
                 </td>
-                <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, color: 'var(--mercedes-cyan)' }}>
+                <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: row.isSubtotal ? 800 : 700, color: 'var(--mercedes-cyan)' }}>
                   {formatCurrency(row.projection)}
                 </td>
               </tr>
