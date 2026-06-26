@@ -403,7 +403,10 @@ export default function DashboardPage() {
     const convAll = names.map(n => ({ name: n, value: convCount(byV[n]) })).sort((a, b) => (b.value - a.value) || a.name.localeCompare(b.name));
     const pulpo = sortDesc(pulpoCount);
     const madruga = names.map(n => ({ name: n, value: firstMin(byV[n]) })).filter(x => x.value != null).sort((a, b) => (a.value as number) - (b.value as number));
-    return { dispSeg, conv, convAll, pulpo, madruga };
+    // Mejor vendedor de Swap del mes (nº de ventas con ¿Swap? marcado).
+    const swapCount = (ventas: any[]) => ventas.filter(s => s.isSwap === true || String(s.isSwap).toLowerCase() === 'true').length;
+    const swap = sortDesc(swapCount);
+    return { dispSeg, conv, convAll, pulpo, madruga, swap };
   })();
   const fotoSrc = (n: string) => `/${n}.jpg`;
   const hhmm = (mins: number) => `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
@@ -487,7 +490,7 @@ export default function DashboardPage() {
         <div style={{
           background: 'var(--bg-card)',
           borderRadius: 16,
-          padding: '16px',
+          padding: '12px',
           border: '1px solid var(--border-strong)',
           boxShadow: '0 4px 14px -5px rgba(0,0,0,0.05)',
           display: 'flex',
@@ -498,12 +501,12 @@ export default function DashboardPage() {
           {/* Subtle background glow */}
           <div style={{ position: 'absolute', bottom: -50, right: -50, width: 150, height: 150, background: 'radial-gradient(circle, rgba(236, 72, 153, 0.15) 0%, rgba(236, 72, 153, 0) 70%)', borderRadius: '50%' }} />
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
             <div style={{ backgroundColor: 'rgba(236, 72, 153, 0.1)', padding: '10px', borderRadius: '12px' }}>
               <Crown size={24} color="#ec4899" />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: 'var(--text-main)' }}>Destacados y Nominados MVP</h3>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'var(--text-main)' }}>Destacados y Nominados MVP</h3>
               <p style={{ margin: 0, fontSize: '13px', color: 'var(--medium-gray)', fontWeight: 500 }}>
                 {mvp.isToday ? 'Rendimiento y Liderazgo Hoy' : 'Rendimiento y Liderazgo del Mes'}
               </p>
@@ -892,7 +895,7 @@ export default function DashboardPage() {
         <div style={{
           background: 'var(--bg-card)',
           borderRadius: 16,
-          padding: '16px',
+          padding: '12px',
           border: '1px solid var(--border-strong)',
           boxShadow: '0 4px 14px -5px rgba(0,0,0,0.05)',
           display: 'flex',
@@ -903,12 +906,12 @@ export default function DashboardPage() {
           {/* Subtle background glow */}
           <div style={{ position: 'absolute', top: -50, right: -50, width: 150, height: 150, background: 'radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0) 70%)', borderRadius: '50%' }} />
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
             <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '10px', borderRadius: '12px' }}>
               <Target size={24} color="#10b981" />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: 'var(--text-main)' }}>Cuenta Kilómetros</h3>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'var(--text-main)' }}>Cuenta Kilómetros</h3>
               <p style={{ margin: 0, fontSize: '13px', color: 'var(--medium-gray)', fontWeight: 500 }}>
                 Carrera hacia Alta BAF Convergente
               </p>
@@ -918,7 +921,7 @@ export default function DashboardPage() {
           <div style={{ flex: 1, display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 14, alignItems: 'center', alignContent: 'center', justifyContent: 'center' }}>
             {(ranking.convAll.length === 0 || ranking.convAll[0].value === 0) ? (
               <p style={{ margin: 'auto', fontSize: 14, color: 'var(--medium-gray)', textAlign: 'center' }}>Aún no hay altas convergentes este mes.</p>
-            ) : ranking.convAll.map((r, i) => {
+            ) : ranking.convAll.slice(0, 6).map((r, i) => {
               const lider = ranking.convAll[0].value;
               const faltan = lider - r.value;
               return (
@@ -950,19 +953,19 @@ export default function DashboardPage() {
         <div style={{
           background: 'var(--bg-card)',
           borderRadius: 16,
-          padding: '16px',
+          padding: '12px',
           border: '1px solid var(--border-strong)',
           boxShadow: '0 4px 14px -5px rgba(0,0,0,0.05)',
           display: 'flex',
           flexDirection: 'column',
           position: 'relative'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
             <div style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)', padding: '10px', borderRadius: '12px' }}>
               <Award size={24} color="#8b5cf6" />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: 'var(--text-main)' }}>Tus Medallas y Logros</h3>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'var(--text-main)' }}>Tus Medallas y Logros</h3>
               <p style={{ margin: 0, fontSize: '13px', color: 'var(--medium-gray)', fontWeight: 500 }}>Desbloqueos recientes esta semana</p>
             </div>
           </div>
@@ -971,7 +974,7 @@ export default function DashboardPage() {
             {[
               { titulo: 'Rey de Dispositivos', sub: 'Líder en Dispositivos', holder: ranking.dispSeg[0], second: ranking.dispSeg[1], valor: (v: number) => eur(v), grad: 'linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%)', col: '#d97706', ring: 'rgba(245, 158, 11, 0.25)' },
               { titulo: 'El Pulpo', sub: 'Más multi-paquete', holder: ranking.pulpo[0], second: ranking.pulpo[1], valor: (v: number) => `${v} ops`, grad: 'linear-gradient(135deg, #fca5a5 0%, #ef4444 100%)', col: '#b91c1c', ring: 'rgba(239, 68, 68, 0.25)' },
-              { titulo: 'Madrugador', sub: '1ª venta más temprana', holder: ranking.madruga[0], second: ranking.madruga[1], valor: (v: number) => hhmm(v), grad: 'linear-gradient(135deg, #93c5fd 0%, #3b82f6 100%)', col: '#1d4ed8', ring: 'rgba(59, 130, 246, 0.25)' },
+              { titulo: 'Rey del Swap', sub: 'Mejor vendedor de Swap del mes', holder: ranking.swap[0], second: ranking.swap[1], valor: (v: number) => `${v} swaps`, grad: 'linear-gradient(135deg, #5eead4 0%, #14b8a6 100%)', col: '#0d9488', ring: 'rgba(20, 184, 166, 0.25)' },
             ].map((m, i) => (
               <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', background: 'var(--bg-body)', padding: '12px', borderRadius: '12px', border: `1px solid ${m.ring}` }}>
                 <div style={{ position: 'relative', width: 48, height: 48 }}>
