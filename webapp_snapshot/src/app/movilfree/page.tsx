@@ -887,10 +887,7 @@ export default function MovilFreeApp() {
             <h1 style={{ margin: 0, color: '#E91E97', fontSize: 24, fontWeight: 800 }}>MovilFree Salamanca</h1>
             <p style={{ margin: '4px 0 0', color: '#666', fontSize: 14 }}>Panel de Gestión y Punto de Venta</p>
           </div>
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 16 }}>
-            <a href="/cristina-admin/facturas" title="Facturas y Tickets" style={{ display: 'flex', alignItems: 'center', gap: 8, height: 40, padding: '0 14px', borderRadius: 10, border: `1px solid ${fuchsia}`, background: lightPink, color: fuchsia, fontWeight: 700, fontSize: 13, cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-              <Receipt size={18} /> Facturas y Tickets
-            </a>
+          <div style={{ marginLeft: 'auto' }}>
             <img src="/images/media__1778608332264.png" alt="Movilfree" style={{ height: 48, objectFit: 'contain' }} />
           </div>
         </div>
@@ -901,16 +898,21 @@ export default function MovilFreeApp() {
             <span style={{ fontSize: 14, color: '#666', fontWeight: 'bold' }}>TIENDA ACTIVA: </span>
             <span style={{ fontSize: 16, color: fuchsia, fontWeight: 'bold', background: lightPink, padding: '6px 12px', borderRadius: 8 }}>{selectedTienda === 'O2' ? 'Movilfree' : selectedTienda}</span>
           </div>
-          {isGlobalUser && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <label style={{ fontSize: 13, fontWeight: 'bold', color: '#555' }}>Cambiar Tienda Vista:</label>
-              <select value={selectedTienda} onChange={(e) => { setSelectedTienda(e.target.value); setCart([]); }} style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${fuchsia}`, fontSize: 13, background: 'white', color: fuchsia, fontWeight: 'bold' }}>
-                {Object.keys(TIENDAS_COMERCIALES).map((t) => (
-                  <option key={t} value={t}>{t === 'O2' ? 'Movilfree' : t}</option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
+            {isGlobalUser && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <label style={{ fontSize: 13, fontWeight: 'bold', color: '#555' }}>Cambiar Tienda Vista:</label>
+                <select value={selectedTienda} onChange={(e) => { setSelectedTienda(e.target.value); setCart([]); }} style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${fuchsia}`, fontSize: 13, background: 'white', color: fuchsia, fontWeight: 'bold' }}>
+                  {Object.keys(TIENDAS_COMERCIALES).map((t) => (
+                    <option key={t} value={t}>{t === 'O2' ? 'Movilfree' : t}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <a href="/cristina-admin/facturas" title="Facturas y Tickets" style={{ display: 'flex', alignItems: 'center', gap: 8, height: 38, padding: '0 14px', borderRadius: 10, border: `1px solid ${fuchsia}`, background: lightPink, color: fuchsia, fontWeight: 700, fontSize: 13, cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+              <Receipt size={18} /> Facturas y Tickets
+            </a>
+          </div>
         </div>
 
         {/* TABS & SEARCH */}
