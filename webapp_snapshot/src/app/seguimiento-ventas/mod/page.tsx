@@ -111,9 +111,10 @@ export default function ModPage() {
                     includeTerritorialTiendas: includeTerritorial,
                 });
 
-            // La página MOD SÍ incluye el PRV Territorial Tiendas en su Importe Mensual
-            // (a diferencia de Ganancias, que lo añade por su cuenta).
-            const currMetrics = processMetrics(currSalesRaw, currConfigs, year, month, activePeriodKey, true);
+            // El PRV Territorial Tiendas NO entra en el Importe Mensual de la MOD: vive como
+            // fila propia en el "Resumen de Métricas MOD". Aquí el importe es la caja operativa
+            // (comisiones + MovilFree + PRV Territorial O2), igual que la "Caja Tiendas" de Ganancias.
+            const currMetrics = processMetrics(currSalesRaw, currConfigs, year, month, activePeriodKey);
             const prevMetrics = processMetrics(prevSalesRaw, prevConfigs, year - 1, month, prevYearKey);
 
             const pctOps = prevMetrics.totalOps > 0
@@ -381,7 +382,9 @@ export default function ModPage() {
                                     `• Comisión de ventas (Movistar + O2):  ${num(currMetrics.breakdown?.comisiones || 0)} €\n` +
                                     `• Margen MovilFree:  ${num(currMetrics.breakdown?.movilFree || 0)} €\n` +
                                     `• PRV Territorial O2:  ${num(currMetrics.breakdown?.prvTerritorialO2 || 0)} €\n` +
-                                    `• PRV Territorial Tiendas:  ${num(currMetrics.breakdown?.prvTerritorialTiendas || 0)} €\n` +
+                                    ((currMetrics.breakdown?.prvTerritorialTiendas || 0) > 0
+                                        ? `• PRV Territorial Tiendas:  ${num(currMetrics.breakdown?.prvTerritorialTiendas || 0)} €\n`
+                                        : '') +
                                     `──────────────────────────\n` +
                                     `TOTAL:  ${num(currMetrics.breakdown?.total || currMetrics.totalImporte)} €`}
                             >
