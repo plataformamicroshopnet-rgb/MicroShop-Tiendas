@@ -12,6 +12,7 @@ import { usePeriod } from '@/components/PeriodProvider'
 import { OBJECTIVE_KEYS, OBJECTIVE_MAPPING } from '@/lib/constants'
 import { calculateDynamicCommission, sanitizeSale, normalizeString, getCurrentMonthString, isVentaWithinDates, renderDashboardData, isSaleActive } from '@/lib/salesUtils'
 import { getSaleCommissionBase } from '@/lib/saleCommission'
+import { computeBonosO2, computeTerritorialTotal } from '@/lib/territorialConsolidado'
 import { can, canEdit } from '@/lib/permissions'
 import { useGuard } from '@/hooks/useGuard'
 import { RepescaTrimestral } from './RepescaTrimestral'
@@ -66,6 +67,12 @@ export default function LiquidacionesPage() {
     const [importesPlus, setImportesPlus] = useState<any[]>([]) // Captador
     const [extraAssignments, setExtraAssignments] = useState<any[]>([])
     const [catalogs, setCatalogs] = useState<Record<string, any[]>>({})
+    // Datos crudos + reglas para filas-resumen en vivo (PRV Territorial O2/Tiendas, MovilFree).
+    const [salesRaw, setSalesRaw] = useState<any[]>([])
+    const [territorialO2Rules, setTerritorialO2Rules] = useState<any[]>([])
+    const [territorialTiendasRules, setTerritorialTiendasRules] = useState<any[]>([])
+    const [movilFreeSales, setMovilFreeSales] = useState<any[]>([])
+    const [movilFreeProducts, setMovilFreeProducts] = useState<any[]>([])
 
     // Saving state
     const [savingObj, setSavingObj] = useState(false)
@@ -156,8 +163,15 @@ export default function LiquidacionesPage() {
             fetch(`/api/importes-pyme?periodKey=${activePeriodKey}&strictPeriod=1`).then(res => res.json()).catch(() => ({})),
             fetch(`/api/importes-plus?periodKey=${activePeriodKey}&strictPeriod=1`).then(res => res.json()).catch(() => ({})),
             fetch(`/api/sales?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({})),
-            fetch(`/api/extras/assignments?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({}))
-        ]).then(([objData, pymeData, plusData, sData, extrasData]) => {
+            fetch(`/api/extras/assignments?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({})),
+            fetch(`/api/territorial?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({ success: true, o2: [], tiendas: [] })),
+            fetch(`/api/movilfree/sales`).then(res => res.json()).catch(() => ([])),
+            fetch(`/api/movilfree/products`).then(res => res.json()).catch(() => ([]))
+        ]).then(([objData, pymeData, plusData, sData, extrasData, territorialRes, mfSalesData, mfProductsData]) => {
+            setTerritorialO2Rules((territorialRes && territorialRes.o2) || [])
+            setTerritorialTiendasRules((territorialRes && territorialRes.tiendas) || [])
+            setMovilFreeSales(Array.isArray(mfSalesData) ? mfSalesData : (mfSalesData?.sales || mfSalesData?.data || []))
+            setMovilFreeProducts(Array.isArray(mfProductsData) ? mfProductsData : (mfProductsData?.products || mfProductsData?.data || []))
             if (objData && objData.success && objData.objetivos) {
                 setObjetivos(objData.objetivos)
                 if (objData.grupos) setObjGrupos(objData.grupos)
@@ -180,6 +194,7 @@ export default function LiquidacionesPage() {
             }
             
             if (sData && sData.success && sData.logs) {
+                setSalesRaw(sData.logs)  // crudas (sin sanitizeSale): para computeBonosO2/computeTerritorialTotal
                 const sanitized = sData.logs.map(sanitizeSale)
                 setAllSales(sanitized)
                 setFilteredSalesGlobal(sanitized)
@@ -1436,7 +1451,46 @@ export default function LiquidacionesPage() {
             return 0;
         };
 
-        const activeExtras = extraAssignments.filter(ea => ea.status !== 'CANCELLED')
+        // ── Filas-resumen EN VIVO (mismo motor que Resumen MOD / Operaciones por Grupo Cliente).
+        // Usa salesRaw (sin sanitizeSale) para que el territorial/O2 no salga descuadrado. ──
+        const viewingPeriodLiq = activePeriodKey ? activePeriodKey.replace('_', '') : ''
+        const bonosO2Live = computeBonosO2(salesRaw, territorialO2Rules)
+        const territorialTiendasLive = computeTerritorialTotal({ sales: salesRaw, territorialRules: territorialTiendasRules, catalogs, viewingPeriod: viewingPeriodLiq } as any)
+        const movilFreeLive = (() => {
+            const [yStr, mStr] = String(activePeriodKey || '').split('_')
+            const y = Number(yStr), m = Number(mStr)
+            if (!y || !m) return 0
+            return movilFreeSales
+                .filter((s: any) => { const d = new Date(s.fechaVenta); return s.estado === 'COMPLETADA' && d.getFullYear() === y && (d.getMonth() + 1) === m })
+                .reduce((acc: number, s: any) => {
+                    try {
+                        const list = JSON.parse(s.listaProductos)
+                        const cost = list.reduce((cAcc: number, item: any) => {
+                            const prodCost = item.coste !== undefined ? item.coste : (movilFreeProducts.find((p: any) => p.id === item.id)?.coste || 0)
+                            return cAcc + (prodCost * item.cantidad)
+                        }, 0)
+                        return acc + ((s.importeTotal / 1.21) - cost)
+                    } catch (e) { return acc }
+                }, 0)
+        })()
+
+        const liveSummaryExtras = ([
+            { name: 'PRV Territorial O2', amount: bonosO2Live },
+            { name: 'MovilFree (margen)', amount: movilFreeLive },
+            { name: 'PRV Territorial Tiendas', amount: territorialTiendasLive },
+        ] as any[])
+            .filter(r => r.amount)
+            .map(r => ({ id: `__live_${r.name}`, seller: 'MicroShop', customerNif: 'TERRITORIAL', customerName: r.name, telecomRewardAmount: r.amount, sellerRewardAmount: 0, status: 'LIQUIDATED', createdAt: new Date().toISOString(), rule: { name: r.name } }))
+
+        // activeExtras = extras reales SIN el Bono Territorial O2 persistido (stale) + las 3 en vivo.
+        const activeExtras = [
+            ...extraAssignments.filter(ea => {
+                if (ea.status === 'CANCELLED') return false
+                const isTerrO2 = String(ea.customerNif) === 'TERRITORIAL' || String(ea.rule?.name || '').toUpperCase().includes('TERRITORIAL O2')
+                return !isTerrO2
+            }),
+            ...liveSummaryExtras
+        ]
 
         const exportToExcel = async () => {
             const workbook = new ExcelJS.Workbook();
