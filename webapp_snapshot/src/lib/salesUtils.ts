@@ -32,6 +32,16 @@ export function isSaleActive(sale: any): boolean {
 }
 
 /**
+ * "Señalización Solar 360": ni la cobra la empresa ni se paga al comercial. Se elimina de
+ * comisiones Y de los listados de operaciones. Fuente única para detectarla (por producto;
+ * en los datos llega como detalle='Varios' + producto 'Solar360 (...)').
+ */
+export function isSolar360(sale: any): boolean {
+    const hay = (x: any) => { const s = String(x || '').toLowerCase(); return s.includes('solar360') || s.includes('solar 360') }
+    return hay(sale?.producto) || hay(sale?.categoria) || hay(sale?.detalle)
+}
+
+/**
  * Parses a Spanish DD/MM/YYYY date string into a Date object for comparison.
  */
 export function parseSpanishDate(dateStr?: string | null): Date | null {

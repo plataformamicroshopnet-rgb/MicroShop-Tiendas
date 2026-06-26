@@ -55,7 +55,7 @@ export default function ProductTreeSelector({ value, onChange, disabled, placeho
     setExpandedCats(prev => ({ ...prev, [cat]: !prev[cat] }))
   }
 
-  const predefined = ["Alta BAF Total", "Alta BAF Convergente", "Dispositivos", "Seguro", "Swap", "MPA", "FTTR", "Señalización Solar 360", "ARPU", "Repo Fútbol"];
+  const predefined = ["Alta BAF Total", "Alta BAF Convergente", "Dispositivos", "Seguro", "Swap", "MPA", "FTTR", "ARPU", "Repo Fútbol"];
   
   // Extraemos categorias excluyendo algunas si hace falta, pero mostramos todas las que vienen del server
   const categories = Object.keys(catalogs).filter(cat => cat !== 'Fija' && cat !== 'M\u00f3vil' && cat !== 'Mvil' && cat !== 'Micro').sort()

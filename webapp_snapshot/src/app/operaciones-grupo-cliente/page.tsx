@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { usePeriod } from '@/components/PeriodProvider'
 import { useGuard } from '@/hooks/useGuard'
 import { ExcelIcon } from '@/components/ActionIcons'
-import { renderDashboardData, calculateDynamicCommission, isVentaWithinDates, normalizeString, getCurrentMonthString, isSaleActive } from '@/lib/salesUtils'
+import { renderDashboardData, calculateDynamicCommission, isVentaWithinDates, normalizeString, getCurrentMonthString, isSaleActive, isSolar360 } from '@/lib/salesUtils'
 import { getSaleCommission } from '@/lib/saleCommission'
 import { matchesRule, getValueForRule, matchTipoVenta } from '@/hooks/useComisionesData'
 import * as XLSX from 'xlsx'
@@ -378,18 +378,12 @@ function GrupoClienteContent() {
         setTerritorialRules(territorialRes.tiendas || [])
       }
       if (tiendasRes?.success) {
-        setTiendaRules(tiendasRes.rules || [])
+        // "Señalización Solar 360" eliminada como palanca (no se cobra ni se paga).
+        setTiendaRules((tiendasRes.rules || []).filter((r: any) => !String(r.nombre || '').toLowerCase().includes('solar')))
       }
       if (sData?.success) {
-        const rawSales = sData.logs || [];
-        const mappedSales = rawSales.map((s: any) => {
-          const prodLower = String(s.producto || '').toLowerCase();
-          if (prodLower.includes('solar360')) {
-            return { ...s, cuota: 0, importe: 0 };
-          }
-          return s;
-        });
-        setSales(mappedSales.filter((s: any) => isSaleActive(s)))
+        // Solar 360 fuera del listado de operaciones por completo (no solo a 0 €).
+        setSales((sData.logs || []).filter((s: any) => isSaleActive(s) && !isSolar360(s)))
       }
       if (pymeData?.success) setImportesPyme(pymeData.importes || pymeData.data || [])
       if (plusData?.success) setImportesPlus(plusData.importes || plusData.data || [])

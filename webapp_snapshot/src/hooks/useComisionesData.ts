@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getProfile, getGroupVisual, mapObjectiveGroup, ALL_GROUPS, FIXED_SELLERS } from '@/lib/comisiones';
 import { usePeriod } from '@/components/PeriodProvider';
+import { isSolar360 } from '@/lib/salesUtils';
 
 // Parseador de Fórmulas de Productos (Soporta exclusiones con " -")
 export const matchProductFormula = (productName: string, formula: string) => {
@@ -208,7 +209,8 @@ export function useComisionesData(user?: any) {
         ])
         .then(([data, condData, extrasData, rulesData, tiendasData, o2Data, territorialData, catalogsData, fttrDiscountData]) => {
             if (data.success && data.logs) {
-                setAllSales(data.logs);
+                // Solar 360 fuera por completo (ni se cobra ni se paga): se excluye de ventas.
+                setAllSales((data.logs || []).filter((s: any) => !isSolar360(s)));
             }
             if (condData && condData.rows) {
                 setCondiciones(condData.rows);
@@ -221,7 +223,8 @@ export function useComisionesData(user?: any) {
                 setActiveRules(rulesData.rules.filter((r: any) => r.isActive && r.combinationLabel?.startsWith('[KPI]')));
             }
             if (tiendasData && tiendasData.success) {
-                setTiendaRules(tiendasData.rules || []);
+                // "Señalización Solar 360" eliminada como palanca de comisión (no se paga).
+                setTiendaRules((tiendasData.rules || []).filter((r: any) => !String(r.nombre || '').toLowerCase().includes('solar')));
                 setTiendaHours(tiendasData.hours || []);
             }
             if (o2Data && o2Data.value) {

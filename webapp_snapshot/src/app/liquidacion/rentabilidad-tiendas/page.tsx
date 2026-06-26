@@ -173,11 +173,11 @@ export default function RentabilidadTiendasPage() {
       const dashboardRows = isPlus ? pymeRows : captadorRows;
       const det = (sale.detalle || '').toLowerCase();
 
-      // Solar360: cuenta como operación pero NO suma comisión (igual que el Resumen/MOD, que lo excluye del importe)
+      // Solar360 eliminado por completo (ni se cobra ni se paga): fuera de operaciones e importe.
       const prodLower = String(sale.producto || '').toLowerCase();
       const catLower = String(sale.categoria || '').toLowerCase();
       if (prodLower.includes('solar360') || prodLower.includes('solar 360') || catLower.includes('solar') || det.includes('solar')) {
-          return { ...sale, comisionReal: 0 };
+          return null;
       }
 
       // Seguro: se paga la comisión del catálogo (no el importe), igual que el motor de liquidación

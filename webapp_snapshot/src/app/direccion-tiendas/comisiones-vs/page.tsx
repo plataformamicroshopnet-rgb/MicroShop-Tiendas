@@ -94,7 +94,7 @@ export default function ComisionesVsPage() {
       comercial.resto_baf = sumRules(k => k.includes('baf') && k.includes('total'))         // Alta BAF Total → Resto BAF
       comercial.mimovistar = sumRules(k => k.includes('baf') && k.includes('convergente'))  // Alta BAF Convergente → miMovistar
       comercial.repos = sumRules(k => k.includes('repos') || k.includes('arpu') || k.includes('fútbol') || k.includes('futbol'))
-      comercial.varios = sumRules(k => k.includes('fttr') || k.includes('mpa') || k.includes('solar') || k === 'swap')
+      comercial.varios = sumRules(k => k.includes('fttr') || k.includes('mpa') || k === 'swap')
       comercial.o2 = sumRules(k => k.includes('fibra'))            // Altas/Portas Fibra + Internas Fibra (O2/Marta)
 
       const totalEmpresa = GROUPS.reduce((a, g) => a + (empresa[g.id] || 0), 0)

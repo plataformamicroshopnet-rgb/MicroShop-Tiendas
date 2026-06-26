@@ -166,7 +166,6 @@ export default function CombosPage() {
           { label: 'Disp. + Seguros', v: totals.dispSeg, isEuro: true },
           { label: 'MPA', v: totals.mpa, isEuro: false },
           { label: 'FTTR', v: totals.fttr, isEuro: false },
-          { label: 'Solar 360', v: totals.solar, isEuro: false },
           { label: 'ARPU', v: totals.arpu, isEuro: true },
           { label: 'Repo Fútbol', v: totals.repoFutbol, isEuro: false },
         ].map(k => (
@@ -190,7 +189,6 @@ export default function CombosPage() {
                 <th style={thS(true)}>Disp. + Seguros</th>
                 <th style={thS(true)}>MPA</th>
                 <th style={thS(true)}>FTTR</th>
-                <th style={thS(true)}>Solar 360</th>
                 <th style={thS(true)}>ARPU</th>
                 <th style={thS(true)}>Repo Fútbol</th>
               </tr>
@@ -204,7 +202,6 @@ export default function CombosPage() {
                   { data: row.dispSeg,     id: `${row.name}-dispSeg`,     isEuro: true  },
                   { data: row.mpa,         id: `${row.name}-mpa`,         isEuro: false },
                   { data: row.fttr,        id: `${row.name}-fttr`,        isEuro: false },
-                  { data: row.solar,       id: `${row.name}-solar`,       isEuro: false },
                   { data: row.arpu,        id: `${row.name}-arpu`,        isEuro: true  },
                   { data: row.repoFutbol,  id: `${row.name}-repoFutbol`,  isEuro: false },
                 ]
@@ -217,7 +214,7 @@ export default function CombosPage() {
                     </tr>
                     {openCell && openCell.data.cl.length > 0 && (
                       <tr style={{ background: '#f0f7ff', borderBottom: `1px solid ${CYAN2}` }}>
-                        <td colSpan={9} style={{ padding: '14px 22px' }}>
+                        <td colSpan={8} style={{ padding: '14px 22px' }}>
                           <div style={{ fontSize: 12, fontWeight: 700, color: NAVY, marginBottom: 8 }}>
                             👥 Clientes — {row.name}:
                           </div>
@@ -244,7 +241,6 @@ export default function CombosPage() {
                   { v: totals.dispSeg, isEuro: true },
                   { v: totals.mpa, isEuro: false },
                   { v: totals.fttr, isEuro: false },
-                  { v: totals.solar, isEuro: false },
                   { v: totals.arpu, isEuro: true },
                   { v: totals.repoFutbol, isEuro: false }
                 ].map((k, i) => (

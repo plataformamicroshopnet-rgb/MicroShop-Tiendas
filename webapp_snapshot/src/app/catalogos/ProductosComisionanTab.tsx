@@ -210,7 +210,7 @@ export default function ProductosComisionanTab() {
                     </td>
                     <td style={{ padding: '8px' }}>
                       {(() => {
-                        const predefined = ["Alta BAF Total", "Alta BAF Convergente", "Dispositivos + Seguro", "MPA", "FTTR", "Señalización Solar 360", "ARPU", "Repo Fútbol"];
+                        const predefined = ["Alta BAF Total", "Alta BAF Convergente", "Dispositivos + Seguro", "MPA", "FTTR", "ARPU", "Repo Fútbol"];
                         const isFormulaLibre = rule.productosCuentan?.includes('FORMULA_LIBRE');
                         return (
                           <>
