@@ -202,28 +202,39 @@ export default function ComisionesJefeTiendasPage() {
 
     const comisionFinal = finalDisp + finalArpu + finalBaf + finalConv
 
-    // Celda "Avance de Importe": cada tramo con su icono (1/2/3) y en VERDE cuando se ha
-    // cumplido el objetivo (gris si aún no). Tramos = [{ n, amount, reached }].
-    const renderAvance = (tramos: { n: number; amount: number; reached: boolean }[]) => (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: `${tableData.length * 35}px` }}>
-            {tramos.map((t, i) => (
-                <div key={t.n} style={{
-                    flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                    borderBottom: i < tramos.length - 1 ? '1px solid #d1d5db' : 'none',
-                    background: t.reached ? 'rgba(16,185,129,0.10)' : 'transparent',
-                    color: t.reached ? '#10b981' : '#94a3b8', fontWeight: t.reached ? 700 : 500
-                }}>
-                    <span title={`Objetivo ${t.n}`} style={{
-                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                        width: 18, height: 18, borderRadius: '50%', fontSize: 10, fontWeight: 700,
-                        color: '#fff', background: t.reached ? '#10b981' : '#cbd5e1', flexShrink: 0
-                    }}>{t.n}</span>
-                    <span>{t.amount.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span>
-                    {t.reached && <span style={{ fontWeight: 700 }}>✓</span>}
-                </div>
-            ))}
-        </div>
-    )
+    // Celda "Avance de Importe": cada tramo con su icono (1/2/3). SOLO el tramo más alto
+    // alcanzado se pone VERDE con ✓ (es el ÚNICO que se cobra). Los tramos inferiores ya
+    // alcanzados se apagan (gris + tachado = "alcanzado pero superado, no se cobra") para
+    // que quede claro que no se cobran los dos. Los no alcanzados, gris normal.
+    const renderAvance = (tramos: { n: number; amount: number; reached: boolean }[]) => {
+        const lastReachedIdx = tramos.reduce((acc, t, i) => (t.reached ? i : acc), -1)
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: `${tableData.length * 35}px` }}>
+                {tramos.map((t, i) => {
+                    const active = i === lastReachedIdx       // el que se cobra
+                    const superseded = t.reached && !active   // alcanzado pero superado por uno mayor
+                    return (
+                        <div key={t.n} style={{
+                            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                            borderBottom: i < tramos.length - 1 ? '1px solid #d1d5db' : 'none',
+                            background: active ? 'rgba(16,185,129,0.12)' : 'transparent',
+                            color: active ? '#10b981' : '#94a3b8', fontWeight: active ? 700 : 500
+                        }}>
+                            <span title={`Objetivo ${t.n}`} style={{
+                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                width: 18, height: 18, borderRadius: '50%', fontSize: 10, fontWeight: 700,
+                                color: '#fff', background: active ? '#10b981' : '#cbd5e1', flexShrink: 0
+                            }}>{t.n}</span>
+                            <span style={{ textDecoration: superseded ? 'line-through' : 'none' }}>
+                                {t.amount.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                            </span>
+                            {active && <span style={{ fontWeight: 700 }}>✓</span>}
+                        </div>
+                    )
+                })}
+            </div>
+        )
+    }
 
     // Un tono de azul distinto por palanca para distinguir las columnas a golpe de vista
     // (cabecera fuerte + tinte claro en la columna "Ventas {palanca}").
