@@ -938,6 +938,31 @@ export default function ComisionesDashboardPage() {
                                                 )
                                             }) : <tr><td colSpan={13} style={{padding: 16, textAlign: 'center', color: '#64748b'}}>No hay reglas de comisión configuradas para este mes.</td></tr>
                                             })()}
+                                            {!String(s.name).toLowerCase().includes('marta') && s.o2Otras && (s.o2Otras.confirmed + s.o2Otras.pending) > 0 && (
+                                                <tr style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: '#eff6ff', color: '#334155' }}>
+                                                    <td style={{ padding: '8px 10px', fontSize: 12.5, fontWeight: 700, color: '#0f172a' }}>Altas O2/Otras</td>
+                                                    <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5, color: '#334155' }}>9,00 €</td>
+                                                    <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5, color: '#334155' }}>-</td>
+                                                    <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5, color: '#334155' }}>-</td>
+                                                    <td
+                                                        onClick={(e) => { e.stopPropagation(); const conf = (s.o2Otras.sales || []).filter((x: any) => String(x.pendiente || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim() !== 'si'); if (conf.length > 0) setSalesModal({ title: `${s.name} · Altas O2/Otras — Ventas confirmadas`, sales: conf }); }}
+                                                        style={{ padding: '8px 8px', textAlign: 'center', fontSize: 13.5, fontWeight: 800, color: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.05)', cursor: s.o2Otras.confirmed > 0 ? 'pointer' : 'default', textDecoration: s.o2Otras.confirmed > 0 ? 'underline' : 'none', textUnderlineOffset: 2 }}
+                                                        title={s.o2Otras.confirmed > 0 ? 'Ver detalle de ventas O2 confirmadas' : ''}
+                                                    >
+                                                        {s.o2Otras.confirmed}
+                                                    </td>
+                                                    <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5, fontWeight: 700, color: '#f59e0b' }}>{s.o2Otras.pending > 0 ? s.o2Otras.pending : '-'}</td>
+                                                    <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5 }}>-</td>
+                                                    <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5 }}>-</td>
+                                                    <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5 }}>-</td>
+                                                    <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5 }}>-</td>
+                                                    <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5 }}>-</td>
+                                                    <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5 }}>-</td>
+                                                    <td style={{ padding: '8px 10px', textAlign: 'right', fontSize: 13.5, fontWeight: 800, color: '#10b981' }}>
+                                                        {s.o2Otras.comision.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                                                    </td>
+                                                </tr>
+                                            )}
                                             {s.extraGroups && s.extraGroups.length > 0 && s.extraGroups.filter((eg: any) => !String(eg.name).includes('TERRITORIAL O2 MOVILFREE')).map((eg: any, idx: number) => {
                                                 const safeName = eg.name || 'Bono Extra';
                                                 return (

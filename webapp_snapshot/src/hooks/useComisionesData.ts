@@ -712,6 +712,32 @@ export function useComisionesData(user?: any) {
             internalTotalPendiente += comPendiente;
         });
 
+        // ── "Altas O2/Otras": O2 MovilFree vendidas por comerciales que NO son de la tienda O2
+        // (Marta). Se les paga 9 €/ud en SU propia liquidación. La facturación de la empresa por
+        // estas ventas se imputa a la tienda O2 MovilFree (ver Rentabilidad por Tiendas). ──
+        const O2_OTRAS_RATE = 9;
+        let o2OtrasConfirmed = 0;
+        let o2OtrasPending = 0;
+        const o2OtrasSales: any[] = [];
+        if (!isO2) {
+            sSales.forEach(s => {
+                const _an = String(s.anulado || '').toLowerCase().trim();
+                const _pe = String(s.pendiente || '').toLowerCase().trim();
+                if (_an === 'si' || _an === 'sí' || _pe === 'anulado') return;
+                const det = String(s.detalle || s.categoria || '').toLowerCase().trim();
+                if (det !== 'o2') return;
+                o2OtrasSales.push(s);
+                const isPend = String(s.pendiente || '').toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim() === 'si';
+                if (isPend) o2OtrasPending += 1; else o2OtrasConfirmed += 1;
+            });
+        }
+        const o2OtrasComisionConsolidada = o2OtrasConfirmed * O2_OTRAS_RATE;
+        const o2OtrasComisionPendiente = o2OtrasPending * O2_OTRAS_RATE;
+        const o2OtrasComision = o2OtrasComisionConsolidada + o2OtrasComisionPendiente;
+        internalTotalComision += o2OtrasComision;
+        internalTotalConsolidada += o2OtrasComisionConsolidada;
+        internalTotalPendiente += o2OtrasComisionPendiente;
+
         // Apuntar las comisiones del motor de reglas extra
         const virtualKpiExtras: any[] = [];
         
@@ -1124,7 +1150,8 @@ export function useComisionesData(user?: any) {
             extraGroups,
             groupIsConsolidado,
             activeTeamGroupCounts,
-            activeTeamGroupPending
+            activeTeamGroupPending,
+            o2Otras: { confirmed: o2OtrasConfirmed, pending: o2OtrasPending, comision: o2OtrasComision, sales: o2OtrasSales }
         };
         return sellerObj;
     });
