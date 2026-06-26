@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, ShoppingCart, X, Users, ArrowLeftRight, RefreshCcw, Package, Edit, Save, Search, Edit2, Wrench, UploadCloud, Printer, ArrowRight } from 'lucide-react'
+import { Plus, Trash2, ShoppingCart, X, Users, ArrowLeftRight, RefreshCcw, Package, Edit, Save, Search, Edit2, Wrench, UploadCloud, Printer, ArrowRight, Receipt } from 'lucide-react'
 import { TIENDAS_COMERCIALES } from '@/lib/constants'
 import { useGuard } from '@/hooks/useGuard'
 import './MovilFree.css'
@@ -887,7 +887,10 @@ export default function MovilFreeApp() {
             <h1 style={{ margin: 0, color: '#E91E97', fontSize: 24, fontWeight: 800 }}>MovilFree Salamanca</h1>
             <p style={{ margin: '4px 0 0', color: '#666', fontSize: 14 }}>Panel de Gestión y Punto de Venta</p>
           </div>
-          <div style={{ marginLeft: 'auto' }}>
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 16 }}>
+            <a href="/cristina-admin/facturas" title="Facturas y Tickets" style={{ display: 'flex', alignItems: 'center', gap: 8, height: 40, padding: '0 14px', borderRadius: 10, border: `1px solid ${fuchsia}`, background: lightPink, color: fuchsia, fontWeight: 700, fontSize: 13, cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+              <Receipt size={18} /> Facturas y Tickets
+            </a>
             <img src="/images/media__1778608332264.png" alt="Movilfree" style={{ height: 48, objectFit: 'contain' }} />
           </div>
         </div>

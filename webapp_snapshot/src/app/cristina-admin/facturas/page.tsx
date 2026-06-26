@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, Receipt, Calendar, Printer, Download, RefreshCw, FileText, ArrowLeft } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
+import { can } from '@/lib/permissions'
 
 type SaleItem = {
   id: string
@@ -35,32 +36,36 @@ export default function FacturasTicketsPage() {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
 
-  const fetchSales = async () => {
+  // Usuario logueado: Cristina/Admin ven todo; el resto (Marta) solo MovilFree.
+  const [user, setUser] = useState<any>(undefined)
+  const movilfreeOnly = user ? !(can(user, 'MODULE_CRISTINA') || String(user.role || '').toUpperCase() === 'ADMIN') : false
+
+  const fetchSales = async (onlyMovilfree: boolean) => {
     setLoading(true)
     try {
-      const [microshopRes, movilfreeRes] = await Promise.all([
-        fetch('/api/microshop-accesorios/sales'),
-        fetch('/api/movilfree/sales')
-      ])
-      
-      const microshopData = await microshopRes.json()
+      const movilfreeRes = await fetch('/api/movilfree/sales')
       const movilfreeData = await movilfreeRes.json()
-      
-      const microshopSales: SaleItem[] = (Array.isArray(microshopData) ? microshopData : []).map(s => ({
-        ...s,
-        appSource: 'MicroShop'
-      }))
-      
       const movilfreeSales: SaleItem[] = (Array.isArray(movilfreeData) ? movilfreeData : []).map(s => ({
         ...s,
         appSource: 'MovilFree'
       }))
-      
+
+      // Solo se traen las ventas de MicroShop Accesorios para usuarios con acceso completo.
+      let microshopSales: SaleItem[] = []
+      if (!onlyMovilfree) {
+        const microshopRes = await fetch('/api/microshop-accesorios/sales')
+        const microshopData = await microshopRes.json()
+        microshopSales = (Array.isArray(microshopData) ? microshopData : []).map(s => ({
+          ...s,
+          appSource: 'MicroShop'
+        }))
+      }
+
       // Combine and sort by date descending
       const combined = [...microshopSales, ...movilfreeSales].sort((a, b) => {
         return new Date(b.fechaVenta).getTime() - new Date(a.fechaVenta).getTime()
       })
-      
+
       setSales(combined)
     } catch (e) {
       console.error("Error fetching sales data:", e)
@@ -70,13 +75,23 @@ export default function FacturasTicketsPage() {
     }
   }
 
+  // 1) Cargar el usuario; 2) cuando esté, cargar las ventas con el alcance que le corresponda.
   useEffect(() => {
-    fetchSales()
+    fetch('/api/auth/me').then(r => r.json())
+      .then(d => setUser(d && d.authenticated ? d.user : null))
+      .catch(() => setUser(null))
   }, [])
+
+  useEffect(() => {
+    if (user === undefined) return
+    const only = user ? !(can(user, 'MODULE_CRISTINA') || String(user.role || '').toUpperCase() === 'ADMIN') : false
+    if (only) setStoreFilter('O2')   // bloqueado a MovilFree
+    fetchSales(only)
+  }, [user])
 
   const handleRefresh = () => {
     setRefreshing(true)
-    fetchSales()
+    fetchSales(movilfreeOnly)
   }
 
   // Filter logic
@@ -394,20 +409,22 @@ export default function FacturasTicketsPage() {
               />
             </div>
             
-            {/* Store Filter */}
-            <select 
-              value={storeFilter} 
-              onChange={e => setStoreFilter(e.target.value)}
-              className="filter-input"
-              style={{ height: 38, cursor: 'pointer' }}
-            >
-              <option value="Todas">Todas las tiendas</option>
-              <option value="Auxiliadora 45">Auxiliadora 45</option>
-              <option value="Correhuela">Correhuela</option>
-              <option value="Villamayor">Villamayor</option>
-              <option value="Béjar">Béjar</option>
-              <option value="O2">Movilfree</option>
-            </select>
+            {/* Store Filter — oculto cuando el usuario está limitado a MovilFree (Marta) */}
+            {!movilfreeOnly && (
+              <select
+                value={storeFilter}
+                onChange={e => setStoreFilter(e.target.value)}
+                className="filter-input"
+                style={{ height: 38, cursor: 'pointer' }}
+              >
+                <option value="Todas">Todas las tiendas</option>
+                <option value="Auxiliadora 45">Auxiliadora 45</option>
+                <option value="Correhuela">Correhuela</option>
+                <option value="Villamayor">Villamayor</option>
+                <option value="Béjar">Béjar</option>
+                <option value="O2">Movilfree</option>
+              </select>
+            )}
             
             {/* Date Range */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
