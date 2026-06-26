@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, Suspense, useRef } from 'react'
+import { useEffect, useState, Suspense, useRef, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { FilterX, Search, Save, X, Edit2, Trash2 } from 'lucide-react'
 import Link from 'next/link'
@@ -13,6 +13,7 @@ import { usePeriod } from '@/components/PeriodProvider'
 import { normalizeRole } from '@/lib/appConfig'
 import { ExcelIcon } from '@/components/ActionIcons'
 import { getSaleCommission } from '@/lib/saleCommission'
+import { computeBonosO2, computeTerritorialTotal } from '@/lib/territorialConsolidado'
 
 const LEVER_MAPPING: Record<string, string[]> = {
   'FD': ['Alta FD Total', 'Alta FD Total NC', 'Migra FD Total', 'Alta FD Flex', 'Alta FD Flex NC', 'Migra FD Flex'],
@@ -591,6 +592,12 @@ function OperationsContent() {
   const [searchTerm, setSearchTerm] = useState('')
   const [exporting, setExporting] = useState(false)
   const [extraAssignments, setExtraAssignments] = useState<any[]>([])
+  // Datos en bruto + reglas para las filas-resumen en vivo (PRV Territorial O2/Tiendas, MovilFree).
+  const [salesRaw, setSalesRaw] = useState<any[]>([])
+  const [territorialO2Rules, setTerritorialO2Rules] = useState<any[]>([])
+  const [territorialTiendasRules, setTerritorialTiendasRules] = useState<any[]>([])
+  const [movilFreeSales, setMovilFreeSales] = useState<any[]>([])
+  const [movilFreeProducts, setMovilFreeProducts] = useState<any[]>([])
 
   // Dashboard Config States for Retroactive Calculations
   const [objetivos, setObjetivos] = useState<Record<string, any>>({ Pyme: {}, Captador: {} })
@@ -621,8 +628,15 @@ function OperationsContent() {
       fetch(`/api/importes-pyme?periodKey=${activePeriodKey}&strictPeriod=1`).then(res => res.json()).catch(() => ({})),
       fetch(`/api/importes-plus?periodKey=${activePeriodKey}&strictPeriod=1`).then(res => res.json()).catch(() => ({})),
       fetch(`/api/catalogs?_t=${Date.now()}`).then(res => res.json()).catch(() => ({})),
-      fetch(`/api/extras/assignments?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({}))
-    ]).then(([authData, sData, objData, pymeData, plusData, catData, extrasData]) => {
+      fetch(`/api/extras/assignments?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({})),
+      fetch(`/api/territorial?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({ success: true, o2: [], tiendas: [] })),
+      fetch(`/api/movilfree/sales`).then(res => res.json()).catch(() => ([])),
+      fetch(`/api/movilfree/products`).then(res => res.json()).catch(() => ([]))
+    ]).then(([authData, sData, objData, pymeData, plusData, catData, extrasData, territorialRes, mfSalesData, mfProductsData]) => {
+      setTerritorialO2Rules((territorialRes && territorialRes.o2) || [])
+      setTerritorialTiendasRules((territorialRes && territorialRes.tiendas) || [])
+      setMovilFreeSales(Array.isArray(mfSalesData) ? mfSalesData : (mfSalesData?.sales || mfSalesData?.data || []))
+      setMovilFreeProducts(Array.isArray(mfProductsData) ? mfProductsData : (mfProductsData?.products || mfProductsData?.data || []))
       if (authData && authData.authenticated) {
         setUser(authData.user)
       }
@@ -640,6 +654,7 @@ function OperationsContent() {
         setCatalogs(catData.catalogs || {})
       }
       if (sData && sData.success) {
+        setSalesRaw(sData.logs || [])  // crudas (sin sanitizeSale): para computeBonosO2/computeTerritorialTotal
         let cleanedSales = (sData.logs || []).map(sanitizeSale)
         cleanedSales = cleanedSales.filter((s: any) => {
             const p = String(s.producto || '').toLowerCase()
@@ -768,14 +783,43 @@ function OperationsContent() {
     )
   }
 
-  // Calculate activeExtras using the same filter logic applied to displayedSales
-  const activeExtras = extraAssignments.filter(ea => {
+  // ── Filas-resumen EN VIVO (mismo motor que Resumen MOD / Operaciones por Grupo Cliente) ──
+  const viewingPeriodOps = activePeriodKey ? activePeriodKey.replace('_', '') : getCurrentMonthString()
+  const bonosO2Live = useMemo(() => computeBonosO2(salesRaw, territorialO2Rules), [salesRaw, territorialO2Rules])
+  const territorialTiendasLive = useMemo(
+    () => computeTerritorialTotal({ sales: salesRaw, territorialRules: territorialTiendasRules, catalogs, viewingPeriod: viewingPeriodOps } as any),
+    [salesRaw, territorialTiendasRules, catalogs, viewingPeriodOps]
+  )
+  const movilFreeLive = useMemo(() => {
+    const [yStr, mStr] = String(activePeriodKey || '').split('_')
+    const y = Number(yStr), m = Number(mStr)
+    if (!y || !m) return 0
+    return movilFreeSales
+      .filter((s: any) => { const d = new Date(s.fechaVenta); return s.estado === 'COMPLETADA' && d.getFullYear() === y && (d.getMonth() + 1) === m })
+      .reduce((acc: number, s: any) => {
+        try {
+          const list = JSON.parse(s.listaProductos)
+          const cost = list.reduce((cAcc: number, item: any) => {
+            const prodCost = item.coste !== undefined ? item.coste : (movilFreeProducts.find((p: any) => p.id === item.id)?.coste || 0)
+            return cAcc + (prodCost * item.cantidad)
+          }, 0)
+          return acc + ((s.importeTotal / 1.21) - cost)
+        } catch (e) { return acc }
+      }, 0)
+  }, [movilFreeSales, movilFreeProducts, activePeriodKey])
+
+  // activeExtras = extras reales (EXCLUYENDO el Bono Territorial O2 PERSISTIDO, que estaba stale)
+  // + 3 filas-resumen recalculadas EN VIVO (PRV Territorial O2, MovilFree, PRV Territorial Tiendas),
+  // para que el TOTAL COMISIONES cuadre con el Resumen MOD / Operaciones por Grupo Cliente.
+  const activeExtras = useMemo(() => {
+    const base = extraAssignments.filter(ea => {
       if (ea.status === 'CANCELLED') return false;
       if (activeVendorFilter && normName(ea.seller) !== normName(activeVendorFilter)) return false;
-      // We don't apply `grupoFilter` to extras as they are groups across many. Or maybe we only show them if no group filter is applied.
       if (grupoFilter) return false;
       if (isPendingView) return false; // Extras are never pending
-      
+      // Bono Territorial O2 persistido (stale) fuera: se recalcula en vivo más abajo.
+      const isTerrO2 = String(ea.customerNif) === 'TERRITORIAL' || String(ea.rule?.name || '').toUpperCase().includes('TERRITORIAL O2');
+      if (isTerrO2) return false;
       if (searchTerm) {
         const lowerTerm = normName(searchTerm);
         if (
@@ -787,9 +831,24 @@ function OperationsContent() {
            return false;
         }
       }
-      
       return true;
-  });
+    });
+
+    // Solo en la vista global (sin filtros) para no descuadrar las vistas filtradas.
+    const showSummary = !activeVendorFilter && !grupoFilter && !isPendingView && !searchTerm;
+    const summary: any[] = [];
+    if (showSummary) {
+      const mk = (name: string, amount: number) => ({
+        id: `__live_${name}`, seller: 'MicroShop', customerName: name, customerNif: 'TERRITORIAL',
+        telecomRewardAmount: amount, sellerRewardAmount: 0, status: 'LIQUIDATED',
+        createdAt: new Date().toISOString(), rule: { name }
+      });
+      if (bonosO2Live) summary.push(mk('PRV Territorial O2', bonosO2Live));
+      if (movilFreeLive) summary.push(mk('MovilFree (margen)', movilFreeLive));
+      if (territorialTiendasLive) summary.push(mk('PRV Territorial Tiendas', territorialTiendasLive));
+    }
+    return [...base, ...summary];
+  }, [extraAssignments, activeVendorFilter, grupoFilter, isPendingView, searchTerm, bonosO2Live, movilFreeLive, territorialTiendasLive]);
 
   // Dynamic Commission Calculator (Selective Sync)
   const getCalculatedCommission = (sale: any) => {
