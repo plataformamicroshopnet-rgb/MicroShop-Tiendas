@@ -637,6 +637,18 @@ function GrupoClienteContent() {
     viewingPeriod: activePeriodKey ? activePeriodKey.replace('_', '') : getCurrentMonthString(),
   });
 
+  // Comisión a MOSTRAR en la pestaña activa. En "Varios", las ventas Swap que NO son
+  // 'varios' de verdad (p.ej. un RENT con ¿Swap? marcado) muestran SOLO su bono de Swap
+  // (+15 €); la comisión completa del dispositivo se queda en su palanca de origen (Rent),
+  // para no mezclar/inflar Varios. En el resto de pestañas = comisión normal.
+  const tabCommission = (sale: any): number => {
+    if (activeTab === 'varios') {
+      const det = String(sale.detalle || sale.categoria || '').toLowerCase().trim()
+      if (det !== 'varios') return sale.isSwap === true ? 15 : getCommission(sale)
+    }
+    return getCommission(sale)
+  }
+
   const allBasicoSales = useMemo(() => sales.filter(s => isBasico(s.codigo)), [sales])
 
   const plusDash  = useMemo(() => {
@@ -671,9 +683,9 @@ function GrupoClienteContent() {
 
   const showCuotaTotal = activeTab === 'rent' || activeTab === 'seguro';
 
-  // Total comisiones (dinámico según pestaña)
+  // Total comisiones (dinámico según pestaña). En Varios, los Swap cuentan solo su bono (+15).
   const grandComisionesTotal = tabSales.reduce((acc, sale) => {
-    return acc + getCommission(sale);
+    return acc + tabCommission(sale);
   }, 0)
 
   // ── Global Totalizers Calculation ───────────────────────────────────
@@ -2076,7 +2088,7 @@ function GrupoClienteContent() {
             tabColor={tab.color} 
             isRent={tab.id === 'rent' || tab.id === 'seguro'}
             tabId={tab.id}
-            calcCommission={getCommission}
+            calcCommission={tabCommission}
             calcImporte={getSaleCuotaTotal}
             showCuotaTotal={showCuotaTotal}
           />
@@ -2088,7 +2100,7 @@ function GrupoClienteContent() {
             tabColor={tab.color} 
             isRent={tab.id === 'rent' || tab.id === 'seguro'}
             tabId={tab.id}
-            calcCommission={getCommission}
+            calcCommission={tabCommission}
             calcImporte={getSaleCuotaTotal}
             showCuotaTotal={showCuotaTotal}
           />
@@ -2100,7 +2112,7 @@ function GrupoClienteContent() {
             tabColor={tab.color} 
             isRent={tab.id === 'rent' || tab.id === 'seguro'}
             tabId={tab.id}
-            calcCommission={getCommission}
+            calcCommission={tabCommission}
             calcImporte={getSaleCuotaTotal}
             showCuotaTotal={showCuotaTotal}
           />
