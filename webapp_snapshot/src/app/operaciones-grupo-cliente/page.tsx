@@ -7,6 +7,7 @@ import { useGuard } from '@/hooks/useGuard'
 import { ExcelIcon } from '@/components/ActionIcons'
 import { renderDashboardData, calculateDynamicCommission, isVentaWithinDates, normalizeString, getCurrentMonthString, isSaleActive, isSolar360 } from '@/lib/salesUtils'
 import { getSaleCommission } from '@/lib/saleCommission'
+import { computeTerritorialRows } from '@/lib/territorialConsolidado'
 import { matchesRule, getValueForRule, matchTipoVenta } from '@/hooks/useComisionesData'
 import * as XLSX from 'xlsx'
 import ExcelJS from 'exceljs'
@@ -449,98 +450,17 @@ function GrupoClienteContent() {
   };
 
   const calculatedRows = useMemo(() => {
-    return STATIC_PALANCAS.map(p => {
-      const baseRule = findRuleInList(p.matches, tiendaRules);
-      const objetivo = baseRule ? (baseRule.objPrimerTramo || 0) : 0;
-      const terrRule = findRuleInList(p.matches, territorialRules);
-      
-      const t1Raw = terrRule ? terrRule.importe1 : p.tramos.tramo1;
-      const t2Raw = terrRule ? terrRule.importe2 : p.tramos.tramo2;
-      const t3Raw = p.tramos.tramo3;
-      const bonifRaw = p.tramos.bonif;
-
-      let ventas = 0;
-      if (baseRule) {
-        ventas = getSalesCountForRule(baseRule.nombre, baseRule.productosCuentan);
-      } else {
-        if (p.key === 'altas_baf') {
-          ventas = getSalesCountForRule('Alta BAF Total', 'Alta BAF Total, Alta BAF Convergente');
-        } else if (p.key === 'altas_baf_conv') {
-          ventas = getSalesCountForRule('Alta BAF Convergente', 'Alta BAF Convergente');
-        } else if (p.key === 'baf_conv_ms_disp') {
-          ventas = sales.filter(s => {
-            if (String(s.vendedor || '').toLowerCase().includes('marta')) return false;
-            if (s.anulado === 'Si' || s.anulado === 'Sí' || s.pendiente === 'Anulado') return false;
-            return String(s.categoria || s.detalle || s.sheet || '').toLowerCase() === 'rent';
-          }).length;
-        } else if (p.key === 'fibra_fttr') {
-          ventas = getSalesCountForRule('FTTR', 'Solución FTTR');
-        } else if (p.key === 'rent_disp_seguros') {
-          ventas = getSalesCountForRule('Dispositivos + Seguros', 'Dispositivos, Seguro');
-        } else if (p.key === 'altas_futbol_tv') {
-          ventas = getSalesCountForRule('Repo Fútbol', 'Extra Repos up destino Fútbol');
-        }
-      }
-
-      let pct = 0;
-      if (p.key === 'baf_conv_ms_disp') {
-        const bafConvRow = findRuleInList(['Alta BAF Convergente'], tiendaRules);
-        const bafConvObj = bafConvRow ? (bafConvRow.objPrimerTramo || 0) : 0;
-        const bafConvSales = getSalesCountForRule('Alta BAF Convergente', 'Alta BAF Convergente');
-        pct = bafConvObj > 0 ? (bafConvSales / bafConvObj) * 100 : 0;
-      } else {
-        pct = objetivo > 0 ? (ventas / objetivo) * 100 : 0;
-      }
-
-      let importe = 0;
-      let tramoAplicado = '';
-      const isPct = (str: string) => String(str).includes('%');
-      
-      if (p.key === 'baf_conv_ms_disp') {
-        if (pct >= 100) {
-          tramoAplicado = 'Bonif (20%)';
-          importe = ventas * 0.20;
-        }
-      } else if (p.key === 'rent_disp_seguros') {
-        if (pct >= 130) {
-          tramoAplicado = 'Tramo 3 (6%)';
-          importe = ventas * 0.06;
-        } else if (pct >= 115) {
-          tramoAplicado = 'Tramo 2 (4,5%)';
-          importe = ventas * 0.045;
-        } else if (pct >= 100) {
-          tramoAplicado = 'Tramo 1 (3,5%)';
-          importe = ventas * 0.035;
-        }
-      } else {
-        const obj1Val = objetivo;
-        const obj2Val = baseRule ? (baseRule.objSegundoTramo || 0) : 0;
-        const val1 = parseNumber(t1Raw);
-        const val2 = parseNumber(t2Raw);
-
-        if (obj2Val > 0 && ventas >= obj2Val) {
-          tramoAplicado = `Tramo 2 (${t2Raw})`;
-          importe = isPct(t2Raw) ? (ventas * (val2 / 100)) : val2;
-        } else if (obj1Val > 0 && ventas >= obj1Val) {
-          tramoAplicado = `Tramo 1 (${t1Raw})`;
-          importe = isPct(t1Raw) ? (ventas * (val1 / 100)) : val1;
-        }
-      }
-
-      return {
-        ...p,
-        objetivo,
-        ventas,
-        pct,
-        t1Raw,
-        t2Raw,
-        t3Raw,
-        bonifRaw,
-        tramoAplicado,
-        importe
-      };
-    });
-  }, [sales, tiendaRules, territorialRules, catalogs]);
+    // FUENTE ÚNICA: el PRV Territorial Tiendas se calcula con computeTerritorialRows (lib),
+    // exactamente igual que Entrada de Datos / Resumen MOD (% sobre Σ comisión, O2 excluido).
+    // Antes esta página tenía un cálculo local con el bug viejo (% × unidades) que daba ~588 €
+    // en vez de los 9.053 € reales. Mismas STATIC_PALANCAS → la tabla se pinta igual.
+    return computeTerritorialRows({
+      sales,
+      territorialRules,
+      catalogs,
+      viewingPeriod: activePeriodKey ? activePeriodKey.replace('_', '') : getCurrentMonthString(),
+    } as any);
+  }, [sales, territorialRules, catalogs, activePeriodKey]);
 
   const totalImporteTerritorial = useMemo(() => {
     return calculatedRows.reduce((acc, row) => acc + row.importe, 0);
