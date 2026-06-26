@@ -1270,13 +1270,16 @@ function GrupoClienteContent() {
     const exportRows: any[] = []
     const nifGroups = groupSalesByNif(tabSales)
 
-    const getSaleCuotaTotalLocal = (s: any) => {
-      return getSaleCuotaTotal(s)
-    }
+    // Mismo criterio que la pantalla (Opción A): en la hoja "Varios", una venta Swap-no-varios
+    // (p.ej. RENT con ¿Swap?) aporta solo su bono (+15 €) y SIN cuota; la comisión y la cuota
+    // completas del dispositivo viven en su pestaña/hoja Rent. Evita mezclar/inflar Varios.
+    const isVariosSwap = (s: any) => tab.id === 'varios'
+      && String(s.detalle || s.categoria || '').toLowerCase().trim() !== 'varios'
+      && s.isSwap === true
 
-    const getSaleComisionLocal = (s: any) => {
-      return getCommission(s)
-    }
+    const getSaleCuotaTotalLocal = (s: any) => isVariosSwap(s) ? 0 : getSaleCuotaTotal(s)
+
+    const getSaleComisionLocal = (s: any) => isVariosSwap(s) ? 15 : getCommission(s)
 
     nifGroups.forEach(group => {
       if (flatMode) {
