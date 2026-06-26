@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { usePeriod } from '@/components/PeriodProvider'
 import { calculateDynamicCommission, normalizeString, renderDashboardData } from '@/lib/salesUtils'
 import { TIENDAS_COMERCIALES } from '@/lib/constants'
+import { computeBonosO2 } from '@/lib/territorialConsolidado'
 
 type GroupedSale = {
   fecha: string
@@ -35,6 +36,7 @@ export default function RentabilidadTiendasPage() {
 
   const [movilFreeSales, setMovilFreeSales] = useState<any[]>([])
   const [movilFreeProducts, setMovilFreeProducts] = useState<any[]>([])
+  const [territorialO2Rules, setTerritorialO2Rules] = useState<any[]>([])
 
   const [expandedTiendas, setExpandedTiendas] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
@@ -59,14 +61,15 @@ export default function RentabilidadTiendasPage() {
 
         if (!activePeriodKey) return;
 
-        const [salesRes, catRes, pymeRes, plusRes, objRes, mfSalesRes, mfProductsRes] = await Promise.all([
+        const [salesRes, catRes, pymeRes, plusRes, objRes, mfSalesRes, mfProductsRes, territorialRes] = await Promise.all([
           fetch(`/api/sales?periodKey=${activePeriodKey}&strictPeriod=1`).catch(() => null),
           fetch(`/api/catalogs?_t=${Date.now()}`).catch(() => null),
           fetch(`/api/importes-pyme?periodKey=${activePeriodKey}&strictPeriod=1`).catch(() => null),
           fetch(`/api/importes-plus?periodKey=${activePeriodKey}&strictPeriod=1`).catch(() => null),
           fetch(`/api/objetivos?periodKey=${activePeriodKey}&strictPeriod=1`).catch(() => null),
           fetch(`/api/movilfree/sales`).catch(() => null),
-          fetch(`/api/movilfree/products`).catch(() => null)
+          fetch(`/api/movilfree/products`).catch(() => null),
+          fetch(`/api/territorial?periodKey=${activePeriodKey}`).then(r => r.json()).catch(() => ({ o2: [] }))
         ])
 
         const salesData = salesRes && salesRes.ok ? await salesRes.json() : { logs: [] }
@@ -82,6 +85,7 @@ export default function RentabilidadTiendasPage() {
         setCatalogs(catData.catalogs || catData || {})
         setMovilFreeSales(Array.isArray(mfSalesData) ? mfSalesData : (mfSalesData.sales || mfSalesData.data || []))
         setMovilFreeProducts(Array.isArray(mfProductsData) ? mfProductsData : (mfProductsData.products || mfProductsData.data || []))
+        setTerritorialO2Rules((territorialRes && territorialRes.o2) || [])
 
         const importesPyme = pymeData.importes || pymeData.data || []
         const importesPlus = plusData.importes || plusData.data || []
@@ -278,12 +282,15 @@ export default function RentabilidadTiendasPage() {
       else if (det === 'varios') tipo = 'Varios'
       else if (det === 'repos') tipo = 'Repos'
 
-      // Si la venta O2 es de un vendedor que no tiene fila en "O2 MovilFree", se la creamos
-      let row = tiendaObj.rows.find(r => r.nombre.toLowerCase() === vendedor.toLowerCase())
+      // O2 de un vendedor que NO es el comercial de la tienda O2 (Marta) -> se consolidan
+      // TODOS en una única fila "Ventas de Otras Tiendas" (Carmen y cualquier otra tienda).
+      const esComercialO2 = TIENDAS_COMERCIALES['O2'].some(c => c.toLowerCase() === vendedor.toLowerCase())
+      const rowName = (isO2 && !esComercialO2) ? 'Ventas de Otras Tiendas' : vendedor
+      let row = tiendaObj.rows.find(r => r.nombre.toLowerCase() === rowName.toLowerCase())
       if (!row && isO2) {
         const cells = {} as Record<string, { total: number, sales: any[] }>
         TIPOS_VENTA.forEach(t => cells[t] = { total: 0, sales: [] })
-        row = { nombre: vendedor, cells, totalGlobal: 0, totalUdsGlobal: 0 }
+        row = { nombre: rowName, cells, totalGlobal: 0, totalUdsGlobal: 0 }
         tiendaObj.rows.push(row)
       }
       if (row && row.cells[tipo]) {
@@ -326,14 +333,26 @@ export default function RentabilidadTiendasPage() {
       TIPOS_VENTA.forEach(t => cells[t] = { total: 0, sales: [] })
       cells['O2 MovilFree'].total = movilFreeReal
       // Es margen, no operaciones: totalUdsGlobal = 0 para no inflar el conteo de ventas
-      o2Store.rows.push({ nombre: 'MovilFree (margen)', cells, totalGlobal: movilFreeReal, totalUdsGlobal: 0, esMargen: true } as any)
+      o2Store.rows.push({ nombre: 'MovilFree Ventas', cells, totalGlobal: movilFreeReal, totalUdsGlobal: 0, esMargen: true } as any)
       o2Store.footerTotals['O2 MovilFree'].total += movilFreeReal
       o2Store.totalTienda += movilFreeReal
     }
 
+    // ── PRV Territorial O2 (bono O2 del mes): fila propia, mismo valor que el "PRV Territorial
+    // O2" del Resumen de Métricas MOD (computeBonosO2 sobre ventas raw). No suma operaciones. ──
+    const bonosO2 = computeBonosO2(sales, territorialO2Rules)
+    if (o2Store && bonosO2 !== 0) {
+      const cells = {} as Record<string, { total: number, sales: any[] }>
+      TIPOS_VENTA.forEach(t => cells[t] = { total: 0, sales: [] })
+      cells['O2 MovilFree'].total = bonosO2
+      o2Store.rows.push({ nombre: 'PRV Territorial O2', cells, totalGlobal: bonosO2, totalUdsGlobal: 0, esMargen: true } as any)
+      o2Store.footerTotals['O2 MovilFree'].total += bonosO2
+      o2Store.totalTienda += bonosO2
+    }
+
     result.sort((a, b) => b.totalTienda - a.totalTienda)
     return result
-  }, [sales, pymeRows, captadorRows, catalogs, activePeriodObj, movilFreeSales, movilFreeProducts])
+  }, [sales, pymeRows, captadorRows, catalogs, activePeriodObj, movilFreeSales, movilFreeProducts, territorialO2Rules])
 
   const globalTotal = matrixData.reduce((s, t) => s + t.totalTienda, 0)
   const globalUds = matrixData.reduce((s, t) => s + t.totalTiendaUds, 0)
@@ -380,6 +399,10 @@ export default function RentabilidadTiendasPage() {
           const rankBg = idx === 0 ? 'rgba(245,158,11,0.16)' : idx === 1 ? 'rgba(148,163,184,0.20)' : idx === 2 ? 'rgba(180,83,9,0.16)' : 'var(--section-bg)'
           const accent = idx === 0 ? '#f59e0b' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#10b981'
           const open = expandedTiendas[tienda.nombre]
+          // O2 MovilFree: solo columnas con datos (las 9 palancas genéricas no aplican a su negocio).
+          const cols = tienda.nombre === 'O2 MovilFree'
+            ? TIPOS_VENTA.filter(t => tienda.footerTotals[t].total !== 0 || tienda.footerTotals[t].uds !== 0)
+            : TIPOS_VENTA
           return (
           <div key={tienda.nombre} className="card" style={{ padding: 0, overflow: 'hidden', borderLeft: `4px solid ${accent}` }}>
             <div
@@ -409,11 +432,11 @@ export default function RentabilidadTiendasPage() {
 
             {expandedTiendas[tienda.nombre] && (
               <div style={{ overflowX: 'auto', padding: '10px 20px 20px 20px' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 1000 }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: cols.length >= 5 ? 1000 : 'auto' }}>
                   <thead>
                     <tr style={{ borderBottom: '2px solid var(--border-light)' }}>
                       <th style={{ padding: '12px 8px', textAlign: 'left', color: 'var(--light-text)', position: 'sticky', left: 0, backgroundColor: 'var(--bg-card)', zIndex: 2 }}>Comercial</th>
-                      {TIPOS_VENTA.map(t => (
+                      {cols.map(t => (
                         <th key={t} style={{ padding: '12px 8px', textAlign: 'right', color: 'var(--medium-gray)', fontWeight: 600 }}>{t}</th>
                       ))}
                       <th style={{ padding: '12px 8px', textAlign: 'right', color: 'var(--light-text)', fontWeight: 800 }}>TOTAL</th>
@@ -429,7 +452,7 @@ export default function RentabilidadTiendasPage() {
                               {row.nombre}
                             </div>
                           </td>
-                          {TIPOS_VENTA.map(t => {
+                          {cols.map(t => {
                             const cell = row.cells[t]
                             const hasSales = cell.sales.length > 0
                             const cellKey = `${tienda.nombre}-${row.nombre}-${t}`
@@ -463,12 +486,12 @@ export default function RentabilidadTiendasPage() {
                             </div>
                           </td>
                         </tr>
-                        {TIPOS_VENTA.map(t => {
+                        {cols.map(t => {
                           const cellKey = `${tienda.nombre}-${row.nombre}-${t}`
                           if (expandedCell === cellKey && row.cells[t].sales.length > 0) {
                             return (
                               <tr key={`expanded-${cellKey}`}>
-                                <td colSpan={TIPOS_VENTA.length + 2} style={{ padding: 0 }}>
+                                <td colSpan={cols.length + 2} style={{ padding: 0 }}>
                                   <div style={{ padding: '16px 24px', backgroundColor: 'rgba(0,0,0,0.2)', borderBottom: '1px solid var(--border-light)' }}>
                                     <h4 style={{ margin: '0 0 12px 0', color: 'var(--mercedes-cyan)', fontSize: 14 }}>
                                       Operaciones de {row.nombre} en {t}
@@ -516,7 +539,7 @@ export default function RentabilidadTiendasPage() {
                   <tfoot>
                     <tr style={{ borderTop: '2px solid var(--border-light)' }}>
                       <td style={{ padding: '12px 8px', fontWeight: 800, color: 'var(--light-text)', position: 'sticky', left: 0, backgroundColor: 'var(--bg-card)', zIndex: 1 }}>TOTAL TIENDA</td>
-                      {TIPOS_VENTA.map(t => (
+                      {cols.map(t => (
                         <td key={t} style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 700, color: 'var(--light-text)' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
                             <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{tienda.footerTotals[t].uds} uds</span>
