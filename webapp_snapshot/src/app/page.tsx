@@ -779,8 +779,8 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* 4. Dispositivos + Seguros */}
-          <div style={{ background: 'var(--bg-body)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
+          {/* Dispositivos + Seguros: la más importante → fila completa arriba (order -1) */}
+          <div style={{ background: 'var(--bg-body)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border-light)', gridColumn: '1 / -1', order: -1 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Smartphone size={18} color="#f59e0b" />
