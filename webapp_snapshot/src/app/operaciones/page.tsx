@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, Suspense, useRef, useMemo } from 'react'
+import { useEffect, useState, Suspense, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { FilterX, Search, Save, X, Edit2, Trash2 } from 'lucide-react'
 import Link from 'next/link'
@@ -785,12 +785,11 @@ function OperationsContent() {
 
   // ── Filas-resumen EN VIVO (mismo motor que Resumen MOD / Operaciones por Grupo Cliente) ──
   const viewingPeriodOps = activePeriodKey ? activePeriodKey.replace('_', '') : getCurrentMonthString()
-  const bonosO2Live = useMemo(() => computeBonosO2(salesRaw, territorialO2Rules), [salesRaw, territorialO2Rules])
-  const territorialTiendasLive = useMemo(
-    () => computeTerritorialTotal({ sales: salesRaw, territorialRules: territorialTiendasRules, catalogs, viewingPeriod: viewingPeriodOps } as any),
-    [salesRaw, territorialTiendasRules, catalogs, viewingPeriodOps]
-  )
-  const movilFreeLive = useMemo(() => {
+  // NOTA: consts normales (NO useMemo): este punto está DESPUÉS del return anticipado
+  // `if (loading && sales.length === 0) return ...`, así que un hook aquí rompería las reglas.
+  const bonosO2Live = computeBonosO2(salesRaw, territorialO2Rules)
+  const territorialTiendasLive = computeTerritorialTotal({ sales: salesRaw, territorialRules: territorialTiendasRules, catalogs, viewingPeriod: viewingPeriodOps } as any)
+  const movilFreeLive = (() => {
     const [yStr, mStr] = String(activePeriodKey || '').split('_')
     const y = Number(yStr), m = Number(mStr)
     if (!y || !m) return 0
@@ -806,12 +805,12 @@ function OperationsContent() {
           return acc + ((s.importeTotal / 1.21) - cost)
         } catch (e) { return acc }
       }, 0)
-  }, [movilFreeSales, movilFreeProducts, activePeriodKey])
+  })()
 
   // activeExtras = extras reales (EXCLUYENDO el Bono Territorial O2 PERSISTIDO, que estaba stale)
   // + 3 filas-resumen recalculadas EN VIVO (PRV Territorial O2, MovilFree, PRV Territorial Tiendas),
   // para que el TOTAL COMISIONES cuadre con el Resumen MOD / Operaciones por Grupo Cliente.
-  const activeExtras = useMemo(() => {
+  const activeExtras = (() => {
     const base = extraAssignments.filter(ea => {
       if (ea.status === 'CANCELLED') return false;
       if (activeVendorFilter && normName(ea.seller) !== normName(activeVendorFilter)) return false;
@@ -848,7 +847,7 @@ function OperationsContent() {
       if (territorialTiendasLive) summary.push(mk('PRV Territorial Tiendas', territorialTiendasLive));
     }
     return [...base, ...summary];
-  }, [extraAssignments, activeVendorFilter, grupoFilter, isPendingView, searchTerm, bonosO2Live, movilFreeLive, territorialTiendasLive]);
+  })();
 
   // Dynamic Commission Calculator (Selective Sync)
   const getCalculatedCommission = (sale: any) => {
