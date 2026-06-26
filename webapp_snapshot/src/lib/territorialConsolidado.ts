@@ -190,7 +190,7 @@ export function computeTerritorialRows(input: TerritorialInput): any[] {
   return STATIC_PALANCAS.map(p => {
     const terrRule = findRuleInList(p.matches, territorialRules || [])
     if (!terrRule) {
-      return { ...p, objetivo: 0, ventas: 0, pct: 0, t1Raw: p.tramos.tramo1, t2Raw: p.tramos.tramo2, t3Raw: p.tramos.tramo3, bonifRaw: p.tramos.bonif, tramoAplicado: '', importe: 0 }
+      return { ...p, objetivo: 0, obj1Target: 0, obj2Target: 0, obj3Target: 0, ventas: 0, ventasBase: 0, comisionBase: 0, pct: 0, t1Raw: p.tramos.tramo1, t2Raw: p.tramos.tramo2, t3Raw: p.tramos.tramo3, bonifRaw: p.tramos.bonif, tramoAplicado: '', importe: 0 }
     }
 
     // Ventas por tienda física + total, y el importe sumado (método Entrada de Datos).
@@ -219,6 +219,14 @@ export function computeTerritorialRows(input: TerritorialInput): any[] {
       return acc + calculateTiendaImporte(terrRule, store, perStore[i], salesTot, comisionBase)
     }, 0)
 
+    // Base de comisiones (€) y unidades de la palanca, SIEMPRE con O2 excluido (su
+    // territorial es aparte). Se exponen para reusar fuera del territorial — p. ej.
+    // Comisiones Jefe Tiendas aplica su propio % a esta base, exista o no el
+    // condicionante `baseComision` del territorial.
+    const comisionBase = perStoreData.reduce((acc, d) =>
+      acc + d.logs.filter(_notO2).reduce((a: number, s: any) => a + getSaleCommission(s, ctx), 0), 0)
+    const ventasBase = perStoreData.reduce((acc, d) => acc + d.logs.filter(_notO2).length, 0)
+
     // Objetivo/tramo para mostrar (objetivo global de tramo 1; en per_store no hay global).
     const obj1Target = terrRule.obj1Type === 'global' ? parseNumber(terrRule.obj1Global) : 0
     const obj2Target = terrRule.obj2Type === 'global' ? parseNumber(terrRule.obj2Global) : 0
@@ -232,7 +240,12 @@ export function computeTerritorialRows(input: TerritorialInput): any[] {
     return {
       ...p,
       objetivo: obj1Target,
+      obj1Target,
+      obj2Target,
+      obj3Target,
       ventas: salesTot,
+      ventasBase,
+      comisionBase,
       pct: obj1Target > 0 ? (salesTot / obj1Target) * 100 : 0,
       t1Raw: terrRule.importe1 || p.tramos.tramo1,
       t2Raw: terrRule.importe2 || p.tramos.tramo2,

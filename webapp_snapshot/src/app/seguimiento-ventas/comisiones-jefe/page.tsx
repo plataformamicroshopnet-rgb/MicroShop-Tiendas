@@ -6,11 +6,12 @@ import { useComisionesData, matchTipoVenta, parseSafeFloat } from '@/hooks/useCo
 import { useGuard } from '@/hooks/useGuard'
 import { useRouter } from 'next/navigation'
 import { AuditableCell } from '@/components/AuditableCell'
+import { computeTerritorialRows } from '@/lib/territorialConsolidado'
 
 export default function ComisionesJefeTiendasPage() {
     const router = useRouter()
     const { authorized, user } = useGuard('MODULE_JEFE_TIENDAS')
-    const { loading, sellerStats, tiendaRules } = useComisionesData()
+    const { loading, sellerStats, tiendaRules, monthSales, catalogs, activePeriodKey } = useComisionesData()
     
     // Solo el administrador puede editar los porcentajes
     const isSuperAdmin = user && user.role?.toUpperCase() === 'ADMIN'
@@ -20,6 +21,13 @@ export default function ComisionesJefeTiendasPage() {
     const [dispPct3, setDispPct3] = useState<number>(0)
     const [arpuPct1, setArpuPct1] = useState<number>(4.00)
     const [arpuPct2, setArpuPct2] = useState<number>(6.00)
+    // Comisiones nuevas del Jefe: Altas Total BAF y Altas BAF Movistar Convergente.
+    const [bafPct1, setBafPct1] = useState<number>(0)
+    const [bafPct2, setBafPct2] = useState<number>(0)
+    const [convPct1, setConvPct1] = useState<number>(0)
+    const [convPct2, setConvPct2] = useState<number>(0)
+    // Reglas de TERRITORIAL TIENDAS (objetivos 87/101, 50/58 + base de comisiones).
+    const [territorialTiendasRules, setTerritorialTiendasRules] = useState<any[]>([])
 
     useEffect(() => {
         Promise.all([
@@ -27,15 +35,31 @@ export default function ComisionesJefeTiendasPage() {
             fetch('/api/settings?key=COMISION_JEFE_DISP_PCT2').then(res => res.json()),
             fetch('/api/settings?key=COMISION_JEFE_ARPU_PCT1').then(res => res.json()),
             fetch('/api/settings?key=COMISION_JEFE_ARPU_PCT2').then(res => res.json()),
-            fetch('/api/settings?key=COMISION_JEFE_DISP_PCT3').then(res => res.json())
-        ]).then(([disp1, disp2, arpu1, arpu2, disp3]) => {
+            fetch('/api/settings?key=COMISION_JEFE_DISP_PCT3').then(res => res.json()),
+            fetch('/api/settings?key=COMISION_JEFE_BAF_PCT1').then(res => res.json()).catch(() => ({ value: null })),
+            fetch('/api/settings?key=COMISION_JEFE_BAF_PCT2').then(res => res.json()).catch(() => ({ value: null })),
+            fetch('/api/settings?key=COMISION_JEFE_CONV_PCT1').then(res => res.json()).catch(() => ({ value: null })),
+            fetch('/api/settings?key=COMISION_JEFE_CONV_PCT2').then(res => res.json()).catch(() => ({ value: null }))
+        ]).then(([disp1, disp2, arpu1, arpu2, disp3, baf1, baf2, conv1, conv2]) => {
             if (disp1.success && disp1.value !== null) setDispPct1(Number(disp1.value))
             if (disp2.success && disp2.value !== null) setDispPct2(Number(disp2.value))
             if (arpu1.success && arpu1.value !== null) setArpuPct1(Number(arpu1.value))
             if (arpu2.success && arpu2.value !== null) setArpuPct2(Number(arpu2.value))
             if (disp3 && disp3.success && disp3.value !== null) setDispPct3(Number(disp3.value))
+            if (baf1 && baf1.success && baf1.value !== null) setBafPct1(Number(baf1.value))
+            if (baf2 && baf2.success && baf2.value !== null) setBafPct2(Number(baf2.value))
+            if (conv1 && conv1.success && conv1.value !== null) setConvPct1(Number(conv1.value))
+            if (conv2 && conv2.success && conv2.value !== null) setConvPct2(Number(conv2.value))
         }).catch(err => console.error("Error loading settings", err))
     }, [])
+
+    // Reglas del territorial (objetivos + base de comisiones) del periodo activo.
+    useEffect(() => {
+        if (!activePeriodKey) return
+        fetch(`/api/territorial?periodKey=${activePeriodKey}`).then(r => r.json())
+            .then(d => { if (d && d.success) setTerritorialTiendasRules(d.tiendas || []) })
+            .catch(err => console.error("Error loading territorial", err))
+    }, [activePeriodKey])
 
     const handleSavePct = async (key: string, value: number) => {
         try {
@@ -99,6 +123,41 @@ export default function ComisionesJefeTiendasPage() {
         }
     }, [sellerStats, tiendaRules])
 
+    // BAF y Convergente: objetivos (uds) + base de comisiones (€) desde TERRITORIAL TIENDAS.
+    // Reusa el mismo motor (computeTerritorialRows) → cuadra con el territorial por construcción.
+    const { baf, conv } = useMemo(() => {
+        const empty = { obj1: 0, obj2: 0, uds: 0, base: 0 }
+        if (!monthSales || monthSales.length === 0 || !territorialTiendasRules || territorialTiendasRules.length === 0) {
+            return { baf: empty, conv: empty }
+        }
+        const rows = computeTerritorialRows({
+            sales: monthSales,
+            territorialRules: territorialTiendasRules,
+            catalogs,
+            viewingPeriod: activePeriodKey ? String(activePeriodKey).replace(/[_-]/g, '') : ''
+        } as any)
+        const get = (key: string) => {
+            const r = rows.find((x: any) => x.key === key)
+            if (!r) return empty
+            return { obj1: r.obj1Target || 0, obj2: r.obj2Target || 0, uds: r.ventasBase || 0, base: r.comisionBase || 0 }
+        }
+        return { baf: get('altas_baf'), conv: get('altas_baf_conv') }
+    }, [monthSales, territorialTiendasRules, catalogs, activePeriodKey])
+
+    // Avance del Jefe: su % sobre la base de comisiones de la palanca; el tramo (más alto
+    // alcanzado) se decide por las UNIDADES vs el objetivo del territorial.
+    const avanceBaf1 = baf.base * (bafPct1 / 100)
+    const avanceBaf2 = baf.base * (bafPct2 / 100)
+    const avanceConv1 = conv.base * (convPct1 / 100)
+    const avanceConv2 = conv.base * (convPct2 / 100)
+
+    let finalBaf = 0
+    if (baf.obj2 > 0 && baf.uds >= baf.obj2) finalBaf = avanceBaf2
+    else if (baf.obj1 > 0 && baf.uds >= baf.obj1) finalBaf = avanceBaf1
+    let finalConv = 0
+    if (conv.obj2 > 0 && conv.uds >= conv.obj2) finalConv = avanceConv2
+    else if (conv.obj1 > 0 && conv.uds >= conv.obj1) finalConv = avanceConv1
+
     // Cálculos de Avance
     const avanceDisp1 = totalDispVentas * (dispPct1 / 100)
     const avanceDisp2 = totalDispVentas * (dispPct2 / 100)
@@ -108,7 +167,7 @@ export default function ComisionesJefeTiendasPage() {
     const avanceArpu2 = totalArpuVentas * (arpuPct2 / 100)
 
     // Total Condicionado (El máximo posible: el tramo más alto configurado)
-    const totalCondicionado = (globalDispObj3 > 0 ? avanceDisp3 : avanceDisp2) + avanceArpu2
+    const totalCondicionado = (globalDispObj3 > 0 ? avanceDisp3 : avanceDisp2) + avanceArpu2 + avanceBaf2 + avanceConv2
 
     // Comisión Final (Real) - el tramo más alto alcanzado manda
     let finalDisp = 0
@@ -120,7 +179,7 @@ export default function ComisionesJefeTiendasPage() {
     if (totalArpuVentas >= globalArpuObj2 && globalArpuObj2 > 0) finalArpu = avanceArpu2
     else if (totalArpuVentas >= globalArpuObj1 && globalArpuObj1 > 0) finalArpu = avanceArpu1
 
-    const comisionFinal = finalDisp + finalArpu
+    const comisionFinal = finalDisp + finalArpu + finalBaf + finalConv
 
     if (authorized === null) {
         return <div style={{ padding: 40, color: '#0078d4', fontWeight: 600 }}>Verificando credenciales del módulo...</div>;
@@ -178,13 +237,17 @@ export default function ComisionesJefeTiendasPage() {
                         color: #0078d4;
                         background: #f8fafc;
                     }
+                    /* Tarjetas de condiciones compactadas para que entren las 4 */
+                    .excel-table.compact th, .excel-table.compact td { padding: 5px 8px; font-size: 12.5px; }
+                    .excel-table.compact .input-pct { width: 52px; padding: 3px; }
+                    .card-progress { font-size: 10px; color: #64748b; font-weight: 600; }
                 `}} />
 
                 {/* TARJETAS SUPERIORES (Estilo Excel) */}
-                <div style={{ display: 'flex', gap: 20, marginBottom: 20, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap', alignItems: 'flex-start' }}>
                     
                     {/* Condiciones Disp+Seg */}
-                    <table className="excel-table" style={{ width: 'auto', minWidth: 280 }}>
+                    <table className="excel-table compact" style={{ width: 'auto', minWidth: 200 }}>
                         <thead>
                             <tr>
                                 <th colSpan={3} className="header-blue">Condiciones Disp+Seg</th>
@@ -249,7 +312,7 @@ export default function ComisionesJefeTiendasPage() {
                     </table>
 
                     {/* Condiciones Arpu (Repos) */}
-                    <table className="excel-table" style={{ width: 'auto', minWidth: 280 }}>
+                    <table className="excel-table compact" style={{ width: 'auto', minWidth: 200 }}>
                         <thead>
                             <tr>
                                 <th colSpan={2} className="header-blue">Codiciones Arpu (Repos)</th>
@@ -292,6 +355,98 @@ export default function ComisionesJefeTiendasPage() {
                                         }}
                                         style={{ opacity: isSuperAdmin ? 1 : 0.7 }}
                                     /> %
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    {/* Condiciones Altas Total BAF (objetivos en uds desde TERRITORIAL TIENDAS) */}
+                    <table className="excel-table compact" style={{ width: 'auto', minWidth: 200 }}>
+                        <thead>
+                            <tr>
+                                <th colSpan={2} className="header-blue">Altas Total BAF</th>
+                            </tr>
+                            <tr style={{ color: '#0078d4', fontWeight: 'bold' }}>
+                                <td>Objetivo 1</td>
+                                <td>Objetivo 2</td>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style={{ color: '#0078d4', fontWeight: 'bold' }}>
+                                <td>{baf.obj1} uds</td>
+                                <td>{baf.obj2} uds</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <input
+                                        className="input-pct"
+                                        type="number" step="0.01"
+                                        value={bafPct1}
+                                        disabled={!isSuperAdmin}
+                                        onChange={e => { const v = Number(e.target.value); setBafPct1(v); handleSavePct('COMISION_JEFE_BAF_PCT1', v); }}
+                                        style={{ opacity: isSuperAdmin ? 1 : 0.7 }}
+                                    /> %
+                                </td>
+                                <td>
+                                    <input
+                                        className="input-pct"
+                                        type="number" step="0.01"
+                                        value={bafPct2}
+                                        disabled={!isSuperAdmin}
+                                        onChange={e => { const v = Number(e.target.value); setBafPct2(v); handleSavePct('COMISION_JEFE_BAF_PCT2', v); }}
+                                        style={{ opacity: isSuperAdmin ? 1 : 0.7 }}
+                                    /> %
+                                </td>
+                            </tr>
+                            <tr>
+                                <td colSpan={2} className="card-progress">
+                                    {baf.base.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} € · {baf.uds} uds
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    {/* Condiciones Altas BAF Movistar Convergente */}
+                    <table className="excel-table compact" style={{ width: 'auto', minWidth: 200 }}>
+                        <thead>
+                            <tr>
+                                <th colSpan={2} className="header-blue">Altas BAF Movistar Convergente</th>
+                            </tr>
+                            <tr style={{ color: '#0078d4', fontWeight: 'bold' }}>
+                                <td>Objetivo 1</td>
+                                <td>Objetivo 2</td>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style={{ color: '#0078d4', fontWeight: 'bold' }}>
+                                <td>{conv.obj1} uds</td>
+                                <td>{conv.obj2} uds</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <input
+                                        className="input-pct"
+                                        type="number" step="0.01"
+                                        value={convPct1}
+                                        disabled={!isSuperAdmin}
+                                        onChange={e => { const v = Number(e.target.value); setConvPct1(v); handleSavePct('COMISION_JEFE_CONV_PCT1', v); }}
+                                        style={{ opacity: isSuperAdmin ? 1 : 0.7 }}
+                                    /> %
+                                </td>
+                                <td>
+                                    <input
+                                        className="input-pct"
+                                        type="number" step="0.01"
+                                        value={convPct2}
+                                        disabled={!isSuperAdmin}
+                                        onChange={e => { const v = Number(e.target.value); setConvPct2(v); handleSavePct('COMISION_JEFE_CONV_PCT2', v); }}
+                                        style={{ opacity: isSuperAdmin ? 1 : 0.7 }}
+                                    /> %
+                                </td>
+                            </tr>
+                            <tr>
+                                <td colSpan={2} className="card-progress">
+                                    {conv.base.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} € · {conv.uds} uds
                                 </td>
                             </tr>
                         </tbody>
