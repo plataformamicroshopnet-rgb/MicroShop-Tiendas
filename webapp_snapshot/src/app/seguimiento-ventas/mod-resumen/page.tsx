@@ -10,6 +10,7 @@ import { ArrowLeft, BarChart2 } from 'lucide-react'
 import { matchTipoVenta, matchesRule, getValueForRule } from '@/hooks/useComisionesData'
 import { renderDashboardData, calculateDynamicCommission, sanitizeSale, normalizeString, isVentaWithinDates } from '@/lib/salesUtils'
 import { getSaleCommissionBase } from '@/lib/saleCommission'
+import { computeTerritorialTotal } from '@/lib/territorialConsolidado'
 import { TIENDAS_COMERCIALES } from '@/lib/constants'
 
 // Definición estática de las 6 palancas para el tramo territorial de tiendas
@@ -400,60 +401,15 @@ export default function ModResumenPage() {
     const telecomExtras = nonTerritorialExtras.reduce((acc: number, ex: any) => acc + Number(ex.telecomRewardAmount || 0), 0);
     const tiendasMovistarReal = salesCommissions + telecomExtras;
 
-    // --- 5. PRV TERRITORIAL TIENDAS ---
-    const calculateTiendaImporte = (rule: any, storeName: string, salesCount: number, salesTot: number) => {
-      let earned = 0;
-      let target1 = 0;
-      let isReached1 = false;
-      if (rule.obj1Type === 'per_store') {
-        target1 = parseNumber(rule.obj1Stores?.[storeName] || '0');
-        isReached1 = target1 > 0 && salesCount >= target1;
-      } else {
-        target1 = parseNumber(rule.obj1Global);
-        isReached1 = target1 > 0 && salesTot >= target1;
-      }
-
-      let target2 = 0;
-      let isReached2 = false;
-      if (rule.obj2Type === 'per_store') {
-        target2 = parseNumber(rule.obj2Stores?.[storeName] || '0');
-        isReached2 = target2 > 0 && salesCount >= target2;
-      } else {
-        target2 = parseNumber(rule.obj2Global);
-        isReached2 = target2 > 0 && salesTot >= target2;
-      }
-
-      const import1Num = parseNumber(rule.importe1);
-      const import2Num = parseNumber(rule.importe2);
-
-      const isPct1 = String(rule.importe1).includes('%');
-      const isPct2 = String(rule.importe2).includes('%');
-
-      if (isReached2) {
-        if (isPct2) earned = salesCount * (import2Num / 100);
-        else earned = import2Num;
-      } else if (isReached1) {
-        if (isPct1) earned = salesCount * (import1Num / 100);
-        else earned = import1Num;
-      }
-
-      return earned;
-    };
-
-    const prvTerritorialTiendasReal = territorialTiendasRules.reduce((acc, rule) => {
-      const dataAux = getSalesDataForStoreAndType('Auxiliadora 45', rule.tipoVenta);
-      const dataCor = getSalesDataForStoreAndType('Correhuela', rule.tipoVenta);
-      const dataVil = getSalesDataForStoreAndType('Villamayor', rule.tipoVenta);
-      const dataBej = getSalesDataForStoreAndType('Béjar', rule.tipoVenta);
-      const salesTot = dataAux.value + dataCor.value + dataVil.value + dataBej.value;
-
-      const impAux = calculateTiendaImporte(rule, 'Auxiliadora 45', dataAux.value, salesTot);
-      const impCor = calculateTiendaImporte(rule, 'Correhuela', dataCor.value, salesTot);
-      const impVil = calculateTiendaImporte(rule, 'Villamayor', dataVil.value, salesTot);
-      const impBej = calculateTiendaImporte(rule, 'Béjar', dataBej.value, salesTot);
-
-      return acc + impAux + impCor + impVil + impBej;
-    }, 0);
+    // --- 5. PRV TERRITORIAL TIENDAS (motor único, idéntico a la Entrada de Datos) ---
+    // Antes había una réplica local que quedó desfasada (no aplicaba el condicionante
+    // "% sobre comisiones" ni excluía O2). Ahora delega en computeTerritorialTotal.
+    const prvTerritorialTiendasReal = computeTerritorialTotal({
+      sales: salesList,
+      territorialRules: territorialTiendasRules,
+      catalogs,
+      viewingPeriod: saleMonth
+    } as any);
 
     // --- 6. VARIOS ---
     const variosReal = 0;
@@ -466,13 +422,11 @@ export default function ModResumenPage() {
       return (real / elapsed) * totalWorking;
     };
 
-    // Separadas: "Tiendas Movistar" (comisión de tienda) y "MovilFree + O2" (margen MovilFree + comisión O2 directa).
-    // La suma de ambas = importe de la pantalla MOD.
-    const movilFreeMasO2Real = movilFreeReal + o2Real;
-
+    // MovilFree (margen de la tienda MovilFree) y O2 (comisión O2 directa) en filas separadas.
     const rows = [
       { name: 'Tiendas Movistar', real: tiendasMovistarReal, projection: getProjection(tiendasMovistarReal) },
-      { name: 'MovilFree + O2', real: movilFreeMasO2Real, projection: getProjection(movilFreeMasO2Real) },
+      { name: 'MovilFree', real: movilFreeReal, projection: getProjection(movilFreeReal) },
+      { name: 'O2', real: o2Real, projection: getProjection(o2Real) },
       { name: 'PRV Territorial O2', real: bonosO2Real, projection: getProjection(bonosO2Real) },
       { name: 'PRV Territorial Tiendas', real: prvTerritorialTiendasReal, projection: getProjection(prvTerritorialTiendasReal) },
       { name: 'Varios', real: variosReal, projection: getProjection(variosReal) }
