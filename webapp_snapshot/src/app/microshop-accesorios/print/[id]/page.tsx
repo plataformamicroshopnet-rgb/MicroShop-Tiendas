@@ -69,7 +69,10 @@ export default async function PrintMicroShopInvoice({ params, searchParams }: { 
         <div>
           {items.map((i: any, idx: number) => (
             <div className="item-row" key={idx}>
-              <div style={{ flex: 1, paddingRight: 10 }}>{i.cantidad}x {i.nombre}</div>
+              <div style={{ flex: 1, paddingRight: 10 }}>
+                {i.cantidad}x {i.nombre}
+                {i.imei ? <div style={{ fontSize: 11 }}>IMEI: {i.imei}</div> : null}
+              </div>
               <div>{(i.cantidad * i.precio).toFixed(2)}</div>
             </div>
           ))}
@@ -225,7 +228,10 @@ export default async function PrintMicroShopInvoice({ params, searchParams }: { 
         <tbody>
           {items.map((i: any, idx: number) => (
             <tr key={idx}>
-              <td><strong>{i.nombre}</strong></td>
+              <td>
+                <strong>{i.nombre}</strong>
+                {i.imei ? <div style={{ fontSize: 12, color: '#718096', marginTop: 2 }}>IMEI: {i.imei}</div> : null}
+              </td>
               <td className="text-right">{i.precio.toFixed(2)} €</td>
               <td className="text-right">{i.cantidad}</td>
               <td className="text-right" style={{ fontWeight: '600', color: '#2d3748' }}>{(i.cantidad * i.precio).toFixed(2)} €</td>

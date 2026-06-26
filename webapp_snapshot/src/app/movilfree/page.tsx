@@ -642,7 +642,7 @@ export default function MovilFreeApp() {
       importeTotal: total,
       metodoPago: paymentMethod,
       tipoDocumento: documentType,
-      listaProductos: cart.map(c => ({ id: c.product.id, nombre: c.product.nombre, cantidad: c.cantidad, precio: c.product.precio * 1.21, coste: c.product.coste }))
+      listaProductos: cart.map(c => ({ id: c.product.id, nombre: c.product.nombre, cantidad: c.cantidad, precio: c.product.precio * 1.21, coste: c.product.coste, imei: c.product.imei || '', categoria: c.product.categoria || '' }))
     }
 
     try {

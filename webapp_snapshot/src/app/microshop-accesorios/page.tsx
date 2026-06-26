@@ -279,6 +279,8 @@ export default function MicroShopAccesoriosApp() {
         cantidad: c.cantidad,
         precio: c.product.precio * 1.21,
         coste: c.product.coste,
+        imei: c.product.imei || '',
+        categoria: c.product.categoria || '',
       })),
     }
 
