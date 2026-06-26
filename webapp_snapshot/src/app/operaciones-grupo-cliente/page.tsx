@@ -7,6 +7,7 @@ import { useGuard } from '@/hooks/useGuard'
 import { ExcelIcon } from '@/components/ActionIcons'
 import { renderDashboardData, calculateDynamicCommission, isVentaWithinDates, normalizeString, getCurrentMonthString, isSaleActive, isSolar360 } from '@/lib/salesUtils'
 import { getSaleCommission } from '@/lib/saleCommission'
+import { computeBonosO2 } from '@/lib/territorialConsolidado'
 import { matchesRule, getValueForRule, matchTipoVenta } from '@/hooks/useComisionesData'
 import * as XLSX from 'xlsx'
 import ExcelJS from 'exceljs'
@@ -357,6 +358,8 @@ function GrupoClienteContent() {
   const [territorialO2Rules, setTerritorialO2Rules] = useState<any[]>([])
   const [tiendaRules, setTiendaRules] = useState<any[]>([])
   const [territorialRules, setTerritorialRules] = useState<any[]>([])
+  const [movilFreeSales, setMovilFreeSales] = useState<any[]>([])
+  const [movilFreeProducts, setMovilFreeProducts] = useState<any[]>([])
 
   const activePeriodObj = availablePeriods?.find((p: any) => p.period_key === activePeriodKey)
 
@@ -372,7 +375,11 @@ function GrupoClienteContent() {
       fetch(`/api/catalogs?periodKey=${activePeriodKey}`).then(r => r.json()).catch(() => ({})),
       fetch(`/api/territorial?periodKey=${activePeriodKey}`).then(r => r.json()).catch(() => ({ success: true, o2: [], tiendas: [] })),
       fetch(`/api/tiendas-comisiones?periodKey=${activePeriodKey}`).then(r => r.json()).catch(() => ({ success: true, rules: [] })),
-    ]).then(([sData, pymeData, plusData, objData, extrasData, catData, territorialRes, tiendasRes]) => {
+      fetch(`/api/movilfree/sales`).then(r => r.json()).catch(() => ([])),
+      fetch(`/api/movilfree/products`).then(r => r.json()).catch(() => ([])),
+    ]).then(([sData, pymeData, plusData, objData, extrasData, catData, territorialRes, tiendasRes, mfSalesData, mfProductsData]) => {
+      setMovilFreeSales(Array.isArray(mfSalesData) ? mfSalesData : (mfSalesData?.sales || mfSalesData?.data || []))
+      setMovilFreeProducts(Array.isArray(mfProductsData) ? mfProductsData : (mfProductsData?.products || mfProductsData?.data || []))
       if (territorialRes?.success) {
         setTerritorialO2Rules(territorialRes.o2 || [])
         setTerritorialRules(territorialRes.tiendas || [])
@@ -676,28 +683,48 @@ function GrupoClienteContent() {
     return acc + getCommission(sale);
   }, 0)
 
+  // ── Margen MovilFree del mes (ingreso sin IVA − coste). Igual que MOD/Rentabilidad. ──
+  const movilFreeReal = useMemo(() => {
+    const y = activePeriodObj?.year
+    const m = activePeriodObj?.month
+    if (!y || !m) return 0
+    return movilFreeSales
+      .filter((s: any) => {
+        const d = new Date(s.fechaVenta)
+        return s.estado === 'COMPLETADA' && d.getFullYear() === y && (d.getMonth() + 1) === m
+      })
+      .reduce((acc: number, s: any) => {
+        try {
+          const list = JSON.parse(s.listaProductos)
+          const cost = list.reduce((cAcc: number, item: any) => {
+            const prodCost = item.coste !== undefined ? item.coste : (movilFreeProducts.find((p: any) => p.id === item.id)?.coste || 0)
+            return cAcc + (prodCost * item.cantidad)
+          }, 0)
+          return acc + ((s.importeTotal / 1.21) - cost)
+        } catch (e) { return acc }
+      }, 0)
+  }, [movilFreeSales, movilFreeProducts, activePeriodObj])
+
   // ── Global Totalizers Calculation ───────────────────────────────────
   const { globalCuotaTotal, globalComisionTotal } = useMemo(() => {
+    // Cuota Total (€): se mantiene igual — solo ventas con pestaña reconocida.
     let cuotaSum = 0
-    let comSum = 0
-
     sales.forEach(s => {
-      let matchedTab = TABS.find(t => filterByTab(s, t.id))
-      if (!matchedTab) return
-      
+      if (!TABS.find(t => filterByTab(s, t.id))) return
       cuotaSum += getSaleCuotaTotal(s)
-      comSum += getCommission(s)
     })
 
-    extraAssignments.forEach(ea => {
-      comSum += Number(ea.telecomRewardAmount || 0)
-    })
-
-    // Sumar el total consolidado de la tabla territorial
-    comSum += totalImporteTerritorial
+    // Comisión Periodo = la CAJA, idéntica a MOD / Resumen MOD / Rentabilidad por Tiendas:
+    //   Σ comisión de TODAS las ventas (motor único getSaleCommission, incl. la huérfana)
+    //   + margen MovilFree + PRV Territorial O2 (computeBonosO2).
+    // El PRV Territorial Tiendas y los extras se ven en sus pestañas pero NO entran en el
+    // titular (no forman parte de la caja operativa). Así cuadra con las otras 5 vistas.
+    const ventasComision = sales.reduce((acc, s) => acc + getCommission(s), 0)
+    const prvTerritorialO2 = computeBonosO2(sales, territorialO2Rules)
+    const comSum = ventasComision + movilFreeReal + prvTerritorialO2
 
     return { globalCuotaTotal: cuotaSum, globalComisionTotal: comSum }
-  }, [sales, extraAssignments, catalogs, plusDash, basicoDash, totalImporteTerritorial])
+  }, [sales, catalogs, plusDash, basicoDash, territorialO2Rules, movilFreeReal])
 
   // ── Ventas huérfanas: sin pestaña reconocida ────────────────────────
   // Si el 'detalle' de una venta no casa con ninguna pestaña, la venta no
