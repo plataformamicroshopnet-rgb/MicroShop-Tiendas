@@ -7,6 +7,7 @@ import { useGuard } from '@/hooks/useGuard'
 import { useRouter } from 'next/navigation'
 import { AuditableCell } from '@/components/AuditableCell'
 import { computeTerritorialRows } from '@/lib/territorialConsolidado'
+import { getSaleCommission } from '@/lib/saleCommission'
 
 export default function ComisionesJefeTiendasPage() {
     const router = useRouter()
@@ -87,6 +88,22 @@ export default function ComisionesJefeTiendasPage() {
         const gArpuObj1 = arpuRule ? Number(arpuRule.objPrimerTramo || 0) : 0
         const gArpuObj2 = arpuRule ? Number(arpuRule.objSegundoTramo || 0) : 0
 
+        // tipoVenta de las palancas BAF para el desglose por comercial (mismo filtro que el
+        // territorial). Comisión por venta de empresa, O2 excluido (cuadra con la base).
+        const _n = (x: string) => String(x || '').toLowerCase()
+        const bafTipo = (territorialTiendasRules.find(r => _n(r.nombre).includes('baf') && !_n(r.nombre).includes('convergente'))?.tipoVenta) || 'Alta BAF Total'
+        const convTipo = (territorialTiendasRules.find(r => _n(r.nombre).includes('baf') && _n(r.nombre).includes('convergente'))?.tipoVenta) || 'Alta BAF Convergente'
+        const _ctx = {
+            catalogs,
+            dashRowsPlus: [] as any[],
+            dashRowsBasico: [] as any[],
+            viewingPeriod: activePeriodKey ? String(activePeriodKey).replace(/[_-]/g, '') : ''
+        }
+        const _notO2 = (sale: any) => String(sale.detalle || sale.categoria || '').toLowerCase().trim() !== 'o2'
+        const comisionPalanca = (rawSales: any[], tipo: string) =>
+            (rawSales || []).filter(sale => _notO2(sale) && matchTipoVenta(sale, tipo))
+                            .reduce((acc, sale) => acc + getSaleCommission(sale, _ctx), 0)
+
         let tDisp = 0
         let tArpu = 0
 
@@ -100,6 +117,8 @@ export default function ComisionesJefeTiendasPage() {
 
             const dispEur = dispKey ? (s.groupCounts[dispKey] || 0) : 0
             const arpuEur = arpuKey ? (s.groupCounts[arpuKey] || 0) : 0
+            const bafEur = comisionPalanca(s.rawSales, bafTipo)
+            const convEur = comisionPalanca(s.rawSales, convTipo)
 
             tDisp += dispEur
             tArpu += arpuEur
@@ -107,13 +126,15 @@ export default function ComisionesJefeTiendasPage() {
             return {
                 name: s.name,
                 dispEur,
-                arpuEur
+                arpuEur,
+                bafEur,
+                convEur
             }
         })
 
-        return { 
-            tableData: data, 
-            totalDispVentas: tDisp, 
+        return {
+            tableData: data,
+            totalDispVentas: tDisp,
             totalArpuVentas: tArpu,
             globalDispObj1: gDispObj1,
             globalDispObj2: gDispObj2,
@@ -121,7 +142,7 @@ export default function ComisionesJefeTiendasPage() {
             globalArpuObj1: gArpuObj1,
             globalArpuObj2: gArpuObj2
         }
-    }, [sellerStats, tiendaRules])
+    }, [sellerStats, tiendaRules, territorialTiendasRules, catalogs, activePeriodKey])
 
     // BAF y Convergente: objetivos (uds) + base de comisiones (€) desde TERRITORIAL TIENDAS.
     // Reusa el mismo motor (computeTerritorialRows) → cuadra con el territorial por construcción.
@@ -498,6 +519,12 @@ export default function ComisionesJefeTiendasPage() {
                             <th className="header-lightblue"><AuditableCell metricKey="ARPU_VENTAS">Ventas Arpu (Repos)</AuditableCell></th>
                             <th className="header-lightblue">Total Ventas</th>
                             <th className="header-lightblue"><AuditableCell metricKey="AVANCE_IMPORTE_JEFE_ARPU">Avance de Importe</AuditableCell></th>
+                            <th className="header-lightblue">Ventas Altas BAF</th>
+                            <th className="header-lightblue">Total Ventas</th>
+                            <th className="header-lightblue">Avance de Importe</th>
+                            <th className="header-lightblue">Ventas BAF Convergente</th>
+                            <th className="header-lightblue">Total Ventas</th>
+                            <th className="header-lightblue">Avance de Importe</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -548,11 +575,55 @@ export default function ComisionesJefeTiendasPage() {
                                         </td>
                                     </>
                                 )}
+
+                                {/* Altas Total BAF */}
+                                <td className="cell-currency">
+                                    {row.bafEur > 0 ? `${row.bafEur.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : '- €'}
+                                </td>
+                                {index === 0 && (
+                                    <>
+                                        <td rowSpan={tableData.length} style={{ fontWeight: 'bold', fontSize: 16, verticalAlign: 'middle' }}>
+                                            {baf.base > 0 ? `${baf.base.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : '- €'}
+                                        </td>
+                                        <td rowSpan={tableData.length} className="cell-green" style={{ verticalAlign: 'middle', padding: 0 }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: `${tableData.length * 35}px` }}>
+                                                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid #d1d5db' }}>
+                                                    {avanceBaf1.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                                                </div>
+                                                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    {avanceBaf2.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </>
+                                )}
+
+                                {/* Altas BAF Movistar Convergente */}
+                                <td className="cell-currency">
+                                    {row.convEur > 0 ? `${row.convEur.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : '- €'}
+                                </td>
+                                {index === 0 && (
+                                    <>
+                                        <td rowSpan={tableData.length} style={{ fontWeight: 'bold', fontSize: 16, verticalAlign: 'middle' }}>
+                                            {conv.base > 0 ? `${conv.base.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : '- €'}
+                                        </td>
+                                        <td rowSpan={tableData.length} className="cell-green" style={{ verticalAlign: 'middle', padding: 0 }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: `${tableData.length * 35}px` }}>
+                                                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid #d1d5db' }}>
+                                                    {avanceConv1.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                                                </div>
+                                                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    {avanceConv2.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </>
+                                )}
                             </tr>
                         ))}
                         {tableData.length === 0 && (
                             <tr>
-                                <td colSpan={7} style={{ padding: 24, color: '#64748b' }}>No hay comerciales disponibles.</td>
+                                <td colSpan={13} style={{ padding: 24, color: '#64748b' }}>No hay comerciales disponibles.</td>
                             </tr>
                         )}
                     </tbody>
