@@ -10,7 +10,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { PeriodSelector } from '@/components/PeriodSelector'
 import { usePeriod } from '@/components/PeriodProvider'
 import { OBJECTIVE_KEYS, OBJECTIVE_MAPPING } from '@/lib/constants'
-import { calculateDynamicCommission, sanitizeSale, normalizeString, getCurrentMonthString, isVentaWithinDates, renderDashboardData } from '@/lib/salesUtils'
+import { calculateDynamicCommission, sanitizeSale, normalizeString, getCurrentMonthString, isVentaWithinDates, renderDashboardData, isSaleActive } from '@/lib/salesUtils'
 import { getSaleCommissionBase } from '@/lib/saleCommission'
 import { can, canEdit } from '@/lib/permissions'
 import { useGuard } from '@/hooks/useGuard'
@@ -924,7 +924,7 @@ export default function LiquidacionesPage() {
     const renderAuditoria = () => {
         // ── helpers ──────────────────────────────────────────────────────
         const PLUS_CODES = ['plus 1ks', 'plus 1sk', 'plus nfg', 'plus n7d', 'plus k2z', 'plus zf7']
-        const notCancelled = (s: any) => s.anulado !== 'Si' && s.pendiente !== 'Anulado'
+        const notCancelled = (s: any) => isSaleActive(s)
         const parseVal = (v: any) => parseFloat(String(v || '0').replace(/[^0-9.,-]/g, '').replace(',', '.')) || 0
         const isPlusSale   = (s: any) => PLUS_CODES.some(c => String(s.codigo || '').toLowerCase().includes(c))
         const isBasicoSale = (s: any) => String(s.codigo || '').toLowerCase().includes('basico xcu') || String(s.codigo || '').toLowerCase().includes('básico xcu')

@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { usePeriod } from '@/components/PeriodProvider'
 import { useGuard } from '@/hooks/useGuard'
 import { ExcelIcon } from '@/components/ActionIcons'
-import { renderDashboardData, calculateDynamicCommission, isVentaWithinDates, normalizeString, getCurrentMonthString } from '@/lib/salesUtils'
+import { renderDashboardData, calculateDynamicCommission, isVentaWithinDates, normalizeString, getCurrentMonthString, isSaleActive } from '@/lib/salesUtils'
 import { getSaleCommission } from '@/lib/saleCommission'
 import { matchesRule, getValueForRule, matchTipoVenta } from '@/hooks/useComisionesData'
 import * as XLSX from 'xlsx'
@@ -389,7 +389,7 @@ function GrupoClienteContent() {
           }
           return s;
         });
-        setSales(mappedSales.filter((s: any) => s.anulado !== 'Si' && s.pendiente !== 'Anulado'))
+        setSales(mappedSales.filter((s: any) => isSaleActive(s)))
       }
       if (pymeData?.success) setImportesPyme(pymeData.importes || pymeData.data || [])
       if (plusData?.success) setImportesPlus(plusData.importes || plusData.data || [])

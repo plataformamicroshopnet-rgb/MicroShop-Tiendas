@@ -15,6 +15,23 @@ export function normalizeString(str: string): string {
 }
 
 /**
+ * FUENTE ÚNICA del estado "anulada" de una venta. Una venta anulada (que en
+ * Liquidaciones se muestra como "NULL") NO debe contar en ningún cálculo/conteo.
+ * Cubre todas las variantes: anulado 'Si'/'Sí'/'SI' (con o sin acento, mayúsculas)
+ * y pendiente 'Anulado'. Cualquier filtro de ventas que cuente debe usar esto y NO
+ * recrear el check a mano (así no se vuelve a colar una anulada por mirar solo 'Si').
+ */
+export function isSaleCancelled(sale: any): boolean {
+    // normalizeString quita acentos y deja minúsculas: 'Si'/'Sí'/'SI' -> 'si'; 'Anulado' -> 'anulado'.
+    return normalizeString(sale?.anulado || '') === 'si' || normalizeString(sale?.pendiente || '') === 'anulado'
+}
+
+/** Inverso de isSaleCancelled: la venta cuenta (no anulada). */
+export function isSaleActive(sale: any): boolean {
+    return !isSaleCancelled(sale)
+}
+
+/**
  * Parses a Spanish DD/MM/YYYY date string into a Date object for comparison.
  */
 export function parseSpanishDate(dateStr?: string | null): Date | null {
@@ -130,7 +147,7 @@ export function sanitizeSale(sale: any): any {
  * and returns the exact € payout.
  */
 export function calculateDynamicCommission(sale: any, dashboardDataRows: any[], overrideBaseValue?: number): number {
-    if (sale.anulado === 'Si' || sale.pendiente === 'Anulado') return 0;
+    if (isSaleCancelled(sale)) return 0;
     if (sale.producto && String(sale.producto).toLowerCase().includes('solar360')) return 0;
     
     // If we have no dashboard data to compare against, we can't calculate blue commission
@@ -278,13 +295,13 @@ export function renderDashboardData(
 
                     // Exact Category Matching Logic (Structural)
                     if (monGroup === 'TMA') {
-                        return distincDet === 'tma' && (s.anulado !== 'Si' && s.pendiente !== 'Anulado')
+                        return distincDet === 'tma' && isSaleActive(s)
                     }
                     if (monGroup === 'TI') {
-                        return distincDet === 'ti' && (s.anulado !== 'Si' && s.pendiente !== 'Anulado')
+                        return distincDet === 'ti' && isSaleActive(s)
                     }
                     if (monGroup === 'MICRO' || monGroup === 'MIC') {
-                        return distincDet === 'micro' && (s.anulado !== 'Si' && s.pendiente !== 'Anulado')
+                        return distincDet === 'micro' && isSaleActive(s)
                     }
 
                     // Special hardcoded match for "Dispositivos + Seguros" to mirror main dashboard logic
@@ -293,14 +310,14 @@ export function renderDashboardData(
                         const det = String(s.detalle || '').trim().toLowerCase();
                         const sheet = String(s.sheet || '').trim().toLowerCase();
                         if (['rent', 'seguro'].includes(cat) || det.includes('seguro') || sheet.includes('seguro')) {
-                            return (s.anulado !== 'Si' && s.pendiente !== 'Anulado');
+                            return isSaleActive(s);
                         }
                     }
 
                     // Fallback to previous mapped logic for others
                     if (!s.producto && !s.categoria) return false
                     const saleProd = String(s.producto || s.categoria).normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase()
-                    return mappedProducts.includes(saleProd) && (s.anulado !== 'Si' && s.pendiente !== 'Anulado')
+                    return mappedProducts.includes(saleProd) && isSaleActive(s)
                 })
 
             // Separate confirmed vs pending for display — both still shown in table
@@ -370,7 +387,7 @@ export function renderDashboardData(
                 if (!s.producto) return false
                 if (!filterByGroup(s)) return false;
                 const saleProd = String(s.producto).normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase()
-                return mappedProducts.includes(saleProd) && (s.anulado !== 'Si' && s.pendiente !== 'Anulado')
+                return mappedProducts.includes(saleProd) && isSaleActive(s)
             })
             matchedOpsPending = allMatched.filter(s => s.estado === 'Pendiente' || s.pendiente === 'Si')
             matchedOps = allMatched.filter(s => s.estado !== 'Pendiente' && s.pendiente !== 'Si')

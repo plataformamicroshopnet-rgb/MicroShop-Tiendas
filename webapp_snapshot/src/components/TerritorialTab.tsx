@@ -9,7 +9,7 @@ import { TIENDAS_COMERCIALES } from '@/lib/constants'
 import ProductTreeSelector from '@/components/ProductTreeSelector'
 import { matchTipoVenta } from '@/hooks/useComisionesData'
 import { getSaleCommission } from '@/lib/saleCommission'
-import { renderDashboardData, getCurrentMonthString } from '@/lib/salesUtils'
+import { renderDashboardData, getCurrentMonthString, isSaleCancelled } from '@/lib/salesUtils'
 
 // Tramos para O2 MovilFree
 const TRAMOS_MES = [
@@ -154,7 +154,7 @@ export default function TerritorialTab() {
       // Contar TODAS las ventas de cualquier comercial donde:
       // detalle/categoria = 'o2' Y producto empieza por 'Fibra' o 'Interna'
       filtered = sales.filter(s => {
-        if (s.anulado === 'Si' || s.pendiente === 'Anulado') return false;
+        if (isSaleCancelled(s)) return false;
         const det = String(s.detalle || s.categoria || '').toLowerCase().trim();
         if (det !== 'o2') return false;
         const prod = String(s.producto || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
@@ -167,7 +167,7 @@ export default function TerritorialTab() {
       if (key) storeSellers = TIENDAS_COMERCIALES[key];
 
       filtered = sales.filter(s => {
-        if (s.anulado === 'Si' || s.pendiente === 'Anulado') return false;
+        if (isSaleCancelled(s)) return false;
         if (!storeSellers.some(seller => (s.vendedor || '').toLowerCase() === seller.toLowerCase())) return false;
         return isProductMatch(s);
       });

@@ -2,7 +2,7 @@
 // FUENTE ÚNICA DE VERDAD: lo usan la página /seguimiento-ventas/mod y el endpoint
 // /api/mod-importe (que alimenta "Caja Tiendas" del panel de Ganancias). No duplicar.
 
-import { renderDashboardData, sanitizeSale } from '@/lib/salesUtils'
+import { renderDashboardData, sanitizeSale, isSaleCancelled } from '@/lib/salesUtils'
 import { getSaleCommissionBase } from '@/lib/saleCommission'
 import { computeBonosO2 } from '@/lib/territorialConsolidado'
 
@@ -117,7 +117,7 @@ export function computeMonthMetrics(input: ModMonthInput) {
     }))
 
     salesList.forEach((sale: any) => {
-        if (sale.pendiente === 'Anulado' || sale.anulado === 'Si') return
+        if (isSaleCancelled(sale)) return
         let saleDay = -1
         if (sale.timestamp) {
             const d = new Date(sale.timestamp)

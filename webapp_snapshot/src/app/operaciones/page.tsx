@@ -6,7 +6,7 @@ import { FilterX, Search, Save, X, Edit2, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { PageHeader } from '@/components/PageHeader'
 import { can, canEdit as canEditMacro, canView } from '@/lib/permissions'
-import { renderDashboardData, calculateDynamicCommission, sanitizeSale, getCurrentMonthString, normalizeString, isVentaWithinDates } from '@/lib/salesUtils'
+import { renderDashboardData, calculateDynamicCommission, sanitizeSale, getCurrentMonthString, normalizeString, isVentaWithinDates, isSaleCancelled } from '@/lib/salesUtils'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { useGuard } from '@/hooks/useGuard'
 import { usePeriod } from '@/components/PeriodProvider'
@@ -796,7 +796,7 @@ function OperationsContent() {
       // If we don't have enough config data, just show the raw DB data until loaded
       if (Object.keys(importesPyme).length === 0 || Object.keys(importesPlus).length === 0) return sale.importe || sale.cuota || 0;
 
-      if (sale.anulado === 'Si' || sale.pendiente === 'Anulado' || sale.pendiente === 'Si' || sale.estado === 'Pendiente') return 0;
+      if (isSaleCancelled(sale) || sale.pendiente === 'Si' || sale.estado === 'Pendiente') return 0;
       
       const tipoVenta = (String(sale.sheet || '')).trim().toLowerCase();
       const codigo = (String(sale.codigo || '')).trim().toLowerCase();
@@ -964,7 +964,7 @@ function OperationsContent() {
       });
 
       displayedSales.forEach((sale: any) => {
-        if (sale.anulado === 'Si' || sale.pendiente === 'Anulado') return;
+        if (isSaleCancelled(sale)) return;
         
         const groupId = getSaleGroupId(sale);
         const stats = summaryMap.get(groupId) || { count: 0, cuota: 0, comision: 0 };

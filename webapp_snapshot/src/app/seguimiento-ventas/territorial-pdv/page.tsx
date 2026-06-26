@@ -7,7 +7,7 @@ import { usePeriod } from '@/components/PeriodProvider'
 import { PageHeader } from '@/components/PageHeader'
 import { PeriodSelector } from '@/components/PeriodSelector'
 import { Globe, ArrowLeft, Info, Percent, AlertCircle } from 'lucide-react'
-import { renderDashboardData, calculateDynamicCommission, sanitizeSale, normalizeString, isVentaWithinDates } from '@/lib/salesUtils'
+import { renderDashboardData, calculateDynamicCommission, sanitizeSale, normalizeString, isVentaWithinDates, isSaleCancelled } from '@/lib/salesUtils'
 import { computeTerritorialRows } from '@/lib/territorialConsolidado'
 
 // STATIC_PALANCAS + el cálculo de las filas viven en lib/territorialConsolidado (fuente única).
@@ -115,7 +115,7 @@ export default function TerritorialPdvPage() {
         const captadorData = renderDashboardData('Captador', importesPlus, captadorMonthObj, salesList, objGrupos, periodData);
 
         const getCommission = (sale: any) => {
-          if (sale.anulado === 'Si' || sale.pendiente === 'Anulado') return 0;
+          if (isSaleCancelled(sale)) return 0;
 
           let sMonth = ''
           if (sale.fecha) {

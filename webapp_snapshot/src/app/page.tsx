@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/PageHeader'
 import Link from 'next/link'
 import { usePeriod } from '@/components/PeriodProvider'
 import { matchTipoVenta, matchesRule, getValueForRule } from '@/hooks/useComisionesData'
+import { isSaleActive } from '@/lib/salesUtils'
 
 export default function DashboardPage() {
   const { activePeriodKey } = usePeriod()
@@ -79,7 +80,7 @@ export default function DashboardPage() {
   }, [activePeriodKey]);
 
   // ── Cómputo del Termómetro Diario (6 KPIs) ──
-  const teamSales = allSales.filter(s => !String(s.vendedor || '').toLowerCase().includes('marta') && s.anulado !== 'Si' && s.pendiente !== 'Anulado');
+  const teamSales = allSales.filter(s => !String(s.vendedor || '').toLowerCase().includes('marta') && isSaleActive(s));
 
   const getKPIMetrics = (kpiName: string, fallbackTarget: number, isPercentage: boolean) => {
     const rule = tiendaRules.find(r => r.nombre.toLowerCase().trim() === kpiName.toLowerCase().trim());
@@ -142,7 +143,7 @@ export default function DashboardPage() {
     const y = now.getFullYear();
     const todayStr = `${d}/${m}/${y}`;
 
-    const activeSales = allSales.filter(s => s.anulado !== 'Si' && s.pendiente !== 'Anulado');
+    const activeSales = allSales.filter(s => isSaleActive(s));
     let salesForMvp = activeSales.filter(s => s.fecha === todayStr);
     let isToday = true;
 
@@ -275,7 +276,7 @@ export default function DashboardPage() {
   const userSales = allSales.filter(s => {
     const v = String(s.vendedor || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
     const tgt = String(currentUser?.username || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-    return v === tgt && s.anulado !== 'Si' && s.pendiente !== 'Anulado';
+    return v === tgt && isSaleActive(s);
   });
 
   const getCuentaKilometros = () => {
@@ -343,7 +344,7 @@ export default function DashboardPage() {
 
   // ── Ranking por vendedor (Torneos · Cuenta Kilómetros · Medallas) ──
   const ranking = (() => {
-    const activos = allSales.filter(s => s.anulado !== 'Si' && s.pendiente !== 'Anulado');
+    const activos = allSales.filter(s => isSaleActive(s));
     const byV: Record<string, any[]> = {};
     activos.forEach(s => {
       const v = String(s.vendedor || '').trim();

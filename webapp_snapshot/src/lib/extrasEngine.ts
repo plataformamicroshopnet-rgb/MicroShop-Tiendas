@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import crypto from 'crypto'
 import { getGroupVisual } from './comisiones'
+import { isSaleCancelled } from './salesUtils'
 const prisma = new PrismaClient()
 
 /**
@@ -77,16 +78,11 @@ export async function runExtrasEngine(periodId?: string) {
     // Si un CIF recibe el extra mayor, queda bloqueado para cualquier otro extra.
     const globalRewardedNifs = new Set<string>();
 
-    // 3. Traer Ventas Válidas del Periodo (Sin anuladas. SÍ traemos pendientes para marcarlos)
-    const validSales = await prisma.sale.findMany({
-        where: {
-            periodId: targetPeriodId,
-            OR: [
-                { anulado: null },
-                { anulado: { not: 'Si' } }
-            ]
-        }
-    });
+    // 3. Traer Ventas Válidas del Periodo (Sin anuladas. SÍ traemos pendientes para marcarlos).
+    // Se trae todo el periodo y se filtran las anuladas con la fuente única isSaleCancelled
+    // (cubre anulado 'Si'/'Sí' y pendiente 'Anulado'; conserva nulls = ventas válidas).
+    const allPeriodSales = await prisma.sale.findMany({ where: { periodId: targetPeriodId } });
+    const validSales = allPeriodSales.filter(s => !isSaleCancelled(s));
 
     // 4. Agrupar Ventas por Vendedor -> NIF (Cliente)
     // Map: sellerName -> (Map: nif -> Sale[])

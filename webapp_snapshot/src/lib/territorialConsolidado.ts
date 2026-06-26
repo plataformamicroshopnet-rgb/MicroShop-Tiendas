@@ -8,6 +8,7 @@
 import { matchTipoVenta } from '@/hooks/useComisionesData'
 import { TIENDAS_COMERCIALES } from '@/lib/constants'
 import { getSaleCommission } from '@/lib/saleCommission'
+import { isSaleCancelled } from '@/lib/salesUtils'
 
 export const TIENDAS_FISICAS = ['Auxiliadora 45', 'Correhuela', 'Villamayor', 'Béjar']
 
@@ -82,7 +83,7 @@ export function getSalesDataForStoreAndType(sales: any[], storeName: string, tip
   let filtered: any[]
   if (storeName === 'O2') {
     filtered = sales.filter(s => {
-      if (s.anulado === 'Si' || s.pendiente === 'Anulado') return false
+      if (isSaleCancelled(s)) return false
       const det = String(s.detalle || s.categoria || '').toLowerCase().trim()
       if (det !== 'o2') return false
       const prod = String(s.producto || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim()
@@ -93,7 +94,7 @@ export function getSalesDataForStoreAndType(sales: any[], storeName: string, tip
     const key = Object.keys(TIENDAS_COMERCIALES).find(k => k.toLowerCase().replace('é', 'e') === storeName.toLowerCase().replace('é', 'e'))
     if (key) storeSellers = (TIENDAS_COMERCIALES as any)[key]
     filtered = sales.filter(s => {
-      if (s.anulado === 'Si' || s.pendiente === 'Anulado') return false
+      if (isSaleCancelled(s)) return false
       if (!storeSellers.some(seller => (s.vendedor || '').toLowerCase() === seller.toLowerCase())) return false
       return isProductMatch(s)
     })

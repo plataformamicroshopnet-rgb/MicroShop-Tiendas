@@ -1,4 +1,4 @@
-import { calculateDynamicCommission, normalizeString, isVentaWithinDates } from './salesUtils'
+import { calculateDynamicCommission, normalizeString, isVentaWithinDates, isSaleCancelled } from './salesUtils'
 
 // ─────────────────────────────────────────────────────────────────────────
 // FUENTE ÚNICA DE LA COMISIÓN POR VENTA (empresa / Telefónica)
@@ -36,8 +36,8 @@ const PLUS_CODES_EXACT = ['plus 1ks', 'plus 1sk', 'plus nfg', 'plus n7d', 'plus 
 export function getSaleCommissionBase(sale: any, ctx: SaleCommissionCtx): number {
   const { catalogs, dashRowsPlus, dashRowsBasico, viewingPeriod } = ctx
 
-  // Anuladas no comisionan.
-  if (sale.anulado === 'Si' || sale.anulado === 'Sí' || sale.pendiente === 'Anulado') return 0
+  // Anuladas no comisionan (fuente única isSaleCancelled: cubre Si/Sí/SI y pendiente=Anulado).
+  if (isSaleCancelled(sale)) return 0
 
   const codigoLower = String(sale.codigo || '').trim().toLowerCase()
   const isPlus = PLUS_CODES_EXACT.some(c => codigoLower.includes(c))
@@ -127,5 +127,7 @@ export function getSaleCommissionBase(sale: any, ctx: SaleCommissionCtx): number
 
 /** Comisión total de la operación, incluyendo el bono de Swap (+15 € empresa). */
 export function getSaleCommission(sale: any, ctx: SaleCommissionCtx): number {
+  // Una anulada no comisiona NADA, tampoco el +15 € del Swap (antes se colaba).
+  if (isSaleCancelled(sale)) return 0
   return getSaleCommissionBase(sale, ctx) + (sale.isSwap === true ? 15 : 0)
 }
