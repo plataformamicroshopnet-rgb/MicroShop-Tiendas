@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { FileText, BookOpen, Library, Trophy, Flame, Target, Award, Star, Zap, Crown, Wifi, Smartphone, Shield, TrendingUp, Tv, Layers } from 'lucide-react'
+import { FileText, BookOpen, Library, Trophy, Flame, Target, Award, Star, Zap, Crown, Wifi, Smartphone, Shield, TrendingUp, Tv, Layers, Repeat } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
 import Link from 'next/link'
 import { usePeriod } from '@/components/PeriodProvider'
@@ -134,6 +134,19 @@ export default function DashboardPage() {
   const kpiFttr = getKPIMetrics('FTTR', 8, false);
   const kpiArpu = getKPIMetrics('ARPU', 50000, true);
   const kpiRepoFutbol = getKPIMetrics('Repo Fútbol', 34, false);
+  // Swap: conteo directo de ventas con ¿Swap? marcado (sin pasar por el virtualSeguro de
+  // getKPIMetrics, que duplicaría una venta Swap que además lleve seguro). Objetivo de la regla 'swap'.
+  const kpiSwap = (() => {
+    const swapCount = teamSales.filter(s => s.isSwap === true || String(s.isSwap).toLowerCase() === 'true').length;
+    const swapRule = tiendaRules.find(r => String(r.nombre || '').toLowerCase().trim() === 'swap');
+    const swapTarget = swapRule && swapRule.objPrimerTramo ? Number(swapRule.objPrimerTramo) : 1;
+    return {
+      llevamos: swapCount,
+      target: swapTarget,
+      faltan: Math.max(0, swapTarget - swapCount),
+      progressPct: swapTarget > 0 ? Math.min(100, (swapCount / swapTarget) * 100) : 0,
+    };
+  })();
 
   // ── Cómputo del MVP y Nominados ──
   const getMVPAndNominados = () => {
@@ -682,7 +695,7 @@ export default function DashboardPage() {
           </div>
           <div>
             <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: 'var(--text-main)' }}>Termómetro Diario de la Empresa</h3>
-            <p style={{ margin: 0, fontSize: '14px', color: 'var(--medium-gray)', fontWeight: 500 }}>Seguimiento en vivo de los 6 KPIs críticos para llegar al objetivo del mes.</p>
+            <p style={{ margin: 0, fontSize: '14px', color: 'var(--medium-gray)', fontWeight: 500 }}>Seguimiento en vivo de los 7 KPIs críticos para llegar al objetivo del mes.</p>
           </div>
         </div>
 
@@ -740,7 +753,33 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* 3. Dispositivos + Seguros */}
+          {/* 3. Swap */}
+          <div style={{ background: 'var(--bg-body)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Repeat size={18} color="#14b8a6" />
+                <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>Swap</span>
+              </div>
+              {kpiSwap.faltan > 0 ? (
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
+                  Faltan {kpiSwap.faltan}
+                </span>
+              ) : (
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
+                  ¡Logrado!
+                </span>
+              )}
+            </div>
+            <div style={{ width: '100%', height: '8px', background: 'var(--border-strong)', borderRadius: '4px', overflow: 'hidden', marginBottom: 4 }}>
+              <div style={{ width: `${kpiSwap.progressPct}%`, height: '100%', background: 'linear-gradient(90deg, #2dd4bf, #0d9488)', borderRadius: '4px' }} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--medium-gray)', fontWeight: 600 }}>
+              <span>Llevamos: <strong style={{ color: 'var(--text-main)' }}>{kpiSwap.llevamos}</strong></span>
+              <span>Objetivo: {kpiSwap.target}</span>
+            </div>
+          </div>
+
+          {/* 4. Dispositivos + Seguros */}
           <div style={{ background: 'var(--bg-body)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
