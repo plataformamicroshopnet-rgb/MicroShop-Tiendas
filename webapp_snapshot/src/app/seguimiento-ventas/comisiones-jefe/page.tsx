@@ -294,6 +294,8 @@ export default function ComisionesJefeTiendasPage() {
                     .excel-table.compact th, .excel-table.compact td { padding: 5px 8px; font-size: 12.5px; }
                     .excel-table.compact .input-pct { width: 52px; padding: 3px; }
                     .card-progress { font-size: 10px; color: #64748b; font-weight: 600; }
+                    /* Filas de la tabla de comerciales un pelín más bajas (~3px) para que entre en pantalla */
+                    .excel-table.main-table th, .excel-table.main-table td { padding-top: 8.5px; padding-bottom: 8.5px; }
                 `}} />
 
                 {/* TARJETAS SUPERIORES (Estilo Excel) */}
@@ -548,7 +550,7 @@ export default function ComisionesJefeTiendasPage() {
                 </div>
 
                 {/* TABLA PRINCIPAL DE COMERCIALES */}
-                <table className="excel-table">
+                <table className="excel-table main-table">
                     <thead>
                         <tr>
                             <th className="header-lightblue" style={{ background: '#0078d4' }}>Comercial</th>
