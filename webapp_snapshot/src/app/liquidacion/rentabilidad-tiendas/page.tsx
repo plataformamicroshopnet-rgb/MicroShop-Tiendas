@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, Building2, User, ChevronDown, ChevronUp, BarChart2, Calendar, Wallet, ShoppingBag, Trophy } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
 import { usePeriod } from '@/components/PeriodProvider'
-import { calculateDynamicCommission, normalizeString, renderDashboardData } from '@/lib/salesUtils'
+import { renderDashboardData, isSolar360 } from '@/lib/salesUtils'
+import { getSaleCommission } from '@/lib/saleCommission'
 import { TIENDAS_COMERCIALES } from '@/lib/constants'
 import { computeBonosO2 } from '@/lib/territorialConsolidado'
 
@@ -119,135 +120,38 @@ export default function RentabilidadTiendasPage() {
       return `${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}`
     }
 
+    const viewingPeriod = activePeriodObj
+      ? `${activePeriodObj.year}${String(activePeriodObj.month).padStart(2, '0')}`
+      : getCurrentMonthString();
+
+    // FUENTE ÚNICA de la comisión por venta: lib/saleCommission.getSaleCommission, la misma que
+    // MOD, Resumen MOD, Liquidaciones y Operaciones por Grupo Cliente (incluye el +15 € de Swap).
+    // Antes esta página replicaba el cálculo inline y se desviaba (se le olvidó el Swap -> 330 €).
     const salesWithCommission = sales.map(sale => {
-      // Anuladas fuera: el total de operaciones debe cuadrar con realizadas + pendientes (igual que MOD)
-      if (sale.anulado === 'Si' || sale.anulado === 'Sí' || sale.pendiente === 'Anulado') {
-        return null
-      }
-
-      const tipoVenta = (String(sale.sheet || '')).trim().toLowerCase()
-      const codigoLower = String(sale.codigo || '').trim().toLowerCase()
-
-      const isPlus = ['plus 1ks', 'plus 1sk', 'plus nfg', 'plus n7d', 'plus k2z', 'plus zf7'].some(c => codigoLower.includes(c))
-
-      let saleMonth = ''
+      // Anuladas fuera (no cuentan como operación ni pagan), igual que la MOD.
+      if (sale.anulado === 'Si' || sale.anulado === 'Sí' || sale.pendiente === 'Anulado') return null;
+      // Solar360 fuera por completo (ni cuenta como operación ni paga).
+      if (isSolar360(sale)) return null;
+      // Solo el periodo visualizado (las ventas ya vienen strictPeriod; filtro defensivo).
+      let saleMonth = '';
       if (sale.fecha) {
-         const parts = sale.fecha.split('/')
-         if (parts.length === 3) saleMonth = `${parts[2]}${parts[1]}`
-         else if (sale.fecha.includes('-')) {
-             const p = sale.fecha.split('-')
-             if (p.length >= 2) saleMonth = `${p[0]}${p[1]}`
-         }
+        const parts = String(sale.fecha).split('/');
+        if (parts.length === 3) saleMonth = `${parts[2]}${parts[1]}`;
+        else if (String(sale.fecha).includes('-')) {
+          const p = String(sale.fecha).split('-');
+          if (p.length >= 2) saleMonth = `${p[0]}${p[1]}`;
+        }
       }
-
-      const getFallbackValue = () => {
-           let val = sale.importe || sale.cuota || 0;
-           const det = (sale.detalle || '').toLowerCase();
-           if (!val && (det === 'ti' || det === 'tma' || det === 'rent' || det === 'micro')) {
-               let catalogKey = '';
-               if (det === 'ti') catalogKey = 'Ti';
-               if (det === 'tma' || det === 'rent') catalogKey = 'Rent';
-               if (det === 'micro') catalogKey = 'Micro';
-               
-               const list = catalogs[catalogKey] || [];
-               const found = list.find((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
-               if (found) {
-                   val = Number(String(found.anual || 0).replace(',','.'));
-               }
-           }
-           return val;
-      }
-
-      const parseToNumber = (val: any): number => {
-        if (val === null || val === undefined) return 0;
-        if (typeof val === 'number') return isNaN(val) ? 0 : val;
-        const clean = String(val).replace('€', '').replace(/\s/g, '').replace(',', '.').trim();
-        const num = parseFloat(clean);
-        return isNaN(num) ? 0 : num;
-      }
-
-      if (!saleMonth) return { ...sale, comisionReal: parseToNumber(getFallbackValue()) }
-
-      const viewingPeriod = activePeriodObj
-          ? `${activePeriodObj.year}${String(activePeriodObj.month).padStart(2, '0')}`
-          : getCurrentMonthString();
-      
       if (saleMonth && saleMonth !== viewingPeriod) return null;
-      
-      const dashboardRows = isPlus ? pymeRows : captadorRows;
-      const det = (sale.detalle || '').toLowerCase();
 
-      // Solar360 eliminado por completo (ni se cobra ni se paga): fuera de operaciones e importe.
-      const prodLower = String(sale.producto || '').toLowerCase();
-      const catLower = String(sale.categoria || '').toLowerCase();
-      if (prodLower.includes('solar360') || prodLower.includes('solar 360') || catLower.includes('solar') || det.includes('solar')) {
-          return null;
-      }
-
-      // Seguro: se paga la comisión del catálogo (no el importe), igual que el motor de liquidación
-      if (det === 'seguro') {
-          const list = catalogs['Seguro'] || [];
-          const found = list.find((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
-          if (found && found.comision) {
-              return { ...sale, comisionReal: parseToNumber(found.comision) };
-          }
-          return { ...sale, comisionReal: parseToNumber(sale.importe || sale.cuota || 0) };
-      }
-
-      const isTV = det === 'suscripciones tv' || det === 'suscripcion tv';
-      // Mismos conceptos que el motor de liquidación (Resumen/MOD): se cobran por su importe directo.
-      // 'resto baf' y 'traslado mimovistar' faltaban aquí -> antes se pagaban de menos vía comisión dinámica.
-      if (det === 'o2' || det === 'mimovistar' || det === 'repos' || det === 'varios' || isTV || det === 'prepago' || det === 'resto baf' || det === 'traslado mimovistar') {
-          return { ...sale, comisionReal: parseToNumber(sale.importe || sale.cuota || 0) };
-      }
-      
-      let overrideBaseValue: number | undefined = undefined;
-      if (det === 'ti' || det === 'tma' || det === 'rent' || det === 'micro') {
-          let catalogKey = '';
-          if (det === 'ti') catalogKey = 'Ti';
-          if (det === 'tma' || det === 'rent') catalogKey = 'Rent';
-          if (det === 'micro') catalogKey = 'Micro';
-          
-          const list = catalogs[catalogKey] || [];
-          const matchingProducts = list.filter((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
-          
-          let found = matchingProducts[0];
-          if (matchingProducts.length > 1) {
-              const correctlyDated = matchingProducts.find((c: any) => {
-                  if (!c.validFrom) return false;
-                  return true;
-              });
-              if (correctlyDated) {
-                  found = correctlyDated;
-              }
-          }
-
-          if (found) {
-              overrideBaseValue = parseToNumber(found.anual);
-              
-              if (det === 'ti') {
-                  return { ...sale, comisionReal: overrideBaseValue };
-              }
-              
-              if (det === 'tma' || det === 'rent') {
-                  const isConCoste = sale.rentConCoste && (sale.rentConCoste.toLowerCase() === 'sí' || sale.rentConCoste.toLowerCase() === 'si');
-                  if (isConCoste) {
-                      return { ...sale, comisionReal: parseToNumber(found.comisionConCoste) };
-                  } else {
-                      return { ...sale, comisionReal: parseToNumber(found.comision) };
-                  }
-              }
-          }
-      }
-
-      const finalCommission = parseToNumber(calculateDynamicCommission(sale, dashboardRows, overrideBaseValue));
-      return { ...sale, comisionReal: finalCommission }
-    }).filter(Boolean).map((s: any) => ({
-      ...s,
-      // +15 € de bonificación Swap por venta, igual que el motor unificado getSaleCommission
-      // y la MOD. Esta página tenía su propio cálculo y no lo añadía -> descuadre de 15€/swap.
-      comisionReal: s.comisionReal + ((s.isSwap === true || String(s.isSwap).toLowerCase() === 'true') ? 15 : 0)
-    })) as any[]
+      const comisionReal = getSaleCommission(sale, {
+        catalogs,
+        dashRowsPlus: pymeRows,
+        dashRowsBasico: captadorRows,
+        viewingPeriod
+      });
+      return { ...sale, comisionReal };
+    }).filter(Boolean) as any[]
 
     const result = Object.entries(TIENDAS_COMERCIALES).map(([tiendaName, comerciales]) => {
       const rows = comerciales.map(comercial => {
