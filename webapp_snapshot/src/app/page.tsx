@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { usePeriod } from '@/components/PeriodProvider'
 import { matchTipoVenta, matchesRule, getValueForRule } from '@/hooks/useComisionesData'
 import { isSaleActive } from '@/lib/salesUtils'
+import { TIENDAS_COMERCIALES } from '@/lib/constants'
 
 export default function DashboardPage() {
   const { activePeriodKey } = usePeriod()
@@ -419,6 +420,30 @@ export default function DashboardPage() {
     if (parent) parent.innerHTML = `<span style="color:#fff; font-size:13px; font-weight:900">${name.charAt(0).toUpperCase()}</span>`;
   };
 
+  // ── Reto motivador Disp+Seg: lo que falta repartido entre comerciales y días laborables ──
+  const nComercialesTiendas = Object.entries(TIENDAS_COMERCIALES)
+    .filter(([k]) => k !== 'O2')
+    .reduce((acc, [, v]) => acc + (v as string[]).length, 0);
+  const diasLaborablesRestantes = (() => {
+    if (!activePeriodKey) return 0;
+    const [yStr, mStr] = String(activePeriodKey).split(/[_-]/);
+    const y = Number(yStr), m = Number(mStr); // m = 1..12
+    if (!y || !m) return 0;
+    const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+    const finMes = new Date(y, m, 0);          // último día del mes
+    const inicioMes = new Date(y, m - 1, 1);
+    const cursor = new Date(Math.max(hoy.getTime(), inicioMes.getTime())); cursor.setHours(0, 0, 0, 0);
+    if (cursor > finMes) return 0;             // mes ya cerrado
+    let count = 0;
+    for (const d = new Date(cursor); d <= finMes; d.setDate(d.getDate() + 1)) {
+      const wd = d.getDay();                   // 0=dom, 6=sáb
+      if (wd !== 0 && wd !== 6) count++;
+    }
+    return count;
+  })();
+  const retoDiarioEquipo = diasLaborablesRestantes > 0 ? kpiDispSeg.faltan / diasLaborablesRestantes : 0;
+  const retoDiarioComercial = (diasLaborablesRestantes > 0 && nComercialesTiendas > 0) ? retoDiarioEquipo / nComercialesTiendas : 0;
+
   if (loading && allSales.length === 0) return <div style={{ padding: 20 }}>Cargando datos del Dashboard...</div>
 
   return (
@@ -790,9 +815,17 @@ export default function DashboardPage() {
                 <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>Dispositivos + Seguros</span>
               </div>
               {kpiDispSeg.faltan > 0 ? (
-                <span style={{ fontSize: '12px', fontWeight: 700, color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
-                  Faltan {fmt(kpiDispSeg.faltan)}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
+                    Faltan {fmt(kpiDispSeg.faltan)}
+                  </span>
+                  {diasLaborablesRestantes > 0 && (
+                    <span style={{ fontSize: 11.5, fontWeight: 600, color: '#d97706' }}>
+                      💪 ≈ {fmt(retoDiarioComercial)}/día por comercial · {fmt(retoDiarioEquipo)}/día entre todos
+                      <span style={{ color: 'var(--medium-gray)', fontWeight: 500 }}> ({diasLaborablesRestantes} días lab. · {nComercialesTiendas} comerciales)</span>
+                    </span>
+                  )}
+                </div>
               ) : (
                 <span style={{ fontSize: '12px', fontWeight: 700, color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
                   ¡Logrado!
