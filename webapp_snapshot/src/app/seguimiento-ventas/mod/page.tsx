@@ -95,7 +95,7 @@ export default function ModPage() {
 
             // Métricas MOD del mes — FUENTE ÚNICA en lib/modMetrics (computeMonthMetrics),
             // que usa también el panel de Ganancias para "Caja Tiendas". No duplicar aquí.
-            const processMetrics = (salesListRaw: any[], configs: any[], y: number, m: number, periodKeyForConfig: string) =>
+            const processMetrics = (salesListRaw: any[], configs: any[], y: number, m: number, periodKeyForConfig: string, includeTerritorial = false) =>
                 computeMonthMetrics({
                     salesRaw: salesListRaw,
                     configs,
@@ -107,9 +107,13 @@ export default function ModPage() {
                     month: m,
                     periodKeyForConfig,
                     o2Rules: territorialRes.o2 || [],
+                    tiendasRules: territorialRes.tiendas || [],
+                    includeTerritorialTiendas: includeTerritorial,
                 });
 
-            const currMetrics = processMetrics(currSalesRaw, currConfigs, year, month, activePeriodKey);
+            // La página MOD SÍ incluye el PRV Territorial Tiendas en su Importe Mensual
+            // (a diferencia de Ganancias, que lo añade por su cuenta).
+            const currMetrics = processMetrics(currSalesRaw, currConfigs, year, month, activePeriodKey, true);
             const prevMetrics = processMetrics(prevSalesRaw, prevConfigs, year - 1, month, prevYearKey);
 
             const pctOps = prevMetrics.totalOps > 0
@@ -371,7 +375,18 @@ export default function ModPage() {
                             <td style={{ padding: '6px 8px', fontSize: '12px', fontWeight: 800 }}>{currMetrics.workingDaysElapsed}</td>
                             <td style={{ padding: '6px 8px', fontSize: '12px', fontWeight: 800 }}>{num(currMetrics.mediaOpsDiaria)}</td>
                             <td style={{ padding: '6px 8px', fontSize: '12px', fontWeight: 800 }}>{num(currMetrics.mediaPorOp)} €</td>
-                            <td style={{ padding: '6px 8px', fontSize: '12px', fontWeight: 800 }}>{num(currMetrics.totalImporte)} €</td>
+                            <td
+                                style={{ padding: '6px 8px', fontSize: '12px', fontWeight: 800, cursor: 'help', textDecoration: 'underline dotted', textUnderlineOffset: '3px' }}
+                                title={`Desglose del Importe Mensual (${monthName} ${year}):\n` +
+                                    `• Comisión de ventas (Movistar + O2):  ${num(currMetrics.breakdown?.comisiones || 0)} €\n` +
+                                    `• Margen MovilFree:  ${num(currMetrics.breakdown?.movilFree || 0)} €\n` +
+                                    `• PRV Territorial O2:  ${num(currMetrics.breakdown?.prvTerritorialO2 || 0)} €\n` +
+                                    `• PRV Territorial Tiendas:  ${num(currMetrics.breakdown?.prvTerritorialTiendas || 0)} €\n` +
+                                    `──────────────────────────\n` +
+                                    `TOTAL:  ${num(currMetrics.breakdown?.total || currMetrics.totalImporte)} €`}
+                            >
+                                {num(currMetrics.totalImporte)} € <span style={{ fontWeight: 400, opacity: 0.8 }}>ℹ️</span>
+                            </td>
                             <td style={{ padding: '6px 8px', fontSize: '12px', fontWeight: 800 }}>{num(currMetrics.mediaImporteDiario)} €</td>
                         </tr>
                         <tr style={{ backgroundColor: '#0284c7', color: 'white' }}>

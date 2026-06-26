@@ -4,7 +4,7 @@
 
 import { renderDashboardData, sanitizeSale, isSaleCancelled } from '@/lib/salesUtils'
 import { getSaleCommissionBase } from '@/lib/saleCommission'
-import { computeBonosO2 } from '@/lib/territorialConsolidado'
+import { computeBonosO2, computeTerritorialTotal } from '@/lib/territorialConsolidado'
 
 // Festivos de Salamanca (excluye sábados, domingos y festivos locales/regionales)
 export const isHolidaySalamanca = (y: number, m: number, d: number) => {
@@ -64,11 +64,13 @@ export interface ModMonthInput {
     month: number
     periodKeyForConfig: string
     o2Rules?: any[]   // reglas O2 de la Entrada de Datos (/api/territorial -> o2) para el bono PRV Territorial O2
+    tiendasRules?: any[]  // reglas TIENDAS de la Entrada de Datos (/api/territorial -> tiendas) para el PRV Territorial Tiendas
+    includeTerritorialTiendas?: boolean  // SOLO la página MOD lo suma; Ganancias lo añade por su cuenta (evita doble conteo)
 }
 
 // Reproduce EXACTAMENTE el processMetrics de la página MOD para un mes dado.
 export function computeMonthMetrics(input: ModMonthInput) {
-    const { salesRaw, configs, catalogs, periods, mfSales, mfProducts, year: y, month: m, periodKeyForConfig, o2Rules } = input
+    const { salesRaw, configs, catalogs, periods, mfSales, mfProducts, year: y, month: m, periodKeyForConfig, o2Rules, tiendasRules, includeTerritorialTiendas } = input
     const daysInMonth = new Date(y, m, 0).getDate()
 
     const [objData, pymeData, plusData, extrasData] = configs
@@ -141,6 +143,12 @@ export function computeMonthMetrics(input: ModMonthInput) {
     let globalImporte = 0
     const saleMonth = `${y}${m.toString().padStart(2, '0')}`
 
+    // Componentes del importe (para el desglose/tooltip de la página MOD).
+    let bComisiones = 0          // comisión de ventas (Movistar + O2) + extras telco
+    let bMovilFree = 0
+    let bPrvTerritorialO2 = 0
+    let bPrvTerritorialTiendas = 0
+
     if (y === 2026 && m === 6) {
         // --- TUBERÍA DE COMISIONES REALES PARA JUNIO 2026 ---
         const pymeMonthObj = objetivos.Pyme?.[saleMonth] || {}
@@ -167,28 +175,41 @@ export function computeMonthMetrics(input: ModMonthInput) {
 
         const salesCommissions = salesForTable.reduce((acc: number, s: any) => acc + getCommission(s), 0)
         const telecomExtras = nonTerritorialExtras.reduce((acc: number, ex: any) => acc + Number(ex.telecomRewardAmount || 0), 0)
-        globalImporte = salesCommissions + telecomExtras
+        bComisiones = salesCommissions + telecomExtras
     } else {
         // --- CÁLCULO ESTÁNDAR ORIGINAL ---
         if (importesPyme.length > 0) {
             const dashPyme = renderDashboardData('Pyme', importesPyme, objetivos.Pyme?.[saleMonth] || {}, salesList, objGrupos, periodData)
-            globalImporte += dashPyme.totalImporte
+            bComisiones += dashPyme.totalImporte
         }
         if (importesPlus.length > 0) {
             const dashCaptador = renderDashboardData('Captador', importesPlus, objetivos.Captador?.[saleMonth] || {}, salesList, objGrupos, periodData)
-            globalImporte += dashCaptador.totalImporte
+            bComisiones += dashCaptador.totalImporte
         }
         nonTerritorialExtras.forEach((ex: any) => {
             const amount = Number(ex.amount || ex.telecomRewardAmount) || 0
-            globalImporte += amount
+            bComisiones += amount
         })
     }
 
-    globalImporte += movilFreeReal
+    bMovilFree = movilFreeReal
 
     // PRV Territorial O2 (bono O2 del mes): SÍ suma en el MOD, para que su Importe Mensual
     // coincida con el "Resumen de Métricas MOD" y con la Caja Tiendas de Ganancias.
-    globalImporte += computeBonosO2(salesRaw, o2Rules || [])
+    bPrvTerritorialO2 = computeBonosO2(salesRaw, o2Rules || [])
+
+    // PRV Territorial Tiendas: SOLO se suma cuando lo pide la página MOD (includeTerritorialTiendas).
+    // Ganancias lo añade por su cuenta con computeTerritorialTotal → evitar doble conteo.
+    if (includeTerritorialTiendas) {
+        bPrvTerritorialTiendas = computeTerritorialTotal({
+            sales: salesRaw,
+            territorialRules: tiendasRules || [],
+            catalogs,
+            viewingPeriod: saleMonth
+        } as any)
+    }
+
+    globalImporte = bComisiones + bMovilFree + bPrvTerritorialO2 + bPrvTerritorialTiendas
 
     const totalOpsGlobal = stats.reduce((acc, d) => acc + d.ops, 0)
     const avgImportePerOp = totalOpsGlobal > 0 ? (globalImporte / totalOpsGlobal) : 0
@@ -217,5 +238,13 @@ export function computeMonthMetrics(input: ModMonthInput) {
         estOps: (totalOps / effectiveDays) * totalWorkingDaysInMonth,
         estRentabilidad: (totalImporte / effectiveDays) * totalWorkingDaysInMonth,
         workingDaysElapsed,
+        // Desglose del Importe Mensual (para el tooltip de la página MOD). Suma = totalImporte.
+        breakdown: {
+            comisiones: bComisiones,
+            movilFree: bMovilFree,
+            prvTerritorialO2: bPrvTerritorialO2,
+            prvTerritorialTiendas: bPrvTerritorialTiendas,
+            total: globalImporte,
+        },
     }
 }
