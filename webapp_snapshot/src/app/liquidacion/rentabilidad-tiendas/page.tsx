@@ -242,7 +242,12 @@ export default function RentabilidadTiendasPage() {
 
       const finalCommission = parseToNumber(calculateDynamicCommission(sale, dashboardRows, overrideBaseValue));
       return { ...sale, comisionReal: finalCommission }
-    }).filter(Boolean) as any[]
+    }).filter(Boolean).map((s: any) => ({
+      ...s,
+      // +15 € de bonificación Swap por venta, igual que el motor unificado getSaleCommission
+      // y la MOD. Esta página tenía su propio cálculo y no lo añadía -> descuadre de 15€/swap.
+      comisionReal: s.comisionReal + ((s.isSwap === true || String(s.isSwap).toLowerCase() === 'true') ? 15 : 0)
+    })) as any[]
 
     const result = Object.entries(TIENDAS_COMERCIALES).map(([tiendaName, comerciales]) => {
       const rows = comerciales.map(comercial => {
