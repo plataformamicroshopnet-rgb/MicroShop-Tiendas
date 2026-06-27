@@ -29,6 +29,7 @@ export default function TiendasHubPage() {
     {
       title: 'Ventas Tiendas',
       description: 'Acceso al módulo principal de registro, tracking y gestión de ventas del canal.',
+      image: '/tiendas-ventas.png',
       icon: Briefcase,
       action: () => router.push('/ventas-tiendas'),
       bgIcon: 'linear-gradient(135deg, rgba(59,130,246,0.15) 0%, rgba(37,99,235,0.2) 100%)',
@@ -38,6 +39,7 @@ export default function TiendasHubPage() {
     {
       title: 'Comisiones',
       description: 'Cálculo de retribuciones, métricas de éxito y liquidaciones en tiempo real.',
+      image: '/tiendas-comisiones.png',
       icon: CreditCard,
       action: () => router.push('/comisiones'),
       bgIcon: 'linear-gradient(135deg, rgba(0, 173, 239, 0.15) 0%, rgba(0, 150, 200, 0.2) 100%)',
@@ -47,6 +49,7 @@ export default function TiendasHubPage() {
     {
       title: 'Caja',
       description: 'Gestión de entradas, salidas y trazabilidad de efectivo entre tiendas y Central.',
+      image: '/tiendas-caja.png',
       icon: Calculator,
       action: () => router.push('/tiendas/caja'),
       bgIcon: 'linear-gradient(135deg, rgba(0, 173, 239, 0.15) 0%, rgba(0, 150, 200, 0.2) 100%)',
@@ -56,6 +59,7 @@ export default function TiendasHubPage() {
     {
       title: 'Condiciones, Comisiones Extras del mes y Penalizaciones',
       description: 'Consulta de condiciones, bonificaciones especiales y notas asignadas a este periodo.',
+      image: '/tiendas-condiciones.png',
       icon: Target,
       action: () => router.push('/tiendas/condiciones-mensuales'),
       bgIcon: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.2) 100%)',
@@ -65,6 +69,7 @@ export default function TiendasHubPage() {
     {
       title: 'MicroShop Accesorios',
       description: 'Gestión de inventario de accesorios de MicroShop, punto de venta y trazabilidad.',
+      image: '/tiendas-accesorios.png',
       icon: Package,
       action: () => router.push('/microshop-accesorios'),
       bgIcon: 'linear-gradient(135deg, rgba(0, 173, 239, 0.15) 0%, rgba(0, 150, 200, 0.2) 100%)',
@@ -74,6 +79,7 @@ export default function TiendasHubPage() {
     {
       title: 'Control de Stock',
       description: 'Gestión y control de inventario y almacén.',
+      image: '/tiendas-stock.png',
       icon: Package,
       action: () => router.push('/cristina-admin/stock'),
       bgIcon: 'linear-gradient(135deg, rgba(14, 165, 233, 0.15) 0%, rgba(2, 132, 199, 0.2) 100%)',
@@ -263,22 +269,36 @@ export default function TiendasHubPage() {
                 </div>
               )}
               
-              <div className={`hub-card hub-card-main ${isEditMode ? 'wiggle-mode' : ''}`} onClick={isEditMode ? undefined : c.action} style={{ cursor: isEditMode ? 'default' : 'pointer', borderLeft: `6px solid ${c.colorIcon}` }}>
-                <div style={{ 
-                background: c.bgIcon, 
-                color: c.colorIcon, 
-                width: 64, 
-                height: 64, 
+              <div className={`hub-card hub-card-main ${isEditMode ? 'wiggle-mode' : ''}`} onClick={isEditMode ? undefined : c.action} style={{ cursor: isEditMode ? 'default' : 'pointer', borderLeft: `6px solid ${c.colorIcon}`, ...(c.image ? { padding: 0, overflow: 'hidden', gap: 0, alignItems: 'stretch', minHeight: 150 } : {}) }}>
+                {c.image ? (
+                <div aria-hidden="true" style={{
+                  width: 160,
+                  minWidth: 160,
+                  minHeight: 120,
+                  alignSelf: 'stretch',
+                  flexShrink: 0,
+                  backgroundImage: `url(${c.image})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundColor: c.colorIcon
+                }} />
+                ) : (
+                <div style={{
+                background: c.bgIcon,
+                color: c.colorIcon,
+                width: 64,
+                height: 64,
                 flexShrink: 0,
-                borderRadius: 18, 
-                display: 'flex', 
-                alignItems: 'center', 
+                borderRadius: 18,
+                display: 'flex',
+                alignItems: 'center',
                 justifyContent: 'center',
                 boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.5)'
               }}>
                 <Icon size={28} strokeWidth={2.5} />
               </div>
-              <div style={{ flex: 1 }}>
+              )}
+              <div style={{ flex: 1, ...(c.image ? { padding: '16px 20px' } : {}) }}>
                 <h3 className="ds-card-main" style={{ margin: '0 0 6px 0', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.3px', fontSize: 20 }}>
                   {c.title}
                 </h3>
