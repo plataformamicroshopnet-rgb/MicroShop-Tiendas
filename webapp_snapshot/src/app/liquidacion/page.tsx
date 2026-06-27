@@ -79,6 +79,8 @@ export default function LiquidacionesPage() {
     const [drillComercial, setDrillComercial] = useState<string | null>(null)
     const [drillSearch, setDrillSearch] = useState('')
     const [exportSel, setExportSel] = useState<number[]>([0, 1, 2, 3, 4]) // bloques marcados para exportar
+    const [openComercial, setOpenComercial] = useState<string | null>(null) // comercial desplegado en Comisiones Comerciales
+    const [openPalanca, setOpenPalanca] = useState<string | null>(null) // palanca desplegada (nivel 2)
     // Datos del Panel de Comisiones (comisión por comercial) para la carta "Cuadro de Comisiones Comerciales"
     const comisionesData = useComisionesData(user)
 
@@ -1504,8 +1506,25 @@ export default function LiquidacionesPage() {
     const renderComisionesComerciales = () => {
         const fmtEur = (v: number) => (v || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
         const loadingC = (comisionesData as any)?.loading
+        const estadoVenta = (s: any) => {
+            const a = String(s.anulado || '').toLowerCase().trim()
+            if (a === 'si' || a === 'sí' || String(s.pendiente || '').toLowerCase().trim() === 'anulado') return 'NULL'
+            return String(s.pendiente || '').toLowerCase().trim() === 'si' ? 'PED' : 'OK'
+        }
         const stats = (((comisionesData as any)?.sellerStats as any[]) || [])
-            .map((s: any) => ({ name: s.name, profile: s.profile, finalized: s.totalConsolidada || 0, pending: s.totalPendiente || 0, ventas: s.totalSales || 0 }))
+            .map((s: any) => {
+                const gc = s.groupConsolidada || {}
+                const gs = s.groupSales || {}
+                const finalized = s.totalConsolidada || 0
+                // Solo las palancas que va a cobrar (consolidadas, objetivo alcanzado)
+                const palancas = Object.keys(gc)
+                    .filter((k: string) => (gc[k] || 0) > 0.01)
+                    .map((k: string) => ({ name: k, eur: gc[k], sales: (gs[k] || []) }))
+                    .sort((a: any, b: any) => b.eur - a.eur)
+                const otros = finalized - palancas.reduce((a: number, p: any) => a + p.eur, 0)
+                if (otros > 0.01) palancas.push({ name: 'Otros (O2 otras tiendas / incentivos)', eur: otros, sales: [] })
+                return { name: s.name, profile: s.profile, finalized, pending: s.totalPendiente || 0, ventas: s.totalSales || 0, palancas }
+            })
             .filter((s: any) => s.finalized !== 0 || s.pending !== 0 || s.ventas > 0)
             .sort((a: any, b: any) => b.finalized - a.finalized)
         const totalFinalized = stats.reduce((a: number, s: any) => a + s.finalized, 0)
@@ -1539,7 +1558,7 @@ export default function LiquidacionesPage() {
                     <div style={{ padding: '18px 24px', background: 'linear-gradient(135deg, rgba(16,185,129,0.12), rgba(16,185,129,0.03))', borderBottom: '1px solid var(--border-color)' }}>
                         <h2 style={{ margin: 0, fontSize: 20, fontWeight: 900, color: 'var(--light-text)' }}>✅ Cuadro de Comisiones Comerciales — FINALIZADAS{activePeriodObj?.name ? ` · ${activePeriodObj.name}` : ''}</h2>
                         <p style={{ margin: '6px 0 0 0', fontSize: 13, color: 'var(--medium-gray)', lineHeight: 1.5 }}>
-                            <strong>Lo que cobra cada comercial</strong> este mes, ya <strong>finalizado</strong> (consolidado). Es el mismo dato del <strong>Panel de Comisiones</strong>. Lo <strong>pendiente</strong> (PED) se muestra aparte en gris y NO suma al total.
+                            <strong>Lo que cobra cada comercial</strong> este mes, ya <strong>finalizado</strong> (consolidado). Es el mismo dato del <strong>Panel de Comisiones</strong>. Lo <strong>pendiente</strong> (PED) se muestra aparte en gris y NO suma al total. 💡 <strong>Pulsa un comercial</strong> para ver <strong>solo las palancas que cobra</strong>; <strong>pulsa una palanca</strong> para ver sus <strong>ventas</strong>.
                         </p>
                     </div>
                     <div style={{ padding: '12px 16px 16px 16px' }}>
@@ -1564,14 +1583,51 @@ export default function LiquidacionesPage() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {stats.map((s: any, i: number) => (
-                                        <tr key={i} style={{ borderTop: '1px solid var(--border-light)' }}>
-                                            <td style={{ padding: '11px 14px', fontWeight: 700, color: 'var(--light-text)' }}>{s.name} <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--medium-gray)' }}>· {s.profile}</span></td>
+                                    {stats.map((s: any, i: number) => { const cOpen = openComercial === s.name; return (
+                                        <React.Fragment key={i}>
+                                        <tr onClick={() => { setOpenComercial(cOpen ? null : s.name); setOpenPalanca(null) }} style={{ borderTop: '1px solid var(--border-light)', cursor: 'pointer', background: cOpen ? 'rgba(16,185,129,0.07)' : 'transparent' }}>
+                                            <td style={{ padding: '11px 14px', fontWeight: 700, color: 'var(--light-text)' }}><span style={{ color: 'var(--medium-gray)', marginRight: 6 }}>{cOpen ? '▾' : '▸'}</span>{s.name} <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--medium-gray)' }}>· {s.profile}</span></td>
                                             <td style={{ padding: '11px 12px', textAlign: 'right', color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{s.ventas}</td>
                                             <td style={{ padding: '11px 12px', textAlign: 'right', color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{s.pending > 0 ? fmtEur(s.pending) : '—'}</td>
                                             <td style={{ padding: '11px 16px', textAlign: 'right', fontWeight: 800, color: '#10b981', whiteSpace: 'nowrap' }}>{fmtEur(s.finalized)}</td>
                                         </tr>
-                                    ))}
+                                        {cOpen && (s.palancas.length === 0 ? (
+                                            <tr><td colSpan={4} style={{ padding: '8px 16px 8px 40px', color: 'var(--medium-gray)', fontSize: 12.5, background: 'rgba(0,0,0,0.02)' }}>Este comercial no tiene palancas que cobrar este mes.</td></tr>
+                                        ) : s.palancas.map((p: any, j: number) => { const pkey = `${s.name}|${p.name}`; const pOpen = openPalanca === pkey; const hasSales = p.sales && p.sales.length > 0; return (
+                                            <React.Fragment key={j}>
+                                            <tr onClick={() => hasSales && setOpenPalanca(pOpen ? null : pkey)} style={{ borderTop: '1px solid var(--border-light)', background: pOpen ? 'rgba(16,185,129,0.04)' : 'rgba(0,0,0,0.02)', cursor: hasSales ? 'pointer' : 'default' }}>
+                                                <td colSpan={3} style={{ padding: '8px 12px 8px 40px', fontSize: 13, color: 'var(--light-text)', fontWeight: 600 }}>{hasSales && <span style={{ color: 'var(--medium-gray)', marginRight: 6 }}>{pOpen ? '▾' : '▸'}</span>}{p.name}{hasSales ? <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--medium-gray)' }}> · {p.sales.length} {p.sales.length === 1 ? 'venta' : 'ventas'}</span> : null}</td>
+                                                <td style={{ padding: '8px 16px', textAlign: 'right', fontWeight: 700, color: 'var(--light-text)', whiteSpace: 'nowrap' }}>{fmtEur(p.eur)}</td>
+                                            </tr>
+                                            {pOpen && hasSales && (
+                                                <tr><td colSpan={4} style={{ padding: 0, background: 'rgba(0,0,0,0.035)' }}>
+                                                    <div style={{ padding: '6px 16px 12px 52px', overflowX: 'auto' }}>
+                                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 620 }}>
+                                                            <thead><tr style={{ color: 'var(--medium-gray)', fontSize: 10.5, textTransform: 'uppercase' }}>
+                                                                <th style={{ padding: '5px 8px', textAlign: 'left' }}>Fecha</th><th style={{ padding: '5px 8px', textAlign: 'left' }}>Cliente (NIF)</th>
+                                                                <th style={{ padding: '5px 8px', textAlign: 'left' }}>Producto</th><th style={{ padding: '5px 8px', textAlign: 'left' }}>Tienda</th>
+                                                                <th style={{ padding: '5px 8px', textAlign: 'right' }}>Cuota</th><th style={{ padding: '5px 8px', textAlign: 'center' }}>Estado</th>
+                                                            </tr></thead>
+                                                            <tbody>
+                                                                {p.sales.map((v: any, k: number) => { const est = estadoVenta(v); return (
+                                                                    <tr key={k} style={{ borderTop: '1px solid var(--border-light)', background: est === 'NULL' ? 'rgba(239,68,68,0.05)' : 'transparent' }}>
+                                                                        <td style={{ padding: '5px 8px', color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{v.fecha || '-'}</td>
+                                                                        <td style={{ padding: '5px 8px', color: 'var(--light-text)' }}>{v.nif || '-'}</td>
+                                                                        <td style={{ padding: '5px 8px', color: 'var(--light-text)' }}>{v.producto || '-'}</td>
+                                                                        <td style={{ padding: '5px 8px', color: 'var(--medium-gray)' }}>{v.codigo || '-'}</td>
+                                                                        <td style={{ padding: '5px 8px', textAlign: 'right', whiteSpace: 'nowrap' }}>{v.cuota != null && v.cuota !== '' ? fmtEur(parseFloat(String(v.cuota).replace(',', '.')) || 0) : '-'}</td>
+                                                                        <td style={{ padding: '5px 8px', textAlign: 'center' }}><span style={{ fontSize: 10.5, fontWeight: 800, color: est === 'OK' ? '#10b981' : est === 'PED' ? '#f59e0b' : '#ef4444' }}>{est}</span></td>
+                                                                    </tr>
+                                                                )})}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </td></tr>
+                                            )}
+                                            </React.Fragment>
+                                        )}))}
+                                        </React.Fragment>
+                                    )})}
                                 </tbody>
                             </table>
                         )}

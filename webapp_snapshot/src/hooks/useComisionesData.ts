@@ -439,6 +439,7 @@ export function useComisionesData(user?: any) {
         const groupObj2: Record<string, number> = {};
         const groupObj3: Record<string, number> = {};
         const groupComisions: Record<string, number> = {};
+        const groupConsolidada: Record<string, number> = {};
         const groupSales: Record<string, any[]> = {};
 
         // INICIALIZAR OBJETIVOS Y CONTADORES BASADOS EN REGLAS DINAMICAS
@@ -468,6 +469,7 @@ export function useComisionesData(user?: any) {
             groupCounts[ruleName] = 0;
             groupPending[ruleName] = 0;
             groupComisions[ruleName] = 0;
+            groupConsolidada[ruleName] = 0;
             groupSales[ruleName] = [];
             
             const totalHoras = rule.totalHoras || 0;
@@ -707,6 +709,7 @@ export function useComisionesData(user?: any) {
             }
 
             groupComisions[ruleName] = comTotal;
+            groupConsolidada[ruleName] = comConsolidada;
             internalTotalComision += comTotal;
             internalTotalConsolidada += comConsolidada;
             internalTotalPendiente += comPendiente;
@@ -1142,6 +1145,7 @@ export function useComisionesData(user?: any) {
             groupObj2,
             groupObj3,
             groupComisions,
+            groupConsolidada,
             totalValueGroupsAmount,
             totalUnitGroupsAmount,
             rawSales: sSales,
