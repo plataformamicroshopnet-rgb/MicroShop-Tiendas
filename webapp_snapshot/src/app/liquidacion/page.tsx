@@ -15,6 +15,7 @@ import { getSaleCommissionBase } from '@/lib/saleCommission'
 import { computeBonosO2, computeTerritorialTotal, computeTerritorialRows, calculateO2Importe } from '@/lib/territorialConsolidado'
 import { can, canEdit } from '@/lib/permissions'
 import { useGuard } from '@/hooks/useGuard'
+import { useComisionesData } from '@/hooks/useComisionesData'
 import { RepescaTrimestral } from './RepescaTrimestral'
 import { ComisionesV3 } from './ComisionesV3'
 type ViewType = 'menu' | 'plus' | 'basico' | 'operaciones' | 'cruce' | 'objetivos' | 'auditoria' | 'repesca' | 'comisiones_v3' | 'rentabilidad_total' | 'comisiones_comerciales'
@@ -78,6 +79,8 @@ export default function LiquidacionesPage() {
     const [drillComercial, setDrillComercial] = useState<string | null>(null)
     const [drillSearch, setDrillSearch] = useState('')
     const [exportSel, setExportSel] = useState<number[]>([0, 1, 2, 3, 4]) // bloques marcados para exportar
+    // Datos del Panel de Comisiones (comisión por comercial) para la carta "Cuadro de Comisiones Comerciales"
+    const comisionesData = useComisionesData(user)
 
     // Saving state
     const [savingObj, setSavingObj] = useState(false)
@@ -1497,6 +1500,91 @@ export default function LiquidacionesPage() {
         )
     }
 
+    // ── Cuadro de Comisiones Comerciales: comisión FINALIZADA por comercial (datos del Panel de Comisiones) ──
+    const renderComisionesComerciales = () => {
+        const fmtEur = (v: number) => (v || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
+        const loadingC = (comisionesData as any)?.loading
+        const stats = (((comisionesData as any)?.sellerStats as any[]) || [])
+            .map((s: any) => ({ name: s.name, profile: s.profile, finalized: s.totalConsolidada || 0, pending: s.totalPendiente || 0, ventas: s.totalSales || 0 }))
+            .filter((s: any) => s.finalized !== 0 || s.pending !== 0 || s.ventas > 0)
+            .sort((a: any, b: any) => b.finalized - a.finalized)
+        const totalFinalized = stats.reduce((a: number, s: any) => a + s.finalized, 0)
+        const totalPending = stats.reduce((a: number, s: any) => a + s.pending, 0)
+
+        const exportExcelCC = async () => {
+            const wb = new ExcelJS.Workbook()
+            const ws = wb.addWorksheet('Comisiones Comerciales')
+            const t = ws.addRow([`COMISIONES COMERCIALES (FINALIZADAS)${activePeriodObj?.name ? ` · ${activePeriodObj.name}` : ''}`]); t.font = { bold: true, size: 14 }
+            ws.addRow([`Comisión finalizada de cada comercial (Panel de Comisiones) · generado ${new Date().toLocaleString('es-ES')}`]); ws.addRow([])
+            const h = ws.addRow(['Comercial', 'Perfil', 'Ventas', 'Comisión finalizada', 'Pendiente']); h.font = { bold: true }
+            stats.forEach((s: any) => { const r = ws.addRow([s.name, s.profile, s.ventas, s.finalized, s.pending]); r.getCell(4).numFmt = '#,##0.00 €'; r.getCell(5).numFmt = '#,##0.00 €' })
+            const tot = ws.addRow(['TOTAL', '', '', totalFinalized, totalPending]); tot.font = { bold: true, size: 12 }; tot.getCell(4).numFmt = '#,##0.00 €'; tot.getCell(5).numFmt = '#,##0.00 €'
+            ws.columns.forEach((c: any, i: number) => { c.width = i === 0 ? 22 : (i >= 3 ? 18 : 12) })
+            const buf = await wb.xlsx.writeBuffer(); const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+            const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `Comisiones_Comerciales_${activePeriodObj?.name || activePeriodKey || 'mes'}.xlsx`; a.click(); window.URL.revokeObjectURL(url)
+        }
+        const escC = (s: any) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        const openPrintCC = () => {
+            const rows = stats.map((s: any) => `<tr><td>${escC(s.name)}</td><td>${escC(s.profile)}</td><td class=c>${s.ventas}</td><td class=r>${escC(fmtEur(s.finalized))}</td><td class=r style="color:#888">${s.pending > 0 ? escC(fmtEur(s.pending)) : '—'}</td></tr>`).join('')
+            const html = `<!doctype html><html lang=es><head><meta charset=utf-8><title>Comisiones Comerciales</title><style>*{font-family:Arial,Helvetica,sans-serif}body{margin:24px;color:#1f2937}h1{font-size:18px;margin:0 0 2px}.meta{color:#6b7280;font-size:12px;margin-bottom:16px}table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:7px 12px;border-bottom:1px solid #eee;text-align:left}th{color:#6b7280;font-size:11px;text-transform:uppercase}.r{text-align:right}.c{text-align:center}tfoot td{font-weight:bold;border-top:2px solid #333}</style></head><body><h1>Comisiones Comerciales — finalizadas${escC(activePeriodObj?.name ? ` · ${activePeriodObj.name}` : '')}</h1><div class=meta>Comisión finalizada de cada comercial (Panel de Comisiones) · generado ${escC(new Date().toLocaleString('es-ES'))}</div><table><thead><tr><th>Comercial</th><th>Perfil</th><th class=c>Ventas</th><th class=r>Comisión finalizada</th><th class=r>Pendiente</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td>TOTAL</td><td></td><td></td><td class=r>${escC(fmtEur(totalFinalized))}</td><td class=r>${escC(fmtEur(totalPending))}</td></tr></tfoot></table></body></html>`
+            const w = window.open('', '_blank', 'width=900,height=700'); if (!w) { alert('Activa las ventanas emergentes para PDF / Imprimir.'); return }
+            w.document.write(html); w.document.close(); w.focus(); setTimeout(() => { try { w.print() } catch (e) { } }, 350)
+        }
+        const ccBtn: React.CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '7px 12px', borderRadius: 10, border: '1px solid var(--border-color)', background: 'var(--bg-card)', cursor: 'pointer', fontSize: 10.5, fontWeight: 700, color: 'var(--medium-gray)', minWidth: 70 }
+
+        return (
+            <>
+                <BackButton />
+                <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                    <div style={{ padding: '18px 24px', background: 'linear-gradient(135deg, rgba(16,185,129,0.12), rgba(16,185,129,0.03))', borderBottom: '1px solid var(--border-color)' }}>
+                        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 900, color: 'var(--light-text)' }}>✅ Cuadro de Comisiones Comerciales — FINALIZADAS{activePeriodObj?.name ? ` · ${activePeriodObj.name}` : ''}</h2>
+                        <p style={{ margin: '6px 0 0 0', fontSize: 13, color: 'var(--medium-gray)', lineHeight: 1.5 }}>
+                            <strong>Lo que cobra cada comercial</strong> este mes, ya <strong>finalizado</strong> (consolidado). Es el mismo dato del <strong>Panel de Comisiones</strong>. Lo <strong>pendiente</strong> (PED) se muestra aparte en gris y NO suma al total.
+                        </p>
+                    </div>
+                    <div style={{ padding: '12px 16px 16px 16px' }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 12, padding: '10px 12px', border: '1px dashed var(--border-color)', borderRadius: 10, background: 'var(--bg-hover)' }}>
+                            <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--light-text)', marginRight: 4 }}>Exportar / Imprimir:</span>
+                            <button onClick={exportExcelCC} style={ccBtn} title="Exportar a Excel"><svg width="22" height="22" viewBox="0 0 24 24"><rect x="2.5" y="3" width="19" height="18" rx="2.5" fill="#16a34a" /><path d="M6.5 8l4.5 8M11 8l-4.5 8" stroke="#fff" strokeWidth="1.7" /><path d="M14 8.5h5.5M14 12h5.5M14 15.5h5.5" stroke="#fff" strokeWidth="1.5" /></svg><span>Excel</span></button>
+                            <button onClick={openPrintCC} style={ccBtn} title="Exportar a PDF (en el diálogo elige 'Guardar como PDF')"><svg width="22" height="22" viewBox="0 0 24 24"><rect x="3" y="2.5" width="18" height="19" rx="2.5" fill="#E2483D" /><text x="12" y="15.5" fontSize="7" fontWeight="bold" fill="#fff" textAnchor="middle" fontFamily="Arial">PDF</text></svg><span>PDF</span></button>
+                            <button onClick={openPrintCC} style={ccBtn} title="Imprimir"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="1.7"><path d="M6 9V3.5h12V9" /><rect x="3" y="9" width="18" height="8" rx="1.5" fill="#dbeafe" /><rect x="6.5" y="13.5" width="11" height="6.5" fill="#fff" /></svg><span>Imprimir</span></button>
+                        </div>
+                        {loadingC ? (
+                            <div style={{ padding: 30, textAlign: 'center', color: 'var(--medium-gray)' }}>Cargando comisiones del Panel…</div>
+                        ) : stats.length === 0 ? (
+                            <div style={{ padding: 30, textAlign: 'center', color: 'var(--medium-gray)' }}>No hay comisiones para este periodo.</div>
+                        ) : (
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                                <thead>
+                                    <tr style={{ color: 'var(--medium-gray)', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.3 }}>
+                                        <th style={{ padding: '8px 14px', textAlign: 'left' }}>Comercial</th>
+                                        <th style={{ padding: '8px 12px', textAlign: 'right' }}>Ventas</th>
+                                        <th style={{ padding: '8px 12px', textAlign: 'right' }}>Pendiente</th>
+                                        <th style={{ padding: '8px 16px', textAlign: 'right' }}>Comisión finalizada</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {stats.map((s: any, i: number) => (
+                                        <tr key={i} style={{ borderTop: '1px solid var(--border-light)' }}>
+                                            <td style={{ padding: '11px 14px', fontWeight: 700, color: 'var(--light-text)' }}>{s.name} <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--medium-gray)' }}>· {s.profile}</span></td>
+                                            <td style={{ padding: '11px 12px', textAlign: 'right', color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{s.ventas}</td>
+                                            <td style={{ padding: '11px 12px', textAlign: 'right', color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{s.pending > 0 ? fmtEur(s.pending) : '—'}</td>
+                                            <td style={{ padding: '11px 16px', textAlign: 'right', fontWeight: 800, color: '#10b981', whiteSpace: 'nowrap' }}>{fmtEur(s.finalized)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        )}
+                        <div style={{ marginTop: 16, padding: '16px 22px', borderRadius: 12, background: 'linear-gradient(135deg, #10b981, #059669)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 8px 20px -6px rgba(16,185,129,0.5)' }}>
+                            <div style={{ fontSize: 15, fontWeight: 800, color: '#fff' }}>TOTAL COMISIONES FINALIZADAS{totalPending > 0 ? ` (pendiente aparte: ${fmtEur(totalPending)})` : ''}</div>
+                            <div style={{ fontSize: 24, fontWeight: 900, color: '#fff' }}>{fmtEur(totalFinalized)}</div>
+                        </div>
+                    </div>
+                </div>
+            </>
+        )
+    }
+
     const renderMenu = () => {
         const menuCardsRaw = [
             {
@@ -2354,7 +2442,7 @@ export default function LiquidacionesPage() {
             {currentView === 'basico' && renderPymeView()}
             {currentView === 'operaciones' && renderOperacionesView()}
             {currentView === 'rentabilidad_total' && renderRentabilidadTotal()}
-            {currentView === 'comisiones_comerciales' && renderRentabilidadTotal(true)}
+            {currentView === 'comisiones_comerciales' && renderComisionesComerciales()}
             {currentView === 'cruce' && renderCruceView()}
             {currentView === 'auditoria' && renderAuditoria()}
             {currentView === 'repesca' && <RepescaTrimestral user={user} activeYear={activePeriodObj?.year || 2026} />}
