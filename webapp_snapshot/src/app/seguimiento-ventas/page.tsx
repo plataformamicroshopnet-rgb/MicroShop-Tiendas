@@ -39,6 +39,7 @@ export default function SeguimientoVentasPage() {
   const cards = [
     {
       title: 'Ventas Tiendas',
+      image: '/tiendas-ventas.png',
       description: 'Acceso al módulo principal de registro, tracking y gestión de ventas del canal.',
       icon: Briefcase,
       action: () => router.push('/ventas-tiendas'),
@@ -48,6 +49,7 @@ export default function SeguimientoVentasPage() {
     },
     {
       title: 'Avance de Palancas',
+      image: '/nx-avance-palancas.png',
       description: 'Acceso directo a las hojas secundarias de operaciones (Cloud, Novac, Portas, etc.).',
       icon: Package,
       action: () => router.push('/seguimiento-ventas/productos'),
@@ -66,6 +68,7 @@ export default function SeguimientoVentasPage() {
     },
     {
       title: 'Comisiones Tiendas Completas',
+      image: '/nx-comisiones-completas.png',
       description: 'Liquidación grupal y métricas completas de todas las comisiones.',
       icon: Calculator,
       action: () => router.push('/comisiones'),
@@ -84,6 +87,7 @@ export default function SeguimientoVentasPage() {
     },
     {
       title: 'Condiciones, Comisiones Extras del mes y Penalizaciones',
+      image: '/tiendas-condiciones.png',
       description: 'Consulta de condiciones, bonificaciones especiales y notas asignadas a este periodo.',
       icon: Target,
       action: () => router.push('/seguimiento-ventas/condiciones-mensuales'),
@@ -92,6 +96,7 @@ export default function SeguimientoVentasPage() {
     },
     {
       title: 'Comparativa Rapida de Ventas',
+      image: '/nx-comparativa.png',
       description: 'Cross-sell por comercial: Palancas principales de comisiones. Clic en cada cifra para ver clientes.',
       icon: Target,
       action: () => router.push('/seguimiento-ventas/combos'),
@@ -101,6 +106,7 @@ export default function SeguimientoVentasPage() {
     },
     {
       title: 'Comisiones del Mes (Jefe)',
+      image: '/nx-comisiones-jefe.png',
       description: 'Cálculo dinámico de comisiones del Jefe Tiendas (media de equipo y bonos).',
       icon: Calculator,
       action: () => router.push('/seguimiento-ventas/comisiones-jefe'),
@@ -110,6 +116,7 @@ export default function SeguimientoVentasPage() {
     },
     {
       title: 'MicroShop Accesorios',
+      image: '/tiendas-accesorios.png',
       description: 'Gestión de inventario de accesorios de MicroShop, punto de venta y trazabilidad.',
       icon: Package,
       action: () => router.push('/microshop-accesorios'),
@@ -118,6 +125,7 @@ export default function SeguimientoVentasPage() {
     },
     {
       title: 'Control de Stock',
+      image: '/tiendas-stock.png',
       description: 'Gestión y control de inventario y almacén.',
       icon: Package,
       action: () => router.push('/cristina-admin/stock'),
@@ -126,6 +134,7 @@ export default function SeguimientoVentasPage() {
     },
     {
       title: 'MOD (Media Operaciones Diaria)',
+      image: '/nx-mod.png',
       description: 'Comparativa de operaciones, importe medio y rentabilidad diaria.',
       icon: TrendingUp,
       action: () => router.push('/seguimiento-ventas/mod'),
@@ -461,30 +470,35 @@ export default function SeguimientoVentasPage() {
                   onTouchStart={(e) => handleStartPress(e, i)}
                   onTouchEnd={(e) => handleReleasePress(e, c.action)}
                   onTouchMove={handleMovePress}
-                  style={{ 
-                      cursor: isEditMode ? 'grab' : 'pointer', 
+                  style={{
+                      cursor: isEditMode ? 'grab' : 'pointer',
                       borderLeft: `6px solid ${iconColor}`,
                       display: 'flex',
                       flexDirection: 'row',
                       alignItems: 'center',
-                      gap: '16px'
+                      gap: '16px',
+                      ...(c.image ? { padding: 0, overflow: 'hidden', gap: 0, alignItems: 'stretch', minHeight: 150 } : {})
                   }}
               >
-                <div style={{ 
-                    background: c.color || 'rgba(59, 130, 246, 0.1)', 
-                    color: iconColor, 
-                    width: 56, 
-                    height: 56, 
+                {c.image ? (
+                <div aria-hidden="true" style={{ width: 160, minWidth: 160, minHeight: 120, alignSelf: 'stretch', flexShrink: 0, backgroundImage: `url(${c.image})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundColor: iconColor }} />
+                ) : (
+                <div style={{
+                    background: c.color || 'rgba(59, 130, 246, 0.1)',
+                    color: iconColor,
+                    width: 56,
+                    height: 56,
                     flexShrink: 0,
-                    borderRadius: 16, 
-                    display: 'flex', 
-                    alignItems: 'center', 
+                    borderRadius: 16,
+                    display: 'flex',
+                    alignItems: 'center',
                     justifyContent: 'center',
                     boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.05)'
                 }}>
                   <Icon size={26} strokeWidth={2.5} />
                 </div>
-                <div style={{ flex: 1 }}>
+                )}
+                <div style={{ flex: 1, ...(c.image ? { padding: '14px 18px' } : {}) }}>
                   <h3 style={{ margin: '0 0 4px 0', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.3px', fontSize: 18 }}>
                     {c.title}
                   </h3>
