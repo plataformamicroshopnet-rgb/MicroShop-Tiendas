@@ -1513,42 +1513,54 @@ export default function LiquidacionesPage() {
         }
         const stats = (((comisionesData as any)?.sellerStats as any[]) || [])
             .map((s: any) => {
-                const gc = s.groupConsolidada || {}
+                const gComis = s.groupComisions || {}
+                const gCounts = s.groupCounts || {}
+                const gPend = s.groupPending || {}
+                const gCons = s.groupIsConsolidado || {}
                 const gs = s.groupSales || {}
-                const finalized = s.totalConsolidada || 0
-                // Solo las palancas que va a cobrar (consolidadas, objetivo alcanzado)
-                const palancas = Object.keys(gc)
-                    .filter((k: string) => (gc[k] || 0) > 0.01)
-                    .map((k: string) => ({ name: k, eur: gc[k], sales: (gs[k] || []) }))
+                // Comisión FINALIZADA por palanca: SOLO las ventas finalizadas cuentan (las pendientes NO),
+                // y solo si la palanca tiene el objetivo alcanzado. Se reparte la comisión total por la
+                // fracción finalizada: comTotal × (finalizadas / (finalizadas+pendientes)).
+                // Ej. Nuria Alta BAF Total: 18 uds (14 fin + 4 pend) a 6€ = 108€ -> finalizada = 108×14/18 = 84€.
+                const palancas = Object.keys(gComis)
+                    .map((k: string) => {
+                        const comTotal = gComis[k] || 0
+                        const fin = gCounts[k] || 0
+                        const pend = gPend[k] || 0
+                        const denom = fin + pend
+                        const eur = (gCons[k] && comTotal > 0) ? (denom > 0 ? comTotal * (fin / denom) : comTotal) : 0
+                        return { name: k, eur, sales: (gs[k] || []).filter((v: any) => estadoVenta(v) === 'OK') }
+                    })
+                    .filter((p: any) => p.eur > 0.01)
                     .sort((a: any, b: any) => b.eur - a.eur)
-                const otros = finalized - palancas.reduce((a: number, p: any) => a + p.eur, 0)
-                if (otros > 0.01) {
-                    // "Otros" = incentivos (extras con sellerRewardAmount>0) + O2 de otras tiendas (9€/ud, solo consolidadas)
-                    const extrasRows = (s.rawExtras || [])
-                        .filter((e: any) => (e.sellerRewardAmount || 0) > 0.001)
-                        .map((e: any) => ({
-                            fecha: e.createdAt ? new Date(e.createdAt).toLocaleDateString('es-ES') : '-',
-                            nif: e.customerName || e.customerNif || '-',
-                            producto: e.rule?.name || e.ruleName || 'Incentivo',
-                            codigo: 'INCENTIVO',
-                            cuota: e.sellerRewardAmount || 0,
-                            estado: e.status === 'PENDING' ? 'PED' : 'OK',
-                        }))
-                    const o2OtrasRows = (s.o2OtrasSales || [])
-                        .filter((v: any) => estadoVenta(v) === 'OK') // solo las consolidadas (no pendientes/anuladas)
-                        .map((v: any) => ({
-                            fecha: v.fecha || '-',
-                            nif: v.nif || '-',
-                            producto: `O2 MovilFree (otra tienda)${v.producto ? ' — ' + v.producto : ''}`,
-                            codigo: v.codigo || 'O2',
-                            cuota: 9, // 9 €/ud que se le abonan por O2 de otras tiendas
-                            estado: 'OK',
-                        }))
-                    palancas.push({ name: 'Otros (incentivos / O2 otras tiendas)', eur: otros, sales: [...extrasRows, ...o2OtrasRows] })
-                }
-                return { name: s.name, profile: s.profile, finalized, pending: s.totalPendiente || 0, ventas: s.totalSales || 0, palancas }
+                // "Otros" = incentivos FINALIZADOS (extras sellerReward>0, no pendientes) + O2 de otras tiendas (9€/ud, solo finalizadas)
+                const extrasRows = (s.rawExtras || [])
+                    .filter((e: any) => (e.sellerRewardAmount || 0) > 0.001 && e.status !== 'PENDING')
+                    .map((e: any) => ({
+                        fecha: e.createdAt ? new Date(e.createdAt).toLocaleDateString('es-ES') : '-',
+                        nif: e.customerName || e.customerNif || '-',
+                        producto: e.rule?.name || e.ruleName || 'Incentivo',
+                        codigo: 'INCENTIVO',
+                        cuota: e.sellerRewardAmount || 0,
+                        estado: 'OK',
+                    }))
+                const o2OtrasRows = (s.o2OtrasSales || [])
+                    .filter((v: any) => estadoVenta(v) === 'OK')
+                    .map((v: any) => ({
+                        fecha: v.fecha || '-',
+                        nif: v.nif || '-',
+                        producto: `O2 MovilFree (otra tienda)${v.producto ? ' — ' + v.producto : ''}`,
+                        codigo: v.codigo || 'O2',
+                        cuota: 9,
+                        estado: 'OK',
+                    }))
+                const otrosTotal = extrasRows.reduce((a: number, r: any) => a + (r.cuota || 0), 0) + o2OtrasRows.length * 9
+                if (otrosTotal > 0.01) palancas.push({ name: 'Otros (incentivos / O2 otras tiendas)', eur: otrosTotal, sales: [...extrasRows, ...o2OtrasRows] })
+                const finalized = palancas.reduce((a: number, p: any) => a + p.eur, 0)
+                const pending = Math.max(0, (s.totalComision || 0) - finalized)
+                return { name: s.name, profile: s.profile, finalized, pending, ventas: s.totalSales || 0, palancas }
             })
-            .filter((s: any) => s.finalized !== 0 || s.pending !== 0 || s.ventas > 0)
+            .filter((s: any) => s.finalized > 0.01 || s.pending > 0.01 || s.ventas > 0)
             .sort((a: any, b: any) => b.finalized - a.finalized)
         const totalFinalized = stats.reduce((a: number, s: any) => a + s.finalized, 0)
         const totalPending = stats.reduce((a: number, s: any) => a + s.pending, 0)
