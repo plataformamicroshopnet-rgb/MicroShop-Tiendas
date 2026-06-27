@@ -12,12 +12,12 @@ import { usePeriod } from '@/components/PeriodProvider'
 import { OBJECTIVE_KEYS, OBJECTIVE_MAPPING } from '@/lib/constants'
 import { calculateDynamicCommission, sanitizeSale, normalizeString, getCurrentMonthString, isVentaWithinDates, renderDashboardData, isSaleActive } from '@/lib/salesUtils'
 import { getSaleCommissionBase } from '@/lib/saleCommission'
-import { computeBonosO2, computeTerritorialTotal } from '@/lib/territorialConsolidado'
+import { computeBonosO2, computeTerritorialTotal, computeTerritorialRows, calculateO2Importe } from '@/lib/territorialConsolidado'
 import { can, canEdit } from '@/lib/permissions'
 import { useGuard } from '@/hooks/useGuard'
 import { RepescaTrimestral } from './RepescaTrimestral'
 import { ComisionesV3 } from './ComisionesV3'
-type ViewType = 'menu' | 'plus' | 'basico' | 'operaciones' | 'cruce' | 'objetivos' | 'auditoria' | 'repesca' | 'comisiones_v3'
+type ViewType = 'menu' | 'plus' | 'basico' | 'operaciones' | 'cruce' | 'objetivos' | 'auditoria' | 'repesca' | 'comisiones_v3' | 'rentabilidad_total'
 
 const getDisplayGroup = (producto: string) => {
     if (!producto) return null;
@@ -1125,6 +1125,135 @@ export default function LiquidacionesPage() {
 
 
 
+    const renderRentabilidadTotal = () => {
+        const fmtEur = (v: number) => (v || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
+        // ── Comisión por venta (MISMA fuente única que Operaciones Telefónica) ──
+        const pymeMonthObj = objetivos.Pyme?.[currentObjMonth] || {}
+        const captadorMonthObj = objetivos.Captador?.[currentObjMonth] || {}
+        const pymeData = renderDashboardData('Pyme', importesPyme, pymeMonthObj, filteredSalesGlobal, objGrupos, activePeriodObj)
+        const captadorData = renderDashboardData('Captador', importesPlus, captadorMonthObj, filteredSalesGlobal, objGrupos, activePeriodObj)
+        const viewingPeriod = activePeriodObj ? `${activePeriodObj.year}${String(activePeriodObj.month).padStart(2, '0')}` : getCurrentMonthString()
+        const getComm = (sale: any) => getSaleCommissionBase(sale, { catalogs, dashRowsPlus: pymeData.rows, dashRowsBasico: captadorData.rows, viewingPeriod }) + (sale.isSwap === true ? 15 : 0)
+
+        const isAnul = (s: any) => { const a = String(s.anulado || '').toLowerCase().trim(); return a === 'si' || a === 'sí' || String(s.pendiente || '').toLowerCase().trim() === 'anulado' }
+        const isSolarS = (s: any) => { const t = `${s.producto || ''} ${s.categoria || ''} ${s.detalle || ''}`.toLowerCase(); return t.includes('solar360') || t.includes('solar 360') }
+        const activas = filteredSalesGlobal.filter((s: any) => !isAnul(s) && !isSolarS(s))
+
+        // ── 1) Tiendas Movistar, por grupo (excluye O2) ──
+        const GRUPOS = [
+            { id: 'ti', label: 'Contratos Móvil' }, { id: 'rent', label: 'Rent (Dispositivos)' },
+            { id: 'seguro', label: 'Seguro' }, { id: 'mimovistar', label: 'miMovistar' },
+            { id: 'tv', label: 'Suscripciones TV' }, { id: 'repos', label: 'Repos (Arpu)' },
+            { id: 'resto_baf', label: 'Resto BAF' }, { id: 'traslado', label: 'Traslado miMovistar' },
+            { id: 'varios', label: 'Varios' }, { id: 'prepago', label: 'Prepago' }, { id: 'otros', label: 'Otros (sin clasificar)' },
+        ]
+        const grupoDe = (s: any) => {
+            const d = String(s.detalle || s.categoria || '').toLowerCase().trim()
+            if (d === 'ti' || d === 'contratos móvil' || d === 'contratos movil') return 'ti'
+            if (d === 'rent' || d === 'tma') return 'rent'
+            if (d === 'seguro') return 'seguro'
+            if (d === 'mimovistar' || d === 'mimovi') return 'mimovistar'
+            if (d === 'suscripciones tv' || d === 'suscripcion tv' || d === 'tv') return 'tv'
+            if (d === 'repos') return 'repos'
+            if (d === 'resto baf') return 'resto_baf'
+            if (d === 'traslado mimovistar' || d === 'traslado') return 'traslado'
+            if (d === 'varios') return 'varios'
+            if (d === 'prepago') return 'prepago'
+            return 'otros'
+        }
+        const movMap: Record<string, { uds: number, eur: number }> = {}
+        GRUPOS.forEach(g => { movMap[g.id] = { uds: 0, eur: 0 } })
+        const o2Marta = { uds: 0, eur: 0 }; const o2Otras = { uds: 0, eur: 0 }
+        activas.forEach((s: any) => {
+            const d = String(s.detalle || s.categoria || '').toLowerCase().trim()
+            const com = getComm(s)
+            if (d === 'o2' || d === 'o2 movilfree') {
+                if (String(s.vendedor || '').toLowerCase().includes('marta')) { o2Marta.uds++; o2Marta.eur += com }
+                else { o2Otras.uds++; o2Otras.eur += com }
+            } else { const g = grupoDe(s); movMap[g].uds++; movMap[g].eur += com }
+        })
+        const movRows = GRUPOS.map(g => ({ label: g.label, uds: movMap[g.id].uds, eur: movMap[g.id].eur })).filter(r => r.uds > 0 || r.eur !== 0)
+        const movTotal = movRows.reduce((a, r) => a + r.eur, 0)
+        const o2Total = o2Marta.eur + o2Otras.eur
+
+        // ── 3) MovilFree margen (ingreso sin IVA − coste) ──
+        const movilFreeTotal = (() => {
+            const [yStr, mStr] = String(activePeriodKey || '').split('_'); const y = Number(yStr), m = Number(mStr)
+            if (!y || !m) return 0
+            return movilFreeSales.filter((s: any) => { const dd = new Date(s.fechaVenta); return s.estado === 'COMPLETADA' && dd.getFullYear() === y && (dd.getMonth() + 1) === m })
+                .reduce((acc: number, s: any) => { try { const list = JSON.parse(s.listaProductos); const cost = list.reduce((c: number, it: any) => c + ((it.coste !== undefined ? it.coste : (movilFreeProducts.find((p: any) => p.id === it.id)?.coste || 0)) * it.cantidad), 0); return acc + ((s.importeTotal / 1.21) - cost) } catch { return acc } }, 0)
+        })()
+
+        // ── 4) PRV Territorial O2 (por regla) — usa ventas crudas ──
+        const o2Count = salesRaw.filter((s: any) => { if (isAnul(s)) return false; const d = String(s.detalle || s.categoria || '').toLowerCase().trim(); if (d !== 'o2') return false; const p = String(s.producto || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim(); return p.startsWith('fibra') || p.startsWith('interna') }).length
+        const prvO2Rows = (territorialO2Rules || []).map((r: any) => ({ label: r.nombre || 'Bono O2', uds: o2Count, eur: calculateO2Importe(r, o2Count) })).filter((r: any) => r.eur > 0)
+        const prvO2Total = prvO2Rows.reduce((a: number, r: any) => a + r.eur, 0)
+
+        // ── 5) PRV Territorial Tiendas (por palanca) — usa ventas crudas ──
+        const terrRows = computeTerritorialRows({ sales: salesRaw, territorialRules: territorialTiendasRules, catalogs, viewingPeriod } as any)
+            .map((r: any) => ({ label: r.palanca, uds: r.ventas, eur: r.importe })).filter((r: any) => r.eur > 0)
+        const prvTiendasTotal = terrRows.reduce((a: number, r: any) => a + r.eur, 0)
+
+        const granTotal = movTotal + o2Total + movilFreeTotal + prvO2Total + prvTiendasTotal
+
+        const sections: any[] = [
+            { icon: '🏢', color: '#2563eb', title: 'Tiendas Movistar', sub: 'Comisión de ventas, por grupo (= Operaciones por Grupo Cliente)', rows: movRows, subtotal: movTotal },
+            { icon: '🔵', color: '#005D82', title: 'O2 MovilFree', sub: 'Comisión de ventas O2 (Marta + otras tiendas)', rows: [{ label: 'Marta (tienda O2)', uds: o2Marta.uds, eur: o2Marta.eur }, { label: 'Ventas de otras tiendas', uds: o2Otras.uds, eur: o2Otras.eur }].filter(r => r.uds > 0 || r.eur !== 0), subtotal: o2Total },
+            { icon: '📦', color: '#8B5CF6', title: 'MovilFree (margen de la tienda)', sub: 'Ingreso sin IVA − coste de los productos vendidos', rows: [], subtotal: movilFreeTotal },
+            { icon: '⚡', color: '#0891B2', title: 'PRV Territorial O2', sub: 'Bono que paga O2 por volumen de altas de fibra/interna', rows: prvO2Rows, subtotal: prvO2Total },
+            { icon: '⚡', color: '#10b981', title: 'PRV Territorial Tiendas', sub: 'Bono que paga Telefónica por las palancas territoriales', rows: terrRows, subtotal: prvTiendasTotal },
+        ]
+
+        return (
+            <>
+                <BackButton />
+                <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                    <div style={{ padding: '18px 24px', background: 'linear-gradient(135deg, rgba(14,165,233,0.12), rgba(14,165,233,0.03))', borderBottom: '1px solid var(--border-color)' }}>
+                        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 900, color: 'var(--light-text)' }}>📋 Hoja de Cobro — Rentabilidad Total{activePeriodObj?.name ? ` · ${activePeriodObj.name}` : ''}</h2>
+                        <p style={{ margin: '6px 0 0 0', fontSize: 13, color: 'var(--medium-gray)', lineHeight: 1.5 }}>
+                            Esto es <strong>lo que Telefónica y O2 deben pagarnos este mes</strong>, por cada pata de la empresa. Revisa cada partida contra lo que nos ingresen. Cada bloque trae su <strong>subtotal</strong> y abajo está el <strong>total general</strong>. (Las ventas anuladas no cuentan.)
+                        </p>
+                    </div>
+
+                    <div style={{ padding: '8px 16px 16px 16px' }}>
+                        {sections.map((sec, i) => (
+                            <div key={i} style={{ marginTop: 14, border: '1px solid var(--border-color)', borderRadius: 12, overflow: 'hidden' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '12px 16px', background: `${sec.color}14`, borderLeft: `4px solid ${sec.color}` }}>
+                                    <div>
+                                        <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--light-text)' }}>{sec.icon} {sec.title}</div>
+                                        <div style={{ fontSize: 12, color: 'var(--medium-gray)', marginTop: 2 }}>{sec.sub}</div>
+                                    </div>
+                                    <div style={{ fontSize: 20, fontWeight: 900, color: sec.color, whiteSpace: 'nowrap' }}>{fmtEur(sec.subtotal)}</div>
+                                </div>
+                                {sec.rows.length > 0 && (
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                                        <tbody>
+                                            {sec.rows.map((r: any, j: number) => (
+                                                <tr key={j} style={{ borderTop: '1px solid var(--border-light)' }}>
+                                                    <td style={{ padding: '9px 16px 9px 32px', color: 'var(--light-text)' }}>{r.label}</td>
+                                                    <td style={{ padding: '9px 12px', textAlign: 'right', color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{r.uds != null ? `${r.uds} uds` : ''}</td>
+                                                    <td style={{ padding: '9px 16px', textAlign: 'right', fontWeight: 700, color: 'var(--light-text)', whiteSpace: 'nowrap', width: 130 }}>{fmtEur(r.eur)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                )}
+                            </div>
+                        ))}
+
+                        <div style={{ marginTop: 18, padding: '18px 24px', borderRadius: 12, background: 'linear-gradient(135deg, #10b981, #059669)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 8px 20px -6px rgba(16,185,129,0.5)' }}>
+                            <div style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>TOTAL A COBRAR DE TELEFÓNICA / O2</div>
+                            <div style={{ fontSize: 26, fontWeight: 900, color: '#fff' }}>{fmtEur(granTotal)}</div>
+                        </div>
+                        <p style={{ margin: '10px 4px 0', fontSize: 11.5, color: 'var(--medium-gray)' }}>
+                            "Tiendas Movistar" y "O2" = comisiones por venta · "MovilFree" = margen propio de la tienda · "PRV Territorial" = bonos por volumen/palancas.
+                        </p>
+                    </div>
+                </div>
+            </>
+        )
+    }
+
     const renderMenu = () => {
         const menuCardsRaw = [
             {
@@ -1155,9 +1284,9 @@ export default function LiquidacionesPage() {
             
             {
                 title: 'Rentabilidad Total de Tiendas Movistar/O2/Movilfree',
-                description: 'Módulo en construcción. Próximamente incluirá la estructura consolidada.',
+                description: 'Hoja de cobro consolidada: qué nos debe pagar Telefónica/O2 por cada pata, desglosado y con subtotales.',
                 icon: TrendingUp,
-                href: '#'
+                view: 'rentabilidad_total' as ViewType
             }
         ];
 
@@ -1956,6 +2085,7 @@ export default function LiquidacionesPage() {
             {currentView === 'plus' && renderCaptadorView()}
             {currentView === 'basico' && renderPymeView()}
             {currentView === 'operaciones' && renderOperacionesView()}
+            {currentView === 'rentabilidad_total' && renderRentabilidadTotal()}
             {currentView === 'cruce' && renderCruceView()}
             {currentView === 'auditoria' && renderAuditoria()}
             {currentView === 'repesca' && <RepescaTrimestral user={user} activeYear={activePeriodObj?.year || 2026} />}
