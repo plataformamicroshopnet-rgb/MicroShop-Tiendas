@@ -18,6 +18,7 @@ export default function AdminDashboardPage() {
     // --- GRUPO CIAN ---
     {
       title: 'Entrada de Datos',
+      image: '/nx-entrada-datos.png',
       description: 'Editar catálogos de precios, cuotas y objetivos.',
       icon: FileEdit,
       action: () => router.push('/catalogos'),
@@ -28,6 +29,7 @@ export default function AdminDashboardPage() {
     },
     {
       title: 'Control de Caja',
+      image: '/tiendas-caja.png',
       description: 'Gestión de entradas, salidas y trazabilidad de efectivo.',
       icon: Calculator,
       action: () => router.push('/tiendas/caja'),
@@ -38,6 +40,7 @@ export default function AdminDashboardPage() {
     },
     {
       title: 'Facturas y Tickets',
+      image: '/nx-facturas.png',
       description: 'Consulta, búsqueda y exportación de facturas y tickets emitidos por tienda.',
       icon: Calculator,
       action: () => router.push('/cristina-admin/facturas'),
@@ -49,6 +52,7 @@ export default function AdminDashboardPage() {
     // --- GRUPO NARANJA ---
     {
       title: 'Condiciones, Comisiones Extras del mes y Penalizaciones',
+      image: '/tiendas-condiciones.png',
       description: 'Escribir condiciones, notas y comisiones estra para el mes en curso.',
       icon: FileEdit,
       action: () => router.push('/admin/condiciones-mensuales'),
@@ -59,6 +63,7 @@ export default function AdminDashboardPage() {
     },
     {
       title: 'Ganancias MicroShop',
+      image: '/nx-ganancias-micro.png',
       description: 'Dashboard Financiero Macro e Histórico (2011 - 2026).',
       icon: TrendingUp,
       action: () => router.push('/admin/ganancias'),
@@ -68,6 +73,7 @@ export default function AdminDashboardPage() {
     },
     {
       title: 'Préstamos, Créditos e Hipotecas',
+      image: '/nx-prestamos.png',
       description: 'Dashboard Retrospectivo de Patrimonio (2008 - 2026).',
       icon: Landmark,
       action: () => router.push('/admin/prestamos'),
@@ -79,6 +85,7 @@ export default function AdminDashboardPage() {
     // --- GRUPO VERDE ---
     {
       title: 'Gestión de Periodos Operativos',
+      image: '/nx-periodos.png',
       description: 'Control estructural de meses DRAFT, ACTIVE e HISTORIC.',
       icon: CalendarDays,
       action: () => router.push('/admin/periodos'),
@@ -89,6 +96,7 @@ export default function AdminDashboardPage() {
     },
     {
       title: 'Gestión de Usuarios',
+      image: '/nx-usuarios.png',
       description: 'Crear perfiles, restablecer contraseñas y asignar permisos.',
       icon: Users,
       action: () => router.push('/admin/usuarios'),
@@ -98,6 +106,7 @@ export default function AdminDashboardPage() {
     },
     {
       title: 'Google Drive Backups',
+      image: '/nx-backups.png',
       description: 'Copias de seguridad autónomas en la nube.',
       icon: Cloud,
       action: () => router.push('/admin/cloud-backup'),
@@ -107,6 +116,7 @@ export default function AdminDashboardPage() {
     },
     {
       title: 'Trazabilidad y Accesos',
+      image: '/nx-trazabilidad.png',
       description: 'Auditoría en tiempo real de navegación de usuarios.',
       icon: Activity,
       action: () => router.push('/admin/tracking'),
@@ -330,13 +340,18 @@ export default function AdminDashboardPage() {
                         cursor: 'pointer',
                         backgroundColor: c.bgColorOverride || undefined,
                         color: c.textColorOverride || undefined,
-                        borderColor: c.bgColorOverride ? 'transparent' : undefined
+                        borderColor: c.bgColorOverride ? 'transparent' : undefined,
+                        ...(c.image ? { padding: 0, overflow: 'hidden', alignItems: 'stretch', gap: 0, minHeight: 150 } : {})
                       }}
                     >
+                      {c.image ? (
+                      <div aria-hidden="true" style={{ width: 150, minWidth: 150, minHeight: 110, alignSelf: 'stretch', flexShrink: 0, backgroundImage: `url(${c.image})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundColor: c.iconColorOverride || c.textColor }} />
+                      ) : (
                       <div className="card-icon-wrapper" style={{ backgroundColor: c.iconBgOverride || c.color, color: c.iconColorOverride || c.textColor, flexShrink: 0 }}>
                         <Icon size={20} strokeWidth={2.5} />
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1 }}>
+                      )}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, ...(c.image ? { padding: '14px 18px' } : {}) }}>
                         <h3 className="card-title" style={{ color: c.textColorOverride || undefined }}>
                           {c.title}
                         </h3>

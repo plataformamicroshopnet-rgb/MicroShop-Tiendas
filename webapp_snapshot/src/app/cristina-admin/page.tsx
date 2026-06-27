@@ -10,6 +10,7 @@ export default function CristinaAdminPage() {
   const cards = [
       {
         title: 'Caja',
+        image: '/tiendas-caja.png',
         description: 'Gestión de entradas, salidas y trazabilidad de efectivo entre tiendas y Central.',
         icon: Calculator,
         action: () => router.push('/tiendas/caja'),
@@ -18,6 +19,7 @@ export default function CristinaAdminPage() {
       },
     {
       title: 'Agenda de Llamadas Cristina',
+      image: '/nx-llamadas.png',
       description: 'Tracking diario visual de llamadas y métricas independientes.',
       icon: Calendar,
       action: () => router.push('/seguimiento-ventas/agenda-cristina'),
@@ -26,6 +28,7 @@ export default function CristinaAdminPage() {
     },
     {
       title: 'Control de Stock',
+      image: '/tiendas-stock.png',
       description: 'Gestión y control de inventario y almacén.',
       icon: Package,
       action: () => router.push('/cristina-admin/stock'),
@@ -34,6 +37,7 @@ export default function CristinaAdminPage() {
     },
     {
       title: 'MicroShop Accesorios',
+      image: '/tiendas-accesorios.png',
       description: 'Gestión de inventario de accesorios de MicroShop, punto de venta y trazabilidad.',
       icon: Package,
       action: () => router.push('/microshop-accesorios'),
@@ -42,6 +46,7 @@ export default function CristinaAdminPage() {
     },
     {
       title: 'Informes de Gastos',
+      image: '/nx-gastos.png',
       description: 'Registro y seguimiento de gastos operativos.',
       icon: Receipt,
       action: () => router.push('/cristina-admin/gastos'),
@@ -50,6 +55,7 @@ export default function CristinaAdminPage() {
     },
     {
       title: 'Vencimientos',
+      image: '/nx-vencimientos.png',
       description: 'Dashboard de pagos a proveedores y control de vencimientos.',
       icon: Receipt,
       action: () => router.push('/cristina-admin/vencimientos'),
@@ -58,6 +64,7 @@ export default function CristinaAdminPage() {
     },
     {
       title: 'Informes de IVA',
+      image: '/nx-iva.png',
       description: 'Historial y control de liquidaciones de IVA y cierres trimestrales.',
       icon: Calculator,
       action: () => router.push('/cristina-admin/iva'),
@@ -66,6 +73,7 @@ export default function CristinaAdminPage() {
     },
     {
       title: 'Facturas y Tickets',
+      image: '/nx-facturas.png',
       description: 'Consulta, búsqueda y exportación de facturas y tickets emitidos por tienda.',
       icon: Receipt,
       action: () => router.push('/cristina-admin/facturas'),
@@ -158,33 +166,39 @@ export default function CristinaAdminPage() {
           
           return (
             <div key={c.title} style={{ position: 'relative' }}>
-              <div className="hub-card hub-card-main" onClick={c.action} style={{ cursor: 'pointer', borderLeft: `6px solid ${c.colorIcon}` }}>
-                <div style={{ 
-                  background: c.bgIcon, 
-                  color: c.colorIcon, 
-                  width: 64, 
-                  height: 64, 
+              <div className="hub-card hub-card-main" onClick={c.action} style={{ cursor: 'pointer', borderLeft: `6px solid ${c.colorIcon}`, ...(c.image ? { padding: 0, overflow: 'hidden', gap: 0, alignItems: 'stretch', minHeight: 150 } : {}) }}>
+                {c.image ? (
+                <div aria-hidden="true" style={{ width: 160, minWidth: 160, minHeight: 120, alignSelf: 'stretch', flexShrink: 0, backgroundImage: `url(${c.image})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundColor: c.colorIcon }} />
+                ) : (
+                <div style={{
+                  background: c.bgIcon,
+                  color: c.colorIcon,
+                  width: 64,
+                  height: 64,
                   flexShrink: 0,
-                  borderRadius: 18, 
-                  display: 'flex', 
-                  alignItems: 'center', 
+                  borderRadius: 18,
+                  display: 'flex',
+                  alignItems: 'center',
                   justifyContent: 'center',
                   boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.5)'
                 }}>
                   <Icon size={28} strokeWidth={2.5} />
                 </div>
-                <div style={{ flex: 1 }}>
+                )}
+                <div style={{ flex: 1, ...(c.image ? { padding: '16px 20px' } : {}) }}>
                   <h3 className="ds-card-main" style={{ margin: '0 0 6px 0', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.3px', fontSize: 20 }}>
                     {c.title}
                   </h3>
                   <p className="ds-body" style={{ margin: 0, color: 'var(--text-muted)', fontWeight: 500 }}>
                     {c.description}
                   </p>
+                  {!c.image && (
                   <div style={{ marginTop: 16 }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: c.colorIcon, color: '#ffffff', padding: '8px 16px', borderRadius: 8, fontWeight: 700, fontSize: 13, boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
                       Acceder &rarr;
                     </span>
                   </div>
+                  )}
                 </div>
               </div>
             </div>
