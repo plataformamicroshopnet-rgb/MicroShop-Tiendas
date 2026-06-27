@@ -166,7 +166,7 @@ export default function CristinaAdminPage() {
           
           return (
             <div key={c.title} style={{ position: 'relative' }}>
-              <div className="hub-card hub-card-main" onClick={c.action} style={{ cursor: 'pointer', borderLeft: `6px solid ${c.colorIcon}`, ...(c.image ? { padding: 0, overflow: 'hidden', gap: 0, alignItems: 'stretch', minHeight: 150 } : {}) }}>
+              <div className="hub-card hub-card-main" onClick={c.action} style={{ cursor: 'pointer', borderLeft: `6px solid ${c.colorIcon}`, ...(c.image ? { padding: 0, overflow: 'hidden', gap: 0, alignItems: 'stretch', minHeight: 142 } : {}) }}>
                 {c.image ? (
                 <div aria-hidden="true" style={{ width: 160, minWidth: 160, minHeight: 120, alignSelf: 'stretch', flexShrink: 0, backgroundImage: `url(${c.image})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundColor: c.colorIcon }} />
                 ) : (
@@ -185,7 +185,7 @@ export default function CristinaAdminPage() {
                   <Icon size={28} strokeWidth={2.5} />
                 </div>
                 )}
-                <div style={{ flex: 1, ...(c.image ? { padding: '16px 20px' } : {}) }}>
+                <div style={{ flex: 1, ...(c.image ? { padding: '12px 20px' } : {}) }}>
                   <h3 className="ds-card-main" style={{ margin: '0 0 6px 0', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.3px', fontSize: 20 }}>
                     {c.title}
                   </h3>
