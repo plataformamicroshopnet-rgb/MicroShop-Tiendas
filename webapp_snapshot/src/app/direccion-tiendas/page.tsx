@@ -35,6 +35,7 @@ export default function DireccionTiendasPage() {
     {
       title: 'MOD (Media Operaciones Diaria)',
       description: 'Comparativa de operaciones, importe medio y rentabilidad diaria.',
+      image: '/dt-mod.png',
       icon: TrendingUp,
       action: () => router.push('/seguimiento-ventas/mod'),
       color: 'rgba(34, 197, 94, 0.1)',
@@ -44,6 +45,7 @@ export default function DireccionTiendasPage() {
     {
       title: 'Comparativa Rapida de Ventas',
       description: 'Cross-sell por comercial: Palancas principales de comisiones. Clic en cada cifra para ver clientes.',
+      image: '/dt-comparativa-ventas.png',
       icon: Target,
       action: () => router.push('/seguimiento-ventas/combos'),
       color: 'rgba(30,58,95,0.08)',
@@ -53,6 +55,7 @@ export default function DireccionTiendasPage() {
     {
       title: 'Avance de Palancas',
       description: 'Acceso directo a las hojas secundarias de operaciones (Cloud, Novac, Portas, etc.).',
+      image: '/dt-avance-palancas.png',
       icon: Package,
       action: () => router.push('/seguimiento-ventas/productos'),
       color: 'rgba(0,173,239,0.1)',
@@ -64,6 +67,7 @@ export default function DireccionTiendasPage() {
     {
       title: 'Rentabilidad por Tiendas',
       description: 'Visión agrupada de personal, ventas y rentabilidad segmentada por tienda.',
+      image: '/dt-rentabilidad-tiendas.png',
       icon: DollarSign,
       action: () => router.push('/liquidacion/rentabilidad-tiendas'),
       color: 'rgba(168, 85, 247, 0.1)',
@@ -73,6 +77,7 @@ export default function DireccionTiendasPage() {
     {
       title: 'Ganancias desde el 2014',
       description: 'Ingresos, gastos y rentabilidad por año (Tiendas + FFVV), desde 2014.',
+      image: '/dt-ganancias-2014.png',
       icon: Wallet,
       action: () => router.push('/direccion-tiendas/ganancias'),
       color: 'rgba(0, 173, 239, 0.1)',
@@ -82,6 +87,7 @@ export default function DireccionTiendasPage() {
     {
       title: 'Comisiones Personal Tiendas VS Comisiones de la Empresa',
       description: 'Por comercial: lo que gana la empresa (Liquidaciones) frente a lo que se paga al comercial (Panel de Comisiones), grupo a grupo.',
+      image: '/dt-comisiones-vs.png',
       icon: Scale,
       action: () => router.push('/direccion-tiendas/comisiones-vs'),
       color: 'rgba(34, 197, 94, 0.1)',
@@ -244,20 +250,34 @@ export default function DireccionTiendasPage() {
                   onClick={isEditMode ? undefined : c.action} 
                   style={{ cursor: isEditMode ? 'default' : 'pointer', borderLeft: `6px solid ${iconColor}` }}
               >
-                <div style={{ 
-                    background: c.color || 'rgba(59, 130, 246, 0.1)', 
-                    color: iconColor, 
-                    width: 64, 
-                    height: 64, 
+                {c.image ? (
+                  <div aria-hidden="true" style={{
+                    width: 120,
+                    minWidth: 120,
+                    alignSelf: 'stretch',
                     flexShrink: 0,
-                    borderRadius: 18, 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.05)'
-                }}>
-                  <Icon size={28} strokeWidth={2.5} />
-                </div>
+                    borderRadius: 16,
+                    backgroundImage: `url(${c.image})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundColor: iconColor
+                  }} />
+                ) : (
+                  <div style={{
+                      background: c.color || 'rgba(59, 130, 246, 0.1)',
+                      color: iconColor,
+                      width: 64,
+                      height: 64,
+                      flexShrink: 0,
+                      borderRadius: 18,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.05)'
+                  }}>
+                    <Icon size={28} strokeWidth={2.5} />
+                  </div>
+                )}
                 <div style={{ flex: 1 }}>
                   <h3 style={{ margin: '0 0 6px 0', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.3px', fontSize: 20 }}>
                     {c.title}
