@@ -77,6 +77,7 @@ export default function LiquidacionesPage() {
     const [drillKey, setDrillKey] = useState<string | null>(null)
     const [drillComercial, setDrillComercial] = useState<string | null>(null)
     const [drillSearch, setDrillSearch] = useState('')
+    const [exportSel, setExportSel] = useState<number[]>([0, 1, 2, 3, 4]) // bloques marcados para exportar
 
     // Saving state
     const [savingObj, setSavingObj] = useState(false)
@@ -1309,6 +1310,80 @@ export default function LiquidacionesPage() {
             )
         }
 
+        // ── Exportación (Excel / PDF / Imprimir) ──
+        const effSel = (exportSel.length ? exportSel : [0, 1, 2, 3, 4]).filter((i: number) => i >= 0 && i < sections.length).sort((a, b) => a - b)
+        const uniqueDrill = (sec: any) => Array.from(new Set((sec.rows || []).map((r: any) => r.drill).filter(Boolean))).flatMap((d: any) => d)
+        const drillToRowObj = (d: any) => ({ fecha: d.fecha, comercial: d.comercial, nif: d.nif, telefono: d.telf, tienda: d.tienda, producto: d.producto, swap: d.swap ? 'Sí' : 'No', comision: Number(d.comision || 0), estado: d.estado })
+        const DETAIL_COLS = [
+            { header: 'Fecha', key: 'fecha', width: 12 }, { header: 'Comercial', key: 'comercial', width: 20 },
+            { header: 'Cliente (NIF)', key: 'nif', width: 16 }, { header: 'Teléfono', key: 'telefono', width: 14 },
+            { header: 'Tienda', key: 'tienda', width: 16 }, { header: 'Producto', key: 'producto', width: 34 },
+            { header: 'Swap', key: 'swap', width: 8 }, { header: 'Comisión (€)', key: 'comision', width: 14 }, { header: 'Estado', key: 'estado', width: 10 },
+        ]
+        const sheetName = (t: string, fallback: string) => (String(t).replace(/[\\\/\?\*\[\]:]/g, '').trim().slice(0, 28) || fallback)
+
+        const exportExcel = async (idxs: number[], allMode: boolean) => {
+            const wb = new ExcelJS.Workbook()
+            const sel = idxs.map(i => sections[i]).filter(Boolean)
+            const ws = wb.addWorksheet('Resumen')
+            const t1 = ws.addRow([`HOJA DE COBRO — RENTABILIDAD TOTAL${activePeriodObj?.name ? ` · ${activePeriodObj.name}` : ''}`]); t1.font = { bold: true, size: 14 }
+            ws.addRow([`Lo que Telefónica / O2 deben pagar este mes · generado ${new Date().toLocaleString('es-ES')}`]); ws.addRow([])
+            let gtot = 0
+            sel.forEach(sec => {
+                gtot += sec.subtotal
+                const hr = ws.addRow([`${sec.icon} ${sec.title}`, '', '', '', '', sec.subtotal]); hr.font = { bold: true, size: 12 }; hr.getCell(6).numFmt = '#,##0.00 €'
+                if (sec.detailed) {
+                    const h = ws.addRow(['Concepto', sec.udsLabel || 'Ventas', 'Objetivo', 'Tramo de cobro', 'Estado', 'Importe']); h.font = { italic: true, color: { argb: 'FF6B7280' } }
+                    sec.rows.forEach((r: any) => { const rr = ws.addRow([r.label, r.uds, r.obj, r.tramos, r.estado, r.eur]); rr.getCell(6).numFmt = '#,##0.00 €' })
+                } else {
+                    const h = ws.addRow(['Concepto', 'Unidades', '', '', '', 'Importe']); h.font = { italic: true, color: { argb: 'FF6B7280' } }
+                    sec.rows.forEach((r: any) => { const rr = ws.addRow([r.label, r.uds, '', '', '', r.eur]); rr.getCell(6).numFmt = '#,##0.00 €' })
+                }
+                ws.addRow([])
+            })
+            const trow = ws.addRow(['TOTAL A COBRAR', '', '', '', '', gtot]); trow.font = { bold: true, size: 13 }; trow.getCell(6).numFmt = '#,##0.00 €'
+            ws.columns.forEach((c, i) => { c.width = i === 0 ? 34 : (i === 5 ? 15 : 14) })
+
+            if (allMode) {
+                const wsAll = wb.addWorksheet('Detalle (una hoja)')
+                wsAll.columns = [{ header: 'Bloque', key: 'bloque', width: 24 }, ...DETAIL_COLS]
+                sel.forEach(sec => { uniqueDrill(sec).forEach((d: any) => wsAll.addRow({ bloque: sec.title, ...drillToRowObj(d) })) })
+                wsAll.getRow(1).font = { bold: true }; wsAll.getColumn('comision').numFmt = '#,##0.00 €'
+            }
+            sel.forEach(sec => {
+                const rows = uniqueDrill(sec); if (rows.length === 0) return
+                const ws2 = wb.addWorksheet(sheetName(sec.title, `Bloque ${sections.indexOf(sec) + 1}`))
+                ws2.columns = DETAIL_COLS
+                rows.forEach((d: any) => ws2.addRow(drillToRowObj(d)))
+                ws2.getRow(1).font = { bold: true }; ws2.getColumn('comision').numFmt = '#,##0.00 €'
+            })
+            const buffer = await wb.xlsx.writeBuffer()
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+            const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url
+            a.download = `Rentabilidad_Total_${activePeriodObj?.name || activePeriodKey || 'mes'}${allMode ? '_completo' : ''}.xlsx`; a.click(); window.URL.revokeObjectURL(url)
+        }
+
+        const esc = (s: any) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        const openPrint = (idxs: number[]) => {
+            const sel = idxs.map(i => sections[i]).filter(Boolean); let gtot = 0
+            const blocks = sel.map(sec => {
+                gtot += sec.subtotal
+                const head = sec.detailed
+                    ? `<tr><th>Concepto</th><th>${esc(sec.udsLabel || 'Ventas')}</th><th>Objetivo</th><th>Tramo de cobro</th><th>Estado</th><th class=r>Importe</th></tr>`
+                    : `<tr><th>Concepto</th><th>Unidades</th><th class=r>Importe</th></tr>`
+                const body = sec.rows.map((r: any) => sec.detailed
+                    ? `<tr><td>${esc(r.label)}</td><td>${esc(r.uds)}</td><td>${esc(r.obj)}</td><td>${esc(r.tramos)}</td><td>${esc(r.estado)}</td><td class=r>${esc(fmtEur(r.eur))}</td></tr>`
+                    : `<tr><td>${esc(r.label)}</td><td>${r.uds != null ? esc(r.uds) + ' uds' : ''}</td><td class=r>${esc(fmtEur(r.eur))}</td></tr>`
+                ).join('')
+                return `<div class=sec><div class=sh><span>${esc(sec.icon + ' ' + sec.title)}</span><span>${esc(fmtEur(sec.subtotal))}</span></div><table>${head}${body}</table></div>`
+            }).join('')
+            const html = `<!doctype html><html lang=es><head><meta charset=utf-8><title>Hoja de Cobro — Rentabilidad Total</title><style>*{font-family:Arial,Helvetica,sans-serif;box-sizing:border-box}body{margin:24px;color:#1f2937}h1{font-size:18px;margin:0 0 2px}.meta{color:#6b7280;font-size:12px;margin-bottom:16px}.sec{margin:0 0 14px;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;page-break-inside:avoid}.sh{display:flex;justify-content:space-between;padding:8px 12px;background:#f3f4f6;font-weight:700;font-size:14px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:5px 12px;border-top:1px solid #eee;text-align:left}th{color:#6b7280;font-weight:700;font-size:11px;text-transform:uppercase}.r{text-align:right}.total{display:flex;justify-content:space-between;padding:14px 18px;background:#10b981;color:#fff;border-radius:8px;font-weight:800;font-size:16px;margin-top:8px}@media print{body{margin:10px}}</style></head><body><h1>📋 Hoja de Cobro — Rentabilidad Total${esc(activePeriodObj?.name ? ` · ${activePeriodObj.name}` : '')}</h1><div class=meta>Lo que Telefónica / O2 deben pagar este mes · generado ${esc(new Date().toLocaleString('es-ES'))}</div>${blocks}<div class=total><span>TOTAL A COBRAR DE TELEFÓNICA / O2</span><span>${esc(fmtEur(gtot))}</span></div></body></html>`
+            const w = window.open('', '_blank', 'width=900,height=700'); if (!w) { alert('Activa las ventanas emergentes para PDF / Imprimir.'); return }
+            w.document.write(html); w.document.close(); w.focus(); setTimeout(() => { try { w.print() } catch (e) { } }, 350)
+        }
+
+        const expBtn: React.CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '7px 12px', borderRadius: 10, border: '1px solid var(--border-color)', background: 'var(--bg-card)', cursor: 'pointer', fontSize: 10.5, fontWeight: 700, color: 'var(--medium-gray)', minWidth: 74 }
+
         return (
             <>
                 <BackButton />
@@ -1321,12 +1396,35 @@ export default function LiquidacionesPage() {
                     </div>
 
                     <div style={{ padding: '8px 16px 16px 16px' }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 8, padding: '10px 12px', border: '1px dashed var(--border-color)', borderRadius: 10, background: 'var(--bg-hover)' }}>
+                            <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--light-text)', marginRight: 4 }}>Exportar / Imprimir:</span>
+                            <button onClick={() => exportExcel(effSel, false)} style={expBtn} title="Exportar a Excel SOLO los bloques marcados (✓) — resumen + una hoja de detalle por bloque">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="2.5" width="18" height="19" rx="2.5" fill="#21A366" /><text x="12" y="15.5" fontSize="7.5" fontWeight="bold" fill="#fff" textAnchor="middle" fontFamily="Arial">XLS</text><circle cx="19" cy="19" r="4.5" fill="#15803d" stroke="#fff" strokeWidth="1" /><path d="M16.9 19l1.4 1.4 2.4-2.7" stroke="#fff" strokeWidth="1.3" fill="none" /></svg>
+                                <span>Excel (selección)</span>
+                            </button>
+                            <button onClick={() => exportExcel([0, 1, 2, 3, 4], true)} style={expBtn} title="Exportar TODO a Excel — resumen + una hoja con todo + una hoja por cada bloque">
+                                <svg width="22" height="22" viewBox="0 0 24 24"><rect x="2.5" y="3" width="19" height="18" rx="2.5" fill="#16a34a" /><path d="M6.5 8l4.5 8M11 8l-4.5 8" stroke="#fff" strokeWidth="1.7" /><path d="M14 8.5h5.5M14 12h5.5M14 15.5h5.5" stroke="#fff" strokeWidth="1.5" /></svg>
+                                <span>Excel (todo)</span>
+                            </button>
+                            <button onClick={() => openPrint(effSel)} style={expBtn} title="Exportar a PDF los bloques marcados (✓) — en el diálogo elige 'Guardar como PDF'">
+                                <svg width="22" height="22" viewBox="0 0 24 24"><rect x="3" y="2.5" width="18" height="19" rx="2.5" fill="#E2483D" /><text x="12" y="15.5" fontSize="7" fontWeight="bold" fill="#fff" textAnchor="middle" fontFamily="Arial">PDF</text></svg>
+                                <span>PDF</span>
+                            </button>
+                            <button onClick={() => openPrint(effSel)} style={expBtn} title="Imprimir los bloques marcados (✓)">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="1.7"><path d="M6 9V3.5h12V9" /><rect x="3" y="9" width="18" height="8" rx="1.5" fill="#dbeafe" /><rect x="6.5" y="13.5" width="11" height="6.5" fill="#fff" /><circle cx="17.5" cy="11.5" r="0.9" fill="#ef4444" stroke="none" /></svg>
+                                <span>Imprimir</span>
+                            </button>
+                            <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--medium-gray)', maxWidth: 230, lineHeight: 1.35 }}>Marca con ✓ los bloques que quieras; sin marcar ninguno = todos. "Excel (todo)" siempre exporta todo.</span>
+                        </div>
                         {sections.map((sec, i) => (
                             <div key={i} style={{ marginTop: 14, border: '1px solid var(--border-color)', borderRadius: 12, overflow: 'hidden' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '12px 16px', background: `${sec.color}14`, borderLeft: `4px solid ${sec.color}` }}>
-                                    <div>
-                                        <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--light-text)' }}>{sec.icon} {sec.title}</div>
-                                        <div style={{ fontSize: 12, color: 'var(--medium-gray)', marginTop: 2 }}>{sec.sub}</div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                        <input type="checkbox" checked={exportSel.includes(i)} onChange={() => setExportSel(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i])} title="Incluir este bloque al exportar / imprimir" style={{ width: 17, height: 17, cursor: 'pointer', accentColor: sec.color, flexShrink: 0 }} />
+                                        <div>
+                                            <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--light-text)' }}>{sec.icon} {sec.title}</div>
+                                            <div style={{ fontSize: 12, color: 'var(--medium-gray)', marginTop: 2 }}>{sec.sub}</div>
+                                        </div>
                                     </div>
                                     <div style={{ fontSize: 20, fontWeight: 900, color: sec.color, whiteSpace: 'nowrap' }}>{fmtEur(sec.subtotal)}</div>
                                 </div>
