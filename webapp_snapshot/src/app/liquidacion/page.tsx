@@ -1522,7 +1522,20 @@ export default function LiquidacionesPage() {
                     .map((k: string) => ({ name: k, eur: gc[k], sales: (gs[k] || []) }))
                     .sort((a: any, b: any) => b.eur - a.eur)
                 const otros = finalized - palancas.reduce((a: number, p: any) => a + p.eur, 0)
-                if (otros > 0.01) palancas.push({ name: 'Otros (O2 otras tiendas / incentivos)', eur: otros, sales: [] })
+                if (otros > 0.01) {
+                    // El detalle de "Otros" son los incentivos/extras que pagan al comercial (sellerRewardAmount > 0)
+                    const otrosSales = (s.rawExtras || [])
+                        .filter((e: any) => (e.sellerRewardAmount || 0) > 0.001)
+                        .map((e: any) => ({
+                            fecha: e.createdAt ? new Date(e.createdAt).toLocaleDateString('es-ES') : '-',
+                            nif: e.customerName || e.customerNif || '-',
+                            producto: e.rule?.name || e.ruleName || 'Incentivo',
+                            codigo: 'INCENTIVO',
+                            cuota: e.sellerRewardAmount || 0,
+                            estado: e.status === 'PENDING' ? 'PED' : 'OK',
+                        }))
+                    palancas.push({ name: 'Otros (incentivos / O2 otras tiendas)', eur: otros, sales: otrosSales })
+                }
                 return { name: s.name, profile: s.profile, finalized, pending: s.totalPendiente || 0, ventas: s.totalSales || 0, palancas }
             })
             .filter((s: any) => s.finalized !== 0 || s.pending !== 0 || s.ventas > 0)
@@ -1644,9 +1657,10 @@ export default function LiquidacionesPage() {
     const renderMenu = () => {
         const menuCardsRaw = [
             {
-                title: 'Operaciones Telefónica',
+                title: 'Operaciones Realizadas en Tiendas',
                 description: 'Listado detallado de registro de ventas, cuotas, estados y comisiones finales.',
                 icon: BarChart2,
+                image: '/operaciones-realizadas.jpg',
                 view: 'operaciones' as ViewType
             },
             {
@@ -1732,7 +1746,7 @@ export default function LiquidacionesPage() {
             );
         };
 
-        const brownCards = menuCardsRaw.filter(c => c.title === 'Operaciones Telefónica' || c.title === 'Operaciones por Grupo Cliente' || c.title === 'Comisiones Tiendas y FFVV v3');
+        const brownCards = menuCardsRaw.filter(c => c.title === 'Operaciones Realizadas en Tiendas' || c.title === 'Operaciones por Grupo Cliente' || c.title === 'Comisiones Tiendas y FFVV v3');
         const blueCards = menuCardsRaw.filter(c => c.title === 'Rentabilidad por Tiendas' || c.title === 'Rentabilidad Total de Tiendas Movistar/O2/Movilfree' || c.title === 'Cuadro de Comisiones Comerciales');
         const greenCards = menuCardsRaw.filter(c => c.title === 'Agenda de Llamadas Cristina');
 
