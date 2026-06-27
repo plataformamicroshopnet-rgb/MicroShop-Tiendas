@@ -480,6 +480,14 @@ export function useComisionesData(user?: any) {
                 valObj1 = (rule.objPrimerTramo / totalHoras) * horario;
                 valObj2 = (rule.objSegundoTramo / totalHoras) * horario;
                 valObj3 = ((rule.objTercerTramo || 0) / totalHoras) * horario;
+                // Objetivo 1 por UNIDADES: el prorrateo por horas da decimales (p.ej. 2,29) que se
+                // MUESTRAN redondeados ("2") pero antes se comparaban en crudo -> con 2 ventas faltaba
+                // 0,29 y no consolidaba. Se redondea SOLO el objetivo 1 (consolidación + Falta 1) para
+                // que display y cálculo coincidan. Los tramos 2/3 y los de % (valor €) se dejan exactos.
+                const _isPctObj = String(rule.importePrimerTramo || '').includes('%');
+                if (!_isPctObj) {
+                    valObj1 = Math.round(valObj1);
+                }
             } else {
                 valObj1 = rule.objPrimerTramo || 0;
                 valObj2 = rule.objSegundoTramo || 0;
@@ -1146,6 +1154,7 @@ export function useComisionesData(user?: any) {
             groupObj3,
             groupComisions,
             groupConsolidada,
+            o2OtrasSales,
             totalValueGroupsAmount,
             totalUnitGroupsAmount,
             rawSales: sSales,

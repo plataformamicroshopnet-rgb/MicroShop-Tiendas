@@ -1523,8 +1523,8 @@ export default function LiquidacionesPage() {
                     .sort((a: any, b: any) => b.eur - a.eur)
                 const otros = finalized - palancas.reduce((a: number, p: any) => a + p.eur, 0)
                 if (otros > 0.01) {
-                    // El detalle de "Otros" son los incentivos/extras que pagan al comercial (sellerRewardAmount > 0)
-                    const otrosSales = (s.rawExtras || [])
+                    // "Otros" = incentivos (extras con sellerRewardAmount>0) + O2 de otras tiendas (9€/ud, solo consolidadas)
+                    const extrasRows = (s.rawExtras || [])
                         .filter((e: any) => (e.sellerRewardAmount || 0) > 0.001)
                         .map((e: any) => ({
                             fecha: e.createdAt ? new Date(e.createdAt).toLocaleDateString('es-ES') : '-',
@@ -1534,7 +1534,17 @@ export default function LiquidacionesPage() {
                             cuota: e.sellerRewardAmount || 0,
                             estado: e.status === 'PENDING' ? 'PED' : 'OK',
                         }))
-                    palancas.push({ name: 'Otros (incentivos / O2 otras tiendas)', eur: otros, sales: otrosSales })
+                    const o2OtrasRows = (s.o2OtrasSales || [])
+                        .filter((v: any) => estadoVenta(v) === 'OK') // solo las consolidadas (no pendientes/anuladas)
+                        .map((v: any) => ({
+                            fecha: v.fecha || '-',
+                            nif: v.nif || '-',
+                            producto: `O2 MovilFree (otra tienda)${v.producto ? ' — ' + v.producto : ''}`,
+                            codigo: v.codigo || 'O2',
+                            cuota: 9, // 9 €/ud que se le abonan por O2 de otras tiendas
+                            estado: 'OK',
+                        }))
+                    palancas.push({ name: 'Otros (incentivos / O2 otras tiendas)', eur: otros, sales: [...extrasRows, ...o2OtrasRows] })
                 }
                 return { name: s.name, profile: s.profile, finalized, pending: s.totalPendiente || 0, ventas: s.totalSales || 0, palancas }
             })
