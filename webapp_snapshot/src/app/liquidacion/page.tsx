@@ -1549,9 +1549,9 @@ export default function LiquidacionesPage() {
                         key={c.title}
                         className="premium-card"
                         onClick={() => c.href ? router.push(c.href) : setCurrentView(c.view)}
-                        style={{ position: 'relative', cursor: 'pointer', padding: 0, overflow: 'hidden', borderLeft: '5px solid #0ea5e9', display: 'flex', alignItems: 'stretch' }}
+                        style={{ position: 'relative', cursor: 'pointer', padding: 0, overflow: 'hidden', borderLeft: '5px solid #0ea5e9', display: 'flex', flexDirection: 'row', alignItems: 'stretch', minHeight: 150 }}
                     >
-                        <div aria-hidden="true" style={{ width: 132, minWidth: 132, backgroundImage: `url(${c.image})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                        <div aria-hidden="true" style={{ width: 140, minWidth: 140, alignSelf: 'stretch', backgroundImage: `url(${c.image})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundColor: '#0b2a4a' }} />
                         <div style={{ flex: 1, padding: '16px 6px 16px 18px', display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0 }}>
                             <h3 className="card-title" style={{ margin: 0 }}>{c.title}</h3>
                             <p className="card-desc" style={{ margin: '6px 0 0 0' }}>{c.description}</p>
