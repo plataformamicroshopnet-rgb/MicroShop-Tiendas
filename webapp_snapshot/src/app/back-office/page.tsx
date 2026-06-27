@@ -25,6 +25,7 @@ export default function BackOfficePage() {
   const cardsRaw = [
     hasEditAccess ? {
       title: 'Nueva Venta',
+      image: '/nx-nueva-venta.png',
       description: 'Registra nuevas operaciones de catálogo fijo, móvil o TI en el sistema unificado.',
       icon: Building2,
       href: '/nueva-venta',
@@ -33,6 +34,7 @@ export default function BackOfficePage() {
     } : null,
     {
       title: 'Registro de Operaciones',
+      image: '/nx-registro-operaciones.png',
       description: 'Visualiza, edita o anula las ventas introducidas en la base de datos central.',
       icon: List,
       href: '/operaciones',
@@ -41,6 +43,7 @@ export default function BackOfficePage() {
     },
     {
       title: 'Operaciones Pendientes',
+      image: '/nx-operaciones-pendientes.png',
       description: 'Acceso directo a las operaciones en estado Pendiente para su tramitación.',
       icon: List,
       href: '/operaciones?filter=pendientes',
@@ -185,7 +188,7 @@ export default function BackOfficePage() {
           const Icon = c.icon
           
           const cardContent = (
-            <div className={`premium-card ${isEditMode ? 'wiggle-mode' : ''}`} style={{ position: 'relative', border: c.border || '1px solid transparent', borderLeft: `5px solid ${c.textColor}` }}>
+            <div className={`premium-card ${isEditMode ? 'wiggle-mode' : ''}`} style={{ position: 'relative', border: c.border || '1px solid transparent', borderLeft: `5px solid ${c.textColor}`, ...(c.image ? { padding: 0, overflow: 'hidden', flexDirection: 'row', alignItems: 'stretch', minHeight: 150 } : {}) }}>
               {isEditMode && (
                 <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 10, display: 'flex', gap: 4, background: 'var(--bg-card)', padding: 4, borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.1)', border: '1px solid var(--border-light)' }}>
                   <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); moveCard(i, 'up') }} disabled={i === 0} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 8, border: 'none', background: i === 0 ? 'transparent' : 'var(--bg-input)', color: i === 0 ? 'var(--border-strong)' : 'var(--text-main)', cursor: i === 0 ? 'not-allowed' : 'pointer' }}>
@@ -197,13 +200,25 @@ export default function BackOfficePage() {
                 </div>
               )}
               
-              <div className="card-icon-wrapper" style={{ backgroundColor: c.color, color: c.textColor }}>
-                <Icon size={24} strokeWidth={2.5} />
-              </div>
-              <h2 className="card-title">{c.title}</h2>
-              <p className="card-desc">
-                {c.description}
-              </p>
+              {c.image ? (
+                <>
+                  <div aria-hidden="true" style={{ width: 150, minWidth: 150, minHeight: 120, alignSelf: 'stretch', flexShrink: 0, backgroundImage: `url(${c.image})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundColor: c.textColor }} />
+                  <div style={{ flex: 1, padding: '16px 18px', display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0 }}>
+                    <h2 className="card-title">{c.title}</h2>
+                    <p className="card-desc">{c.description}</p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="card-icon-wrapper" style={{ backgroundColor: c.color, color: c.textColor }}>
+                    <Icon size={24} strokeWidth={2.5} />
+                  </div>
+                  <h2 className="card-title">{c.title}</h2>
+                  <p className="card-desc">
+                    {c.description}
+                  </p>
+                </>
+              )}
             </div>
           )
 
