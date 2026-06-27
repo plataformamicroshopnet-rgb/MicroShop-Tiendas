@@ -1682,21 +1682,21 @@ export default function LiquidacionesPage() {
                 title: 'Operaciones Realizadas en Tiendas',
                 description: 'Listado detallado de registro de ventas, cuotas, estados y comisiones finales.',
                 icon: BarChart2,
-                image: '/operaciones-realizadas.jpg',
+                image: '/nx-op-realizadas.png',
                 view: 'operaciones' as ViewType
             },
             {
                 title: 'Comisiones Tiendas y FFVV v3',
                 description: 'Tabla integrada para gestionar dietas, km, incentivos y cruce de datos O2 (Excel).',
                 icon: ClipboardList,
-                image: '/comisiones-v3.jpg',
+                image: '/nx-comisiones-ffvv.png',
                 view: 'comisiones_v3' as ViewType
             },
             {
                 title: 'Operaciones por Grupo Cliente',
                 description: 'Análisis consolidado de ventas agrupadas por NIF/CIF y producto — secciones Plus y Básico.',
                 icon: Users,
-                image: '/operaciones-grupo-cliente.jpg',
+                image: '/nx-grupo-cliente.png',
                 href: '/operaciones-grupo-cliente'
             },
 
@@ -1704,7 +1704,7 @@ export default function LiquidacionesPage() {
                 title: 'Rentabilidad por Tiendas',
                 description: 'Visión agrupada de personal, ventas y rentabilidad segmentada por tienda.',
                 icon: Briefcase,
-                image: '/rentabilidad-tiendas.jpg',
+                image: '/nx-rentabilidad-tiendas.png',
                 href: '/liquidacion/rentabilidad-tiendas'
             },
             
