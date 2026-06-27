@@ -1184,15 +1184,47 @@ export default function LiquidacionesPage() {
                 .reduce((acc: number, s: any) => { try { const list = JSON.parse(s.listaProductos); const cost = list.reduce((c: number, it: any) => c + ((it.coste !== undefined ? it.coste : (movilFreeProducts.find((p: any) => p.id === it.id)?.coste || 0)) * it.cantidad), 0); return acc + ((s.importeTotal / 1.21) - cost) } catch { return acc } }, 0)
         })()
 
-        // ── 4) PRV Territorial O2 (por regla) — usa ventas crudas ──
-        const o2Count = salesRaw.filter((s: any) => { if (isAnul(s)) return false; const d = String(s.detalle || s.categoria || '').toLowerCase().trim(); if (d !== 'o2') return false; const p = String(s.producto || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim(); return p.startsWith('fibra') || p.startsWith('interna') }).length
-        const prvO2Rows = (territorialO2Rules || []).map((r: any) => ({ label: r.nombre || 'Bono O2', uds: o2Count, eur: calculateO2Importe(r, o2Count) })).filter((r: any) => r.eur > 0)
-        const prvO2Total = prvO2Rows.reduce((a: number, r: any) => a + r.eur, 0)
+        const parseNum = (v: any) => { const n = parseFloat(String(v ?? '0').replace(/[^0-9.,\-]/g, '').replace(',', '.')); return isNaN(n) ? 0 : n }
 
-        // ── 5) PRV Territorial Tiendas (por palanca) — usa ventas crudas ──
-        const terrRows = computeTerritorialRows({ sales: salesRaw, territorialRules: territorialTiendasRules, catalogs, viewingPeriod } as any)
-            .map((r: any) => ({ label: r.palanca, uds: r.ventas, eur: r.importe })).filter((r: any) => r.eur > 0)
-        const prvTiendasTotal = terrRows.reduce((a: number, r: any) => a + r.eur, 0)
+        // ── 4) PRV Territorial O2: los 3 bonos (Mes / Trimestre / Conectividad) desglosados ──
+        const TRAMOS_MES = [
+            { key: '4_10', min: 4, max: 10, label: '4–10' }, { key: '11_14', min: 11, max: 14, label: '11–14' },
+            { key: '15_20', min: 15, max: 20, label: '15–20' }, { key: '21_30', min: 21, max: 30, label: '21–30' },
+            { key: '31_40', min: 31, max: 40, label: '31–40' }, { key: '41_plus', min: 41, max: 99999, label: '≥41' },
+        ]
+        const TRAMOS_TRIM = [{ key: '5_9', min: 5, max: 9, label: '5–9' }, { key: '10_plus', min: 10, max: 99999, label: '≥10' }]
+        const o2Count = salesRaw.filter((s: any) => { if (isAnul(s)) return false; const d = String(s.detalle || s.categoria || '').toLowerCase().trim(); if (d !== 'o2') return false; const p = String(s.producto || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim(); return p.startsWith('fibra') || p.startsWith('interna') }).length
+        const o2Det: any[] = []
+        ;(territorialO2Rules || []).forEach((r: any) => {
+            const mesT = TRAMOS_MES.find(t => o2Count >= t.min && o2Count <= t.max)
+            const trimT = TRAMOS_TRIM.find(t => o2Count >= t.min && o2Count <= t.max)
+            const mesImp = mesT ? parseNum(r.tramosMes?.[mesT.key]) : 0
+            const trimImp = trimT ? parseNum(r.tramosTrim?.[trimT.key]) : 0
+            const conImp = o2Count > 0 ? parseNum(r.conectividad) : 0
+            o2Det.push(
+                { label: 'Bono Mes', uds: o2Count, obj: 'desde 4 altas', tramos: mesT ? `tramo ${mesT.label}` : '—', eur: mesImp, ok: mesImp > 0, estado: mesImp > 0 ? 'alcanzado' : 'no llega (mín. 4)' },
+                { label: 'Bono Trimestre', uds: o2Count, obj: 'desde 5 altas', tramos: trimT ? `tramo ${trimT.label}` : '—', eur: trimImp, ok: trimImp > 0, estado: trimImp > 0 ? 'alcanzado' : 'no llega (mín. 5)' },
+                { label: 'Conectividad', uds: o2Count, obj: 'con ≥ 1 alta', tramos: conImp > 0 ? 'activa' : '—', eur: conImp, ok: conImp > 0, estado: conImp > 0 ? 'alcanzado' : 'no llega' },
+            )
+        })
+        const prvO2Total = o2Det.reduce((a, r) => a + r.eur, 0)
+
+        // ── 5) PRV Territorial Tiendas por palanca (TODAS, incl. las que NO llegan) ──
+        const terrDet = computeTerritorialRows({ sales: salesRaw, territorialRules: territorialTiendasRules, catalogs, viewingPeriod } as any)
+            .map((r: any) => {
+                const objs = [r.obj1Target, r.obj2Target, r.obj3Target].filter((x: number) => x > 0)
+                const tramos = [r.t1Raw, r.t2Raw, r.t3Raw].filter((x: any) => x && String(x).trim() !== '' && String(x) !== '-' && String(x) !== 'undefined')
+                const falta = (r.obj1Target > 0 && r.importe <= 0) ? Math.max(0, r.obj1Target - r.ventas) : 0
+                return {
+                    label: r.palanca, uds: r.ventas,
+                    obj: objs.length ? objs.map((x: number) => x.toLocaleString('es-ES')).join(' / ') : '—',
+                    tramos: tramos.length ? tramos.join(' / ') : '—',
+                    eur: r.importe, ok: r.importe > 0,
+                    estado: r.importe > 0 ? (r.tramoAplicado || 'alcanzado') : (falta > 0 ? `no llega (faltan ${falta})` : 'no llega'),
+                }
+            })
+            .filter((r: any) => r.uds > 0 || r.eur > 0 || r.obj !== '—')
+        const prvTiendasTotal = terrDet.reduce((a: number, r: any) => a + r.eur, 0)
 
         const granTotal = movTotal + o2Total + movilFreeTotal + prvO2Total + prvTiendasTotal
 
@@ -1200,8 +1232,8 @@ export default function LiquidacionesPage() {
             { icon: '🏢', color: '#2563eb', title: 'Tiendas Movistar', sub: 'Comisión de ventas, por grupo (= Operaciones por Grupo Cliente)', rows: movRows, subtotal: movTotal },
             { icon: '🔵', color: '#005D82', title: 'O2 MovilFree', sub: 'Comisión de ventas O2 (Marta + otras tiendas)', rows: [{ label: 'Marta (tienda O2)', uds: o2Marta.uds, eur: o2Marta.eur }, { label: 'Ventas de otras tiendas', uds: o2Otras.uds, eur: o2Otras.eur }].filter(r => r.uds > 0 || r.eur !== 0), subtotal: o2Total },
             { icon: '📦', color: '#8B5CF6', title: 'MovilFree (margen de la tienda)', sub: 'Ingreso sin IVA − coste de los productos vendidos', rows: [], subtotal: movilFreeTotal },
-            { icon: '⚡', color: '#0891B2', title: 'PRV Territorial O2', sub: 'Bono que paga O2 por volumen de altas de fibra/interna', rows: prvO2Rows, subtotal: prvO2Total },
-            { icon: '⚡', color: '#10b981', title: 'PRV Territorial Tiendas', sub: 'Bono que paga Telefónica por las palancas territoriales', rows: terrRows, subtotal: prvTiendasTotal },
+            { icon: '⚡', color: '#0891B2', title: 'PRV Territorial O2', sub: 'Bono que paga O2 por volumen de altas (Mes + Trimestre + Conectividad)', rows: o2Det, subtotal: prvO2Total, detailed: true, udsLabel: 'Altas O2' },
+            { icon: '⚡', color: '#10b981', title: 'PRV Territorial Tiendas', sub: 'Bono que paga Telefónica por palanca (objetivo en unidades → % sobre comisión)', rows: terrDet, subtotal: prvTiendasTotal, detailed: true, udsLabel: 'Ventas' },
         ]
 
         return (
@@ -1225,7 +1257,33 @@ export default function LiquidacionesPage() {
                                     </div>
                                     <div style={{ fontSize: 20, fontWeight: 900, color: sec.color, whiteSpace: 'nowrap' }}>{fmtEur(sec.subtotal)}</div>
                                 </div>
-                                {sec.rows.length > 0 && (
+                                {sec.rows.length > 0 && (sec.detailed ? (
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
+                                        <thead>
+                                            <tr style={{ color: 'var(--medium-gray)', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.3, borderTop: '1px solid var(--border-light)' }}>
+                                                <th style={{ padding: '7px 16px 7px 32px', textAlign: 'left', fontWeight: 700 }}>Concepto</th>
+                                                <th style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 700 }}>{sec.udsLabel || 'Ventas'}</th>
+                                                <th style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 700 }}>Objetivo</th>
+                                                <th style={{ padding: '7px 12px', textAlign: 'left', fontWeight: 700 }}>Tramo de cobro</th>
+                                                <th style={{ padding: '7px 16px', textAlign: 'right', fontWeight: 700, width: 120 }}>Importe</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {sec.rows.map((r: any, j: number) => (
+                                                <tr key={j} style={{ borderTop: '1px solid var(--border-light)', backgroundColor: r.ok ? 'transparent' : 'rgba(239,68,68,0.06)' }}>
+                                                    <td style={{ padding: '9px 16px 9px 32px', color: 'var(--light-text)', fontWeight: 600 }}>{r.label}</td>
+                                                    <td style={{ padding: '9px 12px', textAlign: 'right', color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{r.uds}</td>
+                                                    <td style={{ padding: '9px 12px', textAlign: 'right', color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{r.obj}</td>
+                                                    <td style={{ padding: '9px 12px', textAlign: 'left', whiteSpace: 'nowrap' }}>
+                                                        <span style={{ color: 'var(--light-text)' }}>{r.tramos}</span>
+                                                        {r.estado && <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 700, color: r.ok ? '#10b981' : '#ef4444' }}>· {r.estado}</span>}
+                                                    </td>
+                                                    <td style={{ padding: '9px 16px', textAlign: 'right', fontWeight: 800, color: r.ok ? 'var(--light-text)' : '#ef4444', whiteSpace: 'nowrap' }}>{fmtEur(r.eur)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                ) : (
                                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                                         <tbody>
                                             {sec.rows.map((r: any, j: number) => (
@@ -1237,7 +1295,7 @@ export default function LiquidacionesPage() {
                                             ))}
                                         </tbody>
                                     </table>
-                                )}
+                                ))}
                             </div>
                         ))}
 
