@@ -1521,15 +1521,33 @@ export default function LiquidacionesPage() {
                 title: 'Rentabilidad Total de Tiendas Movistar/O2/Movilfree',
                 description: 'Hoja de cobro consolidada: qué nos debe pagar Telefónica/O2 por cada pata, desglosado y con subtotales.',
                 icon: TrendingUp,
+                image: '/rentabilidad-total.png',
                 view: 'rentabilidad_total' as ViewType
             }
         ];
 
         const renderCard = (c: any) => {
             const Icon = c.icon;
+            if (c.image) {
+                return (
+                    <div
+                        key={c.title}
+                        className="premium-card"
+                        onClick={() => c.href ? router.push(c.href) : setCurrentView(c.view)}
+                        style={{ position: 'relative', cursor: 'pointer', padding: 0, overflow: 'hidden', borderLeft: '5px solid #0ea5e9', display: 'flex', alignItems: 'stretch' }}
+                    >
+                        <div aria-hidden="true" style={{ width: 132, minWidth: 132, backgroundImage: `url(${c.image})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                        <div style={{ flex: 1, padding: '16px 6px 16px 18px', display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0 }}>
+                            <h3 className="card-title" style={{ margin: 0 }}>{c.title}</h3>
+                            <p className="card-desc" style={{ margin: '6px 0 0 0' }}>{c.description}</p>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', padding: '0 14px', color: '#0ea5e9', fontSize: 26, fontWeight: 700 }}>›</div>
+                    </div>
+                );
+            }
             return (
-                <div 
-                    key={c.title} 
+                <div
+                    key={c.title}
                     className="premium-card"
                     onClick={() => c.href ? router.push(c.href) : setCurrentView(c.view)}
                     style={{ 
