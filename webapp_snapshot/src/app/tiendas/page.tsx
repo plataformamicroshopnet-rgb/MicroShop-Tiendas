@@ -305,11 +305,13 @@ export default function TiendasHubPage() {
                 <p className="ds-body" style={{ margin: 0, color: 'var(--text-muted)', fontWeight: 500 }}>
                   {c.description}
                 </p>
+                  {!c.image && (
                   <div style={{ marginTop: 16 }}>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: c.colorIcon, color: '#ffffff', padding: '8px 16px', borderRadius: 8, fontWeight: 700, fontSize: 13, boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
                           Acceder &rarr;
                       </span>
                   </div>
+                  )}
                 </div>
               </div>
             </div>
