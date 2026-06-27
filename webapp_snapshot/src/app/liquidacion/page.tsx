@@ -17,7 +17,7 @@ import { can, canEdit } from '@/lib/permissions'
 import { useGuard } from '@/hooks/useGuard'
 import { RepescaTrimestral } from './RepescaTrimestral'
 import { ComisionesV3 } from './ComisionesV3'
-type ViewType = 'menu' | 'plus' | 'basico' | 'operaciones' | 'cruce' | 'objetivos' | 'auditoria' | 'repesca' | 'comisiones_v3' | 'rentabilidad_total'
+type ViewType = 'menu' | 'plus' | 'basico' | 'operaciones' | 'cruce' | 'objetivos' | 'auditoria' | 'repesca' | 'comisiones_v3' | 'rentabilidad_total' | 'comisiones_comerciales'
 
 const getDisplayGroup = (producto: string) => {
     if (!producto) return null;
@@ -1130,8 +1130,10 @@ export default function LiquidacionesPage() {
 
 
 
-    const renderRentabilidadTotal = () => {
+    const renderRentabilidadTotal = (onlyFinalized = false) => {
         const fmtEur = (v: number) => (v || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
+        const docTitle = onlyFinalized ? 'COMISIONES COMERCIALES (FINALIZADAS)' : 'HOJA DE COBRO — RENTABILIDAD TOTAL'
+        const baseName = onlyFinalized ? 'Comisiones_Comerciales_Finalizadas' : 'Rentabilidad_Total'
         // ── Comisión por venta (MISMA fuente única que Operaciones Telefónica) ──
         const pymeMonthObj = objetivos.Pyme?.[currentObjMonth] || {}
         const captadorMonthObj = objetivos.Captador?.[currentObjMonth] || {}
@@ -1142,7 +1144,10 @@ export default function LiquidacionesPage() {
 
         const isAnul = (s: any) => { const a = String(s.anulado || '').toLowerCase().trim(); return a === 'si' || a === 'sí' || String(s.pendiente || '').toLowerCase().trim() === 'anulado' }
         const isSolarS = (s: any) => { const t = `${s.producto || ''} ${s.categoria || ''} ${s.detalle || ''}`.toLowerCase(); return t.includes('solar360') || t.includes('solar 360') }
-        const activas = filteredSalesGlobal.filter((s: any) => !isAnul(s) && !isSolarS(s))
+        const isPend = (s: any) => String(s.pendiente || '').toLowerCase().trim() === 'si'
+        const activas = filteredSalesGlobal.filter((s: any) => !isAnul(s) && !isSolarS(s) && (!onlyFinalized || !isPend(s)))
+        // En modo "solo finalizadas" se descartan las pendientes (PED) también del territorial/O2
+        const salesRawF = onlyFinalized ? salesRaw.filter((s: any) => !isPend(s)) : salesRaw
 
         // ── 1) Tiendas Movistar, por grupo (excluye O2) ──
         const GRUPOS = [
@@ -1205,7 +1210,7 @@ export default function LiquidacionesPage() {
             { key: '31_40', min: 31, max: 40, label: '31–40' }, { key: '41_plus', min: 41, max: 99999, label: '≥41' },
         ]
         const TRAMOS_TRIM = [{ key: '5_9', min: 5, max: 9, label: '5–9' }, { key: '10_plus', min: 10, max: 99999, label: '≥10' }]
-        const o2AltasSales = salesRaw.filter((s: any) => { if (isAnul(s)) return false; const d = String(s.detalle || s.categoria || '').toLowerCase().trim(); if (d !== 'o2') return false; const p = String(s.producto || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim(); return p.startsWith('fibra') || p.startsWith('interna') })
+        const o2AltasSales = salesRawF.filter((s: any) => { if (isAnul(s)) return false; const d = String(s.detalle || s.categoria || '').toLowerCase().trim(); if (d !== 'o2') return false; const p = String(s.producto || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim(); return p.startsWith('fibra') || p.startsWith('interna') })
         const o2Count = o2AltasSales.length
         const o2AltasDrill = o2AltasSales.map(toDrill)
         const o2Det: any[] = []
@@ -1224,7 +1229,7 @@ export default function LiquidacionesPage() {
         const prvO2Total = o2Det.reduce((a, r) => a + r.eur, 0)
 
         // ── 5) PRV Territorial Tiendas por palanca (TODAS, incl. las que NO llegan) ──
-        const terrDet = computeTerritorialRows({ sales: salesRaw, territorialRules: territorialTiendasRules, catalogs, viewingPeriod } as any)
+        const terrDet = computeTerritorialRows({ sales: salesRawF, territorialRules: territorialTiendasRules, catalogs, viewingPeriod } as any)
             .map((r: any) => {
                 const objs = [r.obj1Target, r.obj2Target, r.obj3Target].filter((x: number) => x > 0)
                 const tramos = [r.t1Raw, r.t2Raw, r.t3Raw].filter((x: any) => x && String(x).trim() !== '' && String(x) !== '-' && String(x) !== 'undefined')
@@ -1326,7 +1331,7 @@ export default function LiquidacionesPage() {
             const wb = new ExcelJS.Workbook()
             const sel = idxs.map(i => sections[i]).filter(Boolean)
             const ws = wb.addWorksheet('Resumen')
-            const t1 = ws.addRow([`HOJA DE COBRO — RENTABILIDAD TOTAL${activePeriodObj?.name ? ` · ${activePeriodObj.name}` : ''}`]); t1.font = { bold: true, size: 14 }
+            const t1 = ws.addRow([`${docTitle}${activePeriodObj?.name ? ` · ${activePeriodObj.name}` : ''}`]); t1.font = { bold: true, size: 14 }
             ws.addRow([`Lo que Telefónica / O2 deben pagar este mes · generado ${new Date().toLocaleString('es-ES')}`]); ws.addRow([])
             let gtot = 0
             sel.forEach(sec => {
@@ -1360,7 +1365,7 @@ export default function LiquidacionesPage() {
             const buffer = await wb.xlsx.writeBuffer()
             const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
             const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url
-            a.download = `Rentabilidad_Total_${activePeriodObj?.name || activePeriodKey || 'mes'}${allMode ? '_completo' : ''}.xlsx`; a.click(); window.URL.revokeObjectURL(url)
+            a.download = `${baseName}_${activePeriodObj?.name || activePeriodKey || 'mes'}${allMode ? '_completo' : ''}.xlsx`; a.click(); window.URL.revokeObjectURL(url)
         }
 
         const esc = (s: any) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -1377,7 +1382,7 @@ export default function LiquidacionesPage() {
                 ).join('')
                 return `<div class=sec><div class=sh><span>${esc(sec.icon + ' ' + sec.title)}</span><span>${esc(fmtEur(sec.subtotal))}</span></div><table>${head}${body}</table></div>`
             }).join('')
-            const html = `<!doctype html><html lang=es><head><meta charset=utf-8><title>Hoja de Cobro — Rentabilidad Total</title><style>*{font-family:Arial,Helvetica,sans-serif;box-sizing:border-box}body{margin:24px;color:#1f2937}h1{font-size:18px;margin:0 0 2px}.meta{color:#6b7280;font-size:12px;margin-bottom:16px}.sec{margin:0 0 14px;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;page-break-inside:avoid}.sh{display:flex;justify-content:space-between;padding:8px 12px;background:#f3f4f6;font-weight:700;font-size:14px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:5px 12px;border-top:1px solid #eee;text-align:left}th{color:#6b7280;font-weight:700;font-size:11px;text-transform:uppercase}.r{text-align:right}.total{display:flex;justify-content:space-between;padding:14px 18px;background:#10b981;color:#fff;border-radius:8px;font-weight:800;font-size:16px;margin-top:8px}@media print{body{margin:10px}}</style></head><body><h1>📋 Hoja de Cobro — Rentabilidad Total${esc(activePeriodObj?.name ? ` · ${activePeriodObj.name}` : '')}</h1><div class=meta>Lo que Telefónica / O2 deben pagar este mes · generado ${esc(new Date().toLocaleString('es-ES'))}</div>${blocks}<div class=total><span>TOTAL A COBRAR DE TELEFÓNICA / O2</span><span>${esc(fmtEur(gtot))}</span></div></body></html>`
+            const html = `<!doctype html><html lang=es><head><meta charset=utf-8><title>${esc(docTitle)}</title><style>*{font-family:Arial,Helvetica,sans-serif;box-sizing:border-box}body{margin:24px;color:#1f2937}h1{font-size:18px;margin:0 0 2px}.meta{color:#6b7280;font-size:12px;margin-bottom:16px}.sec{margin:0 0 14px;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;page-break-inside:avoid}.sh{display:flex;justify-content:space-between;padding:8px 12px;background:#f3f4f6;font-weight:700;font-size:14px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:5px 12px;border-top:1px solid #eee;text-align:left}th{color:#6b7280;font-weight:700;font-size:11px;text-transform:uppercase}.r{text-align:right}.total{display:flex;justify-content:space-between;padding:14px 18px;background:#10b981;color:#fff;border-radius:8px;font-weight:800;font-size:16px;margin-top:8px}@media print{body{margin:10px}}</style></head><body><h1>${esc(docTitle)}${esc(activePeriodObj?.name ? ` · ${activePeriodObj.name}` : '')}</h1><div class=meta>${esc(onlyFinalized ? 'Comisiones de operaciones FINALIZADAS (las pendientes no cuentan)' : 'Lo que Telefónica / O2 deben pagar este mes')} · generado ${esc(new Date().toLocaleString('es-ES'))}</div>${blocks}<div class=total><span>TOTAL A COBRAR DE TELEFÓNICA / O2</span><span>${esc(fmtEur(gtot))}</span></div></body></html>`
             const w = window.open('', '_blank', 'width=900,height=700'); if (!w) { alert('Activa las ventanas emergentes para PDF / Imprimir.'); return }
             w.document.write(html); w.document.close(); w.focus(); setTimeout(() => { try { w.print() } catch (e) { } }, 350)
         }
@@ -1389,9 +1394,12 @@ export default function LiquidacionesPage() {
                 <BackButton />
                 <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                     <div style={{ padding: '18px 24px', background: 'linear-gradient(135deg, rgba(14,165,233,0.12), rgba(14,165,233,0.03))', borderBottom: '1px solid var(--border-color)' }}>
-                        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 900, color: 'var(--light-text)' }}>📋 Hoja de Cobro — Rentabilidad Total{activePeriodObj?.name ? ` · ${activePeriodObj.name}` : ''}</h2>
+                        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 900, color: 'var(--light-text)' }}>{onlyFinalized ? '✅ Cuadro de Comisiones Comerciales — solo FINALIZADAS' : '📋 Hoja de Cobro — Rentabilidad Total'}{activePeriodObj?.name ? ` · ${activePeriodObj.name}` : ''}</h2>
                         <p style={{ margin: '6px 0 0 0', fontSize: 13, color: 'var(--medium-gray)', lineHeight: 1.5 }}>
-                            Esto es <strong>lo que Telefónica y O2 deben pagarnos este mes</strong>, por cada pata de la empresa. Revisa cada partida contra lo que nos ingresen. Cada bloque trae su <strong>subtotal</strong> y abajo está el <strong>total general</strong>. 💡 <strong>Pulsa cualquier fila (▸)</strong> para ver el detalle de ventas — por comercial, con buscador — y saltar a la pantalla origen. (Las ventas anuladas no cuentan.)
+                            {onlyFinalized
+                                ? <>Estas son las <strong>comisiones de Tiendas YA FINALIZADAS</strong> (reales/cobrables) este mes, por cada pata. <strong>Las operaciones pendientes (PED) NO se incluyen</strong> — solo lo cerrado. Cada bloque trae su <strong>subtotal</strong> y abajo el <strong>total</strong>. 💡 <strong>Pulsa cualquier fila (▸)</strong> para ver el detalle venta a venta. (Anuladas y pendientes fuera.)</>
+                                : <>Esto es <strong>lo que Telefónica y O2 deben pagarnos este mes</strong>, por cada pata de la empresa. Revisa cada partida contra lo que nos ingresen. Cada bloque trae su <strong>subtotal</strong> y abajo está el <strong>total general</strong>. 💡 <strong>Pulsa cualquier fila (▸)</strong> para ver el detalle de ventas — por comercial, con buscador — y saltar a la pantalla origen. (Las ventas anuladas no cuentan.)</>
+                            }
                         </p>
                     </div>
 
@@ -1523,6 +1531,13 @@ export default function LiquidacionesPage() {
                 icon: TrendingUp,
                 image: '/rentabilidad-total.png',
                 view: 'rentabilidad_total' as ViewType
+            },
+            {
+                title: 'Cuadro de Comisiones Comerciales',
+                description: 'Control de comisiones y objetivos mensuales integrados. Comisiones reales de Tiendas, solo de operaciones finalizadas.',
+                icon: TrendingUp,
+                image: '/comisiones-comerciales.png',
+                view: 'comisiones_comerciales' as ViewType
             }
         ];
 
@@ -1574,7 +1589,7 @@ export default function LiquidacionesPage() {
         };
 
         const brownCards = menuCardsRaw.filter(c => c.title === 'Operaciones Telefónica' || c.title === 'Operaciones por Grupo Cliente' || c.title === 'Comisiones Tiendas y FFVV v3');
-        const blueCards = menuCardsRaw.filter(c => c.title === 'Rentabilidad por Tiendas' || c.title === 'Rentabilidad Total de Tiendas Movistar/O2/Movilfree');
+        const blueCards = menuCardsRaw.filter(c => c.title === 'Rentabilidad por Tiendas' || c.title === 'Rentabilidad Total de Tiendas Movistar/O2/Movilfree' || c.title === 'Cuadro de Comisiones Comerciales');
         const greenCards = menuCardsRaw.filter(c => c.title === 'Agenda de Llamadas Cristina');
 
         return (
@@ -2339,6 +2354,7 @@ export default function LiquidacionesPage() {
             {currentView === 'basico' && renderPymeView()}
             {currentView === 'operaciones' && renderOperacionesView()}
             {currentView === 'rentabilidad_total' && renderRentabilidadTotal()}
+            {currentView === 'comisiones_comerciales' && renderRentabilidadTotal(true)}
             {currentView === 'cruce' && renderCruceView()}
             {currentView === 'auditoria' && renderAuditoria()}
             {currentView === 'repesca' && <RepescaTrimestral user={user} activeYear={activePeriodObj?.year || 2026} />}
