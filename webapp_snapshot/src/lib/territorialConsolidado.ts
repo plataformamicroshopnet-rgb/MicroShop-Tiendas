@@ -191,7 +191,7 @@ export function computeTerritorialRows(input: TerritorialInput): any[] {
   return STATIC_PALANCAS.map(p => {
     const terrRule = findRuleInList(p.matches, territorialRules || [])
     if (!terrRule) {
-      return { ...p, objetivo: 0, obj1Target: 0, obj2Target: 0, obj3Target: 0, ventas: 0, ventasBase: 0, comisionBase: 0, pct: 0, t1Raw: p.tramos.tramo1, t2Raw: p.tramos.tramo2, t3Raw: p.tramos.tramo3, bonifRaw: p.tramos.bonif, tramoAplicado: '', importe: 0 }
+      return { ...p, objetivo: 0, obj1Target: 0, obj2Target: 0, obj3Target: 0, ventas: 0, ventasBase: 0, comisionBase: 0, pct: 0, t1Raw: p.tramos.tramo1, t2Raw: p.tramos.tramo2, t3Raw: p.tramos.tramo3, bonifRaw: p.tramos.bonif, tramoAplicado: '', importe: 0, logs: [] }
     }
 
     // Ventas por tienda física + total, y el importe sumado (método Entrada de Datos).
@@ -253,7 +253,9 @@ export function computeTerritorialRows(input: TerritorialInput): any[] {
       t3Raw: terrRule.importe3 || p.tramos.tramo3,
       bonifRaw: p.tramos.bonif,
       tramoAplicado,
-      importe
+      importe,
+      // Ventas que cuentan para esta palanca (O2 excluido), para trazabilidad/desglose.
+      logs: perStoreData.flatMap(d => (d.logs || []).filter(_notO2)),
     }
   })
 }

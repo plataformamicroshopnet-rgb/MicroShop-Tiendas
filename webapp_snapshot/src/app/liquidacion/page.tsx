@@ -73,6 +73,10 @@ export default function LiquidacionesPage() {
     const [territorialTiendasRules, setTerritorialTiendasRules] = useState<any[]>([])
     const [movilFreeSales, setMovilFreeSales] = useState<any[]>([])
     const [movilFreeProducts, setMovilFreeProducts] = useState<any[]>([])
+    // Acordeón de trazabilidad en la carta "Rentabilidad Total"
+    const [drillKey, setDrillKey] = useState<string | null>(null)
+    const [drillComercial, setDrillComercial] = useState<string | null>(null)
+    const [drillSearch, setDrillSearch] = useState('')
 
     // Saving state
     const [savingObj, setSavingObj] = useState(false)
@@ -1161,30 +1165,37 @@ export default function LiquidacionesPage() {
             if (d === 'prepago') return 'prepago'
             return 'otros'
         }
-        const movMap: Record<string, { uds: number, eur: number }> = {}
-        GRUPOS.forEach(g => { movMap[g.id] = { uds: 0, eur: 0 } })
-        const o2Marta = { uds: 0, eur: 0 }; const o2Otras = { uds: 0, eur: 0 }
+        const parseNum = (v: any) => { const n = parseFloat(String(v ?? '0').replace(/[^0-9.,\-]/g, '').replace(',', '.')); return isNaN(n) ? 0 : n }
+        const SOURCE_OGC = { href: '/operaciones-grupo-cliente', label: 'Operaciones por Grupo Cliente' }
+        const SOURCE_MF = { href: '/movilfree', label: 'MovilFree' }
+        const estadoDe = (s: any) => isAnul(s) ? 'NULL' : (String(s.pendiente || '').toLowerCase().trim() === 'si' ? 'PED' : 'OK')
+        const toDrill = (s: any) => ({ fecha: s.fecha || '-', comercial: s.vendedor || '-', nif: s.nif || '-', telf: s.telf || '-', tienda: s.codigo || '-', producto: s.producto || '-', cuota: parseNum(s.cuota || s.importe), swap: s.isSwap === true, comision: getComm(s), estado: estadoDe(s) })
+
+        const movMap: Record<string, { uds: number, eur: number, sales: any[] }> = {}
+        GRUPOS.forEach(g => { movMap[g.id] = { uds: 0, eur: 0, sales: [] } })
+        const o2Marta = { uds: 0, eur: 0, sales: [] as any[] }; const o2Otras = { uds: 0, eur: 0, sales: [] as any[] }
         activas.forEach((s: any) => {
             const d = String(s.detalle || s.categoria || '').toLowerCase().trim()
             const com = getComm(s)
             if (d === 'o2' || d === 'o2 movilfree') {
-                if (String(s.vendedor || '').toLowerCase().includes('marta')) { o2Marta.uds++; o2Marta.eur += com }
-                else { o2Otras.uds++; o2Otras.eur += com }
-            } else { const g = grupoDe(s); movMap[g].uds++; movMap[g].eur += com }
+                if (String(s.vendedor || '').toLowerCase().includes('marta')) { o2Marta.uds++; o2Marta.eur += com; o2Marta.sales.push(s) }
+                else { o2Otras.uds++; o2Otras.eur += com; o2Otras.sales.push(s) }
+            } else { const g = grupoDe(s); movMap[g].uds++; movMap[g].eur += com; movMap[g].sales.push(s) }
         })
-        const movRows = GRUPOS.map(g => ({ label: g.label, uds: movMap[g.id].uds, eur: movMap[g.id].eur })).filter(r => r.uds > 0 || r.eur !== 0)
+        const movRows = GRUPOS.map(g => ({ label: g.label, uds: movMap[g.id].uds, eur: movMap[g.id].eur, drill: movMap[g.id].sales.map(toDrill), source: SOURCE_OGC })).filter(r => r.uds > 0 || r.eur !== 0)
         const movTotal = movRows.reduce((a, r) => a + r.eur, 0)
         const o2Total = o2Marta.eur + o2Otras.eur
 
-        // ── 3) MovilFree margen (ingreso sin IVA − coste) ──
-        const movilFreeTotal = (() => {
-            const [yStr, mStr] = String(activePeriodKey || '').split('_'); const y = Number(yStr), m = Number(mStr)
-            if (!y || !m) return 0
-            return movilFreeSales.filter((s: any) => { const dd = new Date(s.fechaVenta); return s.estado === 'COMPLETADA' && dd.getFullYear() === y && (dd.getMonth() + 1) === m })
-                .reduce((acc: number, s: any) => { try { const list = JSON.parse(s.listaProductos); const cost = list.reduce((c: number, it: any) => c + ((it.coste !== undefined ? it.coste : (movilFreeProducts.find((p: any) => p.id === it.id)?.coste || 0)) * it.cantidad), 0); return acc + ((s.importeTotal / 1.21) - cost) } catch { return acc } }, 0)
-        })()
-
-        const parseNum = (v: any) => { const n = parseFloat(String(v ?? '0').replace(/[^0-9.,\-]/g, '').replace(',', '.')); return isNaN(n) ? 0 : n }
+        // ── 3) MovilFree margen + tickets (para el desglose) ──
+        const [mfYStr, mfMStr] = String(activePeriodKey || '').split('_'); const mfY = Number(mfYStr), mfM = Number(mfMStr)
+        const mfDrill: any[] = []; let movilFreeTotal = 0
+        movilFreeSales.filter((s: any) => { const dd = new Date(s.fechaVenta); return s.estado === 'COMPLETADA' && mfY && mfM && dd.getFullYear() === mfY && (dd.getMonth() + 1) === mfM })
+            .forEach((s: any) => {
+                let margen = 0, prods = '-'
+                try { const list = JSON.parse(s.listaProductos); const cost = list.reduce((c: number, it: any) => c + ((it.coste !== undefined ? it.coste : (movilFreeProducts.find((p: any) => p.id === it.id)?.coste || 0)) * it.cantidad), 0); margen = (s.importeTotal / 1.21) - cost; prods = list.map((it: any) => `${it.nombre || it.id}×${it.cantidad}`).join(', ') } catch { margen = 0 }
+                movilFreeTotal += margen
+                mfDrill.push({ fecha: new Date(s.fechaVenta).toLocaleDateString('es-ES'), comercial: s.vendedor || s.tienda || 'MovilFree', nif: s.clienteNif || s.clienteNombre || '-', telf: '-', tienda: 'MovilFree', producto: prods || '-', cuota: (s.importeTotal || 0) / 1.21, swap: false, comision: margen, estado: 'OK' })
+            })
 
         // ── 4) PRV Territorial O2: los 3 bonos (Mes / Trimestre / Conectividad) desglosados ──
         const TRAMOS_MES = [
@@ -1193,7 +1204,9 @@ export default function LiquidacionesPage() {
             { key: '31_40', min: 31, max: 40, label: '31–40' }, { key: '41_plus', min: 41, max: 99999, label: '≥41' },
         ]
         const TRAMOS_TRIM = [{ key: '5_9', min: 5, max: 9, label: '5–9' }, { key: '10_plus', min: 10, max: 99999, label: '≥10' }]
-        const o2Count = salesRaw.filter((s: any) => { if (isAnul(s)) return false; const d = String(s.detalle || s.categoria || '').toLowerCase().trim(); if (d !== 'o2') return false; const p = String(s.producto || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim(); return p.startsWith('fibra') || p.startsWith('interna') }).length
+        const o2AltasSales = salesRaw.filter((s: any) => { if (isAnul(s)) return false; const d = String(s.detalle || s.categoria || '').toLowerCase().trim(); if (d !== 'o2') return false; const p = String(s.producto || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim(); return p.startsWith('fibra') || p.startsWith('interna') })
+        const o2Count = o2AltasSales.length
+        const o2AltasDrill = o2AltasSales.map(toDrill)
         const o2Det: any[] = []
         ;(territorialO2Rules || []).forEach((r: any) => {
             const mesT = TRAMOS_MES.find(t => o2Count >= t.min && o2Count <= t.max)
@@ -1202,9 +1215,9 @@ export default function LiquidacionesPage() {
             const trimImp = trimT ? parseNum(r.tramosTrim?.[trimT.key]) : 0
             const conImp = o2Count > 0 ? parseNum(r.conectividad) : 0
             o2Det.push(
-                { label: 'Bono Mes', uds: o2Count, obj: 'desde 4 altas', tramos: mesT ? `tramo ${mesT.label}` : '—', eur: mesImp, ok: mesImp > 0, estado: mesImp > 0 ? 'alcanzado' : 'no llega (mín. 4)' },
-                { label: 'Bono Trimestre', uds: o2Count, obj: 'desde 5 altas', tramos: trimT ? `tramo ${trimT.label}` : '—', eur: trimImp, ok: trimImp > 0, estado: trimImp > 0 ? 'alcanzado' : 'no llega (mín. 5)' },
-                { label: 'Conectividad', uds: o2Count, obj: 'con ≥ 1 alta', tramos: conImp > 0 ? 'activa' : '—', eur: conImp, ok: conImp > 0, estado: conImp > 0 ? 'alcanzado' : 'no llega' },
+                { label: 'Bono Mes', uds: o2Count, obj: 'desde 4 altas', tramos: mesT ? `tramo ${mesT.label}` : '—', eur: mesImp, ok: mesImp > 0, estado: mesImp > 0 ? 'alcanzado' : 'no llega (mín. 4)', drill: o2AltasDrill, source: SOURCE_OGC },
+                { label: 'Bono Trimestre', uds: o2Count, obj: 'desde 5 altas', tramos: trimT ? `tramo ${trimT.label}` : '—', eur: trimImp, ok: trimImp > 0, estado: trimImp > 0 ? 'alcanzado' : 'no llega (mín. 5)', drill: o2AltasDrill, source: SOURCE_OGC },
+                { label: 'Conectividad', uds: o2Count, obj: 'con ≥ 1 alta', tramos: conImp > 0 ? 'activa' : '—', eur: conImp, ok: conImp > 0, estado: conImp > 0 ? 'alcanzado' : 'no llega', drill: o2AltasDrill, source: SOURCE_OGC },
             )
         })
         const prvO2Total = o2Det.reduce((a, r) => a + r.eur, 0)
@@ -1221,6 +1234,7 @@ export default function LiquidacionesPage() {
                     tramos: tramos.length ? tramos.join(' / ') : '—',
                     eur: r.importe, ok: r.importe > 0,
                     estado: r.importe > 0 ? (r.tramoAplicado || 'alcanzado') : (falta > 0 ? `no llega (faltan ${falta})` : 'no llega'),
+                    drill: (r.logs || []).map(toDrill), source: SOURCE_OGC,
                 }
             })
             .filter((r: any) => r.uds > 0 || r.eur > 0 || r.obj !== '—')
@@ -1230,11 +1244,70 @@ export default function LiquidacionesPage() {
 
         const sections: any[] = [
             { icon: '🏢', color: '#2563eb', title: 'Tiendas Movistar', sub: 'Comisión de ventas, por grupo (= Operaciones por Grupo Cliente)', rows: movRows, subtotal: movTotal },
-            { icon: '🔵', color: '#005D82', title: 'O2 MovilFree', sub: 'Comisión de ventas O2 (Marta + otras tiendas)', rows: [{ label: 'Marta (tienda O2)', uds: o2Marta.uds, eur: o2Marta.eur }, { label: 'Ventas de otras tiendas', uds: o2Otras.uds, eur: o2Otras.eur }].filter(r => r.uds > 0 || r.eur !== 0), subtotal: o2Total },
-            { icon: '📦', color: '#8B5CF6', title: 'MovilFree (margen de la tienda)', sub: 'Ingreso sin IVA − coste de los productos vendidos', rows: [], subtotal: movilFreeTotal },
+            { icon: '🔵', color: '#005D82', title: 'O2 MovilFree', sub: 'Comisión de ventas O2 (Marta + otras tiendas)', rows: [{ label: 'Marta (tienda O2)', uds: o2Marta.uds, eur: o2Marta.eur, drill: o2Marta.sales.map(toDrill), source: SOURCE_OGC }, { label: 'Ventas de otras tiendas', uds: o2Otras.uds, eur: o2Otras.eur, drill: o2Otras.sales.map(toDrill), source: SOURCE_OGC }].filter(r => r.uds > 0 || r.eur !== 0), subtotal: o2Total },
+            { icon: '📦', color: '#8B5CF6', title: 'MovilFree (margen de la tienda)', sub: 'Ingreso sin IVA − coste de los productos vendidos', rows: (mfDrill.length > 0 ? [{ label: 'Tickets MovilFree del mes', uds: mfDrill.length, eur: movilFreeTotal, drill: mfDrill, source: SOURCE_MF }] : []), subtotal: movilFreeTotal },
             { icon: '⚡', color: '#0891B2', title: 'PRV Territorial O2', sub: 'Bono que paga O2 por volumen de altas (Mes + Trimestre + Conectividad)', rows: o2Det, subtotal: prvO2Total, detailed: true, udsLabel: 'Altas O2' },
             { icon: '⚡', color: '#10b981', title: 'PRV Territorial Tiendas', sub: 'Bono que paga Telefónica por palanca (objetivo en unidades → % sobre comisión)', rows: terrDet, subtotal: prvTiendasTotal, detailed: true, udsLabel: 'Ventas' },
         ]
+
+        // Panel desplegable de trazabilidad (filtro por comercial + buscador + tabla + origen)
+        const renderDrill = (drill: any[], source: any, colSpan: number) => {
+            const comerciales = Array.from(new Set((drill || []).map((d: any) => d.comercial).filter(Boolean))).sort()
+            const q = drillSearch.trim().toLowerCase()
+            const filtered = (drill || []).filter((d: any) =>
+                (!drillComercial || d.comercial === drillComercial) &&
+                (!q || [d.nif, d.telf, d.producto, d.comercial].some((v: any) => String(v ?? '').toLowerCase().includes(q)))
+            )
+            const subt = filtered.reduce((a: number, d: any) => a + (d.comision || 0), 0)
+            return (
+                <tr>
+                    <td colSpan={colSpan} style={{ padding: 0, background: 'rgba(0,0,0,0.02)' }}>
+                        <div style={{ padding: '12px 16px 16px 32px' }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 10 }}>
+                                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--medium-gray)', textTransform: 'uppercase' }}>Comercial:</span>
+                                {['__all__', ...comerciales].map((c: any) => {
+                                    const active = c === '__all__' ? !drillComercial : drillComercial === c
+                                    return <button key={c} onClick={() => setDrillComercial(c === '__all__' ? null : c)} style={{ fontSize: 12, fontWeight: 700, padding: '4px 12px', borderRadius: 20, border: '1px solid var(--border-color)', cursor: 'pointer', background: active ? 'var(--mercedes-cyan)' : 'transparent', color: active ? '#fff' : 'var(--medium-gray)' }}>{c === '__all__' ? 'Todos' : c}</button>
+                                })}
+                                <input value={drillSearch} onChange={e => setDrillSearch(e.target.value)} placeholder="Buscar NIF, teléfono, producto…" style={{ marginLeft: 'auto', fontSize: 12, padding: '5px 10px', borderRadius: 8, border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--light-text)', minWidth: 220 }} />
+                                {source && <button onClick={() => router.push(source.href)} style={{ fontSize: 12, fontWeight: 700, padding: '5px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#0ea5e9', color: '#fff', whiteSpace: 'nowrap' }}>↗ Ir a {source.label}</button>}
+                            </div>
+                            <div style={{ overflowX: 'auto', border: '1px solid var(--border-light)', borderRadius: 8 }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 760 }}>
+                                    <thead>
+                                        <tr style={{ background: 'var(--bg-card)', color: 'var(--medium-gray)', fontSize: 10.5, textTransform: 'uppercase' }}>
+                                            <th style={{ padding: '6px 8px', textAlign: 'left' }}>Fecha</th><th style={{ padding: '6px 8px', textAlign: 'left' }}>Comercial</th>
+                                            <th style={{ padding: '6px 8px', textAlign: 'left' }}>Cliente (NIF)</th><th style={{ padding: '6px 8px', textAlign: 'left' }}>Teléfono</th>
+                                            <th style={{ padding: '6px 8px', textAlign: 'left' }}>Tienda</th><th style={{ padding: '6px 8px', textAlign: 'left' }}>Producto</th>
+                                            <th style={{ padding: '6px 8px', textAlign: 'center' }}>Swap</th><th style={{ padding: '6px 8px', textAlign: 'right' }}>Comisión</th>
+                                            <th style={{ padding: '6px 8px', textAlign: 'center' }}>Estado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filtered.length === 0 ? (
+                                            <tr><td colSpan={9} style={{ padding: 14, textAlign: 'center', color: 'var(--medium-gray)' }}>Sin operaciones para este filtro.</td></tr>
+                                        ) : filtered.map((d: any, k: number) => (
+                                            <tr key={k} style={{ borderTop: '1px solid var(--border-light)', background: d.estado === 'NULL' ? 'rgba(239,68,68,0.05)' : 'transparent' }}>
+                                                <td style={{ padding: '6px 8px', color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{d.fecha}</td>
+                                                <td style={{ padding: '6px 8px', color: 'var(--light-text)', fontWeight: 600 }}>{d.comercial}</td>
+                                                <td style={{ padding: '6px 8px', color: 'var(--light-text)' }}>{d.nif}</td>
+                                                <td style={{ padding: '6px 8px', color: 'var(--medium-gray)' }}>{d.telf}</td>
+                                                <td style={{ padding: '6px 8px', color: 'var(--medium-gray)' }}>{d.tienda}</td>
+                                                <td style={{ padding: '6px 8px', color: 'var(--light-text)' }}>{d.producto}</td>
+                                                <td style={{ padding: '6px 8px', textAlign: 'center' }}>{d.swap ? '✅' : ''}</td>
+                                                <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 700, color: 'var(--light-text)', whiteSpace: 'nowrap' }}>{fmtEur(d.comision)}</td>
+                                                <td style={{ padding: '6px 8px', textAlign: 'center' }}><span style={{ fontSize: 10.5, fontWeight: 800, color: d.estado === 'OK' ? '#10b981' : d.estado === 'PED' ? '#f59e0b' : '#ef4444' }}>{d.estado}</span></td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                    {filtered.length > 0 && <tfoot><tr style={{ borderTop: '2px solid var(--border-color)', fontWeight: 800 }}><td colSpan={7} style={{ padding: '8px', textAlign: 'right', color: 'var(--medium-gray)' }}>Subtotal ({filtered.length} ops):</td><td style={{ padding: '8px', textAlign: 'right', color: '#10b981' }}>{fmtEur(subt)}</td><td></td></tr></tfoot>}
+                                </table>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            )
+        }
 
         return (
             <>
@@ -1243,7 +1316,7 @@ export default function LiquidacionesPage() {
                     <div style={{ padding: '18px 24px', background: 'linear-gradient(135deg, rgba(14,165,233,0.12), rgba(14,165,233,0.03))', borderBottom: '1px solid var(--border-color)' }}>
                         <h2 style={{ margin: 0, fontSize: 20, fontWeight: 900, color: 'var(--light-text)' }}>📋 Hoja de Cobro — Rentabilidad Total{activePeriodObj?.name ? ` · ${activePeriodObj.name}` : ''}</h2>
                         <p style={{ margin: '6px 0 0 0', fontSize: 13, color: 'var(--medium-gray)', lineHeight: 1.5 }}>
-                            Esto es <strong>lo que Telefónica y O2 deben pagarnos este mes</strong>, por cada pata de la empresa. Revisa cada partida contra lo que nos ingresen. Cada bloque trae su <strong>subtotal</strong> y abajo está el <strong>total general</strong>. (Las ventas anuladas no cuentan.)
+                            Esto es <strong>lo que Telefónica y O2 deben pagarnos este mes</strong>, por cada pata de la empresa. Revisa cada partida contra lo que nos ingresen. Cada bloque trae su <strong>subtotal</strong> y abajo está el <strong>total general</strong>. 💡 <strong>Pulsa cualquier fila (▸)</strong> para ver el detalle de ventas — por comercial, con buscador — y saltar a la pantalla origen. (Las ventas anuladas no cuentan.)
                         </p>
                     </div>
 
@@ -1269,9 +1342,10 @@ export default function LiquidacionesPage() {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {sec.rows.map((r: any, j: number) => (
-                                                <tr key={j} style={{ borderTop: '1px solid var(--border-light)', backgroundColor: r.ok ? 'transparent' : 'rgba(239,68,68,0.06)' }}>
-                                                    <td style={{ padding: '9px 16px 9px 32px', color: 'var(--light-text)', fontWeight: 600 }}>{r.label}</td>
+                                            {sec.rows.map((r: any, j: number) => { const dk = `${i}-${j}`; const hasD = r.drill && r.drill.length > 0; return (
+                                                <React.Fragment key={j}>
+                                                <tr onClick={() => { if (!hasD) return; if (drillKey === dk) { setDrillKey(null) } else { setDrillKey(dk); setDrillComercial(null); setDrillSearch('') } }} style={{ borderTop: '1px solid var(--border-light)', backgroundColor: drillKey === dk ? 'rgba(14,165,233,0.07)' : (r.ok ? 'transparent' : 'rgba(239,68,68,0.06)'), cursor: hasD ? 'pointer' : 'default' }}>
+                                                    <td style={{ padding: '9px 16px 9px 32px', color: 'var(--light-text)', fontWeight: 600 }}>{hasD && <span style={{ color: 'var(--medium-gray)', marginRight: 5 }}>{drillKey === dk ? '▾' : '▸'}</span>}{r.label}</td>
                                                     <td style={{ padding: '9px 12px', textAlign: 'right', color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{r.uds}</td>
                                                     <td style={{ padding: '9px 12px', textAlign: 'right', color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{r.obj}</td>
                                                     <td style={{ padding: '9px 12px', textAlign: 'left', whiteSpace: 'nowrap' }}>
@@ -1280,19 +1354,24 @@ export default function LiquidacionesPage() {
                                                     </td>
                                                     <td style={{ padding: '9px 16px', textAlign: 'right', fontWeight: 800, color: r.ok ? 'var(--light-text)' : '#ef4444', whiteSpace: 'nowrap' }}>{fmtEur(r.eur)}</td>
                                                 </tr>
-                                            ))}
+                                                {drillKey === dk && hasD && renderDrill(r.drill, r.source, 5)}
+                                                </React.Fragment>
+                                            )})}
                                         </tbody>
                                     </table>
                                 ) : (
                                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                                         <tbody>
-                                            {sec.rows.map((r: any, j: number) => (
-                                                <tr key={j} style={{ borderTop: '1px solid var(--border-light)' }}>
-                                                    <td style={{ padding: '9px 16px 9px 32px', color: 'var(--light-text)' }}>{r.label}</td>
+                                            {sec.rows.map((r: any, j: number) => { const dk = `${i}-${j}`; const hasD = r.drill && r.drill.length > 0; return (
+                                                <React.Fragment key={j}>
+                                                <tr onClick={() => { if (!hasD) return; if (drillKey === dk) { setDrillKey(null) } else { setDrillKey(dk); setDrillComercial(null); setDrillSearch('') } }} style={{ borderTop: '1px solid var(--border-light)', backgroundColor: drillKey === dk ? 'rgba(14,165,233,0.07)' : 'transparent', cursor: hasD ? 'pointer' : 'default' }}>
+                                                    <td style={{ padding: '9px 16px 9px 32px', color: 'var(--light-text)' }}>{hasD && <span style={{ color: 'var(--medium-gray)', marginRight: 5 }}>{drillKey === dk ? '▾' : '▸'}</span>}{r.label}</td>
                                                     <td style={{ padding: '9px 12px', textAlign: 'right', color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{r.uds != null ? `${r.uds} uds` : ''}</td>
                                                     <td style={{ padding: '9px 16px', textAlign: 'right', fontWeight: 700, color: 'var(--light-text)', whiteSpace: 'nowrap', width: 130 }}>{fmtEur(r.eur)}</td>
                                                 </tr>
-                                            ))}
+                                                {drillKey === dk && hasD && renderDrill(r.drill, r.source, 3)}
+                                                </React.Fragment>
+                                            )})}
                                         </tbody>
                                     </table>
                                 ))}
