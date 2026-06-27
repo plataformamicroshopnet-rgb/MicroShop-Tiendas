@@ -247,16 +247,16 @@ export default function DireccionTiendasPage() {
               
               <div 
                   className={`hub-card hub-card-main ${isEditMode ? 'wiggle-mode' : ''}`} 
-                  onClick={isEditMode ? undefined : c.action} 
-                  style={{ cursor: isEditMode ? 'default' : 'pointer', borderLeft: `6px solid ${iconColor}` }}
+                  onClick={isEditMode ? undefined : c.action}
+                  style={{ cursor: isEditMode ? 'default' : 'pointer', borderLeft: `6px solid ${iconColor}`, ...(c.image ? { padding: 0, overflow: 'hidden', gap: 0, alignItems: 'stretch', minHeight: 140 } : {}) }}
               >
                 {c.image ? (
                   <div aria-hidden="true" style={{
-                    width: 120,
-                    minWidth: 120,
+                    width: 160,
+                    minWidth: 160,
+                    minHeight: 120,
                     alignSelf: 'stretch',
                     flexShrink: 0,
-                    borderRadius: 16,
                     backgroundImage: `url(${c.image})`,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
@@ -278,7 +278,7 @@ export default function DireccionTiendasPage() {
                     <Icon size={28} strokeWidth={2.5} />
                   </div>
                 )}
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: 1, ...(c.image ? { padding: '16px 20px' } : {}) }}>
                   <h3 style={{ margin: '0 0 6px 0', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.3px', fontSize: 20 }}>
                     {c.title}
                   </h3>
