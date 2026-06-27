@@ -35,7 +35,7 @@ export default function DireccionTiendasPage() {
     {
       title: 'MOD (Media Operaciones Diaria)',
       description: 'Comparativa de operaciones, importe medio y rentabilidad diaria.',
-      image: '/dt-mod.png',
+      image: '/nx-mod.png',
       icon: TrendingUp,
       action: () => router.push('/seguimiento-ventas/mod'),
       color: 'rgba(34, 197, 94, 0.1)',
@@ -45,7 +45,7 @@ export default function DireccionTiendasPage() {
     {
       title: 'Comparativa Rapida de Ventas',
       description: 'Cross-sell por comercial: Palancas principales de comisiones. Clic en cada cifra para ver clientes.',
-      image: '/dt-comparativa-ventas.png',
+      image: '/nx-comparativa.png',
       icon: Target,
       action: () => router.push('/seguimiento-ventas/combos'),
       color: 'rgba(30,58,95,0.08)',
@@ -55,7 +55,7 @@ export default function DireccionTiendasPage() {
     {
       title: 'Avance de Palancas',
       description: 'Acceso directo a las hojas secundarias de operaciones (Cloud, Novac, Portas, etc.).',
-      image: '/dt-avance-palancas.png',
+      image: '/nx-avance-palancas.png',
       icon: Package,
       action: () => router.push('/seguimiento-ventas/productos'),
       color: 'rgba(0,173,239,0.1)',
@@ -67,7 +67,7 @@ export default function DireccionTiendasPage() {
     {
       title: 'Rentabilidad por Tiendas',
       description: 'Visión agrupada de personal, ventas y rentabilidad segmentada por tienda.',
-      image: '/dt-rentabilidad-tiendas.png',
+      image: '/nx-rentabilidad-tiendas.png',
       icon: DollarSign,
       action: () => router.push('/liquidacion/rentabilidad-tiendas'),
       color: 'rgba(168, 85, 247, 0.1)',
@@ -77,7 +77,7 @@ export default function DireccionTiendasPage() {
     {
       title: 'Ganancias desde el 2014',
       description: 'Ingresos, gastos y rentabilidad por año (Tiendas + FFVV), desde 2014.',
-      image: '/dt-ganancias-2014.png',
+      image: '/nx-ganancias.png',
       icon: Wallet,
       action: () => router.push('/direccion-tiendas/ganancias'),
       color: 'rgba(0, 173, 239, 0.1)',
@@ -87,7 +87,7 @@ export default function DireccionTiendasPage() {
     {
       title: 'Comisiones Personal Tiendas VS Comisiones de la Empresa',
       description: 'Por comercial: lo que gana la empresa (Liquidaciones) frente a lo que se paga al comercial (Panel de Comisiones), grupo a grupo.',
-      image: '/dt-comisiones-vs.png',
+      image: '/nx-comisiones-vs.png',
       icon: Scale,
       action: () => router.push('/direccion-tiendas/comisiones-vs'),
       color: 'rgba(34, 197, 94, 0.1)',
@@ -248,7 +248,7 @@ export default function DireccionTiendasPage() {
               <div 
                   className={`hub-card hub-card-main ${isEditMode ? 'wiggle-mode' : ''}`} 
                   onClick={isEditMode ? undefined : c.action}
-                  style={{ cursor: isEditMode ? 'default' : 'pointer', borderLeft: `6px solid ${iconColor}`, ...(c.image ? { padding: 0, overflow: 'hidden', gap: 0, alignItems: 'stretch', minHeight: 140 } : {}) }}
+                  style={{ cursor: isEditMode ? 'default' : 'pointer', borderLeft: `6px solid ${iconColor}`, ...(c.image ? { padding: 0, overflow: 'hidden', gap: 0, alignItems: 'stretch', minHeight: 150 } : {}) }}
               >
                 {c.image ? (
                   <div aria-hidden="true" style={{
