@@ -59,6 +59,7 @@ export default function SeguimientoVentasPage() {
     },
     {
       title: 'Agenda Comercial Salva',
+      image: '/nx-agenda.png',
       description: 'Tracking diario visual de la Fuerza de Ventas y asistencia.',
       icon: Calendar,
       action: () => router.push('/seguimiento-ventas/agenda'),
@@ -78,6 +79,7 @@ export default function SeguimientoVentasPage() {
     },
     {
       title: 'Comisiones Tiendas Reducidas',
+      image: '/nx-podium.png',
       description: 'Vista unificada de alto impacto con el ranking de ventas y comisiones totales de todos los comerciales.',
       icon: Target,
       action: () => router.push('/seguimiento-ventas/comisiones-equipo'),
