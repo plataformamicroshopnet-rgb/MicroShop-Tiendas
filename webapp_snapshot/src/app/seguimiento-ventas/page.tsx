@@ -479,7 +479,7 @@ export default function SeguimientoVentasPage() {
                       flexDirection: 'row',
                       alignItems: 'center',
                       gap: '16px',
-                      ...(c.image ? { padding: 0, overflow: 'hidden', gap: 0, alignItems: 'stretch', minHeight: 150 } : {})
+                      ...(c.image ? { padding: 0, overflow: 'hidden', gap: 0, alignItems: 'stretch', minHeight: 140 } : {})
                   }}
               >
                 {c.image ? (
