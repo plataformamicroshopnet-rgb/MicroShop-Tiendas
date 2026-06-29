@@ -42,7 +42,7 @@ export default function AdminPeriodosPage() {
   }
 
   const handleDuplicate = async (periodId: string) => {
-    if (!confirm('Esta acción creará el mes siguiente en Borrador, y REALIZARÁ UN CLONADO PROFUNDO arrastrando toda la configuración (bloques de cobro, multiplicadores, catálogos, objetivos y reglas extra activas) del mes seleccionado. ¿Deseas continuar?')) return
+    if (!confirm('Crea/regenera el mes siguiente en Borrador con un CLONADO PROFUNDO de toda la configuración (Condiciones Mensuales, bloques de cobro, multiplicadores, catálogos, objetivos, comisiones, reglas extra y Seguimiento Diario). Las VENTAS no se copian (se quedan en el mes actual). Si ese mes ya existe como borrador, se REGENERA por completo. ¿Continuar?')) return
     
     const res = await fetch('/api/admin/periodos', {
       method: 'POST',
@@ -51,6 +51,16 @@ export default function AdminPeriodosPage() {
     })
     const data = await res.json()
     if (data.success) {
+      // Clonar también el Seguimiento Diario (estructura; ventas semanales a 0) para dejar el mes completo
+      if (data.period?.month && data.period?.year) {
+        try {
+          await fetch('/api/tracking/clone', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ month: data.period.month, year: data.period.year })
+          })
+        } catch (e) { /* si falla, el Seguimiento Diario se puede clonar desde su propia pantalla */ }
+      }
       fetchPeriods()
     } else {
       alert(`Error: ${data.error}`)

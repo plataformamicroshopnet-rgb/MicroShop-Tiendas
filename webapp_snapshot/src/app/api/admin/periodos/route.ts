@@ -65,9 +65,23 @@ export async function POST(req: Request) {
 
       const periodKey = `${nextYear}_${nextMonth.toString().padStart(2, '0')}`
 
-      // Evitar crash por unique constraint check manual
-      const exists = await prisma.workPeriod.findUnique({ where: { period_key: periodKey } })
-      if (exists) return NextResponse.json({ success: false, error: `El mes siguiente (${periodKey}) ya existe.` })
+      // Idempotente: si el mes destino ya existe como BORRADOR, se limpia entero y se regenera.
+      // (Las tablas por clave de periodo y los ajustes no tienen cascade, hay que borrarlos a mano.)
+      const existingTarget = await prisma.workPeriod.findUnique({ where: { period_key: periodKey } })
+      if (existingTarget) {
+        if (existingTarget.status !== 'DRAFT') {
+          return NextResponse.json({ success: false, error: `El mes ${periodKey} ya existe y no es un borrador (${existingTarget.status}); no se puede regenerar.` })
+        }
+        await prisma.monthlyCondition.deleteMany({ where: { periodKey } })
+        await prisma.tiendaCommissionRule.deleteMany({ where: { periodKey } })
+        await prisma.tiendaStoreObjective.deleteMany({ where: { periodKey } })
+        await prisma.tiendaComercialHour.deleteMany({ where: { periodKey } })
+        await prisma.appSetting.deleteMany({ where: { key: { in: [
+          `territorial_tiendas_${periodKey}`, `territorial_o2_${periodKey}`, `o2_rules_v2_${periodKey}`
+        ] } } })
+        // Borra el periodo (cascade: catálogos, ventas, objetivos, importes, reglas extra y asignaciones)
+        await prisma.workPeriod.delete({ where: { id: existingTarget.id } })
+      }
 
       const newPeriod = await prisma.workPeriod.create({
         data: {
@@ -208,6 +222,45 @@ export async function POST(req: Request) {
             create: { key: newKey, value: setting.value }
           });
         }
+      }
+
+      // Clonar Condiciones Mensuales (MonthlyCondition) - config por mes
+      const srcMonthly = await prisma.monthlyCondition.findMany({ where: { periodKey: source.period_key } });
+      if (srcMonthly.length > 0) {
+        await prisma.monthlyCondition.createMany({
+          data: srcMonthly.map(m => ({
+            periodKey: periodKey,
+            type: m.type,
+            title: m.title,
+            color: m.color,
+            text: m.text,
+            amount: m.amount,
+            order: m.order
+          }))
+        });
+      }
+
+      // Clonar Objetivos por Tienda (TiendaStoreObjective) - config por mes
+      const srcStoreObj = await prisma.tiendaStoreObjective.findMany({ where: { periodKey: source.period_key } });
+      if (srcStoreObj.length > 0) {
+        await prisma.tiendaStoreObjective.createMany({
+          data: srcStoreObj.map(o => ({
+            periodKey: periodKey,
+            storeName: o.storeName,
+            bafConvMS: o.bafConvMS,
+            bafNoFusionO2: o.bafNoFusionO2,
+            restoBaf: o.restoBaf,
+            tvFutbol: o.tvFutbol,
+            alarmas: o.alarmas,
+            dispSegEuros: o.dispSegEuros,
+            dispUnidades: o.dispUnidades,
+            seguros: o.seguros,
+            movil: o.movil,
+            repos: o.repos,
+            fttr: o.fttr,
+            bafNoTrasl: o.bafNoTrasl
+          }))
+        });
       }
 
       return NextResponse.json({ success: true, period: newPeriod })
