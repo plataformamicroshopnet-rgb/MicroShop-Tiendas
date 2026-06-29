@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react'
 import { PageHeader } from '@/components/PageHeader'
 import { useGuard } from '@/hooks/useGuard'
-import { CalendarDays, Plus, Copy, Play, Settings, Save, X } from 'lucide-react'
+import { CalendarDays, Copy, Play, Settings, Save, X } from 'lucide-react'
+
+const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
 export default function AdminPeriodosPage() {
   const { authorized } = useGuard('MODULE_ADMIN')
@@ -25,21 +27,6 @@ export default function AdminPeriodosPage() {
       fetchPeriods()
     }
   }, [authorized])
-
-  const handleCreateNext = async () => {
-    if (!confirm('Crear próximo mes generará un nuevo Borrador vacío. ¿Continuar?')) return
-    const res = await fetch('/api/admin/periodos', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'CREATE_NEXT' })
-    })
-    const data = await res.json()
-    if (data.success) {
-      fetchPeriods()
-    } else {
-      alert(`Error: ${data.error}`)
-    }
-  }
 
   const handleDuplicate = async (periodId: string) => {
     if (!confirm('Crea/regenera el mes siguiente en Borrador con un CLONADO PROFUNDO de toda la configuración (Condiciones Mensuales, bloques de cobro, multiplicadores, catálogos, objetivos, comisiones, reglas extra y Seguimiento Diario). Las VENTAS no se copian (se quedan en el mes actual). Si ese mes ya existe como borrador, se REGENERA por completo. ¿Continuar?')) return
@@ -150,11 +137,16 @@ export default function AdminPeriodosPage() {
                 </button>
               )}
 
-              {p.status !== 'HISTORIC' && (
-                <button onClick={() => handleDuplicate(p.id)} title="Copiar y preparar mes siguiente" style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--light-text)', border: '1px solid rgba(255,255,255,0.1)', padding: '8px 16px', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
-                  <Copy size={16} /> Pre-crear Siguiente
+              {p.status !== 'HISTORIC' && (() => {
+                const m = Number(p.month); const y = Number(p.year)
+                const nm = m === 12 ? 1 : m + 1; const ny = m === 12 ? y + 1 : y
+                const cloneLabel = `Clonar de ${MESES[m - 1] ?? ('Mes ' + m)} a ${MESES[nm - 1] ?? ('Mes ' + nm)} ${ny}`
+                return (
+                <button onClick={() => handleDuplicate(p.id)} title="Copia toda la configuración de este mes al siguiente; las ventas no se copian" style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--light-text)', border: '1px solid rgba(255,255,255,0.1)', padding: '8px 16px', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
+                  <Copy size={16} /> {cloneLabel}
                 </button>
-              )}
+                )
+              })()}
             </div>
           )}
         </div>
@@ -253,8 +245,7 @@ export default function AdminPeriodosPage() {
             <h4 style={{ margin: '0 0 12px 0', color: 'var(--mercedes-cyan)', fontSize: 15 }}>Guía de Administración de Periodos</h4>
             <p style={{ marginBottom: 12 }}>Esta pantalla gestiona los ciclos mensuales de toda la empresa. Aquí defines qué reglas de comisiones y objetivos están activos.</p>
             <ul style={{ paddingLeft: 20, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <li><strong>Instanciar Próximo Borrador (Botón Azul):</strong> Busca el último mes creado en la base de datos y genera el mes siguiente en estado "Borrador" vacío. Útil para crear un mes de cero.</li>
-              <li><strong>Pre-crear Siguiente:</strong> Toma como referencia el mes de esa fila en concreto, crea su mes consecutivo y realiza un <strong>clonado profundo</strong>, arrastrando automáticamente toda la configuración (comisiones, objetivos, catálogos y reglas extra activas) para que no tengas que picar datos a mano.</li>
+              <li><strong>Clonar al mes siguiente (ej. «Clonar de Junio a Julio 2026»):</strong> Toma el mes de esa fila, crea el mes consecutivo y realiza un <strong>clonado profundo</strong> de toda la configuración (condiciones mensuales, objetivos por tienda, comisiones, catálogos, reglas extra y seguimiento diario). <strong>Las ventas NO se copian</strong> (se quedan en el mes actual). Si el mes siguiente ya existe como borrador, se <strong>regenera por completo</strong>, así que puedes pulsarlo las veces que quieras.</li>
               <li><strong>Hacer Activo:</strong> Mueve un mes borrador a "Activo" (producción en vivo). Esto cerrará automáticamente el mes que estuviera activo anteriormente, dejándolo en estado Histórico (solo lectura).</li>
               <li><strong>Reglas Globales:</strong> Despliega un panel para editar los multiplicadores Pyme y umbrales de visitas específicos de ese mes.</li>
             </ul>
@@ -262,15 +253,8 @@ export default function AdminPeriodosPage() {
         }
       />
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <h2 style={{ fontSize: 20, color: 'var(--light-text)', margin: 0 }}>Estado del Panel (Fase C1.4)</h2>
-        <button 
-          title="Crea un nuevo mes vacío en estado Borrador. Ideal para preparar la configuración del mes siguiente sin afectar al mes activo."
-          onClick={handleCreateNext}
-          style={{ padding: '12px 24px', background: 'var(--mercedes-cyan)', color: '#000', borderRadius: 10, fontWeight: 700, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
-        >
-          <Plus size={18} /> Instanciar Próximo Borrador
-        </button>
+      <div style={{ marginBottom: 24 }}>
+        <h2 style={{ fontSize: 20, color: 'var(--light-text)', margin: 0 }}>Estado del Panel</h2>
       </div>
 
       {loading ? (
