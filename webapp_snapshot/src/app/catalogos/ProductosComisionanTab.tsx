@@ -197,7 +197,7 @@ export default function ProductosComisionanTab() {
                   <th style={{ padding: '12px 8px' }}>Importe 2º</th>
                   <th style={{ padding: '12px 8px' }}>Obj. 3º Tramo</th>
                   <th style={{ padding: '12px 8px' }}>Importe 3º</th>
-                  <th style={{ padding: '12px 8px' }}>Condicionantes</th>
+                  <th style={{ padding: '12px 8px', cursor: 'help' }} title="Vacío = paga POR UNIDAD al precio del tramo alcanzado (lo normal). Solo para casos especiales: tramos acumulativos, bono fijo + extra, objetivos de equipo.">Condicionantes ⓘ</th>
                   <th style={{ padding: '12px 8px' }}>Total Horas</th>
                   {!isHistoric && <th style={{ padding: '12px 8px', width: 40 }}></th>}
                 </tr>
@@ -275,6 +275,11 @@ export default function ProductosComisionanTab() {
                 )}
               </tbody>
             </table>
+          </div>
+          <div style={{ marginTop: 14, padding: '10px 14px', background: 'var(--active-bg)', borderRadius: 8, fontSize: 12.5, color: 'var(--light-text)', lineHeight: 1.55 }}>
+            💡 <strong>Cómo se paga cada tramo:</strong> por defecto (<strong>Condicionantes vacío</strong>) la comisión se paga <strong>POR UNIDAD al precio del tramo alcanzado</strong>.
+            <br />Ej. tramos 1→20€, 2→30€, 3→40€ &nbsp;→&nbsp; 1 venta = 20€ · 2 ventas = 60€ (30€ c/u) · 3 ventas = 120€ (40€ c/u) · 4+ = a 40€ c/u.
+            <br />Los <strong>Condicionantes</strong> solo se usan para casos especiales (acumulativos, bono fijo + extra, objetivos de equipo…).
           </div>
         </div>
 
