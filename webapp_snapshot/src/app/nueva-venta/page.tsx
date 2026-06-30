@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { PageHeader } from '@/components/PageHeader'
 import { FilePlus, ShieldPlus } from 'lucide-react'
-import { TIENDAS_COMERCIALES, VENDEDORES, CODIGOS_TRAMITACION } from '@/lib/constants'
+import { CODIGOS_TRAMITACION } from '@/lib/constants'
+import { getEffectiveTiendaComerciales, getEffectiveSellers } from '@/lib/comercialRoster'
 import { useGuard } from '@/hooks/useGuard'
 import { usePeriod } from '@/components/PeriodProvider'
 
@@ -56,6 +57,11 @@ export default function NuevaVentaPage() {
   })
 
   const [stockItems, setStockItems] = useState<any[]>([])
+  const [tiendaHours, setTiendaHours] = useState<any[]>([])
+
+  // Plantilla del mes (panel "Horarios de Comerciales"); fallback a la lista fija
+  const tiendaMap = getEffectiveTiendaComerciales(tiendaHours)
+  const rosterSellers = getEffectiveSellers(tiendaHours)
 
   // ── Semáforo de llaves de cruce con Telefónica ──────────────────────
   // Las "llaves" son los datos que permiten identificar la operación en la
@@ -195,11 +201,19 @@ export default function NuevaVentaPage() {
   }, [])
 
   useEffect(() => {
+    if (!activePeriodKey) return
+    fetch(`/api/tiendas-comisiones?periodKey=${activePeriodKey}`)
+      .then(r => r.json())
+      .then(d => setTiendaHours(d?.hours || []))
+      .catch(() => setTiendaHours([]))
+  }, [activePeriodKey])
+
+  useEffect(() => {
     if (user) {
       const username = user.username || ''
-      // Find user store in TIENDAS_COMERCIALES mapping
-      const match = Object.entries(TIENDAS_COMERCIALES).find(([store, commercials]) =>
-        commercials.some((c) => c.toLowerCase() === username.toLowerCase())
+      // Find user store en la plantilla del mes (fallback lista fija)
+      const match = Object.entries(tiendaMap).find(([store, commercials]) =>
+        (commercials as string[]).some((c) => c.toLowerCase() === username.toLowerCase())
       )
 
       if (match) {
@@ -207,7 +221,7 @@ export default function NuevaVentaPage() {
         setFormData((prev: any) => ({ ...prev, vendedor: username }))
       }
     }
-  }, [user])
+  }, [user, tiendaHours])
 
   // Handlers
   const handleInputChange = (field: string, value: any) => {
@@ -660,7 +674,7 @@ export default function NuevaVentaPage() {
                 <label className="form-label" style={{ color: '#1B3D6A' }}>Tienda</label>
                 <select className="form-select" value={selectedTienda} onChange={e => handleTiendaChange(e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
                   <option value="">Selecciona...</option>
-                  {Object.keys(TIENDAS_COMERCIALES).map(t => <option key={t} value={t}>{t}</option>)}
+                  {Object.keys(tiendaMap).map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
@@ -670,10 +684,10 @@ export default function NuevaVentaPage() {
                   {selectedTienda && (
                     <>
                       <optgroup label={`Asignados a ${selectedTienda}`}>
-                        {TIENDAS_COMERCIALES[selectedTienda].map(v => <option key={v} value={v}>{v}</option>)}
+                        {(tiendaMap[selectedTienda] || []).map(v => <option key={v} value={v}>{v}</option>)}
                       </optgroup>
                       <optgroup label="Otras Tiendas">
-                        {VENDEDORES.filter(v => !TIENDAS_COMERCIALES[selectedTienda].includes(v)).map(v => <option key={v} value={v}>{v}</option>)}
+                        {rosterSellers.filter(v => !(tiendaMap[selectedTienda] || []).includes(v)).map(v => <option key={v} value={v}>{v}</option>)}
                       </optgroup>
                     </>
                   )}

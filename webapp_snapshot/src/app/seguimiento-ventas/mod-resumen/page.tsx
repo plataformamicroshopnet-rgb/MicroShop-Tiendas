@@ -11,7 +11,7 @@ import { matchTipoVenta, matchesRule, getValueForRule } from '@/hooks/useComisio
 import { renderDashboardData, calculateDynamicCommission, sanitizeSale, normalizeString, isVentaWithinDates } from '@/lib/salesUtils'
 import { getSaleCommissionBase } from '@/lib/saleCommission'
 import { computeTerritorialTotal } from '@/lib/territorialConsolidado'
-import { TIENDAS_COMERCIALES } from '@/lib/constants'
+import { getSellersForStore } from '@/lib/comercialRoster'
 
 // Definición estática de las 6 palancas para el tramo territorial de tiendas
 const STATIC_PALANCAS = [
@@ -51,6 +51,7 @@ export default function ModResumenPage() {
   const [movilFreeSales, setMovilFreeSales] = useState<any[]>([])
   const [movilFreeProducts, setMovilFreeProducts] = useState<any[]>([])
   const [tiendaRules, setTiendaRules] = useState<any[]>([])
+  const [tiendaHours, setTiendaHours] = useState<any[]>([])
   const [territorialTiendasRules, setTerritorialTiendasRules] = useState<any[]>([])
   const [territorialO2Rules, setTerritorialO2Rules] = useState<any[]>([])
   const [catalogs, setCatalogs] = useState<Record<string, any[]>>({})
@@ -104,6 +105,7 @@ export default function ModResumenPage() {
       setTerritorialO2Rules(territorialRes.o2 || []);
       setCatalogs(catalogsRes.catalogs || {});
       setTiendaRules(tiendasRes.rules || []);
+      setTiendaHours(tiendasRes.hours || []);
       setMovilFreeSales(mfSalesRes || []);
       setMovilFreeProducts(mfProductsRes || []);
 
@@ -278,9 +280,7 @@ export default function ModResumenPage() {
         });
       } else {
         const isProductMatch = (sale: any) => matchTipoVenta(sale, tipoVenta);
-        let storeSellers: string[] = [];
-        const key = Object.keys(TIENDAS_COMERCIALES).find(k => k.toLowerCase().replace('é','e') === storeName.toLowerCase().replace('é','e'));
-        if (key) storeSellers = TIENDAS_COMERCIALES[key];
+        const storeSellers: string[] = getSellersForStore(storeName, tiendaHours);
 
         filtered = sales.filter(s => {
           if (s.anulado === 'Si' || s.anulado === 'Sí' || s.pendiente === 'Anulado') return false;
@@ -453,7 +453,7 @@ export default function ModResumenPage() {
       workingDaysElapsed: elapsed,
       totalWorkingDays: totalWorking
     };
-  }, [loading, sales, movilFreeSales, movilFreeProducts, tiendaRules, territorialTiendasRules, territorialO2Rules, catalogs, objetivos, objGrupos, importesPyme, importesPlus, activeExtras, periodData, year, month]);
+  }, [loading, sales, movilFreeSales, movilFreeProducts, tiendaRules, tiendaHours, territorialTiendasRules, territorialO2Rules, catalogs, objetivos, objGrupos, importesPyme, importesPlus, activeExtras, periodData, year, month]);
 
   if (authorized === null) {
     return <div style={{ padding: 40, color: 'var(--mercedes-cyan)', fontWeight: 600 }}>Verificando credenciales del módulo...</div>;

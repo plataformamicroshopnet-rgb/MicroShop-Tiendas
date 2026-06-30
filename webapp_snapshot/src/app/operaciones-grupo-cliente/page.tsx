@@ -357,6 +357,7 @@ function GrupoClienteContent() {
   const [catalogs, setCatalogs] = useState<any>({})
   const [territorialO2Rules, setTerritorialO2Rules] = useState<any[]>([])
   const [tiendaRules, setTiendaRules] = useState<any[]>([])
+  const [tiendaHours, setTiendaHours] = useState<any[]>([])
   const [territorialRules, setTerritorialRules] = useState<any[]>([])
   const [movilFreeSales, setMovilFreeSales] = useState<any[]>([])
   const [movilFreeProducts, setMovilFreeProducts] = useState<any[]>([])
@@ -387,6 +388,7 @@ function GrupoClienteContent() {
       if (tiendasRes?.success) {
         // "Señalización Solar 360" eliminada como palanca (no se cobra ni se paga).
         setTiendaRules((tiendasRes.rules || []).filter((r: any) => !String(r.nombre || '').toLowerCase().includes('solar')))
+        setTiendaHours(tiendasRes.hours || [])
       }
       if (sData?.success) {
         // Solar 360 fuera del listado de operaciones por completo (no solo a 0 €).
@@ -463,10 +465,11 @@ function GrupoClienteContent() {
     return computeTerritorialRows({
       sales,
       territorialRules,
+      tiendaHours,
       catalogs,
       viewingPeriod: activePeriodKey ? activePeriodKey.replace('_', '') : getCurrentMonthString(),
     } as any);
-  }, [sales, territorialRules, catalogs, activePeriodKey]);
+  }, [sales, territorialRules, tiendaHours, catalogs, activePeriodKey]);
 
   const totalImporteTerritorial = useMemo(() => {
     return calculatedRows.reduce((acc, row) => acc + row.importe, 0);

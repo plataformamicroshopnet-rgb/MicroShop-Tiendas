@@ -1,4 +1,4 @@
-import { TIENDAS_COMERCIALES } from './constants';
+import { getEffectiveTiendaComerciales } from './comercialRoster';
 
 export const STORE_NAMES = ["Auxiliadora 45", "Correhuela", "Villamayor", "Béjar", "O2"];
 
@@ -309,9 +309,12 @@ export function calculateTramitacion(
 ) {
     const projectionFactor = workingDaysElapsed > 0 ? totalWorkingDays / workingDaysElapsed : 1;
 
+    // Plantilla del periodo: tienda -> comerciales según el panel de Horarios (fallback fijo)
+    const tiendaComerciales = getEffectiveTiendaComerciales(hours);
+
     // Helper to get total store hours
     const getStoreHours = (storeName: string) => {
-        const sellers = TIENDAS_COMERCIALES[storeName] || [];
+        const sellers = tiendaComerciales[storeName] || [];
         const hoursList = storeName === 'O2' ? o2Hours : hours;
         return hoursList.filter((h: any) => sellers.includes(h.comercial)).reduce((acc, h) => acc + (h.horario || 0), 0);
     };
@@ -342,7 +345,7 @@ export function calculateTramitacion(
     const result: any = {};
 
     STORE_NAMES.forEach(store => {
-        const sellers = TIENDAS_COMERCIALES[store] || [];
+        const sellers = tiendaComerciales[store] || [];
         const storeSales = sales.filter(s => isValidSale(s) && isSellerInStore(s.vendedor, sellers));
         const storeHours = getStoreHours(store);
         const storeHourRatio = storeHours / globalTotalHours;

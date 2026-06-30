@@ -7,6 +7,7 @@
 
 import { matchTipoVenta } from '@/hooks/useComisionesData'
 import { TIENDAS_COMERCIALES } from '@/lib/constants'
+import { getEffectiveTiendaComerciales } from '@/lib/comercialRoster'
 import { getSaleCommission } from '@/lib/saleCommission'
 import { isSaleCancelled } from '@/lib/salesUtils'
 
@@ -62,6 +63,7 @@ export const STATIC_PALANCAS = [
 export interface TerritorialInput {
   sales: any[]
   tiendaRules?: any[]        // /api/tiendas-comisiones (no usado para el importe; compat)
+  tiendaHours?: any[]        // panel "Horarios de Comerciales" del mes -> plantilla (tienda de cada comercial)
   territorialRules: any[]    // /api/territorial -> tiendas (Entrada de Datos = fuente)
   catalogs?: Record<string, any[]>
 }
@@ -76,9 +78,10 @@ const parseNumber = (val: any): number => {
 
 // Ventas (unidades, o € si el tipo es "dispositivos/importe") de una tienda física para
 // un tipoVenta. Filtra por los comerciales de esa tienda (TIENDAS_COMERCIALES).
-export function getSalesDataForStoreAndType(sales: any[], storeName: string, tipoVenta: string): { value: number; logs: any[] } {
+export function getSalesDataForStoreAndType(sales: any[], storeName: string, tipoVenta: string, tiendaComerciales?: Record<string, string[]>): { value: number; logs: any[] } {
   if (!tipoVenta) return { value: 0, logs: [] }
   const isProductMatch = (sale: any) => matchTipoVenta(sale, tipoVenta)
+  const tiendaMap = tiendaComerciales || TIENDAS_COMERCIALES
 
   let filtered: any[]
   if (storeName === 'O2') {
@@ -91,8 +94,8 @@ export function getSalesDataForStoreAndType(sales: any[], storeName: string, tip
     })
   } else {
     let storeSellers: string[] = []
-    const key = Object.keys(TIENDAS_COMERCIALES).find(k => k.toLowerCase().replace('é', 'e') === storeName.toLowerCase().replace('é', 'e'))
-    if (key) storeSellers = (TIENDAS_COMERCIALES as any)[key]
+    const key = Object.keys(tiendaMap).find(k => k.toLowerCase().replace('é', 'e') === storeName.toLowerCase().replace('é', 'e'))
+    if (key) storeSellers = (tiendaMap as any)[key]
     filtered = sales.filter(s => {
       if (isSaleCancelled(s)) return false
       if (!storeSellers.some(seller => (s.vendedor || '').toLowerCase() === seller.toLowerCase())) return false
@@ -187,6 +190,8 @@ function findRuleInList(palancaMatches: string[], rules: any[]) {
 // importe que paga su regla en la Entrada de Datos. Palanca sin regla => importe 0.
 export function computeTerritorialRows(input: TerritorialInput): any[] {
   const { sales, territorialRules } = input
+  // Plantilla del mes (tienda de cada comercial). Sin tiendaHours -> lista fija (idéntico).
+  const tiendaMap = getEffectiveTiendaComerciales(input.tiendaHours)
 
   return STATIC_PALANCAS.map(p => {
     const terrRule = findRuleInList(p.matches, territorialRules || [])
@@ -198,7 +203,7 @@ export function computeTerritorialRows(input: TerritorialInput): any[] {
     // En palancas con `baseComision` se excluyen las ventas O2 (su territorial es aparte)
     // también del conteo, para espejar el grupo de Operaciones por Grupo Cliente.
     const _notO2 = (s: any) => String(s.detalle || s.categoria || '').toLowerCase().trim() !== 'o2'
-    const perStoreData = TIENDAS_FISICAS.map(store => getSalesDataForStoreAndType(sales, store, terrRule.tipoVenta))
+    const perStoreData = TIENDAS_FISICAS.map(store => getSalesDataForStoreAndType(sales, store, terrRule.tipoVenta, tiendaMap))
     const perStore = perStoreData.map(d => terrRule.baseComision ? d.logs.filter(_notO2).length : d.value)
     const salesTot = perStore.reduce((a, b) => a + b, 0)
 

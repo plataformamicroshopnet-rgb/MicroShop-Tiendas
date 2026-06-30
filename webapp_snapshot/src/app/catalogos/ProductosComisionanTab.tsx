@@ -6,6 +6,7 @@ import { Save, Plus, Trash2, FileText, AlertCircle } from 'lucide-react'
 import { usePeriod } from '@/components/PeriodProvider'
 import RuleConditionBuilder from '@/components/RuleConditionBuilder'
 import ProductTreeSelector from '@/components/ProductTreeSelector'
+import { TIENDAS_FISICAS, tiendaDeComercial } from '@/lib/comercialRoster'
 
 export default function ProductosComisionanTab() {
   const { activePeriodKey, availablePeriods, isLoadingPeriods } = usePeriod()
@@ -28,7 +29,11 @@ export default function ProductosComisionanTab() {
       .then(res => {
         if (res.success) {
           setRules(res.rules || [])
-          setHours(res.hours || [])
+          // Rellenar la tienda de filas antiguas (sin ella) con el mapa de siempre
+          setHours((res.hours || []).map((h: any) => ({
+            ...h,
+            tienda: (h.tienda && String(h.tienda).trim()) || tiendaDeComercial(h.comercial || '')
+          })))
         }
         setLoading(false)
       })
@@ -119,10 +124,11 @@ export default function ProductosComisionanTab() {
 
   // ---- HOURS HANDLERS ----
   const addHour = () => {
-    setHours([...hours, { 
+    setHours([...hours, {
       id: Date.now().toString(),
-      comercial: '', 
-      horario: '' 
+      comercial: '',
+      tienda: '',
+      horario: ''
     }])
   }
 
@@ -284,7 +290,7 @@ export default function ProductosComisionanTab() {
         </div>
 
         {/* TABLA 2: HORARIOS COMERCIALES */}
-        <div className="card" style={{ padding: 20, maxWidth: 600 }}>
+        <div className="card" style={{ padding: 20, maxWidth: 820 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <h3 style={{ margin: 0, color: 'var(--mercedes-cyan)' }}>2. Horarios de Comerciales</h3>
             {!isHistoric && (
@@ -293,11 +299,12 @@ export default function ProductosComisionanTab() {
               </button>
             )}
           </div>
-          
+
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ backgroundColor: 'var(--active-bg)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
                 <th style={{ padding: '12px 8px' }}>Comercial</th>
+                <th style={{ padding: '12px 8px' }}>Tienda</th>
                 <th style={{ padding: '12px 8px' }}>Horario (Horas/Semana o Mes)</th>
                 {!isHistoric && <th style={{ padding: '12px 8px', width: 40 }}></th>}
               </tr>
@@ -307,6 +314,12 @@ export default function ProductosComisionanTab() {
                 <tr key={hour.id || idx} style={{ borderBottom: '1px solid var(--table-border)' }}>
                   <td style={{ padding: '8px' }}>
                     <input type="text" disabled={isHistoric} value={hour.comercial || ''} onChange={e => updateHour(idx, 'comercial', e.target.value)} style={{ width: '100%', padding: 6, backgroundColor: isHistoric ? 'transparent' : 'var(--app-bg)', color: 'var(--light-text)', border: isHistoric ? 'none' : '1px solid var(--border-color)', borderRadius: 4 }} placeholder="Nombre del Comercial..." />
+                  </td>
+                  <td style={{ padding: '8px' }}>
+                    <select disabled={isHistoric} value={hour.tienda || ''} onChange={e => updateHour(idx, 'tienda', e.target.value)} style={{ width: '100%', padding: 6, backgroundColor: isHistoric ? 'transparent' : 'var(--app-bg)', color: 'var(--light-text)', border: isHistoric ? 'none' : '1px solid var(--border-color)', borderRadius: 4 }}>
+                      <option value="">— Elegir tienda —</option>
+                      {TIENDAS_FISICAS.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
                   </td>
                   <td style={{ padding: '8px' }}>
                     <input type="number" step="0.5" disabled={isHistoric} value={hour.horario ?? ''} onChange={e => updateHour(idx, 'horario', e.target.value)} style={{ width: 120, padding: 6, backgroundColor: isHistoric ? 'transparent' : 'var(--app-bg)', color: 'var(--light-text)', border: isHistoric ? 'none' : '1px solid var(--border-color)', borderRadius: 4 }} placeholder="Ej: 39" />
@@ -321,14 +334,14 @@ export default function ProductosComisionanTab() {
                 </tr>
               ))}
               {hours.length === 0 && (
-                <tr><td colSpan={3} style={{ padding: 20, textAlign: 'center', color: 'var(--medium-gray)' }}>No hay comerciales configurados.</td></tr>
+                <tr><td colSpan={4} style={{ padding: 20, textAlign: 'center', color: 'var(--medium-gray)' }}>No hay comerciales configurados.</td></tr>
               )}
             </tbody>
           </table>
-          
+
           <div style={{ marginTop: 12, fontSize: 12, color: 'var(--medium-gray)', display: 'flex', alignItems: 'flex-start', gap: 6 }}>
             <AlertCircle size={14} style={{ marginTop: 2, flexShrink: 0 }} />
-            <span>Los objetivos individuales se prorratearán dividiendo el Objetivo Global entre el Total de Horas (de la tabla superior) y multiplicándolo por el Horario de cada comercial introducido aquí.</span>
+            <span>Esta tabla es la <strong>plantilla del mes</strong>: quien esté aquí cuenta como comercial en todas las pantallas (Comisiones, Torneos, Rentabilidad, MOD…). Si <strong>borras</strong> a alguien desaparece solo de este mes en adelante (su histórico de meses anteriores se conserva). Para <strong>dar de alta</strong> a uno nuevo, añádelo y elígele su Tienda. Los objetivos se prorratean dividiendo el Objetivo Global entre el Total de Horas y multiplicándolo por el Horario de cada comercial.</span>
           </div>
         </div>
       </div>

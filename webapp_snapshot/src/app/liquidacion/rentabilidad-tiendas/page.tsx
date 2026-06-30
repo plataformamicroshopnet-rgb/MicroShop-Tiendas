@@ -8,6 +8,7 @@ import { usePeriod } from '@/components/PeriodProvider'
 import { renderDashboardData, isSolar360 } from '@/lib/salesUtils'
 import { getSaleCommission } from '@/lib/saleCommission'
 import { TIENDAS_COMERCIALES } from '@/lib/constants'
+import { getEffectiveTiendaComerciales } from '@/lib/comercialRoster'
 import { computeBonosO2 } from '@/lib/territorialConsolidado'
 
 type GroupedSale = {
@@ -38,6 +39,7 @@ export default function RentabilidadTiendasPage() {
   const [movilFreeSales, setMovilFreeSales] = useState<any[]>([])
   const [movilFreeProducts, setMovilFreeProducts] = useState<any[]>([])
   const [territorialO2Rules, setTerritorialO2Rules] = useState<any[]>([])
+  const [tiendaHours, setTiendaHours] = useState<any[]>([])
 
   const [expandedTiendas, setExpandedTiendas] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
@@ -62,7 +64,7 @@ export default function RentabilidadTiendasPage() {
 
         if (!activePeriodKey) return;
 
-        const [salesRes, catRes, pymeRes, plusRes, objRes, mfSalesRes, mfProductsRes, territorialRes] = await Promise.all([
+        const [salesRes, catRes, pymeRes, plusRes, objRes, mfSalesRes, mfProductsRes, territorialRes, hoursRes] = await Promise.all([
           fetch(`/api/sales?periodKey=${activePeriodKey}&strictPeriod=1`).catch(() => null),
           fetch(`/api/catalogs?_t=${Date.now()}`).catch(() => null),
           fetch(`/api/importes-pyme?periodKey=${activePeriodKey}&strictPeriod=1`).catch(() => null),
@@ -70,7 +72,8 @@ export default function RentabilidadTiendasPage() {
           fetch(`/api/objetivos?periodKey=${activePeriodKey}&strictPeriod=1`).catch(() => null),
           fetch(`/api/movilfree/sales`).catch(() => null),
           fetch(`/api/movilfree/products`).catch(() => null),
-          fetch(`/api/territorial?periodKey=${activePeriodKey}`).then(r => r.json()).catch(() => ({ o2: [] }))
+          fetch(`/api/territorial?periodKey=${activePeriodKey}`).then(r => r.json()).catch(() => ({ o2: [] })),
+          fetch(`/api/tiendas-comisiones?periodKey=${activePeriodKey}`).then(r => r.json()).catch(() => ({ hours: [] }))
         ])
 
         const salesData = salesRes && salesRes.ok ? await salesRes.json() : { logs: [] }
@@ -87,6 +90,7 @@ export default function RentabilidadTiendasPage() {
         setMovilFreeSales(Array.isArray(mfSalesData) ? mfSalesData : (mfSalesData.sales || mfSalesData.data || []))
         setMovilFreeProducts(Array.isArray(mfProductsData) ? mfProductsData : (mfProductsData.products || mfProductsData.data || []))
         setTerritorialO2Rules((territorialRes && territorialRes.o2) || [])
+        setTiendaHours((hoursRes && hoursRes.hours) || [])
 
         const importesPyme = pymeData.importes || pymeData.data || []
         const importesPlus = plusData.importes || plusData.data || []
@@ -153,7 +157,7 @@ export default function RentabilidadTiendasPage() {
       return { ...sale, comisionReal };
     }).filter(Boolean) as any[]
 
-    const result = Object.entries(TIENDAS_COMERCIALES).map(([tiendaName, comerciales]) => {
+    const result = Object.entries(getEffectiveTiendaComerciales(tiendaHours)).map(([tiendaName, comerciales]) => {
       const rows = comerciales.map(comercial => {
         const cells = {} as Record<string, { total: number, sales: any[] }>
         TIPOS_VENTA.forEach(t => cells[t] = { total: 0, sales: [] })
@@ -261,7 +265,7 @@ export default function RentabilidadTiendasPage() {
 
     result.sort((a, b) => b.totalTienda - a.totalTienda)
     return result
-  }, [sales, pymeRows, captadorRows, catalogs, activePeriodObj, movilFreeSales, movilFreeProducts, territorialO2Rules])
+  }, [sales, pymeRows, captadorRows, catalogs, activePeriodObj, movilFreeSales, movilFreeProducts, territorialO2Rules, tiendaHours])
 
   const globalTotal = matrixData.reduce((s, t) => s + t.totalTienda, 0)
   const globalUds = matrixData.reduce((s, t) => s + t.totalTiendaUds, 0)

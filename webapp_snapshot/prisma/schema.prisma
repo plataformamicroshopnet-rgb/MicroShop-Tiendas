@@ -490,6 +490,7 @@ model TiendaComercialHour {
   id        String   @id @default(uuid())
   periodKey String
   comercial String
+  tienda    String?
   horario   Float
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -8,7 +8,7 @@ import Link from 'next/link'
 import { usePeriod } from '@/components/PeriodProvider'
 import { matchTipoVenta, matchesRule, getValueForRule } from '@/hooks/useComisionesData'
 import { isSaleActive } from '@/lib/salesUtils'
-import { TIENDAS_COMERCIALES } from '@/lib/constants'
+import { getEffectiveTiendaComerciales } from '@/lib/comercialRoster'
 import { loadTorneosConfig, DEFAULT_TORNEOS_CONFIG, concursoSaleValue, TorneosConfig } from '@/lib/torneosConfig'
 
 export default function DashboardPage() {
@@ -16,6 +16,7 @@ export default function DashboardPage() {
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [allSales, setAllSales] = useState<any[]>([])
   const [tiendaRules, setTiendaRules] = useState<any[]>([])
+  const [tiendaHours, setTiendaHours] = useState<any[]>([])
   const [o2Rules, setO2Rules] = useState<any[]>([])
   const [torneosConfig, setTorneosConfig] = useState<TorneosConfig>(DEFAULT_TORNEOS_CONFIG)
   const [catalogs, setCatalogs] = useState<Record<string, any[]>>({})
@@ -54,6 +55,7 @@ export default function DashboardPage() {
       }
       if (tiendasRes && tiendasRes.success) {
         setTiendaRules(tiendasRes.rules || []);
+        setTiendaHours(tiendasRes.hours || []);
       }
       if (o2Res && o2Res.value) {
         try {
@@ -453,7 +455,7 @@ export default function DashboardPage() {
   };
 
   // ── Reto motivador Disp+Seg: lo que falta repartido entre comerciales y días laborables ──
-  const nComercialesTiendas = Object.entries(TIENDAS_COMERCIALES)
+  const nComercialesTiendas = Object.entries(getEffectiveTiendaComerciales(tiendaHours))
     .filter(([k]) => k !== 'O2')
     .reduce((acc, [, v]) => acc + (v as string[]).length, 0);
   const diasLaborablesRestantes = (() => {

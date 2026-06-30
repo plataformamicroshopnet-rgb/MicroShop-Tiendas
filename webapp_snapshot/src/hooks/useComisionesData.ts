@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getProfile, getGroupVisual, mapObjectiveGroup, ALL_GROUPS, FIXED_SELLERS } from '@/lib/comisiones';
+import { getProfile, getGroupVisual, mapObjectiveGroup, ALL_GROUPS } from '@/lib/comisiones';
+import { getEffectiveSellers } from '@/lib/comercialRoster';
 import { usePeriod } from '@/components/PeriodProvider';
 import { isSolar360 } from '@/lib/salesUtils';
 
@@ -389,7 +390,11 @@ export function useComisionesData(user?: any) {
         }
     });
 
-    const sellerStats = FIXED_SELLERS.map(name => {
+    // La plantilla del mes manda: comerciales activos = los del panel "Horarios de
+    // Comerciales" (tiendaHours) + O2 (o2Hours). Si el mes no tiene horarios, se usa
+    // la lista fija de siempre (fallback retrocompatible -> no descuadra histórico).
+    const rosterSellers = getEffectiveSellers(tiendaHours, o2Hours);
+    const sellerStats = rosterSellers.map(name => {
         const sSales = monthSales.filter(s => {
             const v = String(s.vendedor || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
             const tgt = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();

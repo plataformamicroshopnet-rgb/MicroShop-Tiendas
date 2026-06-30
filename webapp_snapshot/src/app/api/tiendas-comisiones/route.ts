@@ -86,6 +86,7 @@ export async function POST(request: Request) {
         data: (hours || []).map((h: any) => ({
           periodKey,
           comercial: h.comercial || '',
+          tienda: h.tienda ? String(h.tienda) : null,
           horario: h.horario !== undefined && h.horario !== '' ? Number(h.horario) : 0,
         }))
       })
