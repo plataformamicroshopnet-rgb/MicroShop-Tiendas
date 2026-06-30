@@ -16,7 +16,8 @@ export const HUB_STRUCTURE_DEFS = [
       { id: 'CARD_CAJA', label: 'Control de Caja' },
       { id: 'CARD_OFERTAS', label: 'Ofertas Micro / TI / TMA' },
       { id: 'CARD_CONDICIONES_TIENDAS', label: 'Condiciones y Tablas' },
-      { id: 'CARD_EXTRAS_TIENDAS', label: 'Comisiones Extras y Penalizaciones' }
+      { id: 'CARD_EXTRAS_TIENDAS', label: 'Comisiones Extras y Penalizaciones' },
+      { id: 'CARD_CONFIG_TORNEOS', label: 'Configurar Torneos de Ventas' }
     ]
   },
   {

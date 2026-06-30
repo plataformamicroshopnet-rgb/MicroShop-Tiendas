@@ -1,9 +1,12 @@
 ﻿'use client'
 
 import React, { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { PageHeader } from '@/components/PageHeader'
-import { Trophy } from 'lucide-react'
-import { useComisionesData, matchTipoVenta, matchesRule, getValueForRule } from '@/hooks/useComisionesData'
+import { Trophy, Settings } from 'lucide-react'
+import { useComisionesData } from '@/hooks/useComisionesData'
+import { can } from '@/lib/permissions'
+import { loadTorneosConfig, DEFAULT_TORNEOS_CONFIG, concursoSaleValue, premioLabel, TorneosConfig } from '@/lib/torneosConfig'
 
 const getMedal = (pos: number) => {
   if (pos === 1) return '🥇';
@@ -59,22 +62,13 @@ const ChartBars = ({ data, maxValue, barColor }: { data: any[], maxValue: number
 
 export default function TorneosVentasPage() {
   const { sellerStats, loading, catalogs } = useComisionesData();
-  const [trofeos, setTrofeos] = useState<Record<string, string>>({});
+  const [config, setConfig] = useState<TorneosConfig>(DEFAULT_TORNEOS_CONFIG);
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('torneos_ventas_trofeos');
-      if (stored) setTrofeos(JSON.parse(stored));
-    } catch (e) {
-      console.error("Error loading trofeos", e);
-    }
+    loadTorneosConfig().then(setConfig);
+    fetch('/api/auth/me').then(r => r.json()).then(u => setUser(u)).catch(() => {});
   }, []);
-
-  const handleTrofeoChange = (colKey: string, pos: number, val: string) => {
-    const newTrofeos = { ...trofeos, [`${colKey}-${pos}`]: val };
-    setTrofeos(newTrofeos);
-    localStorage.setItem('torneos_ventas_trofeos', JSON.stringify(newTrofeos));
-  }
 
   if (loading) {
     return (
@@ -96,39 +90,6 @@ export default function TorneosVentasPage() {
     return anul !== 'si' && pend !== 'anulado';
   };
 
-  // Col 1: Dispositivos + Seguros (Rent por cuota; Seguro por su valor anual de catálogo)
-  let arr1 = validSellers.map(s => {
-    let val = 0;
-    s.rawSales.filter(noAnulada).forEach((rs: any) => {
-      if (matchTipoVenta(rs, 'Dispositivos + Seguros')) {
-        val += getValueForRule(rs, 'Dispositivos + Seguros', catalogs);
-      }
-    });
-    return { name: s.name, value: val };
-  });
-
-  // Col 2: ARPU = Repos (sin Fútbol) + Suscripciones TV + Extra Repos destino Fútbol
-  let arr2 = validSellers.map(s => {
-    let val = 0;
-    s.rawSales.filter(noAnulada).forEach((rs: any) => {
-      if (matchesRule(rs, 'ARPU', 'ARPU')) {
-        val += getValueForRule(rs, 'ARPU', catalogs);
-      }
-    });
-    return { name: s.name, value: val };
-  });
-
-  // Col 3: Alta BAF Convergente (miMovistar y convergentes FD/fibra+móvil)
-  let arr3 = validSellers.map(s => {
-    let count = 0;
-    s.rawSales.filter(noAnulada).forEach((rs: any) => {
-      if (matchTipoVenta(rs, 'Alta BAF Convergente')) {
-        count++;
-      }
-    });
-    return { name: s.name, value: count };
-  });
-
   const fmt = (v: number) => v.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 
   const processCol = (arr: any[], isCurrency: boolean) => {
@@ -141,21 +102,40 @@ export default function TorneosVentasPage() {
     }));
   };
 
-  const dataCol1 = processCol(arr1, true);
-  const dataCol2 = processCol(arr2, true);
-  const dataCol3 = processCol(arr3, false);
+  // Columnas dinámicas según el Configurador de Torneos (hasta 3)
+  const COL_COLORS = ['#3b82f6', '#65a30d', '#f97316'];
+  const COL_HEADER = ['header-blue', 'header-green', 'header-orange'];
+  const columns = config.concursos.map((c) => {
+    const isCurrency = c.metrica === 'importe';
+    const arr = validSellers.map(s => {
+      let val = 0;
+      s.rawSales.filter(noAnulada).forEach((rs: any) => { val += concursoSaleValue(rs, c, catalogs); });
+      return { name: s.name, value: val };
+    });
+    const data = processCol(arr, isCurrency);
+    return { concurso: c, isCurrency, data, max: Math.max(...data.map(d => d.value), 0) };
+  });
 
-  const max1 = Math.max(...dataCol1.map(d => d.value), 0);
-  const max2 = Math.max(...dataCol2.map(d => d.value), 0);
-  const max3 = Math.max(...dataCol3.map(d => d.value), 0);
+  const puedeConfig = can(user, 'CARD_CONFIG_TORNEOS');
 
   return (
     <div className="w-full" style={{ backgroundColor: '#f8fafc', minHeight: '100vh', padding: '24px 0 40px' }}>
-      <PageHeader
-        title={<><Trophy color="#eab308" size={28} /> Torneos de Ventas</>}
-        subtitle="Ranking en tiempo real, competición y medallas por objetivos."
-        showBack={true}
-      />
+      <div style={{ position: 'relative' }}>
+        <PageHeader
+          title={<><Trophy color="#eab308" size={28} /> Torneos de Ventas</>}
+          subtitle="Ranking en tiempo real, competición y medallas por objetivos."
+          showBack={true}
+        />
+        {puedeConfig && (
+          <Link
+            href="/torneos-ventas/config"
+            title="Configurar torneos"
+            style={{ position: 'absolute', top: 18, right: 32, display: 'inline-flex', alignItems: 'center', gap: 6, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: '8px 14px', color: '#0ea5e9', fontWeight: 700, textDecoration: 'none', boxShadow: '0 2px 6px rgba(0,0,0,0.06)' }}
+          >
+            <Settings size={18} /> Configurar
+          </Link>
+        )}
+      </div>
 
       <div style={{ padding: '0px 32px 0' }}>
         <style dangerouslySetInnerHTML={{
@@ -271,138 +251,68 @@ export default function TorneosVentasPage() {
         `}} />
 
         <div style={{ backgroundColor: '#fff', overflow: 'hidden' }}>
+          {columns.length === 0 ? (
+            <div style={{ padding: 50, textAlign: 'center', color: '#94a3b8', fontWeight: 600 }}>
+              <Trophy size={40} style={{ opacity: 0.4 }} />
+              <p style={{ marginTop: 12 }}>No hay ningún torneo configurado.</p>
+              {puedeConfig && (
+                <Link href="/torneos-ventas/config" style={{ color: '#0ea5e9', fontWeight: 700, textDecoration: 'none' }}>
+                  Pulsa aquí para crear uno →
+                </Link>
+              )}
+            </div>
+          ) : (
+          <>
           {/* TABLAS */}
-          <div className="grid-container">
-            {/* Col 1 */}
-            <div>
-              <table className="torneo-table">
-                <thead>
-                  <tr className="header-blue">
-                    <th style={{ width: '15%' }}>Posición</th>
-                    <th style={{ width: '25%' }}>Trofeo</th>
-                    <th style={{ width: '30%' }}>Vendedor</th>
-                    <th style={{ width: '30%' }}>Dispositivos + Seguros</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dataCol1.map(row => (
-                    <tr key={row.name} className={`torneo-row ${getRowClass(row.pos)}`}>
-                      <td style={{ fontSize: row.pos <= 3 ? '20px' : '14px' }}>{getMedal(row.pos)}</td>
-                      <td>
-                        <input
-                          type="text"
-                          className="trofeo-input"
-                          placeholder="-"
-                          value={trofeos[`col1-${row.pos}`] || ''}
-                          onChange={(e) => handleTrofeoChange('col1', row.pos, e.target.value)}
-                        />
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        <div style={{ width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', border: '2px solid rgba(0,0,0,0.05)', display: 'inline-block', verticalAlign: 'middle', margin: 'auto' }} title={row.name}>
-                          <img
-                            src={`/${row.name}.${['Vanesa', 'Lara', 'Nuria', 'Elena'].includes(row.name) ? 'jpeg' : 'jpg'}`}
-                            alt={row.name}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                          />
-                        </div>
-                      </td>
-                      <td>{row.label}</td>
+          <div className="grid-container" style={{ gridTemplateColumns: `repeat(${columns.length}, 1fr)` }}>
+            {columns.map((col, ci) => (
+              <div key={col.concurso.id}>
+                <table className="torneo-table">
+                  <thead>
+                    <tr className={COL_HEADER[ci % COL_HEADER.length]}>
+                      <th style={{ width: '15%' }}>Posición</th>
+                      <th style={{ width: '30%' }}>Premio</th>
+                      <th style={{ width: '25%' }}>Vendedor</th>
+                      <th style={{ width: '30%' }}>{col.concurso.nombre}{col.isCurrency ? ' €' : ''}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Col 2 */}
-            <div>
-              <table className="torneo-table">
-                <thead>
-                  <tr className="header-green">
-                    <th style={{ width: '15%' }}>Posición</th>
-                    <th style={{ width: '25%' }}>Trofeo</th>
-                    <th style={{ width: '30%' }}>Vendedor</th>
-                    <th style={{ width: '30%' }}>Total ARPU €</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dataCol2.map(row => (
-                    <tr key={row.name} className={`torneo-row ${getRowClass(row.pos)}`}>
-                      <td style={{ fontSize: row.pos <= 3 ? '20px' : '14px' }}>{getMedal(row.pos)}</td>
-                      <td>
-                        <input
-                          type="text"
-                          className="trofeo-input"
-                          placeholder="-"
-                          value={trofeos[`col2-${row.pos}`] || ''}
-                          onChange={(e) => handleTrofeoChange('col2', row.pos, e.target.value)}
-                        />
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        <div style={{ width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', border: '2px solid rgba(0,0,0,0.05)', display: 'inline-block', verticalAlign: 'middle', margin: 'auto' }} title={row.name}>
-                          <img
-                            src={`/${row.name}.${['Vanesa', 'Lara', 'Nuria', 'Elena'].includes(row.name) ? 'jpeg' : 'jpg'}`}
-                            alt={row.name}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                          />
-                        </div>
-                      </td>
-                      <td>{row.label}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Col 3 */}
-            <div>
-              <table className="torneo-table">
-                <thead>
-                  <tr className="header-orange">
-                    <th style={{ width: '15%' }}>Posición</th>
-                    <th style={{ width: '25%' }}>Trofeo</th>
-                    <th style={{ width: '30%' }}>Vendedor</th>
-                    <th style={{ width: '30%' }}>Alta BAF Convergente</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dataCol3.map(row => (
-                    <tr key={row.name} className={`torneo-row ${getRowClass(row.pos)}`}>
-                      <td style={{ fontSize: row.pos <= 3 ? '20px' : '14px' }}>{getMedal(row.pos)}</td>
-                      <td>
-                        <input
-                          type="text"
-                          className="trofeo-input"
-                          placeholder="-"
-                          value={trofeos[`col3-${row.pos}`] || ''}
-                          onChange={(e) => handleTrofeoChange('col3', row.pos, e.target.value)}
-                        />
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        <div style={{ width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', border: '2px solid rgba(0,0,0,0.05)', display: 'inline-block', verticalAlign: 'middle', margin: 'auto' }} title={row.name}>
-                          <img
-                            src={`/${row.name}.${['Vanesa', 'Lara', 'Nuria', 'Elena'].includes(row.name) ? 'jpeg' : 'jpg'}`}
-                            alt={row.name}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                          />
-                        </div>
-                      </td>
-                      <td>{row.label}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {col.data.map(row => {
+                      const premio = col.concurso.premios.find(p => p.pos === row.pos);
+                      return (
+                        <tr key={row.name} className={`torneo-row ${getRowClass(row.pos)}`}>
+                          <td style={{ fontSize: row.pos <= 3 ? '20px' : '14px' }}>{getMedal(row.pos)}</td>
+                          <td style={{ fontSize: 12.5, fontWeight: 700, color: premio ? '#0f766e' : '#cbd5e1' }}>
+                            {premio ? premioLabel(premio) : '—'}
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <div style={{ width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', border: '2px solid rgba(0,0,0,0.05)', display: 'inline-block', verticalAlign: 'middle', margin: 'auto' }} title={row.name}>
+                              <img
+                                src={`/${row.name}.${['Vanesa', 'Lara', 'Nuria', 'Elena'].includes(row.name) ? 'jpeg' : 'jpg'}`}
+                                alt={row.name}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                              />
+                            </div>
+                          </td>
+                          <td>{row.label}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ))}
           </div>
 
           {/* GRÁFICOS */}
-          <div className="grid-container" style={{ marginTop: 2 }}>
-            <ChartBars data={dataCol1} maxValue={max1} barColor="#3b82f6" />
-            <ChartBars data={dataCol2} maxValue={max2} barColor="#65a30d" />
-            <ChartBars data={dataCol3} maxValue={max3} barColor="#f97316" />
+          <div className="grid-container" style={{ marginTop: 2, gridTemplateColumns: `repeat(${columns.length}, 1fr)` }}>
+            {columns.map((col, ci) => (
+              <ChartBars key={col.concurso.id} data={col.data} maxValue={col.max} barColor={COL_COLORS[ci % COL_COLORS.length]} />
+            ))}
           </div>
+          </>
+          )}
 
         </div>
       </div>

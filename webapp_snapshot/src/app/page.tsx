@@ -9,6 +9,7 @@ import { usePeriod } from '@/components/PeriodProvider'
 import { matchTipoVenta, matchesRule, getValueForRule } from '@/hooks/useComisionesData'
 import { isSaleActive } from '@/lib/salesUtils'
 import { TIENDAS_COMERCIALES } from '@/lib/constants'
+import { loadTorneosConfig, DEFAULT_TORNEOS_CONFIG, concursoSaleValue, TorneosConfig } from '@/lib/torneosConfig'
 
 export default function DashboardPage() {
   const { activePeriodKey } = usePeriod()
@@ -16,6 +17,8 @@ export default function DashboardPage() {
   const [allSales, setAllSales] = useState<any[]>([])
   const [tiendaRules, setTiendaRules] = useState<any[]>([])
   const [o2Rules, setO2Rules] = useState<any[]>([])
+  const [torneosConfig, setTorneosConfig] = useState<TorneosConfig>(DEFAULT_TORNEOS_CONFIG)
+  const [catalogs, setCatalogs] = useState<Record<string, any[]>>({})
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
@@ -28,15 +31,23 @@ export default function DashboardPage() {
     if (isInitial) setLoading(true);
     
     try {
-      const [userRes, salesRes, tiendasRes, o2Res] = await Promise.all([
+      const [userRes, salesRes, tiendasRes, o2Res, catalogsRes, torneosCfg] = await Promise.all([
         fetch('/api/auth/me').then(res => res.json()).catch(() => null),
         fetch(`/api/sales?periodKey=${activePeriodKey}&dashboard=true`).then(res => res.json()).catch(() => ({ success: false, logs: [] })),
         fetch(`/api/tiendas-comisiones?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({ success: false, rules: [] })),
-        fetch(`/api/settings?key=o2_rules_v2_${activePeriodKey}`).then(res => res.json()).catch(() => ({ value: null }))
+        fetch(`/api/settings?key=o2_rules_v2_${activePeriodKey}`).then(res => res.json()).catch(() => ({ value: null })),
+        fetch('/api/catalogs').then(res => res.json()).catch(() => ({ success: false, catalogs: {} })),
+        loadTorneosConfig().catch(() => DEFAULT_TORNEOS_CONFIG)
       ]);
 
       if (userRes) {
         setCurrentUser(userRes);
+      }
+      if (catalogsRes && catalogsRes.success) {
+        setCatalogs(catalogsRes.catalogs || {});
+      }
+      if (torneosCfg) {
+        setTorneosConfig(torneosCfg);
       }
       if (salesRes && salesRes.success && salesRes.logs) {
         setAllSales(salesRes.logs);
@@ -409,6 +420,27 @@ export default function DashboardPage() {
     const swap = sortDesc(swapCount);
     return { dispSeg, conv, convAll, pulpo, madruga, swap };
   })();
+
+  // ── Torneos config-driven (mismo motor que la pantalla de Torneos) ──
+  const eurFmt = (v: number) => v.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+  const torneoColumns = (() => {
+    const activos = allSales.filter(s => isSaleActive(s));
+    return torneosConfig.concursos.map(c => {
+      const byV: Record<string, number> = {};
+      activos.forEach(s => {
+        const v = String(s.vendedor || '').trim();
+        if (!v || v.toLowerCase() === 'marta') return;
+        byV[v] = (byV[v] || 0) + concursoSaleValue(s, c, catalogs);
+      });
+      const data = Object.entries(byV)
+        .map(([name, value]) => ({ name, value }))
+        .filter(x => x.value > 0)
+        .sort((a, b) => b.value - a.value);
+      const isCurrency = c.metrica === 'importe';
+      return { concurso: c, isCurrency, data, fmt: (v: number) => isCurrency ? eurFmt(v) : String(v) };
+    });
+  })();
+
   const fotoSrc = (n: string) => `/${n}.jpg`;
   const hhmm = (mins: number) => `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
   const eur = (v: number) => v.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
@@ -486,13 +518,15 @@ export default function DashboardPage() {
             </h3>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-            {[
-              { titulo: 'Dispositivos + Seguros', data: ranking.dispSeg, fmt: (v: number) => eur(v) },
-              { titulo: 'Alta BAF Convergente', data: ranking.conv, fmt: (v: number) => String(v) },
-            ].map((col, ci) => (
-              <div key={ci}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8, textAlign: 'center', borderBottom: '2px solid rgba(14,165,233,0.2)', paddingBottom: 6 }}>{col.titulo}</div>
+          {torneoColumns.length === 0 ? (
+            <div style={{ fontSize: 13, color: 'var(--medium-gray)', textAlign: 'center', padding: '20px 8px' }}>
+              No hay torneos configurados.
+            </div>
+          ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${torneoColumns.length}, 1fr)`, gap: '14px' }}>
+            {torneoColumns.map((col, ci) => (
+              <div key={col.concurso.id}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8, textAlign: 'center', borderBottom: '2px solid rgba(14,165,233,0.2)', paddingBottom: 6 }}>{col.concurso.nombre}</div>
                 {col.data.slice(0, 5).map((r, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 6px', borderRadius: 8, background: i === 0 ? 'rgba(245,158,11,0.12)' : 'transparent', marginBottom: 3 }}>
                     {['🥇', '🥈', '🥉'][i]
@@ -509,6 +543,7 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
+          )}
         </div>
       </Link>
         {/* EL MVP ROTATIVO */}
