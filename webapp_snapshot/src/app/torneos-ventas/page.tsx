@@ -67,7 +67,7 @@ export default function TorneosVentasPage() {
 
   useEffect(() => {
     loadTorneosConfig().then(setConfig);
-    fetch('/api/auth/me').then(r => r.json()).then(u => setUser(u)).catch(() => {});
+    fetch('/api/auth/me').then(r => r.json()).then(d => setUser(d?.user ?? d)).catch(() => {});
   }, []);
 
   if (loading) {
@@ -120,22 +120,20 @@ export default function TorneosVentasPage() {
 
   return (
     <div className="w-full" style={{ backgroundColor: '#f8fafc', minHeight: '100vh', padding: '24px 0 40px' }}>
-      <div style={{ position: 'relative' }}>
-        <PageHeader
-          title={<><Trophy color="#eab308" size={28} /> Torneos de Ventas</>}
-          subtitle="Ranking en tiempo real, competición y medallas por objetivos."
-          showBack={true}
-        />
-        {puedeConfig && (
+      <PageHeader
+        title={<><Trophy color="#eab308" size={28} /> Torneos de Ventas</>}
+        subtitle="Ranking en tiempo real, competición y medallas por objetivos."
+        showBack={true}
+        headerActions={puedeConfig ? (
           <Link
             href="/torneos-ventas/config"
             title="Configurar torneos"
-            style={{ position: 'absolute', top: 18, right: 32, display: 'inline-flex', alignItems: 'center', gap: 6, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: '8px 14px', color: '#0ea5e9', fontWeight: 700, textDecoration: 'none', boxShadow: '0 2px 6px rgba(0,0,0,0.06)' }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#0ea5e9', color: '#fff', border: 'none', borderRadius: 10, padding: '9px 14px', fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap', boxShadow: '0 2px 6px rgba(14,165,233,0.3)' }}
           >
             <Settings size={18} /> Configurar
           </Link>
-        )}
-      </div>
+        ) : undefined}
+      />
 
       <div style={{ padding: '0px 32px 0' }}>
         <style dangerouslySetInnerHTML={{

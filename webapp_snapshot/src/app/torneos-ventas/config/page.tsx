@@ -26,7 +26,7 @@ export default function ConfiguradorTorneosPage() {
   const [msg, setMsg] = useState('')
 
   useEffect(() => {
-    fetch('/api/auth/me').then(r => r.json()).then(u => setUser(u)).catch(() => setUser(null))
+    fetch('/api/auth/me').then(r => r.json()).then(d => setUser(d?.user ?? d)).catch(() => setUser(null))
     loadTorneosConfig().then(c => { setConfig(c); setLoaded(true) })
   }, [])
 
