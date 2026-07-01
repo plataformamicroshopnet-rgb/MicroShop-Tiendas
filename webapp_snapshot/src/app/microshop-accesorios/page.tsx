@@ -1490,34 +1490,48 @@ export default function MicroShopAccesoriosApp() {
                     <div style={{ fontSize: 10, textTransform: 'uppercase', color: '#00adef', fontWeight: 'bold', marginBottom: 8 }}>Hasta Fecha</div>
                     <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} style={{ border: 'none', background: 'white', padding: '8px 12px', borderRadius: 6, outline: 'none', fontSize: 13, color: '#00adef', width: '100%', boxSizing: 'border-box' }} />
                   </div>
-                  <div style={{ background: '#e8f5e9', padding: '16px', borderRadius: 12, border: '1px solid #c8e6c9' }}>
-                    <div style={{ fontSize: 10, textTransform: 'uppercase', color: '#2e7d32', fontWeight: 'bold', marginBottom: 8 }}>Total Facturado (IVA inc.)</div>
-                    <div style={{ fontSize: 22, fontWeight: '900', color: '#2e7d32' }}>
-                      {formatMoney(
-                        sales
-                          .filter((s) => s.estado === 'COMPLETADA' && (!dateFrom || new Date(s.fechaVenta) >= new Date(dateFrom)) && (!dateTo || new Date(s.fechaVenta) <= new Date(dateTo + 'T23:59:59')))
-                          .reduce((acc, s) => acc + s.importeTotal, 0)
-                      )}
-                    </div>
-                  </div>
-                  <div style={{ background: '#f0f4f8', padding: '16px', borderRadius: 12, border: '1px solid #cfd8dc' }}>
-                    <div style={{ fontSize: 10, textTransform: 'uppercase', color: '#37474f', fontWeight: 'bold', marginBottom: 8 }}>Ganancias (sin IVA)</div>
-                    <div style={{ fontSize: 22, fontWeight: '900', color: '#37474f' }}>
-                      {formatMoney(
-                        sales
-                          .filter((s) => s.estado === 'COMPLETADA' && (!dateFrom || new Date(s.fechaVenta) >= new Date(dateFrom)) && (!dateTo || new Date(s.fechaVenta) <= new Date(dateTo + 'T23:59:59')))
-                          .reduce((acc, s) => {
-                            try {
-                              const list = JSON.parse(s.listaProductos)
-                              const cost = list.reduce((cAcc: number, item: any) => cAcc + (item.coste * item.cantidad), 0)
-                              return acc + ((s.importeTotal / 1.21) - cost)
-                            } catch (e) {
-                              return acc
-                            }
-                          }, 0)
-                      )}
-                    </div>
-                  </div>
+                  {(() => {
+                    const ventasDe = (list: any[]) => list.reduce((acc, s) => acc + s.importeTotal, 0)
+                    const gananciasDe = (list: any[]) => list.reduce((acc, s) => {
+                      try {
+                        const lp = JSON.parse(s.listaProductos)
+                        const cost = lp.reduce((cAcc: number, item: any) => cAcc + (item.coste * item.cantidad), 0)
+                        return acc + ((s.importeTotal / 1.21) - cost)
+                      } catch (e) {
+                        return acc
+                      }
+                    }, 0)
+                    // Tarjetas del MES EN CURSO: SIEMPRE visibles, independientes del filtro Desde/Hasta.
+                    const hoy = new Date()
+                    const mesSales = sales.filter((s) => {
+                      if (s.estado !== 'COMPLETADA') return false
+                      const f = new Date(s.fechaVenta)
+                      return f.getFullYear() === hoy.getFullYear() && f.getMonth() === hoy.getMonth()
+                    })
+                    // Si se elige un rango Desde/Hasta, se AÑADEN dos tarjetas con ese periodo.
+                    const hayRango = !!(dateFrom || dateTo)
+                    const rangoSales = hayRango ? sales.filter((s) => s.estado === 'COMPLETADA' && (!dateFrom || new Date(s.fechaVenta) >= new Date(dateFrom)) && (!dateTo || new Date(s.fechaVenta) <= new Date(dateTo + 'T23:59:59'))) : []
+                    return (<>
+                      <div style={{ background: '#e8f5e9', padding: '16px', borderRadius: 12, border: '1px solid #c8e6c9' }}>
+                        <div style={{ fontSize: 10, textTransform: 'uppercase', color: '#2e7d32', fontWeight: 'bold', marginBottom: 8 }}>Total Facturado del Mes (IVA inc.)</div>
+                        <div style={{ fontSize: 22, fontWeight: '900', color: '#2e7d32' }}>{formatMoney(ventasDe(mesSales))}</div>
+                      </div>
+                      <div style={{ background: '#f0f4f8', padding: '16px', borderRadius: 12, border: '1px solid #cfd8dc' }}>
+                        <div style={{ fontSize: 10, textTransform: 'uppercase', color: '#37474f', fontWeight: 'bold', marginBottom: 8 }}>Ganancias del Mes (sin IVA)</div>
+                        <div style={{ fontSize: 22, fontWeight: '900', color: '#37474f' }}>{formatMoney(gananciasDe(mesSales))}</div>
+                      </div>
+                      {hayRango && (<>
+                        <div style={{ background: '#e8f5e9', padding: '16px', borderRadius: 12, border: '2px dashed #2e7d32' }}>
+                          <div style={{ fontSize: 10, textTransform: 'uppercase', color: '#2e7d32', fontWeight: 'bold', marginBottom: 8 }}>Total Facturado Desde→Hasta (IVA inc.)</div>
+                          <div style={{ fontSize: 22, fontWeight: '900', color: '#2e7d32' }}>{formatMoney(ventasDe(rangoSales))}</div>
+                        </div>
+                        <div style={{ background: '#f0f4f8', padding: '16px', borderRadius: 12, border: '2px dashed #37474f' }}>
+                          <div style={{ fontSize: 10, textTransform: 'uppercase', color: '#37474f', fontWeight: 'bold', marginBottom: 8 }}>Ganancias Desde→Hasta (sin IVA)</div>
+                          <div style={{ fontSize: 22, fontWeight: '900', color: '#37474f' }}>{formatMoney(gananciasDe(rangoSales))}</div>
+                        </div>
+                      </>)}
+                    </>)
+                  })()}
                 </div>
               </div>
 
