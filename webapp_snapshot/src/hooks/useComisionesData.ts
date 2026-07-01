@@ -134,11 +134,14 @@ export const matchesRule = (s: any, ruleName: string, ruleProductosCuentan: stri
         const normRule = String(ruleName || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
         const prodName = String(s.producto || '').toLowerCase().trim();
         
+        // "Fibra Adicional" (línea de fibra secundaria) NO bonifica: se excluye de las reglas
+        // de fibra O2 aunque empiece por "fibra"/"interna" (el emparejado de Marta es por prefijo,
+        // no por la lista "Tipo de Venta", por eso quitarla de la lista no bastaba).
         if (normRule.includes('altas/portas') || normRule.includes('altas fibra') || normRule === 'altas/portas fibra') {
-            return prodName.startsWith('fibra');
+            return prodName.startsWith('fibra') && !prodName.includes('adicional');
         }
         if (normRule.includes('internas') || normRule === 'internas fibra') {
-            return prodName.startsWith('interna');
+            return prodName.startsWith('interna') && !prodName.includes('adicional');
         }
         return false;
     }

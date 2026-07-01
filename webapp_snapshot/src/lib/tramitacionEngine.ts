@@ -190,11 +190,12 @@ export const matchesRule = (s: any, ruleName: string, ruleProductosCuentan: stri
         const normRule = String(ruleName || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
         const prodName = String(s.producto || '').toLowerCase().trim();
         
+        // "Fibra Adicional" NO bonifica (línea de fibra secundaria) -> se excluye de las reglas de fibra.
         if (normRule.includes('altas/portas') || normRule.includes('altas fibra') || normRule === 'altas/portas fibra') {
-            return prodName.startsWith('fibra');
+            return prodName.startsWith('fibra') && !prodName.includes('adicional');
         }
         if (normRule.includes('internas') || normRule === 'internas fibra') {
-            return prodName.startsWith('interna');
+            return prodName.startsWith('interna') && !prodName.includes('adicional');
         }
         return false;
     }

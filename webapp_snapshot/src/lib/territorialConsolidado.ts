@@ -90,7 +90,8 @@ export function getSalesDataForStoreAndType(sales: any[], storeName: string, tip
       const det = String(s.detalle || s.categoria || '').toLowerCase().trim()
       if (det !== 'o2') return false
       const prod = String(s.producto || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim()
-      return prod.startsWith('fibra') || prod.startsWith('interna')
+      // "Fibra Adicional" NO cuenta para el bono O2 (línea secundaria, no bonifica).
+      return (prod.startsWith('fibra') || prod.startsWith('interna')) && !prod.includes('adicional')
     })
   } else {
     let storeSellers: string[] = []
