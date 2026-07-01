@@ -11,6 +11,11 @@ export default function ComisionesO2Tab() {
   const { activePeriodKey, availablePeriods, isLoadingPeriods } = usePeriod()
   const activePeriodObj = availablePeriods.find(p => p.period_key === activePeriodKey)
   const isHistoric = activePeriodObj?.status === 'HISTORIC'
+  // Opción B: permitir editar las Reglas O2 de un mes CERRADO (histórico) de forma DELIBERADA,
+  // para corregir errores de configuración (p.ej. productos "Fibra Adicional" metidos por error
+  // en la regla de fibra). Por defecto sigue bloqueado; el botón "Editar mes cerrado" lo abre.
+  const [unlockedHistoric, setUnlockedHistoric] = useState(false)
+  const editLocked = isHistoric && !unlockedHistoric
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -37,7 +42,7 @@ export default function ComisionesO2Tab() {
   }, [activePeriodKey])
 
   const handleSave = async () => {
-    if (isHistoric) return alert('No puedes modificar un mes histórico.')
+    if (editLocked) return alert('No puedes modificar un mes histórico.')
     setSaving(true)
     try {
       const res = await fetch('/api/settings', {
@@ -111,8 +116,22 @@ export default function ComisionesO2Tab() {
 
   return (
     <div style={{ paddingBottom: 60 }}>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginBottom: 20 }}>
-        {!isHistoric && (
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+        {isHistoric && !unlockedHistoric && (
+          <button
+            onClick={() => { if (confirm('⚠️ Vas a EDITAR las Reglas O2 de un mes CERRADO (histórico).\n\nÚsalo SOLO para corregir un error de configuración (p.ej. quitar productos metidos por error). Al guardar, las comisiones de ese mes se recalculan.\n\n¿Continuar?')) setUnlockedHistoric(true) }}
+            className="btn btn-secondary"
+            style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, borderColor: '#F5A623', color: '#F5A623' }}
+          >
+            🔓 Editar reglas de un mes cerrado
+          </button>
+        )}
+        {isHistoric && unlockedHistoric && (
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#F5A623', fontWeight: 700, fontSize: 13 }}>
+            <AlertCircle size={16} /> Editando un mes CERRADO — guarda con cuidado
+          </span>
+        )}
+        {!editLocked && (
           <button onClick={handleSave} disabled={saving} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6, backgroundColor: '#34C759', color: 'var(--bg-card)', border: 'none', fontWeight: 'bold' }}>
             <Save size={16} /> {saving ? 'Guardando...' : 'Guardar Configuraciones'}
           </button>
@@ -124,7 +143,7 @@ export default function ComisionesO2Tab() {
         <div className="card" style={{ padding: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <h3 style={{ margin: 0, color: 'var(--mercedes-cyan)' }}>1. Reglas Globales O2 / MovilFree</h3>
-            {!isHistoric && (
+            {!editLocked && (
               <button onClick={addRule} className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
                 <Plus size={16} /> Añadir Regla
               </button>
@@ -143,14 +162,14 @@ export default function ComisionesO2Tab() {
                   <th style={{ padding: '12px 8px' }}>Importe 2º</th>
                   <th style={{ padding: '12px 8px' }}>Condicionantes</th>
                   <th style={{ padding: '12px 8px' }}>Total Horas</th>
-                  {!isHistoric && <th style={{ padding: '12px 8px', width: 40 }}></th>}
+                  {!editLocked && <th style={{ padding: '12px 8px', width: 40 }}></th>}
                 </tr>
               </thead>
               <tbody>
                 {rules.map((rule, idx) => (
                   <tr key={rule.id || idx} style={{ borderBottom: '1px solid var(--table-border)' }}>
                     <td style={{ padding: '8px' }}>
-                      <input type="text" disabled={isHistoric} value={rule.nombre || ''} onChange={e => updateRule(idx, 'nombre', e.target.value)} style={{ width: 140, padding: 6, backgroundColor: isHistoric ? 'transparent' : 'var(--app-bg)', color: 'var(--light-text)', border: isHistoric ? 'none' : '1px solid var(--border-color)', borderRadius: 4 }} placeholder="Alta BAF..." />
+                      <input type="text" disabled={editLocked} value={rule.nombre || ''} onChange={e => updateRule(idx, 'nombre', e.target.value)} style={{ width: 140, padding: 6, backgroundColor: editLocked ?'transparent' : 'var(--app-bg)', color: 'var(--light-text)', border: editLocked ?'none' : '1px solid var(--border-color)', borderRadius: 4 }} placeholder="Alta BAF..." />
                     </td>
                     <td style={{ padding: '8px' }}>
                       {(() => {
@@ -161,14 +180,14 @@ export default function ComisionesO2Tab() {
                             <ProductTreeSelector 
                               value={rule.productosCuentan || ''}
                               onChange={val => updateRule(idx, 'productosCuentan', val)}
-                              disabled={isHistoric}
+                              disabled={editLocked}
                             />
                             {isFormulaLibre && (
                               <textarea 
-                                disabled={isHistoric} 
+                                disabled={editLocked} 
                                 value={rule.productosCuentan || ''} 
                                 onChange={e => updateRule(idx, 'productosCuentan', e.target.value)} 
-                                style={{ marginTop: 8, width: 180, padding: 6, backgroundColor: isHistoric ? 'transparent' : 'var(--app-bg)', color: 'var(--light-text)', border: isHistoric ? 'none' : '1px solid var(--border-color)', borderRadius: 4, resize: 'vertical', minHeight: 32 }} 
+                                style={{ marginTop: 8, width: 180, padding: 6, backgroundColor: editLocked ?'transparent' : 'var(--app-bg)', color: 'var(--light-text)', border: editLocked ?'none' : '1px solid var(--border-color)', borderRadius: 4, resize: 'vertical', minHeight: 32 }} 
                                 placeholder="Fórmula (ej: MPA + FTTR)..." 
                               />
                             )}
@@ -177,29 +196,29 @@ export default function ComisionesO2Tab() {
                       })()}
                     </td>
                     <td style={{ padding: '8px' }}>
-                      <input type="number" step="0.01" disabled={isHistoric} value={rule.objPrimerTramo ?? ''} onChange={e => updateRule(idx, 'objPrimerTramo', e.target.value)} style={{ width: 80, padding: 6, backgroundColor: isHistoric ? 'transparent' : 'var(--app-bg)', color: 'var(--light-text)', border: isHistoric ? 'none' : '1px solid var(--border-color)', borderRadius: 4 }} />
+                      <input type="number" step="0.01" disabled={editLocked} value={rule.objPrimerTramo ?? ''} onChange={e => updateRule(idx, 'objPrimerTramo', e.target.value)} style={{ width: 80, padding: 6, backgroundColor: editLocked ?'transparent' : 'var(--app-bg)', color: 'var(--light-text)', border: editLocked ?'none' : '1px solid var(--border-color)', borderRadius: 4 }} />
                     </td>
                     <td style={{ padding: '8px' }}>
-                      <input type="text" disabled={isHistoric} value={rule.importePrimerTramo || ''} onChange={e => updateRule(idx, 'importePrimerTramo', e.target.value)} style={{ width: 80, padding: 6, backgroundColor: isHistoric ? 'transparent' : 'var(--app-bg)', color: 'var(--light-text)', border: isHistoric ? 'none' : '1px solid var(--border-color)', borderRadius: 4 }} placeholder="€ o %" />
+                      <input type="text" disabled={editLocked} value={rule.importePrimerTramo || ''} onChange={e => updateRule(idx, 'importePrimerTramo', e.target.value)} style={{ width: 80, padding: 6, backgroundColor: editLocked ?'transparent' : 'var(--app-bg)', color: 'var(--light-text)', border: editLocked ?'none' : '1px solid var(--border-color)', borderRadius: 4 }} placeholder="€ o %" />
                     </td>
                     <td style={{ padding: '8px' }}>
-                      <input type="number" step="0.01" disabled={isHistoric} value={rule.objSegundoTramo ?? ''} onChange={e => updateRule(idx, 'objSegundoTramo', e.target.value)} style={{ width: 80, padding: 6, backgroundColor: isHistoric ? 'transparent' : 'var(--app-bg)', color: 'var(--light-text)', border: isHistoric ? 'none' : '1px solid var(--border-color)', borderRadius: 4 }} />
+                      <input type="number" step="0.01" disabled={editLocked} value={rule.objSegundoTramo ?? ''} onChange={e => updateRule(idx, 'objSegundoTramo', e.target.value)} style={{ width: 80, padding: 6, backgroundColor: editLocked ?'transparent' : 'var(--app-bg)', color: 'var(--light-text)', border: editLocked ?'none' : '1px solid var(--border-color)', borderRadius: 4 }} />
                     </td>
                     <td style={{ padding: '8px' }}>
-                      <input type="text" disabled={isHistoric} value={rule.importeSegundoTramo || ''} onChange={e => updateRule(idx, 'importeSegundoTramo', e.target.value)} style={{ width: 80, padding: 6, backgroundColor: isHistoric ? 'transparent' : 'var(--app-bg)', color: 'var(--light-text)', border: isHistoric ? 'none' : '1px solid var(--border-color)', borderRadius: 4 }} placeholder="€ o %" />
+                      <input type="text" disabled={editLocked} value={rule.importeSegundoTramo || ''} onChange={e => updateRule(idx, 'importeSegundoTramo', e.target.value)} style={{ width: 80, padding: 6, backgroundColor: editLocked ?'transparent' : 'var(--app-bg)', color: 'var(--light-text)', border: editLocked ?'none' : '1px solid var(--border-color)', borderRadius: 4 }} placeholder="€ o %" />
                     </td>
                     <td style={{ padding: '8px' }}>
                       <RuleConditionBuilder 
-                        disabled={isHistoric} 
+                        disabled={editLocked} 
                         value={rule.condicionantes || ''} 
                         onChange={val => updateRule(idx, 'condicionantes', val)} 
                         availableGroups={rules.map(r => r.nombre).filter(Boolean)}
                       />
                     </td>
                     <td style={{ padding: '8px' }}>
-                      <input type="number" step="0.5" disabled={isHistoric} value={rule.totalHoras ?? ''} onChange={e => updateRule(idx, 'totalHoras', e.target.value)} style={{ width: 80, padding: 6, backgroundColor: isHistoric ? 'transparent' : 'var(--app-bg)', color: 'var(--light-text)', border: isHistoric ? 'none' : '1px solid var(--border-color)', borderRadius: 4 }} placeholder="Ej: 262" />
+                      <input type="number" step="0.5" disabled={editLocked} value={rule.totalHoras ?? ''} onChange={e => updateRule(idx, 'totalHoras', e.target.value)} style={{ width: 80, padding: 6, backgroundColor: editLocked ?'transparent' : 'var(--app-bg)', color: 'var(--light-text)', border: editLocked ?'none' : '1px solid var(--border-color)', borderRadius: 4 }} placeholder="Ej: 262" />
                     </td>
-                    {!isHistoric && (
+                    {!editLocked && (
                       <td style={{ padding: '8px', textAlign: 'center' }}>
                         <button onClick={() => removeRule(idx)} className="btn" style={{ padding: 4, color: '#FF453A', background: 'transparent', border: 'none' }}>
                           <Trash2 size={16} />
@@ -220,7 +239,7 @@ export default function ComisionesO2Tab() {
         <div className="card" style={{ padding: 20, maxWidth: 600 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <h3 style={{ margin: 0, color: 'var(--mercedes-cyan)' }}>2. Horarios de Comerciales</h3>
-            {!isHistoric && (
+            {!editLocked && (
               <button onClick={addHour} className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
                 <Plus size={16} /> Añadir Comercial
               </button>
@@ -232,19 +251,19 @@ export default function ComisionesO2Tab() {
               <tr style={{ backgroundColor: 'var(--active-bg)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
                 <th style={{ padding: '12px 8px' }}>Comercial</th>
                 <th style={{ padding: '12px 8px' }}>Horario (Horas/Semana o Mes)</th>
-                {!isHistoric && <th style={{ padding: '12px 8px', width: 40 }}></th>}
+                {!editLocked && <th style={{ padding: '12px 8px', width: 40 }}></th>}
               </tr>
             </thead>
             <tbody>
               {hours.map((hour, idx) => (
                 <tr key={hour.id || idx} style={{ borderBottom: '1px solid var(--table-border)' }}>
                   <td style={{ padding: '8px' }}>
-                    <input type="text" disabled={isHistoric} value={hour.comercial || ''} onChange={e => updateHour(idx, 'comercial', e.target.value)} style={{ width: '100%', padding: 6, backgroundColor: isHistoric ? 'transparent' : 'var(--app-bg)', color: 'var(--light-text)', border: isHistoric ? 'none' : '1px solid var(--border-color)', borderRadius: 4 }} placeholder="Nombre del Comercial..." />
+                    <input type="text" disabled={editLocked} value={hour.comercial || ''} onChange={e => updateHour(idx, 'comercial', e.target.value)} style={{ width: '100%', padding: 6, backgroundColor: editLocked ?'transparent' : 'var(--app-bg)', color: 'var(--light-text)', border: editLocked ?'none' : '1px solid var(--border-color)', borderRadius: 4 }} placeholder="Nombre del Comercial..." />
                   </td>
                   <td style={{ padding: '8px' }}>
-                    <input type="number" step="0.5" disabled={isHistoric} value={hour.horario ?? ''} onChange={e => updateHour(idx, 'horario', e.target.value)} style={{ width: 120, padding: 6, backgroundColor: isHistoric ? 'transparent' : 'var(--app-bg)', color: 'var(--light-text)', border: isHistoric ? 'none' : '1px solid var(--border-color)', borderRadius: 4 }} placeholder="Ej: 39" />
+                    <input type="number" step="0.5" disabled={editLocked} value={hour.horario ?? ''} onChange={e => updateHour(idx, 'horario', e.target.value)} style={{ width: 120, padding: 6, backgroundColor: editLocked ?'transparent' : 'var(--app-bg)', color: 'var(--light-text)', border: editLocked ?'none' : '1px solid var(--border-color)', borderRadius: 4 }} placeholder="Ej: 39" />
                   </td>
-                  {!isHistoric && (
+                  {!editLocked && (
                     <td style={{ padding: '8px', textAlign: 'center' }}>
                       <button onClick={() => removeHour(idx)} className="btn" style={{ padding: 4, color: '#FF453A', background: 'transparent', border: 'none' }}>
                         <Trash2 size={16} />
