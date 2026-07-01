@@ -1559,31 +1559,49 @@ export default function MovilFreeApp() {
                     <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ border: 'none', background: 'white', padding: '8px 12px', borderRadius: 6, outline: 'none', fontSize: 14, color: '#0369a1', width: '100%', boxSizing: 'border-box' }} />
                   </div>
 
-                  <div style={{ background: '#FFF0F9', padding: '16px', borderRadius: 12, border: '1px solid #fdd8e7', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                    <div style={{ fontSize: 11, textTransform: 'uppercase', color: '#E91E97', fontWeight: 'bold', marginBottom: 8 }}>Total Ventas (IVA inc.)</div>
-                    <div style={{ fontSize: 24, fontWeight: '900', color: '#E91E97' }}>
-                      {new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(
-                        sales.filter(s => s.estado === 'COMPLETADA' && (!dateFrom || new Date(s.fechaVenta) >= new Date(dateFrom)) && (!dateTo || new Date(s.fechaVenta) <= new Date(dateTo + 'T23:59:59')))
-                        .reduce((acc, s) => acc + s.importeTotal, 0)
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div style={{ background: '#e8f5e9', padding: '16px', borderRadius: 12, border: '1px solid #c8e6c9', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                    <div style={{ fontSize: 11, textTransform: 'uppercase', color: '#2e7d32', fontWeight: 'bold', marginBottom: 8 }}>Ganancias (Sin IVA)</div>
-                    <div style={{ fontSize: 24, fontWeight: '900', color: '#2e7d32' }}>
-                      {new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(
-                        sales.filter(s => s.estado === 'COMPLETADA' && (!dateFrom || new Date(s.fechaVenta) >= new Date(dateFrom)) && (!dateTo || new Date(s.fechaVenta) <= new Date(dateTo + 'T23:59:59')))
-                        .reduce((acc, s) => {
-                          try {
-                            const list = JSON.parse(s.listaProductos);
-                            const cost = list.reduce((cAcc: number, item: any) => cAcc + ((item.coste !== undefined ? item.coste : (products.find(p => p.id === item.id)?.coste || 0)) * item.cantidad), 0);
-                            return acc + ((s.importeTotal / 1.21) - cost);
-                          } catch(e) { return acc; }
-                        }, 0)
-                      )}
-                    </div>
-                  </div>
+                  {(() => {
+                    const fmt = (v: number) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(v)
+                    const ventasDe = (list: any[]) => list.reduce((acc, s) => acc + s.importeTotal, 0)
+                    const gananciasDe = (list: any[]) => list.reduce((acc, s) => {
+                      try {
+                        const lp = JSON.parse(s.listaProductos);
+                        const cost = lp.reduce((cAcc: number, item: any) => cAcc + ((item.coste !== undefined ? item.coste : (products.find(p => p.id === item.id)?.coste || 0)) * item.cantidad), 0);
+                        return acc + ((s.importeTotal / 1.21) - cost);
+                      } catch(e) { return acc; }
+                    }, 0)
+                    // Tarjetas del MES EN CURSO: SIEMPRE visibles, independientes del filtro Desde/Hasta.
+                    const hoy = new Date()
+                    const mesSales = sales.filter(s => {
+                      if (s.estado !== 'COMPLETADA') return false;
+                      const f = new Date(s.fechaVenta);
+                      return f.getFullYear() === hoy.getFullYear() && f.getMonth() === hoy.getMonth();
+                    })
+                    // Si se elige un rango Desde/Hasta, se AÑADEN dos tarjetas con ese periodo.
+                    const hayRango = !!(dateFrom || dateTo)
+                    const rangoSales = hayRango ? sales.filter(s => s.estado === 'COMPLETADA' && (!dateFrom || new Date(s.fechaVenta) >= new Date(dateFrom)) && (!dateTo || new Date(s.fechaVenta) <= new Date(dateTo + 'T23:59:59'))) : []
+                    return (<>
+                      <div style={{ background: '#FFF0F9', padding: '16px', borderRadius: 12, border: '1px solid #fdd8e7', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                        <div style={{ fontSize: 11, textTransform: 'uppercase', color: '#E91E97', fontWeight: 'bold', marginBottom: 8 }}>Total Ventas del Mes (IVA inc.)</div>
+                        <div style={{ fontSize: 24, fontWeight: '900', color: '#E91E97' }}>{fmt(ventasDe(mesSales))}</div>
+                      </div>
+
+                      <div style={{ background: '#e8f5e9', padding: '16px', borderRadius: 12, border: '1px solid #c8e6c9', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                        <div style={{ fontSize: 11, textTransform: 'uppercase', color: '#2e7d32', fontWeight: 'bold', marginBottom: 8 }}>Ganancias del Mes (Sin IVA)</div>
+                        <div style={{ fontSize: 24, fontWeight: '900', color: '#2e7d32' }}>{fmt(gananciasDe(mesSales))}</div>
+                      </div>
+
+                      {hayRango && (<>
+                        <div style={{ background: '#FFF0F9', padding: '16px', borderRadius: 12, border: '2px dashed #E91E97', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                          <div style={{ fontSize: 11, textTransform: 'uppercase', color: '#E91E97', fontWeight: 'bold', marginBottom: 8 }}>Total Ventas Desde→Hasta (IVA inc.)</div>
+                          <div style={{ fontSize: 24, fontWeight: '900', color: '#E91E97' }}>{fmt(ventasDe(rangoSales))}</div>
+                        </div>
+                        <div style={{ background: '#e8f5e9', padding: '16px', borderRadius: 12, border: '2px dashed #2e7d32', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                          <div style={{ fontSize: 11, textTransform: 'uppercase', color: '#2e7d32', fontWeight: 'bold', marginBottom: 8 }}>Ganancias Desde→Hasta (Sin IVA)</div>
+                          <div style={{ fontSize: 24, fontWeight: '900', color: '#2e7d32' }}>{fmt(gananciasDe(rangoSales))}</div>
+                        </div>
+                      </>)}
+                    </>)
+                  })()}
                 </div>
               </div>
 
