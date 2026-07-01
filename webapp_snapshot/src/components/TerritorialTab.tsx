@@ -151,14 +151,14 @@ export default function TerritorialTab() {
     let filtered: any[];
 
     if (storeName === 'O2') {
-      // Contar TODAS las ventas de cualquier comercial donde:
-      // detalle/categoria = 'o2' Y producto empieza por 'Fibra' o 'Interna'
+      // Contar las ventas O2 (detalle/categoria = 'o2') que casen con la lista "Tipo de
+      // Venta" de la regla: la LISTA MANDA (el token 'O2' = comod\u00edn fibra*/interna*
+      // heredado). Antes un prefijo hardcodeado ignoraba la lista.
       filtered = sales.filter(s => {
         if (isSaleCancelled(s)) return false;
         const det = String(s.detalle || s.categoria || '').toLowerCase().trim();
         if (det !== 'o2') return false;
-        const prod = String(s.producto || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-        return prod.startsWith('fibra') || prod.startsWith('interna');
+        return isProductMatch(s);
       });
     } else {
       // Para tiendas físicas: filtrar por comerciales de esa tienda

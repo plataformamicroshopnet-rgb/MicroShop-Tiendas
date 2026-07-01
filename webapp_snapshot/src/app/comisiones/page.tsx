@@ -4,7 +4,7 @@ import React from 'react'
 import { Trophy, Target, Euro, Calendar, Clock, AlertCircle, Medal, BadgeCheck, ListFilter, XCircle, Sparkles, Crown, Diamond, ArrowUp, ArrowDown } from 'lucide-react'
 import Link from 'next/link'
 import { PageHeader } from '@/components/PageHeader'
-import { useComisionesData } from '@/hooks/useComisionesData'
+import { useComisionesData, matchTipoVenta } from '@/hooks/useComisionesData'
 import { ALL_GROUPS } from '@/lib/comisiones'
 import { useGuard } from '@/hooks/useGuard'
 import { useRouter } from 'next/navigation'
@@ -848,8 +848,9 @@ export default function ComisionesDashboardPage() {
                                                             if (ms.anulado === 'Si' || ms.anulado === 'Sí' || ms.pendiente === 'Anulado') return false;
                                                             const det = String(ms.detalle || ms.categoria || ms.sheet || '').toLowerCase().trim();
                                                             if (det !== 'o2') return false;
-                                                            const prod = String(ms.producto || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-                                                            return prod.startsWith('fibra') || prod.startsWith('interna');
+                                                            // La lista "Tipo de Venta" de la regla del bono MANDA ('O2' = comod\u00edn
+                                                            // fibra*/interna*). Mismo criterio que computeBonosO2 para que cuadre.
+                                                            return matchTipoVenta(ms, rule.tipoVenta);
                                                         }).length;
 
                                                         

@@ -190,12 +190,18 @@ export const matchesRule = (s: any, ruleName: string, ruleProductosCuentan: stri
         const normRule = String(ruleName || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
         const prodName = String(s.producto || '').toLowerCase().trim();
         
-        // "Fibra Adicional" NO bonifica (línea de fibra secundaria) -> se excluye de las reglas de fibra.
+        // La lista "Tipo de Venta" de la regla MANDA: matchTipoVenta casa las ventas O2 por
+        // nombre EXACTO ('O2' en la lista = comodín fibra*/interna* heredado). Antes se usaba
+        // un PREFIJO hardcodeado y editar la lista no surtía efecto.
+        if (String(ruleProductosCuentan || '').trim()) {
+            return matchTipoVenta(s, ruleProductosCuentan);
+        }
+        // Compat: regla sin lista configurada -> prefijo de siempre.
         if (normRule.includes('altas/portas') || normRule.includes('altas fibra') || normRule === 'altas/portas fibra') {
-            return prodName.startsWith('fibra') && !prodName.includes('adicional');
+            return prodName.startsWith('fibra');
         }
         if (normRule.includes('internas') || normRule === 'internas fibra') {
-            return prodName.startsWith('interna') && !prodName.includes('adicional');
+            return prodName.startsWith('interna');
         }
         return false;
     }

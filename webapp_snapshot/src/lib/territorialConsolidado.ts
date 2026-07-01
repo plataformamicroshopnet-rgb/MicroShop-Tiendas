@@ -89,9 +89,10 @@ export function getSalesDataForStoreAndType(sales: any[], storeName: string, tip
       if (isSaleCancelled(s)) return false
       const det = String(s.detalle || s.categoria || '').toLowerCase().trim()
       if (det !== 'o2') return false
-      const prod = String(s.producto || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim()
-      // "Fibra Adicional" NO cuenta para el bono O2 (línea secundaria, no bonifica).
-      return (prod.startsWith('fibra') || prod.startsWith('interna')) && !prod.includes('adicional')
+      // La lista "Tipo de Venta" de la regla MANDA (el token 'O2' de la lista = comodín
+      // fibra*/interna* heredado). Antes un prefijo hardcodeado ignoraba la lista y editar
+      // los productos de la regla no cambiaba el bono.
+      return isProductMatch(s)
     })
   } else {
     let storeSellers: string[] = []
