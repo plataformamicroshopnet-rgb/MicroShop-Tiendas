@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Save, ClipboardList, Trash2, ArrowLeft, MessageSquare } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
+import { ExcelIcon } from '@/components/ActionIcons';
 
 export function ComisionesV3({ activePeriodKey, canModify }: { activePeriodKey: string, canModify: boolean }) {
     const [localPeriod, setLocalPeriod] = useState<string>(activePeriodKey || '2026_05');
@@ -194,6 +196,117 @@ export function ComisionesV3({ activePeriodKey, canModify }: { activePeriodKey: 
     const totalTiendas = tiendaRows.reduce((sum, r) => sum + (r.total || 0), 0);
     const totalLogistica = logisticaRows.reduce((sum, r) => sum + (r.total || 0), 0);
 
+    // ── Exportar a Excel con los MISMOS colores/estilo de la pantalla ──────────────
+    const exportExcel = async () => {
+        const wb = new ExcelJS.Workbook();
+        const sheet = wb.addWorksheet('Comisiones');
+        sheet.columns = [{ width: 30 }, { width: 14 }, { width: 14 }, { width: 14 }, { width: 14 }, { width: 14 }, { width: 14 }, { width: 14 }];
+        const CUR = '#,##0.00" €";-#,##0.00" €";"-   €"';
+        const num = (v: any) => Number(v) || 0;
+
+        // Título (banda verde, como en pantalla)
+        const tRow = sheet.addRow([titulo || generateDefaultTitle(localPeriod)]);
+        sheet.mergeCells(tRow.number, 1, tRow.number, 8);
+        tRow.height = 28;
+        const tCell = tRow.getCell(1);
+        tCell.font = { name: 'Segoe UI', size: 13, bold: true, color: { argb: 'FFFFFFFF' } };
+        tCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF5CB85C' } };
+        tCell.alignment = { vertical: 'middle', horizontal: 'center' };
+        sheet.addRow([]);
+
+        const addHeader = (labels: string[]) => {
+            const row = sheet.addRow(labels);
+            row.height = 22;
+            for (let c = 1; c <= labels.length; c++) {
+                const cell = row.getCell(c);
+                cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0066CC' } };
+                cell.alignment = { vertical: 'middle', horizontal: c === 1 ? 'left' : 'center' };
+            }
+        };
+        // Fila de datos: cols = [{v, nota?, rojo?}] — 1ª col texto, resto moneda
+        const addData = (cols: { v: any; nota?: string; rojo?: boolean }[], zebra: boolean) => {
+            const row = sheet.addRow(cols.map(c => c.v));
+            row.height = 18;
+            cols.forEach((c, idx) => {
+                const cell = row.getCell(idx + 1);
+                cell.font = { name: 'Segoe UI', size: 10, color: { argb: c.rojo ? 'FFDC2626' : 'FF0F172A' }, bold: !!c.rojo };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: zebra ? 'FFF0F9FF' : 'FFFFFFFF' } };
+                cell.border = { top: { style: 'thin', color: { argb: 'FFE2E8F0' } }, bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } }, left: { style: 'thin', color: { argb: 'FFE2E8F0' } }, right: { style: 'thin', color: { argb: 'FFE2E8F0' } } };
+                if (idx > 0) { cell.numFmt = CUR; cell.alignment = { horizontal: 'right' }; }
+                if (c.nota && String(c.nota).trim()) cell.note = String(c.nota);
+            });
+        };
+        const addTotal = (label: string, total: number, nCols: number) => {
+            const vals: any[] = new Array(nCols).fill('');
+            vals[0] = label; vals[nCols - 1] = total;
+            const row = sheet.addRow(vals);
+            row.height = 20;
+            for (let c = 1; c <= nCols; c++) {
+                const cell = row.getCell(c);
+                cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF166534' } };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC1E1C1' } };
+                if (c === nCols) { cell.numFmt = CUR; cell.alignment = { horizontal: 'right' }; }
+            }
+        };
+
+        // FFVV
+        addHeader(['FFVV', 'IMPORTE', 'VARIOS', 'DESCUENTOS', 'DIETAS', 'KM', 'INCENTIVOS', 'TOTAL']);
+        ffvvRows.forEach((r, i) => addData([
+            { v: r.nombre || '' }, { v: num(r.importe) },
+            { v: num(r.aceleradores), nota: r.notasVarios },
+            { v: num(r.descuentos), nota: r.notasDescuentos, rojo: num(r.descuentos) > 0 },
+            { v: num(r.dietas), nota: r.notasDietas },
+            { v: num(r.km), nota: r.notasKm },
+            { v: num(r.incentivos) }, { v: num(r.total) },
+        ], i % 2 === 1));
+        addTotal('TOTAL FFVV', totalFFVV, 8);
+        sheet.addRow([]);
+
+        // TIENDAS
+        addHeader(['TIENDAS', 'IMPORTE', 'O2 Y VARIOS', 'DESCUENTOS', 'TOTAL']);
+        tiendaRows.forEach((r, i) => addData([
+            { v: r.nombre || '' }, { v: num(r.importe) },
+            { v: num(r.o2Varios), nota: r.notasVarios },
+            { v: num(r.descuentos), nota: r.notasDescuentos, rojo: num(r.descuentos) > 0 },
+            { v: num(r.total) },
+        ], i % 2 === 1));
+        addTotal('TOTAL TIENDAS', totalTiendas, 5);
+        sheet.addRow([]);
+
+        // LOGÍSTICA
+        addHeader(['LOGÍSTICA', 'COMISIONES', 'GASOLINA', 'DIETAS', 'KM', 'INCENTIVOS', 'TOTAL']);
+        logisticaRows.forEach((r, i) => addData([
+            { v: r.nombre || '' }, { v: num(r.importe) }, { v: num(r.gasolina) },
+            { v: num(r.dietas), nota: r.notasDietas },
+            { v: num(r.km), nota: r.notasKm },
+            { v: num(r.incentivos) }, { v: num(r.total) },
+        ], i % 2 === 1));
+        addTotal('TOTAL LOGÍSTICA', totalLogistica, 7);
+        sheet.addRow([]);
+
+        // TOTAL GENERAL (banda verde como en pantalla)
+        const gRow = sheet.addRow(['TOTAL GENERAL (FFVV + TIENDAS + LOGÍSTICA)', '', '', '', '', '', '', totalFFVV + totalTiendas + totalLogistica]);
+        sheet.mergeCells(gRow.number, 1, gRow.number, 7);
+        gRow.height = 26;
+        for (const c of [1, 8]) {
+            const cell = gRow.getCell(c);
+            cell.font = { name: 'Segoe UI', size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF5CB85C' } };
+            cell.alignment = { vertical: 'middle', horizontal: c === 1 ? 'left' : 'right' };
+            if (c === 8) cell.numFmt = CUR;
+        }
+
+        const buffer = await wb.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Comisiones_Tiendas_FFVV_v3_${localPeriod}.xlsx`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+    };
+
     const actionControlStyle: React.CSSProperties = {
         height: 38,
         padding: '0 12px',
@@ -273,6 +386,9 @@ export function ComisionesV3({ activePeriodKey, canModify }: { activePeriodKey: 
                             <option value="LOGISTICA">Añadir en Varios (Salva)</option>
                         </select>
                     )}
+                    <button onClick={exportExcel} disabled={loading || comisiones.length === 0} title="Exportar todo a Excel (mismos colores y formato)" style={{ ...actionControlStyle, background: '#107c41', opacity: (loading || comisiones.length === 0) ? 0.6 : 1 }}>
+                        <ExcelIcon size={16} /> Exportar Excel
+                    </button>
                     <button onClick={saveChanges} disabled={saving || !canModify} style={{ ...actionControlStyle, background: '#0ea5e9', opacity: (saving || !canModify) ? 0.6 : 1 }}>
                         <Save size={16} /> {saving ? 'Guardando...' : 'Guardar Cambios'}
                     </button>

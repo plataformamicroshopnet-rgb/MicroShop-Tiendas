@@ -96,7 +96,7 @@ export default async function PrintInvoice({ params, searchParams }: { params: P
         </table>
 
         <div style={{ marginTop: 20 }}>
-          <div>FORMA DE PAGO: Efectivo / Tarjeta</div>
+          <div>FORMA DE PAGO: <strong>{sale.metodoPago || 'Efectivo'}</strong></div>
           <div>FECHA: {formatDate(sale.fechaVenta)}</div>
         </div>
 

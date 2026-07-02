@@ -42,7 +42,9 @@ export async function POST(request: Request) {
         if (!incoming || typeof incoming !== 'object') {
             return NextResponse.json({ success: false, error: 'invalid payload' }, { status: 400 })
         }
-        const merged: Record<string, number> = { ...readFeed() }
+        // Por defecto FUSIONA; con {replace:true} el ERP manda la foto completa y sustituye.
+        const replaceAll = !!(body && body.replace === true)
+        const merged: Record<string, number> = replaceAll ? {} : { ...readFeed() }
         for (const [k, v] of Object.entries(incoming)) {
             if (/^\d{4}_\d{2}$/.test(k) && v !== null && v !== undefined && !isNaN(Number(v))) {
                 merged[k] = Number(v)
