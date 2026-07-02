@@ -82,6 +82,9 @@ export default function MicroShopAccesoriosApp() {
   const [products, setProducts] = useState<Product[]>([])
   const [clients, setClients] = useState<Client[]>([])
   const [sales, setSales] = useState<Sale[]>([])
+  // ESPEJO de las ventas del módulo MovilFree (solo LECTURA: se muestran en el Histórico
+  // para verlo todo desde un sitio, pero se gestionan únicamente desde MovilFree).
+  const [mfSales, setMfSales] = useState<any[]>([])
   const [transfers, setTransfers] = useState<Transfer[]>([])
 
   // Active store / user context
@@ -157,6 +160,13 @@ export default function MicroShopAccesoriosApp() {
       .then((d) => {
         if (Array.isArray(d)) setSales(d)
       })
+    // Espejo MovilFree (GET de solo lectura; si falla, simplemente no se muestra)
+    fetch('/api/movilfree/sales')
+      .then((r) => r.json())
+      .then((d) => {
+        if (Array.isArray(d)) setMfSales(d)
+      })
+      .catch(() => {})
   }
 
   const loadTransfers = () => {
@@ -1495,7 +1505,7 @@ export default function MicroShopAccesoriosApp() {
                     const gananciasDe = (list: any[]) => list.reduce((acc, s) => {
                       try {
                         const lp = JSON.parse(s.listaProductos)
-                        const cost = lp.reduce((cAcc: number, item: any) => cAcc + (item.coste * item.cantidad), 0)
+                        const cost = lp.reduce((cAcc: number, item: any) => cAcc + ((Number(item.coste) || 0) * (Number(item.cantidad) || 0)), 0)
                         return acc + ((s.importeTotal / 1.21) - cost)
                       } catch (e) {
                         return acc
@@ -1520,6 +1530,26 @@ export default function MicroShopAccesoriosApp() {
                         <div style={{ fontSize: 10, textTransform: 'uppercase', color: '#37474f', fontWeight: 'bold', marginBottom: 8 }}>Ganancias del Mes (sin IVA)</div>
                         <div style={{ fontSize: 22, fontWeight: '900', color: '#37474f' }}>{formatMoney(gananciasDe(mesSales))}</div>
                       </div>
+                      {(() => {
+                        // ESPEJO MovilFree (solo lectura): mismas métricas del mes en curso
+                        // con las ventas del módulo MovilFree, para verlo todo desde aquí.
+                        if (mfSales.length === 0) return null
+                        const mfMes = mfSales.filter((s: any) => {
+                          if (s.estado !== 'COMPLETADA') return false
+                          const f = new Date(s.fechaVenta)
+                          return f.getFullYear() === hoy.getFullYear() && f.getMonth() === hoy.getMonth()
+                        })
+                        return (<>
+                          <div style={{ background: '#e3f2fd', padding: '16px', borderRadius: 12, border: '1px solid #90caf9' }}>
+                            <div style={{ fontSize: 10, textTransform: 'uppercase', color: '#00adef', fontWeight: 'bold', marginBottom: 8 }}>🔵 MovilFree del Mes (IVA inc.) — espejo</div>
+                            <div style={{ fontSize: 22, fontWeight: '900', color: '#0277bd' }}>{formatMoney(ventasDe(mfMes))}</div>
+                          </div>
+                          <div style={{ background: '#e3f2fd', padding: '16px', borderRadius: 12, border: '1px solid #90caf9' }}>
+                            <div style={{ fontSize: 10, textTransform: 'uppercase', color: '#00adef', fontWeight: 'bold', marginBottom: 8 }}>🔵 Ganancias MovilFree del Mes (sin IVA) — espejo</div>
+                            <div style={{ fontSize: 22, fontWeight: '900', color: '#0277bd' }}>{formatMoney(gananciasDe(mfMes))}</div>
+                          </div>
+                        </>)
+                      })()}
                       {hayRango && (<>
                         <div style={{ background: '#e8f5e9', padding: '16px', borderRadius: 12, border: '2px dashed #2e7d32' }}>
                           <div style={{ fontSize: 10, textTransform: 'uppercase', color: '#2e7d32', fontWeight: 'bold', marginBottom: 8 }}>Total Facturado Desde→Hasta (IVA inc.)</div>
@@ -1550,8 +1580,9 @@ export default function MicroShopAccesoriosApp() {
                     </tr>
                   </thead>
                   <tbody>
-                    {sales
-                      .filter((s) => {
+                    {[...sales.map((s: any) => ({ ...s, __mf: false })), ...mfSales.map((s: any) => ({ ...s, __mf: true }))]
+                      .sort((a: any, b: any) => new Date(b.fechaVenta).getTime() - new Date(a.fechaVenta).getTime())
+                      .filter((s: any) => {
                         const dateVal = new Date(s.fechaVenta)
                         const matchesDate =
                           (!dateFrom || dateVal >= new Date(dateFrom)) &&
@@ -1564,18 +1595,19 @@ export default function MicroShopAccesoriosApp() {
                           (s.numeroFactura ? s.numeroFactura.toString() : '').includes(searchSales)
                         return matchesDate && matchesText
                       })
-                      .map((s) => {
+                      .map((s: any) => {
                         const isDev = s.estado === 'DEVUELTA'
                         const items = JSON.parse(s.listaProductos || '[]')
                         return (
-                          <tr key={s.id} style={{ borderBottom: '1px solid #eee', background: isDev ? '#ffebee' : 'transparent' }}>
+                          <tr key={`${s.__mf ? 'mf' : 'acc'}-${s.id}`} style={{ borderBottom: '1px solid #eee', background: isDev ? '#ffebee' : (s.__mf ? '#f4fbff' : 'transparent') }}>
                             <td style={{ padding: 12 }}>
                               <div style={{ fontWeight: 'bold' }}>#{s.numeroFactura || '---'}</div>
                               <div style={{ fontSize: 11, color: '#666' }}>{new Date(s.fechaVenta).toLocaleString()}</div>
                             </td>
                             <td style={{ padding: 12 }}>
-                              <div style={{ fontWeight: 'bold', color: '#00adef' }}>{s.tienda}</div>
+                              <div style={{ fontWeight: 'bold', color: '#00adef' }}>{s.__mf ? 'MovilFree' : s.tienda}</div>
                               <div style={{ fontSize: 11, color: '#666' }}>Vend.: {s.vendedor}</div>
+                              {s.__mf && <span style={{ background: '#e3f2fd', color: '#0277bd', padding: '2px 6px', borderRadius: 4, fontSize: 9, fontWeight: 'bold' }}>🔵 ESPEJO MOVILFREE</span>}
                             </td>
                             <td style={{ padding: 12 }}>
                               <div style={{ fontWeight: 'bold' }}>{s.nombreCliente}</div>
@@ -1606,6 +1638,12 @@ export default function MicroShopAccesoriosApp() {
                               {s.motivoDevolucion && <div style={{ fontSize: 10, color: '#c62828', marginTop: 4 }}>Motivo: {s.motivoDevolucion}</div>}
                             </td>
                             <td style={{ padding: 12, textAlign: 'center' }}>
+                              {s.__mf ? (
+                                // Espejo: SOLO LECTURA — las ventas de MovilFree se gestionan desde su módulo.
+                                <span title="Venta del módulo MovilFree: imprimir, devolver o borrar se hace desde la pantalla MovilFree Salamanca" style={{ fontSize: 10, color: '#0277bd', fontWeight: 'bold' }}>
+                                  Solo lectura · gestionar en MovilFree
+                                </span>
+                              ) : (
                               <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
                                 <button onClick={() => setPrintModalSale(s)} style={{ background: '#e3f2fd', color: '#00adef', border: 'none', padding: '6px', borderRadius: 4, cursor: 'pointer' }} title="Imprimir Ticket/Factura"><Printer size={14} /></button>
                                 {s.estado !== 'DEVUELTA' && (
@@ -1615,11 +1653,12 @@ export default function MicroShopAccesoriosApp() {
                                 )}
                                 <button onClick={() => handleDeleteSale(s.id)} style={{ background: 'transparent', border: 'none', color: '#bbb', cursor: 'pointer', padding: 4 }}><Trash2 size={16} /></button>
                               </div>
+                              )}
                             </td>
                           </tr>
                         )
                       })}
-                    {sales.length === 0 && (
+                    {sales.length === 0 && mfSales.length === 0 && (
                       <tr>
                         <td colSpan={8} style={{ padding: 24, textAlign: 'center', color: '#888' }}>No hay ventas registradas.</td>
                       </tr>
