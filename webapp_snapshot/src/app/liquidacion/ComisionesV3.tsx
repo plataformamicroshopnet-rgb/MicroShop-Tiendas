@@ -207,7 +207,7 @@ export function ComisionesV3({ activePeriodKey, canModify }: { activePeriodKey: 
         // Título (banda verde, como en pantalla)
         const tRow = sheet.addRow([titulo || generateDefaultTitle(localPeriod)]);
         sheet.mergeCells(tRow.number, 1, tRow.number, 8);
-        tRow.height = 28;
+        tRow.height = 34;
         const tCell = tRow.getCell(1);
         tCell.font = { name: 'Segoe UI', size: 13, bold: true, color: { argb: 'FFFFFFFF' } };
         tCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF5CB85C' } };
@@ -216,7 +216,7 @@ export function ComisionesV3({ activePeriodKey, canModify }: { activePeriodKey: 
 
         const addHeader = (labels: string[]) => {
             const row = sheet.addRow(labels);
-            row.height = 22;
+            row.height = 26;
             for (let c = 1; c <= labels.length; c++) {
                 const cell = row.getCell(c);
                 cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
@@ -227,13 +227,14 @@ export function ComisionesV3({ activePeriodKey, canModify }: { activePeriodKey: 
         // Fila de datos: cols = [{v, nota?, rojo?}] — 1ª col texto, resto moneda
         const addData = (cols: { v: any; nota?: string; rojo?: boolean }[], zebra: boolean) => {
             const row = sheet.addRow(cols.map(c => c.v));
-            row.height = 18;
+            row.height = 24;
             cols.forEach((c, idx) => {
                 const cell = row.getCell(idx + 1);
                 cell.font = { name: 'Segoe UI', size: 10, color: { argb: c.rojo ? 'FFDC2626' : 'FF0F172A' }, bold: !!c.rojo };
                 cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: zebra ? 'FFF0F9FF' : 'FFFFFFFF' } };
                 cell.border = { top: { style: 'thin', color: { argb: 'FFE2E8F0' } }, bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } }, left: { style: 'thin', color: { argb: 'FFE2E8F0' } }, right: { style: 'thin', color: { argb: 'FFE2E8F0' } } };
-                if (idx > 0) { cell.numFmt = CUR; cell.alignment = { horizontal: 'right' }; }
+                cell.alignment = { vertical: 'middle', horizontal: idx > 0 ? 'right' : 'left' };
+                if (idx > 0) cell.numFmt = CUR;
                 if (c.nota && String(c.nota).trim()) cell.note = String(c.nota);
             });
         };
@@ -241,12 +242,13 @@ export function ComisionesV3({ activePeriodKey, canModify }: { activePeriodKey: 
             const vals: any[] = new Array(nCols).fill('');
             vals[0] = label; vals[nCols - 1] = total;
             const row = sheet.addRow(vals);
-            row.height = 20;
+            row.height = 26;
             for (let c = 1; c <= nCols; c++) {
                 const cell = row.getCell(c);
                 cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF166534' } };
                 cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC1E1C1' } };
-                if (c === nCols) { cell.numFmt = CUR; cell.alignment = { horizontal: 'right' }; }
+                cell.alignment = { vertical: 'middle', horizontal: c === nCols ? 'right' : 'left' };
+                if (c === nCols) cell.numFmt = CUR;
             }
         };
 
@@ -288,7 +290,7 @@ export function ComisionesV3({ activePeriodKey, canModify }: { activePeriodKey: 
         // TOTAL GENERAL (banda verde como en pantalla)
         const gRow = sheet.addRow(['TOTAL GENERAL (FFVV + TIENDAS + LOGÍSTICA)', '', '', '', '', '', '', totalFFVV + totalTiendas + totalLogistica]);
         sheet.mergeCells(gRow.number, 1, gRow.number, 7);
-        gRow.height = 26;
+        gRow.height = 32;
         for (const c of [1, 8]) {
             const cell = gRow.getCell(c);
             cell.font = { name: 'Segoe UI', size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
