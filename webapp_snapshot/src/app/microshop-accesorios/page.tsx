@@ -1532,8 +1532,9 @@ export default function MicroShopAccesoriosApp() {
                       </div>
                       {(() => {
                         // ESPEJO MovilFree (solo lectura): mismas métricas del mes en curso
-                        // con las ventas del módulo MovilFree, para verlo todo desde aquí.
-                        if (mfSales.length === 0) return null
+                        // con las ventas del módulo MovilFree. SOLO se muestra cuando la
+                        // Tienda Vista elegida es Movilfree (selectedTienda === 'O2').
+                        if (selectedTienda !== 'O2' || mfSales.length === 0) return null
                         const mfMes = mfSales.filter((s: any) => {
                           if (s.estado !== 'COMPLETADA') return false
                           const f = new Date(s.fechaVenta)
@@ -1580,7 +1581,7 @@ export default function MicroShopAccesoriosApp() {
                     </tr>
                   </thead>
                   <tbody>
-                    {[...sales.map((s: any) => ({ ...s, __mf: false })), ...mfSales.map((s: any) => ({ ...s, __mf: true }))]
+                    {[...sales.map((s: any) => ({ ...s, __mf: false })), ...(selectedTienda === 'O2' ? mfSales : []).map((s: any) => ({ ...s, __mf: true }))]
                       .sort((a: any, b: any) => new Date(b.fechaVenta).getTime() - new Date(a.fechaVenta).getTime())
                       .filter((s: any) => {
                         const dateVal = new Date(s.fechaVenta)
@@ -1658,7 +1659,7 @@ export default function MicroShopAccesoriosApp() {
                           </tr>
                         )
                       })}
-                    {sales.length === 0 && mfSales.length === 0 && (
+                    {sales.length === 0 && (selectedTienda !== 'O2' || mfSales.length === 0) && (
                       <tr>
                         <td colSpan={8} style={{ padding: 24, textAlign: 'center', color: '#888' }}>No hay ventas registradas.</td>
                       </tr>
