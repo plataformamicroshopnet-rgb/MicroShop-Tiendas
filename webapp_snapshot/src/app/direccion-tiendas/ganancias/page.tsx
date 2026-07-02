@@ -75,7 +75,10 @@ export default function GananciasPage() {
     // y aquí se lee (GET). Aplica desde Septiembre 2025. Meses previos: dato del Excel.
     const PRV_FROM_YEAR = 2025
     const PRV_FROM_MONTH = 9
+    // PRV Tiendas ← /api/prv-tiendas-feed (ERP: Resumen Evolutivo Retribuciones Base Tiendas, TCBP)
     const [prvOverride, setPrvOverride] = useState<Record<number, number> | null>(null)
+    // PRV FFVV ← /api/prv-feed (ERP: Resumen Evolutivo PRV por cartera, Desglose Mensual SAUT)
+    const [prvFfvvOverride, setPrvFfvvOverride] = useState<Record<number, number> | null>(null)
 
     // ── Tentáculo: "TOTAL COBRADO IVA Inc" en vivo = "Resumen Evolutivo: Ingresos Totales
     // Telefónica/Movistar" del ERP (mi-nuevo-erp), por mes de VENTAS, vía /api/cobrado-feed.
@@ -212,24 +215,28 @@ export default function GananciasPage() {
 
     useEffect(() => {
         setPrvOverride(null)
+        setPrvFfvvOverride(null)
         const yNum = Number(year)
         if (yNum < PRV_FROM_YEAR) return
         let cancel = false
-        fetch('/api/prv-feed', { cache: 'no-store' })
-            .then(r => r.json())
-            .then(d => {
-                if (cancel || !d?.success || !d.data) return
-                const ov: Record<number, number> = {}
-                for (let m = 1; m <= 12; m++) {
-                    // Respetar "desde Septiembre 2025"
-                    if (yNum === PRV_FROM_YEAR && m < PRV_FROM_MONTH) continue
-                    const key = `${yNum}_${String(m).padStart(2, '0')}`
-                    const v = d.data[key]
-                    if (v !== undefined && v !== null && !isNaN(Number(v))) ov[m] = Number(v)
-                }
-                if (Object.keys(ov).length) setPrvOverride(ov)
-            })
-            .catch(() => {})
+        const cargar = (url: string, set: (ov: Record<number, number>) => void) =>
+            fetch(url, { cache: 'no-store' })
+                .then(r => r.json())
+                .then(d => {
+                    if (cancel || !d?.success || !d.data) return
+                    const ov: Record<number, number> = {}
+                    for (let m = 1; m <= 12; m++) {
+                        // Respetar "desde Septiembre 2025"
+                        if (yNum === PRV_FROM_YEAR && m < PRV_FROM_MONTH) continue
+                        const key = `${yNum}_${String(m).padStart(2, '0')}`
+                        const v = d.data[key]
+                        if (v !== undefined && v !== null && !isNaN(Number(v))) ov[m] = Number(v)
+                    }
+                    if (Object.keys(ov).length) set(ov)
+                })
+                .catch(() => {})
+        cargar('/api/prv-tiendas-feed', setPrvOverride)   // PRV Tiendas (TCBP)
+        cargar('/api/prv-feed', setPrvFfvvOverride)       // PRV FFVV (SAUT)
         return () => { cancel = true }
     }, [year])
 
@@ -274,10 +281,20 @@ export default function GananciasPage() {
         return () => { cancel = true }
     }, [year])
 
-    const rows = baseData[year] || []
+    // Renombrado permanente de las DOS filas "PRV": la de la sección Tiendas pasa a
+    // "PRV Tiendas" y la de la sección FFVV a "PRV FFVV" (petición del usuario, jul-2026).
+    const rows = useMemo(() => {
+        const base = baseData[year] || []
+        const ffvvIdx = base.findIndex(r => r.label === 'Total Ingresos FFVV')
+        return base.map((r, i) => {
+            if (r.label !== 'PRV') return r
+            if (ffvvIdx >= 0 && i > ffvvIdx) return { ...r, label: 'PRV FFVV' }
+            return { ...r, label: 'PRV Tiendas' }
+        })
+    }, [baseData, year])
 
     const displayRows: GananciaRow[] = useMemo(() => {
-        if (!gastosOverride && !cajaModOverride && !comisLocalesOverride && !prvOverride && !cobradoOverride && !produccionOverride) return rows
+        if (!gastosOverride && !cajaModOverride && !comisLocalesOverride && !prvOverride && !prvFfvvOverride && !cobradoOverride && !produccionOverride) return rows
         const build = (months: number[]) => {
             const total = months.reduce((a, b) => a + b, 0)
             const active = months.filter(m => m !== 0).length
@@ -302,6 +319,7 @@ export default function GananciasPage() {
             if (cajaModOverride && row.label === 'Caja Tiendas') return applyMonthly(row, cajaModOverride)
             if (comisLocalesOverride && row.label === 'Comisiones Tiendas Locales') return applyMonthly(row, comisLocalesOverride)
             if (prvOverride && (row.label === 'PRV' || row.label === 'PRV Tiendas') && (ffvvStart < 0 || i < ffvvStart)) return applyMonthly(row, prvOverride)
+            if (prvFfvvOverride && (row.label === 'PRV' || row.label === 'PRV FFVV') && ffvvStart >= 0 && i > ffvvStart) return applyMonthly(row, prvFfvvOverride)
             if (cobradoOverride && row.label === 'TOTAL COBRADO IVA Inc') return applyMonthly(row, cobradoOverride)
             if (produccionOverride && (row.label === 'Producción Plus' || row.label === 'Producción Básico')) {
                 const field: 'plus' | 'basico' = row.label === 'Producción Plus' ? 'plus' : 'basico'
@@ -378,7 +396,7 @@ export default function GananciasPage() {
             if (/^Total Ganancias/i.test(row.label)) return totalize(row.label, totGanMonths)
             return row
         })
-    }, [rows, gastosOverride, cajaModOverride, comisLocalesOverride, prvOverride, cobradoOverride, produccionOverride])
+    }, [rows, gastosOverride, cajaModOverride, comisLocalesOverride, prvOverride, prvFfvvOverride, cobradoOverride, produccionOverride])
 
     const gTiendas = findTotal(displayRows, /real ganancias tiendas/i)
     const gFFVV = findTotal(displayRows, /real ganancias ffvv/i)
@@ -524,7 +542,7 @@ export default function GananciasPage() {
             </div>
             )}
 
-            {!editMode && (gastosOverride || cajaModOverride || comisLocalesOverride || prvOverride) && (
+            {!editMode && (gastosOverride || cajaModOverride || comisLocalesOverride || prvOverride || prvFfvvOverride) && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontSize: 12, color: '#0369a1', fontWeight: 600 }}>
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
                     Ingresos Gastos ({year})
@@ -546,7 +564,8 @@ export default function GananciasPage() {
                         </thead>
                         <tbody>
                             {displayRows.map((row, ri) => {
-                                const gan = isGanancia(row.label)
+                                // "Total Ingresos Tiendas+FFVV" en VERDE y NEGRITA (como las filas de ganancias).
+                                const gan = isGanancia(row.label) || row.label === 'Total Ingresos Tiendas+FFVV'
                                 const sub = isSubtotal(row.label)
                                 const cobrado = /total cobrado/i.test(row.label)
                                 const rojo = ['Gastos Tiendas', 'Comisiones Tiendas', 'Gastos FFVV'].includes(row.label)
@@ -559,7 +578,9 @@ export default function GananciasPage() {
                                     : row.label === 'Comisiones Tiendas Locales'
                                     ? (comisLocalesOverride ? 'En vivo de «Territorial PDV»: Total Consolidado Tiendas (suma de las palancas territoriales)' : 'Dato del Excel «Ganancias 2014-2026»')
                                     : (row.label === 'PRV' || row.label === 'PRV Tiendas')
-                                    ? (prvOverride ? 'En vivo del ERP «mi-nuevo-erp»: Retribución Variable (PRV), Desglose Mensual Interactivo del mes' : 'Dato del Excel «Ganancias 2014-2026»')
+                                    ? (prvOverride ? 'En vivo del ERP «mi-nuevo-erp»: Resumen Evolutivo Retribuciones Base Tiendas (TCBP), neto del mes' : 'Dato del Excel «Ganancias 2014-2026»')
+                                    : row.label === 'PRV FFVV'
+                                    ? (prvFfvvOverride ? 'En vivo del ERP «mi-nuevo-erp»: Resumen Evolutivo PRV por cartera (SAUT), Desglose Mensual del mes' : 'Dato del Excel «Ganancias 2014-2026»')
                                     : row.label === 'Comisiones Tiendas'
                                     ? 'Dato del Excel «Ganancias 2014-2026»'
                                     : undefined
