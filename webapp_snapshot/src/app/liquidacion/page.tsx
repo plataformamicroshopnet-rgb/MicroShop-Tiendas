@@ -11,7 +11,7 @@ import { PeriodSelector } from '@/components/PeriodSelector'
 import { usePeriod } from '@/components/PeriodProvider'
 import { OBJECTIVE_KEYS, OBJECTIVE_MAPPING } from '@/lib/constants'
 import { calculateDynamicCommission, sanitizeSale, normalizeString, getCurrentMonthString, isVentaWithinDates, renderDashboardData, isSaleActive } from '@/lib/salesUtils'
-import { getSaleCommissionBase } from '@/lib/saleCommission'
+import { getSaleCommissionBase, getSwapBonus } from '@/lib/saleCommission'
 import { computeBonosO2, computeTerritorialTotal, computeTerritorialRows, calculateO2Importe } from '@/lib/territorialConsolidado'
 import { can, canEdit } from '@/lib/permissions'
 import { useGuard } from '@/hooks/useGuard'
@@ -1145,7 +1145,7 @@ export default function LiquidacionesPage() {
         const pymeData = renderDashboardData('Pyme', importesPyme, pymeMonthObj, filteredSalesGlobal, objGrupos, activePeriodObj)
         const captadorData = renderDashboardData('Captador', importesPlus, captadorMonthObj, filteredSalesGlobal, objGrupos, activePeriodObj)
         const viewingPeriod = activePeriodObj ? `${activePeriodObj.year}${String(activePeriodObj.month).padStart(2, '0')}` : getCurrentMonthString()
-        const getComm = (sale: any) => getSaleCommissionBase(sale, { catalogs, dashRowsPlus: pymeData.rows, dashRowsBasico: captadorData.rows, viewingPeriod }) + (sale.isSwap === true ? 15 : 0)
+        const getComm = (sale: any) => getSaleCommissionBase(sale, { catalogs, dashRowsPlus: pymeData.rows, dashRowsBasico: captadorData.rows, viewingPeriod }) + getSwapBonus(sale)
 
         const isAnul = (s: any) => { const a = String(s.anulado || '').toLowerCase().trim(); return a === 'si' || a === 'sí' || String(s.pendiente || '').toLowerCase().trim() === 'anulado' }
         const isSolarS = (s: any) => { const t = `${s.producto || ''} ${s.categoria || ''} ${s.detalle || ''}`.toLowerCase(); return t.includes('solar360') || t.includes('solar 360') }
@@ -1985,7 +1985,7 @@ export default function LiquidacionesPage() {
         });
 
         // La empresa cobra 15€ extra por cada Swap (venta con ¿Swap? marcado), además de la comisión normal de la operación
-        const getCommission = (sale: any) => getCommissionBase(sale) + (sale.isSwap === true ? 15 : 0);
+        const getCommission = (sale: any) => getCommissionBase(sale) + getSwapBonus(sale);
 
         // Helper: Cuota Total del producto (para Seguros usa seguroImporte, para el resto cuota)
         const getCuotaTotal = (sale: any): number => {

@@ -6,7 +6,7 @@ import { usePeriod } from '@/components/PeriodProvider'
 import { useGuard } from '@/hooks/useGuard'
 import { ExcelIcon } from '@/components/ActionIcons'
 import { renderDashboardData, calculateDynamicCommission, isVentaWithinDates, normalizeString, getCurrentMonthString, isSaleActive, isSolar360 } from '@/lib/salesUtils'
-import { getSaleCommission } from '@/lib/saleCommission'
+import { getSaleCommission, isLegacySwap } from '@/lib/saleCommission'
 import { computeTerritorialRows, computeBonosO2 } from '@/lib/territorialConsolidado'
 import { matchesRule, getValueForRule, matchTipoVenta } from '@/hooks/useComisionesData'
 import * as XLSX from 'xlsx'
@@ -98,10 +98,10 @@ const filterByTab = (sale: any, tabId: string): boolean => {
     case 'seguro':          return val === 'seguro'
     case 'mimovi':          return val === 'mimovi' || val === 'mimovistar'
     case 'tv':              return val === 'tv' || val === 'suscripciones tv'
-    // Varios incluye sus ventas propias + las ventas Swap (¿Swap? marcado) de
-    // cualquier palanca. La venta sigue contando en su palanca de origen; el
-    // totalizador global usa "primera coincidencia", así que no hay doble conteo.
-    case 'varios':          return val === 'varios' || sale.isSwap === true
+    // Varios incluye sus ventas propias + (SOLO hasta junio 2026) el espejo de las
+    // ventas Swap antiguas de cualquier palanca. Desde julio 2026 el Swap ya es una
+    // línea REAL de Varios (producto "Swap") y entra por val === 'varios' sin espejo.
+    case 'varios':          return val === 'varios' || isLegacySwap(sale)
     case 'repos':           return val === 'repos'
     case 'resto':           return val === 'resto baf'
     case 'accesorios':      return val === 'accesorios'
@@ -321,7 +321,13 @@ function SectionTable({
                     )}
                     <td style={{ padding: '12px 14px', fontSize: 11.5, color: 'var(--medium-gray)', borderRight: '1px solid var(--border-color)' }}>{sale.codigo || '—'}</td>
                     <td style={{ padding: '12px 14px', fontWeight: 600, borderRight: '1px solid var(--border-color)' }}>{sale.vendedor || '—'}</td>
-                    <td style={{ padding: '12px 14px', color: 'var(--light-text)', maxWidth: 280 }}>{sale.producto || '—'}</td>
+                    {/* En Varios, los Swap antiguos (espejo pre-jul-2026) se muestran como
+                        "Swap de <aparato>" para ir uniformes con las líneas Swap nuevas. */}
+                    <td style={{ padding: '12px 14px', color: 'var(--light-text)', maxWidth: 280 }}>
+                      {(tabId === 'varios' && String(sale.detalle || sale.categoria || '').toLowerCase().trim() !== 'varios' && isLegacySwap(sale))
+                        ? `Swap de ${sale.producto || ''}`.trim()
+                        : (sale.producto || '—')}
+                    </td>
                     <td style={{ padding: '12px 14px', textAlign: 'right' }}>
                       <span style={{ background: `${tabColor}22`, color: tabColor, borderRadius: 20, padding: '3px 11px', fontWeight: 800, fontSize: 13 }}>1</span>
                     </td>
@@ -575,7 +581,7 @@ function GrupoClienteContent() {
   const tabCommission = (sale: any): number => {
     if (activeTab === 'varios') {
       const det = String(sale.detalle || sale.categoria || '').toLowerCase().trim()
-      if (det !== 'varios') return sale.isSwap === true ? 15 : getCommission(sale)
+      if (det !== 'varios') return isLegacySwap(sale) ? 15 : getCommission(sale)
     }
     return getCommission(sale)
   }
@@ -1232,7 +1238,7 @@ function GrupoClienteContent() {
     // completas del dispositivo viven en su pestaña/hoja Rent. Evita mezclar/inflar Varios.
     const isVariosSwap = (s: any) => tab.id === 'varios'
       && String(s.detalle || s.categoria || '').toLowerCase().trim() !== 'varios'
-      && s.isSwap === true
+      && isLegacySwap(s)
 
     const getSaleCuotaTotalLocal = (s: any) => isVariosSwap(s) ? 0 : getSaleCuotaTotal(s)
 
@@ -1250,7 +1256,7 @@ function GrupoClienteContent() {
             'Nº Pedido': s.numeroPedido || '—',
             Codigo: s.codigo || '—',
             Comercial: s.vendedor || '—',
-            Producto: s.producto || '—',
+            Producto: isVariosSwap(s) ? `Swap de ${s.producto || ''}`.trim() : (s.producto || '—'),
             Uds: 1,
             'Cuota Total (€)': fmtN(getSaleCuotaTotalLocal(s)),
             Comisión: fmtN(getSaleComisionLocal(s))

@@ -125,9 +125,40 @@ export function getSaleCommissionBase(sale: any, ctx: SaleCommissionCtx): number
   return calculateDynamicCommission(sale, dashboardRows, overrideBaseValue)
 }
 
-/** Comisión total de la operación, incluyendo el bono de Swap (+15 € empresa). */
+// ─────────────────────────────────────────────────────────────────────────
+// SWAP COMO VENTA REAL — corte julio 2026
+// Desde julio 2026 la casilla ¿Swap? genera una LÍNEA DE VENTA propia
+// (Varios · Swap · 15 €, la crea la API de Nueva Venta), visible en todas las
+// pantallas como cualquier venta. Por eso el +15 € escondido y el espejo en la
+// pestaña Varios SOLO aplican a ventas ANTERIORES al corte (histórico intacto).
+// ─────────────────────────────────────────────────────────────────────────
+const SWAP_LINE_FROM = '202607'
+
+function saleYm(sale: any): string {
+  const f = String(sale?.fecha || '')
+  const p = f.split('/')
+  if (p.length === 3 && p[2].length === 4) return `${p[2]}${p[1].padStart(2, '0')}`
+  const m = f.match(/^(\d{4})-(\d{2})/)
+  if (m) return `${m[1]}${m[2]}`
+  return ''
+}
+
+/** true si la venta usa el sistema ANTIGUO de Swap (+15 € escondido y espejo en Varios). */
+export function isLegacySwap(sale: any): boolean {
+  const flag = sale?.isSwap === true || String(sale?.isSwap).toLowerCase() === 'true'
+  if (!flag) return false
+  const ym = saleYm(sale)
+  return !ym || ym < SWAP_LINE_FROM
+}
+
+/** Bono de empresa del Swap (+15 €) — solo para el sistema antiguo (< julio 2026). */
+export function getSwapBonus(sale: any): number {
+  return isLegacySwap(sale) ? 15 : 0
+}
+
+/** Comisión total de la operación, incluyendo el bono de Swap antiguo (+15 € empresa). */
 export function getSaleCommission(sale: any, ctx: SaleCommissionCtx): number {
   // Una anulada no comisiona NADA, tampoco el +15 € del Swap (antes se colaba).
   if (isSaleCancelled(sale)) return 0
-  return getSaleCommissionBase(sale, ctx) + (sale.isSwap === true ? 15 : 0)
+  return getSaleCommissionBase(sale, ctx) + getSwapBonus(sale)
 }

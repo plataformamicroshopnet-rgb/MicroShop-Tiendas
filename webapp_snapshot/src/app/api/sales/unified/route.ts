@@ -205,6 +205,24 @@ export async function POST(request: Request) {
     const salesToInsert = []
     const stockDecrements = []
 
+    // ── SWAP COMO VENTA REAL (desde julio 2026) ─────────────────────────
+    // La casilla ¿Swap? genera una línea de venta propia: Varios · "Swap" · 15 €.
+    // El precio sale del catálogo (Varios → producto "Swap", campo Comisión) si
+    // existe; si no, 15 € por defecto. Los meses anteriores a julio 2026 siguen
+    // con el +15 € antiguo (isLegacySwap en lib/saleCommission) — histórico intacto.
+    const SWAP_LINE_FROM = new Date(2026, 6, 1)
+    let swapPrice = 15
+    try {
+      const swCat = await prisma.productCatalog.findFirst({
+        where: { categoria: 'Varios', producto: 'Swap' },
+        orderBy: { createdAt: 'desc' }
+      })
+      if (swCat?.comision) {
+        const v = parseFloat(String(swCat.comision).replace(',', '.'))
+        if (!isNaN(v) && v > 0) swapPrice = v
+      }
+    } catch (e) { /* catálogo sin Swap: 15 € por defecto */ }
+
     for (let x = 0; x < data.productos.length; x++) {
       const prod = data.productos[x]
       if (prod.producto === '') continue
@@ -262,6 +280,41 @@ export async function POST(request: Request) {
         // Ancla al mes de la fecha de tramitación (no al periodo de la UI)
         periodId: anchorWp?.id || null
       })
+
+      // Línea hermana del Swap: venta REAL de Varios con su descripción.
+      // El padre conserva isSwap=true (columna "Swap: Sí" y reglas de bonos),
+      // pero desde julio 2026 el dinero y la operación viven en esta línea.
+      if (prod.isSwap === true && fechaVentaDate >= SWAP_LINE_FROM) {
+        salesToInsert.push({
+          sheet: 'OP',
+          vendedor: data.vendedor,
+          fecha: fechaStr,
+          codigo: data.codigo || '',
+          producto: 'Swap',
+          nombreCliente: data.nombreCliente,
+          nif: data.nif.toUpperCase(),
+          potencial: prod.noCliente || '',
+          telf: prod.telf || '',
+          pendiente: prod.pendiente || 'No',
+          anulado: 'No',
+          anotaciones: `Swap de ${prod.producto}`,
+          telefonoFijo: data.telefonoFijo || '',
+          telefonoMovil: data.telefonoMovil || '',
+          boletin: '',
+          grupo: '-',
+          cuota: swapPrice,
+          detalle: 'Varios',
+          imei: prod.imei || null,
+          numeroPedido: null,
+          origenStock: null,
+          rentConCoste: null,
+          seguro: null,
+          seguroImporte: null,
+          isLibre: false,
+          isSwap: false,
+          periodId: anchorWp?.id || null
+        })
+      }
 
       // Queue stock decrement if it is Rent
       // CANDADO: el envío logístico NO descuenta stock de tienda.

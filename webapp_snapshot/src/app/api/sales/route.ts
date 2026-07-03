@@ -325,6 +325,30 @@ export async function PATCH(request: Request) {
       data: updateData
     })
 
+    // ── Swap como venta real: al ANULAR una venta con ¿Swap? (≥ julio 2026),
+    // anular también su línea hermana "Swap" (Varios, mismo NIF/fecha/origen) ──
+    const _seAnula = (updates.anulado !== undefined && String(updates.anulado).toLowerCase().startsWith('s'))
+      || (updates.pendiente !== undefined && String(updates.pendiente) === 'Anulado')
+    if (_seAnula && (existingSale as any).isSwap === true) {
+      try {
+        const _p = String(existingSale.fecha || '').split('/')
+        const _esNuevo = _p.length === 3 && `${_p[2]}${_p[1].padStart(2, '0')}` >= '202607'
+        if (_esNuevo) {
+          await prisma.sale.updateMany({
+            where: {
+              nif: existingSale.nif,
+              fecha: existingSale.fecha,
+              producto: 'Swap',
+              detalle: 'Varios',
+              anotaciones: { contains: `Swap de ${existingSale.producto}` },
+              anulado: { not: 'Si' }
+            },
+            data: { anulado: 'Si' }
+          })
+        }
+      } catch (e) { console.error('No se pudo anular la línea Swap hermana:', e) }
+    }
+
     // Disparador Reactivo: Reevaluar Reglas Extra si hubo cambios
     const runPeriodId = updateData.periodId !== undefined ? updateData.periodId : existingSale.periodId
     if (runPeriodId) {

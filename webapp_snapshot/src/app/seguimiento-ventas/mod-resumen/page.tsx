@@ -9,7 +9,7 @@ import { PeriodSelector } from '@/components/PeriodSelector'
 import { ArrowLeft, BarChart2 } from 'lucide-react'
 import { matchTipoVenta, matchesRule, getValueForRule } from '@/hooks/useComisionesData'
 import { renderDashboardData, calculateDynamicCommission, sanitizeSale, normalizeString, isVentaWithinDates } from '@/lib/salesUtils'
-import { getSaleCommissionBase } from '@/lib/saleCommission'
+import { getSaleCommissionBase, getSwapBonus } from '@/lib/saleCommission'
 import { computeTerritorialTotal } from '@/lib/territorialConsolidado'
 import { getSellersForStore } from '@/lib/comercialRoster'
 
@@ -375,7 +375,7 @@ export default function ModResumenPage() {
     };
 
     // La empresa cobra 15€ extra por cada Swap (venta con ¿Swap? marcado)
-    const getCommission = (sale: any) => getCommissionBase(sale) + (sale.isSwap === true ? 15 : 0);
+    const getCommission = (sale: any) => getCommissionBase(sale) + getSwapBonus(sale);
 
     // Filter non-O2 sales
     const nonO2Sales = salesList.filter(s => {

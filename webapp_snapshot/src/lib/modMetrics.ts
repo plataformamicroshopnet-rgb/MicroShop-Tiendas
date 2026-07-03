@@ -3,7 +3,7 @@
 // /api/mod-importe (que alimenta "Caja Tiendas" del panel de Ganancias). No duplicar.
 
 import { renderDashboardData, sanitizeSale, isSaleCancelled } from '@/lib/salesUtils'
-import { getSaleCommissionBase } from '@/lib/saleCommission'
+import { getSaleCommissionBase, getSwapBonus } from '@/lib/saleCommission'
 import { computeBonosO2, computeTerritorialTotal } from '@/lib/territorialConsolidado'
 
 // Festivos de Salamanca (excluye sábados, domingos y festivos locales/regionales)
@@ -165,7 +165,7 @@ export function computeMonthMetrics(input: ModMonthInput) {
             dashRowsBasico: captadorDataR.rows,
             viewingPeriod: saleMonth,
         })
-        const getCommission = (sale: any) => getCommissionBase(sale) + (sale.isSwap === true ? 15 : 0)
+        const getCommission = (sale: any) => getCommissionBase(sale) + getSwapBonus(sale)
 
         const salesForTable = salesList.filter((s: any) => {
             const p = String(s.producto || '').toLowerCase()
