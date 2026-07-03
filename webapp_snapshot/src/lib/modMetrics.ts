@@ -149,8 +149,11 @@ export function computeMonthMetrics(input: ModMonthInput) {
     let bPrvTerritorialO2 = 0
     let bPrvTerritorialTiendas = 0
 
-    if (y === 2026 && m === 6) {
-        // --- TUBERÍA DE COMISIONES REALES PARA JUNIO 2026 ---
+    if (y > 2026 || (y === 2026 && m >= 6)) {
+        // --- TUBERÍA DE COMISIONES REALES (junio 2026 EN ADELANTE) ---
+        // OJO: antes decía "y === 2026 && m === 6" (solo junio) → julio caía al cálculo
+        // estándar antiguo y el Importe Mensual salía irreal (187,60 € con 64 ops).
+        // Los meses ANTERIORES a junio 2026 se quedan con el cálculo antiguo (histórico intacto).
         const pymeMonthObj = objetivos.Pyme?.[saleMonth] || {}
         const captadorMonthObj = objetivos.Captador?.[saleMonth] || {}
         const pymeDataR = renderDashboardData('Pyme', importesPyme, pymeMonthObj, salesList, objGrupos, periodData)
