@@ -191,6 +191,7 @@ function CommercialDashboard({ data, activeExtras = [], isComercial, isAdmin, ca
     if (det === 'varios') return 'varios';
     if (det === 'repos') return 'repos';
     if (det === 'resto baf') return 'resto_baf';
+    if (det === 'accesorios') return 'accesorios';
     if (det === 'traslado mimovistar') return 'traslado_mimovistar';
     if (det === 'extra' || sale.sheet === 'EXTRA TELEFÓNICA' || det === 'extra telefónica' || det === 'extra telefonica') return 'extras';
     return 'varios';
@@ -207,6 +208,7 @@ function CommercialDashboard({ data, activeExtras = [], isComercial, isAdmin, ca
     { id: 'varios', label: 'Varios', icon: '📦' },
     { id: 'repos', label: 'Repos', icon: '🔁' },
     { id: 'resto_baf', label: 'Resto BAF', icon: '📡' },
+    { id: 'accesorios', label: 'Accesorios', icon: '🎧' },
     { id: 'traslado_mimovistar', label: 'Traslado miMovistar', icon: '🚚' },
     { id: 'extras', label: 'Extras', icon: '⚡' }
   ];
@@ -996,6 +998,7 @@ function OperationsContent() {
         if (det === 'varios') return 'varios';
         if (det === 'repos') return 'repos';
         if (det === 'resto baf') return 'resto_baf';
+        if (det === 'accesorios') return 'accesorios';
         if (det === 'traslado mimovistar') return 'traslado_mimovistar';
         if (det === 'extra' || sale.sheet === 'EXTRA TELEFÓNICA' || det === 'extra telefónica' || det === 'extra telefonica') return 'extras';
         return 'varios';
@@ -1012,6 +1015,7 @@ function OperationsContent() {
         { id: 'varios', label: 'Varios', icon: '📦' },
         { id: 'repos', label: 'Repos', icon: '🔁' },
         { id: 'resto_baf', label: 'Resto BAF', icon: '📡' },
+        { id: 'accesorios', label: 'Accesorios', icon: '🎧' },
         { id: 'traslado_mimovistar', label: 'Traslado miMovistar', icon: '🚚' },
         { id: 'extras', label: 'Extras', icon: '⚡' }
       ];

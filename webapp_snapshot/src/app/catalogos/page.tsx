@@ -81,7 +81,7 @@ type ProductItem = {
   importStatus?: 'new' | 'updated' | 'missing' | 'unchanged'
 }
 
-const CATEGORIES = ['Ti', 'Rent', 'Seguro', 'O2', 'miMovistar', 'Suscripciones TV', 'Varios', 'Repos', 'Resto BAF']
+const CATEGORIES = ['Ti', 'Rent', 'Seguro', 'O2', 'miMovistar', 'Suscripciones TV', 'Varios', 'Repos', 'Resto BAF', 'Accesorios']
 
 const getTabStyle = (cat: string, isActive: boolean) => {
   return {
@@ -107,7 +107,7 @@ export default function CatalogosPage() {
   const previousPeriod = currentIndex > 0 ? sortedPeriods[currentIndex - 1] : null
 
   const [catalogs, setCatalogs] = useState<Record<string, ProductItem[]>>({
-    "Ti": [], "Rent": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": [], "Varios": [], "Repos": [], "Resto BAF": [], "Traslado miMovistar": []
+    "Ti": [], "Rent": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": [], "Varios": [], "Repos": [], "Resto BAF": [], "Traslado miMovistar": [], "Accesorios": []
   })
   const [activeTab, setActiveTab] = useState('Ti')
   const isProductTab = CATEGORIES.includes(activeTab) && activeTab !== 'Comisiones para Tiendas' && activeTab !== 'Comisiones para Tienda O2 MovilFree' && activeTab !== 'PRV Territorial Movistar y O2'
@@ -126,7 +126,7 @@ export default function CatalogosPage() {
       .then(res => res.json())
       .then(data => {
         if (data.success) {
-          const mapped: Record<string, ProductItem[]> = { "Ti": [], "Rent": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": [], "Varios": [], "Repos": [], "Resto BAF": [], "Traslado miMovistar": [] }
+          const mapped: Record<string, ProductItem[]> = { "Ti": [], "Rent": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": [], "Varios": [], "Repos": [], "Resto BAF": [], "Traslado miMovistar": [], "Accesorios": [] }
           for (const [cat, items] of Object.entries(data.catalogs as Record<string, any[]>)) {
              if (!mapped[cat]) mapped[cat] = [];
              mapped[cat] = [...mapped[cat], ...items.map((it: any) => ({
@@ -402,7 +402,7 @@ export default function CatalogosPage() {
         newItem.comisionConCoste = '1.00'
       } else if (cat === 'Prepago') {
         newItem.comision = ''
-      } else if (cat === 'Seguro' || cat === 'Varios') {
+      } else if (cat === 'Seguro' || cat === 'Varios' || cat === 'Accesorios') {
         newItem.subcategoria = ''
         newItem.comision = ''
         newItem.cuotaAnual = 0
@@ -590,7 +590,7 @@ export default function CatalogosPage() {
             desde: parts.length > 3 ? parts[3] : '',
             hasta: parts.length > 4 ? parts[4] : '',
           })
-        } else if (activeTab === 'Seguro' || activeTab === 'Varios') {
+        } else if (activeTab === 'Seguro' || activeTab === 'Varios' || activeTab === 'Accesorios') {
           excelData.push({
             categoria: parts[0] || '',
             producto: parts[1] || '',
@@ -788,7 +788,7 @@ export default function CatalogosPage() {
           } else if (activeTab === 'O2') {
             if (item.subcategoria !== row.categoria) { item.subcategoria = row.categoria; changed = true; }
             if (item.comision !== row.amountAsStr) { item.comision = row.amountAsStr; changed = true; }
-          } else if (activeTab === 'Seguro' || activeTab === 'Varios') {
+          } else if (activeTab === 'Seguro' || activeTab === 'Varios' || activeTab === 'Accesorios') {
             if (item.subcategoria !== row.categoria) { item.subcategoria = row.categoria; changed = true; }
             if (item.comision !== row.comision) { item.comision = row.comision; changed = true; }
             const expectedCuota = Math.round(amount * 100) / 100
@@ -836,7 +836,7 @@ export default function CatalogosPage() {
           } else if (activeTab === 'O2') {
             newItem.subcategoria = row.categoria
             newItem.comision = row.amountAsStr
-          } else if (activeTab === 'Seguro' || activeTab === 'Varios') {
+          } else if (activeTab === 'Seguro' || activeTab === 'Varios' || activeTab === 'Accesorios') {
             newItem.subcategoria = row.categoria
             newItem.comision = row.comision
             newItem.cuotaAnual = Math.round(amount * 100) / 100
@@ -937,6 +937,7 @@ export default function CatalogosPage() {
           { cat: 'Varios', tip: 'Catálogo de productos varios (alarmas, migraciones, etc). Introduce categoría, nombre, cuota total y comisión.' },
           { cat: 'Repos', tip: 'Catálogo de Reposiciones. Introduce categoría, nombre, cuota total, comisión y multiplicador.' },
           { cat: 'Resto BAF', tip: 'Catálogo para Resto BAF. Estructura idéntica a miMovistar.' },
+          { cat: 'Accesorios', tip: 'Catálogo de accesorios (fundas, protectores, cargadores, etc). Introduce categoría, nombre, cuota total y comisión.' },
 
           { cat: 'Comisiones para Tiendas', tip: 'Configura las reglas globales y objetivos que aplicarán a los comerciales de la tienda en este mes.' },
           { cat: 'Comisiones para Tienda O2 MovilFree', tip: 'Configuración del motor matemático de comisiones y bonos específicos para O2 y MovilFree.' },
@@ -1052,7 +1053,8 @@ export default function CatalogosPage() {
             Pega tu lista desde Excel. Orden esperado de columnas: <code>{
               activeTab === 'Ti' ? 'Nombre Producto [TAB] Descripción [TAB] Comisión [TAB] Desde [TAB] Hasta' : 
               activeTab === 'Rent' ? 'Fabricante [TAB] Categoría [TAB] Producto [TAB] Gama [TAB] Cuota Total [TAB] Comisión [TAB] Comisión Coste [TAB] Desde [TAB] Hasta' : 
-              activeTab === 'Seguro' ? 'Categoría [TAB] Nombre de Producto [TAB] Cuota Total (€) [TAB] Comision [TAB] Desde [TAB] Hasta' : 
+              activeTab === 'Seguro' ? 'Categoría [TAB] Nombre de Producto [TAB] Cuota Total (€) [TAB] Comision [TAB] Desde [TAB] Hasta' :
+              activeTab === 'Accesorios' ? 'Categoría [TAB] Nombre de Producto [TAB] Cuota Total (€) [TAB] Comision [TAB] Desde [TAB] Hasta' :
               activeTab === 'Suscripciones TV' ? 'Categoría [TAB] Nombre de Producto [TAB] Comisión (€) [TAB] Multiplicador [TAB] Comisión X (€) [TAB] Desde [TAB] Hasta' :
               'Nombre Producto [TAB] Precio [TAB] Desde [TAB] Hasta'
             }</code>. (Las fechas son opcionales).
@@ -1064,7 +1066,8 @@ export default function CatalogosPage() {
               activeTab === 'Ti' ? "Ejemplo:\nPorta AV Ilimitada\tAltas de Prepago\t15\t01/05/2026\t31/05/2026" : 
               activeTab === 'Rent' ? "Ejemplo:\nAPPLE\tACCESORIO\tAirPods\tMEDIA\t122.80\t2.46\t4.91\t01/05/2026" : 
               activeTab === 'O2' ? "Ejemplo:\nFibra y movil\tFibra 600 Mb linea movil 60 Gb\t80,00\t01/05/2026\t31/05/2026" : 
-              activeTab === 'Seguro' ? "Ejemplo:\nSeguro\tSmartphone\t200,00\t18,00\t01/05/2026\t31/05/2026" : 
+              activeTab === 'Seguro' ? "Ejemplo:\nSeguro\tSmartphone\t200,00\t18,00\t01/05/2026\t31/05/2026" :
+              activeTab === 'Accesorios' ? "Ejemplo:\nAccesorios\tFunda iPhone 15\t25,00\t25,00\t01/07/2026\t31/07/2026" :
               activeTab === 'Suscripciones TV' ? "Ejemplo:\nSuscripciones TV\tDisney + sin anuncios\t6,99\t1,50\t10,49\t01/05/2026" :
               "Ejemplo:\nPorta AV Ilimitada\t20\nAlta MV\t15"
             }
@@ -1101,7 +1104,7 @@ export default function CatalogosPage() {
                     <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '35%' }}>Nombre de Producto</th>
                     <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 140 }}>Comisión (€)</th>
                   </>
-                ) : activeTab === 'Seguro' || activeTab === 'Varios' ? (
+                ) : activeTab === 'Seguro' || activeTab === 'Varios' || activeTab === 'Accesorios' ? (
                   <>
                     <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '20%' }}>Categoría</th>
                     <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '30%' }}>Nombre de Producto</th>
@@ -1508,7 +1511,7 @@ export default function CatalogosPage() {
                             </div>
                           </td>
                         </>
-                      ) : activeTab === 'Seguro' || activeTab === 'Varios' ? (
+                      ) : activeTab === 'Seguro' || activeTab === 'Varios' || activeTab === 'Accesorios' ? (
                         <>
                           <td style={{ padding: '12px 20px' }}>
                             <input 

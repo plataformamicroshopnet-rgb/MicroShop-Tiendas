@@ -151,7 +151,7 @@ export default function TerritorialPdvPage() {
           const det = (sale.detalle || '').toLowerCase();
           const isTV = det === 'suscripciones tv' || det === 'suscripcion tv';
           
-          if (det === 'o2' || det === 'seguro' || det === 'mimovistar' || det === 'repos' || det === 'varios' || isTV || det === 'prepago' || det === 'resto baf' || det === 'traslado mimovistar') {
+          if (det === 'o2' || det === 'seguro' || det === 'mimovistar' || det === 'repos' || det === 'varios' || det === 'accesorios' || isTV || det === 'prepago' || det === 'resto baf' || det === 'traslado mimovistar') {
               if (det === 'seguro') {
                   const list = catalogs['Seguro'] || [];
                   const found = list.find((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));

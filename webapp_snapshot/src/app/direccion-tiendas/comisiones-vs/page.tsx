@@ -20,6 +20,7 @@ const GROUPS = [
   { id: 'varios', label: 'Varios', icon: '📦' },
   { id: 'repos', label: 'Repos', icon: '🔁' },
   { id: 'resto_baf', label: 'Resto BAF (Alta BAF Total)', icon: '📡' },
+  { id: 'accesorios', label: 'Accesorios', icon: '🎧' },
   { id: 'traslado_mimovistar', label: 'Traslado miMovistar', icon: '🚚' },
   { id: 'extras', label: 'Extras', icon: '⚡' },
 ]
@@ -37,6 +38,7 @@ const getSaleGroupId = (sale: any): string => {
   if (det === 'varios') return 'varios'
   if (det === 'repos') return 'repos'
   if (det === 'resto baf') return 'resto_baf'
+  if (det === 'accesorios') return 'accesorios'
   if (det === 'traslado mimovistar') return 'traslado_mimovistar'
   if (det === 'extra' || det === 'extra telefónica' || det === 'extra telefonica' || sale.sheet === 'EXTRA TELEFÓNICA') return 'extras'
   return 'varios'

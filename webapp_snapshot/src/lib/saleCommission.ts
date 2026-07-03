@@ -77,7 +77,7 @@ export function getSaleCommissionBase(sale: any, ctx: SaleCommissionCtx): number
 
   // Palancas que guardan la comisión directamente en importe/cuota.
   const isTV = det === 'suscripciones tv' || det === 'suscripcion tv'
-  if (det === 'o2' || det === 'seguro' || det === 'mimovistar' || det === 'repos' || det === 'varios' || isTV || det === 'prepago' || det === 'resto baf' || det === 'traslado mimovistar') {
+  if (det === 'o2' || det === 'seguro' || det === 'mimovistar' || det === 'repos' || det === 'varios' || det === 'accesorios' || isTV || det === 'prepago' || det === 'resto baf' || det === 'traslado mimovistar') {
     if (det === 'seguro') {
       const seguroList = catalogs['Seguro'] || []
       const foundSeguro = seguroList.find((c: any) => normalizeString(c.producto) === normalizeString(sale.producto))

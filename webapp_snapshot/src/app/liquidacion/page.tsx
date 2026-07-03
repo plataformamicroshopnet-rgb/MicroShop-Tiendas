@@ -1160,7 +1160,7 @@ export default function LiquidacionesPage() {
             { id: 'seguro', label: 'Seguro' }, { id: 'mimovistar', label: 'miMovistar' },
             { id: 'tv', label: 'Suscripciones TV' }, { id: 'repos', label: 'Repos (Arpu)' },
             { id: 'resto_baf', label: 'Resto BAF' }, { id: 'traslado', label: 'Traslado miMovistar' },
-            { id: 'varios', label: 'Varios' }, { id: 'prepago', label: 'Prepago' }, { id: 'otros', label: 'Otros (sin clasificar)' },
+            { id: 'varios', label: 'Varios' }, { id: 'accesorios', label: 'Accesorios' }, { id: 'prepago', label: 'Prepago' }, { id: 'otros', label: 'Otros (sin clasificar)' },
         ]
         const grupoDe = (s: any) => {
             const d = String(s.detalle || s.categoria || '').toLowerCase().trim()
@@ -1173,6 +1173,7 @@ export default function LiquidacionesPage() {
             if (d === 'resto baf') return 'resto_baf'
             if (d === 'traslado mimovistar' || d === 'traslado') return 'traslado'
             if (d === 'varios') return 'varios'
+            if (d === 'accesorios') return 'accesorios'
             if (d === 'prepago') return 'prepago'
             return 'otros'
         }

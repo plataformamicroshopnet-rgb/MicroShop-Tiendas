@@ -42,6 +42,7 @@ function resolveGrupo(prod: any): string {
   if (cat === 'miMovistar' || cat === 'Resto BAF' || cat === 'Traslado miMovistar') return 'BAF'
   if (cat === 'Rent' || cat === 'Seguro') return 'REN'
   if (cat === 'O2') return 'ALTA'
+  if (cat === 'Accesorios') return 'ACC'
 
   const productMap: Record<string, string[]> = {
     'FD': [

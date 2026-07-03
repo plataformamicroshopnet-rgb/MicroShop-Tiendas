@@ -390,7 +390,7 @@ export default function NuevaVentaPage() {
                 const mult = parseSafeNum(selectedItem.comisionConCoste || '1.00');
                 newProducts[index].importe = String(baseCom * (mult === 0 ? 1 : mult));
               }
-            } else if (cat === 'O2' || cat === 'Seguro' || cat === 'Prepago' || cat === 'Varios') {
+            } else if (cat === 'O2' || cat === 'Seguro' || cat === 'Prepago' || cat === 'Varios' || cat === 'Accesorios') {
               newProducts[index].importe = selectedItem.comision || ''
               // Para Seguros, también auto-rellenar seguroImporte con la Cuota Total (anual)
               if (cat === 'Seguro' && selectedItem.anual) {
@@ -1244,7 +1244,7 @@ export default function NuevaVentaPage() {
                       })()}
                       <div style={{ display: 'grid', gridTemplateColumns: (isAdmin && prod.categoria === 'Seguro') ? '1fr 1fr 1fr' : ((isAdmin || prod.categoria === 'Seguro') ? '1fr 1fr' : '1fr'), gap: '6px' }}>
                         <div className="form-group" style={{ marginBottom: 0, display: isAdmin ? 'block' : 'none' }}>
-                          <label className="form-label" style={{ color: '#555' }}>{(prod.categoria === 'O2' || prod.categoria === 'Suscripciones TV' || prod.categoria === 'Prepago' || prod.categoria === 'Varios' || prod.categoria === 'Repos' || prod.categoria === 'Seguro') ? 'Comisión' : 'Importe'}</label>
+                          <label className="form-label" style={{ color: '#555' }}>{(prod.categoria === 'O2' || prod.categoria === 'Suscripciones TV' || prod.categoria === 'Prepago' || prod.categoria === 'Varios' || prod.categoria === 'Accesorios' || prod.categoria === 'Repos' || prod.categoria === 'Seguro') ? 'Comisión' : 'Importe'}</label>
                           <div style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
                             <input 
                               type="number" 

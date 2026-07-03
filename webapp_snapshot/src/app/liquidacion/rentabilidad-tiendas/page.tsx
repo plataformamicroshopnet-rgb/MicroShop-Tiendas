@@ -21,7 +21,7 @@ type GroupedSale = {
 
 const TIPOS_VENTA = [
   'Contratos Móvil', 'Rent', 'O2 MovilFree', 'Seguro', 'miMovistar',
-  'Suscripciones TV', 'Varios', 'Repos', 'Resto BAF'
+  'Suscripciones TV', 'Varios', 'Repos', 'Resto BAF', 'Accesorios'
 ]
 
 export default function RentabilidadTiendasPage() {
@@ -193,6 +193,7 @@ export default function RentabilidadTiendasPage() {
       else if (det === 'suscripciones tv' || det === 'suscripcion tv') tipo = 'Suscripciones TV'
       else if (det === 'prepago') tipo = 'Prepago'
       else if (det === 'varios') tipo = 'Varios'
+      else if (det === 'accesorios') tipo = 'Accesorios'
       else if (det === 'repos') tipo = 'Repos'
 
       // O2 de un vendedor que NO es el comercial de la tienda O2 (Marta) -> se consolidan

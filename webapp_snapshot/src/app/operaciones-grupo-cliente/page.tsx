@@ -70,6 +70,7 @@ const TABS = [
   { id: 'varios',          label: 'Varios',          emoji: '📦', color: '#8B5CF6', grupo: 'VARIOS' },
   { id: 'repos',           label: 'Arpu (Repos)',    emoji: '🔁', color: '#0891B2', grupo: 'REPOS' },
   { id: 'resto',           label: 'Resto BAF',       emoji: '📡', color: '#3B82F6', grupo: 'RESTO_BAF' },
+  { id: 'accesorios',      label: 'Accesorios',      emoji: '🎧', color: '#EA580C', grupo: 'ACCESORIOS' },
   { id: 'extras',          label: 'PRV Territorial Tiendas', emoji: '⚡', color: '#10b981', grupo: 'EXTRAS' },
   { id: 'bonos_o2',        label: 'Bonos O2',        emoji: '🏆', color: '#005D82', grupo: 'BONOS_O2' },
 ]
@@ -103,6 +104,7 @@ const filterByTab = (sale: any, tabId: string): boolean => {
     case 'varios':          return val === 'varios' || sale.isSwap === true
     case 'repos':           return val === 'repos'
     case 'resto':           return val === 'resto baf'
+    case 'accesorios':      return val === 'accesorios'
     case 'traslado':        return val === 'traslado mimovistar'
     default:                return false
   }
@@ -682,7 +684,8 @@ function GrupoClienteContent() {
     const sheetName = (label: string) =>
       label.replace(/[\/\\*?:\[\]]/g, '-').slice(0, 31).trim() || 'Hoja'
 
-    TABS.filter(t => t.id !== 'extras' && t.id !== 'bonos_o2').forEach(t => {
+    // Accesorios tampoco va al ERP: es venta propia de tienda, no cruza con Telefónica.
+    TABS.filter(t => t.id !== 'extras' && t.id !== 'bonos_o2' && t.id !== 'accesorios').forEach(t => {
       const rows = sales
         .filter((s: any) => filterByTab(s, t.id))
         .filter((s: any) => !s.anulado || s.anulado === 'No')
@@ -1219,7 +1222,7 @@ function GrupoClienteContent() {
     const tabSales = sales.filter((s: any) => filterByTab(s, tab.id))
     if (tabSales.length === 0) return []
 
-    const flatMode = tab.id === 'prepago' || tab.id === 'varios'
+    const flatMode = tab.id === 'prepago' || tab.id === 'varios' || tab.id === 'accesorios'
     const dedupeInfo = tab.id === 'contratos_movil' || tab.id === 'rent'
     const exportRows: any[] = []
     const nifGroups = groupSalesByNif(tabSales)
