@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
-import { getSaleCommission } from '@/lib/saleCommission'
+import { getSaleCommission, getSaleCommissionBase, isLegacySwap } from '@/lib/saleCommission'
 import { isSolar360 } from '@/lib/salesUtils'
 
 // Export de ventas para el ERP (mi-nuevo-erp) — espejo del ventas-export de FFVV.
@@ -52,36 +52,60 @@ export async function GET(request: Request) {
       (catalogs[c.categoria] ||= []).push(c)
     }
 
-    const ventas = sales
-      .filter(s => {
-        const an = String(s.anulado || '').toLowerCase()
-        if (an === 'si' || an === 'sí' || String(s.pendiente || '') === 'Anulado') return false
-        if (isSolar360(s)) return false  // Solar360 no la cobra la empresa (igual que Op. Grupo Cliente)
-        return !desde || ymOf(String(s.fecha || '')) >= desde
+    const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100
+    const ventas: any[] = []
+    for (const s of sales) {
+      const an = String(s.anulado || '').toLowerCase()
+      if (an === 'si' || an === 'sí' || String(s.pendiente || '') === 'Anulado') continue
+      if (isSolar360(s)) continue  // Solar360 no la cobra la empresa (igual que Op. Grupo Cliente)
+      if (desde && ymOf(String(s.fecha || '')) < desde) continue
+
+      const saleMonth = ymOf(String(s.fecha || '')).replace('-', '') // 'YYYYMM'
+      const ctx = { catalogs, dashRowsPlus: [], dashRowsBasico: [], viewingPeriod: saleMonth }
+      // Swap ANTIGUO (< jul 2026): físicamente es una línea de otra palanca (Rent…)
+      // con la casilla marcada. Op. Grupo Cliente lo refleja en Varios (15 €). Para
+      // que el ERP vea las mismas operaciones, la línea madre va SIN el +15 (comisión
+      // base) y se emite un ESPEJO en Varios de 15 € (sin duplicar el importe).
+      const legacySwap = isLegacySwap(s)
+      let comision = 0
+      try {
+        comision = legacySwap ? getSaleCommissionBase(s, ctx) : getSaleCommission(s, ctx)
+      } catch { comision = 0 }
+      ventas.push({
+        id: s.id,
+        fecha: s.fecha,
+        grupo: GRUPO_ERP[String(s.detalle || '')] || s.detalle || '',
+        codigo: s.codigo,          // tienda
+        producto: s.producto,
+        nif: s.nif,
+        nombreCliente: s.nombreCliente,
+        telf: s.telf || s.telefonoMovil || '',
+        imei: s.imei || '',
+        numeroPedido: s.numeroPedido || '',
+        vendedor: s.vendedor,
+        cuota: s.cuota,
+        comision: r2(comision),
+        pendiente: s.pendiente,
       })
-      .map(s => {
-        const saleMonth = ymOf(String(s.fecha || '')).replace('-', '') // 'YYYYMM'
-        let comision = 0
-        try {
-          comision = getSaleCommission(s, { catalogs, dashRowsPlus: [], dashRowsBasico: [], viewingPeriod: saleMonth })
-        } catch { comision = 0 }
-        return {
-          id: s.id,
+      if (legacySwap) {
+        ventas.push({
+          id: `${s.id}-swap`,
           fecha: s.fecha,
-          grupo: GRUPO_ERP[String(s.detalle || '')] || s.detalle || '',
-          codigo: s.codigo,          // tienda
-          producto: s.producto,
+          grupo: 'Varios',
+          codigo: s.codigo,
+          producto: `Swap de ${s.producto || ''}`.trim(),
           nif: s.nif,
           nombreCliente: s.nombreCliente,
           telf: s.telf || s.telefonoMovil || '',
-          imei: s.imei || '',
-          numeroPedido: s.numeroPedido || '',
+          imei: '',
+          numeroPedido: '',
           vendedor: s.vendedor,
-          cuota: s.cuota,
-          comision: Math.round((comision + Number.EPSILON) * 100) / 100,
+          cuota: 15,
+          comision: 15,
           pendiente: s.pendiente,
-        }
-      })
+        })
+      }
+    }
     return NextResponse.json({ success: true, count: ventas.length, desde, ventas })
   } catch (e: any) {
     return NextResponse.json({ success: false, error: String(e?.message || e) }, { status: 500 })
