@@ -445,7 +445,10 @@ export default function GananciasPage() {
     // Solo las celdas MANUALES son editables: ni las calculadas (Totales, Real
     // Ganancias, sin IVA) ni las que vienen EN VIVO ese mes (feeds). Al ajustar una
     // celda se guarda sola en /api/ganancias-data (misma BD que usaba el lápiz).
-    const ffvvStart = useMemo(() => rows.findIndex(r => r.label === 'Total Ingresos FFVV'), [rows])
+    // NO usar useMemo aquí: este bloque está DESPUÉS del early-return `if (authorized
+    // === null) return` y un hook condicional rompe las Reglas de Hooks (crash de
+    // cliente). findIndex directo es barato.
+    const ffvvStart = rows.findIndex(r => r.label === 'Total Ingresos FFVV')
     const _computed = new Set(['Total Ingresos Tiendas', 'Total Ingresos FFVV', 'Total Ingresos Tiendas+FFVV',
         'TOTAL COBRADO sin IVA', 'Real Ganancias Tiendas', 'Real Ganancias FFVV'])
     const isComputedRow = (label: string) => _computed.has(label) || /^Total Ganancias/i.test(label)
