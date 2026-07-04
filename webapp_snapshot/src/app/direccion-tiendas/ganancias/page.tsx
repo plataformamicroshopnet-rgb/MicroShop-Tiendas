@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useGuard } from '@/hooks/useGuard'
 import { PageHeader } from '@/components/PageHeader'
-import { Wallet, TrendingUp, TrendingDown, Building2, Briefcase, Pencil, Save, X, Plus, Trash2, CalendarPlus } from 'lucide-react'
+import { Wallet, TrendingUp, TrendingDown, Building2, Briefcase, Pencil, Save, X, Plus, Trash2, CalendarPlus, Info } from 'lucide-react'
 import { GANANCIAS_DATA, GananciaRow } from './data'
 import { computeMonthMetrics } from '@/lib/modMetrics'
 import { computeTerritorialTotal } from '@/lib/territorialConsolidado'
@@ -18,6 +18,36 @@ const findTotal = (rows: GananciaRow[], re: RegExp) => {
     return r ? r.total : null
 }
 
+// Celda editable "sin lápiz": se ve como texto (formateado) y al pincharla puedes
+// escribir directamente; al salir (blur/Enter) se guarda. Solo se pone en las celdas
+// MANUALES (las que no vienen en vivo ni son totales calculados).
+function EditableCell({ value, fmt, color, bold, onCommit }: {
+    value: number | null; fmt: (v: number | null) => string; color: string; bold: boolean;
+    onCommit: (v: number | null) => void;
+}) {
+    const [focused, setFocused] = useState(false)
+    const [text, setText] = useState('')
+    const commit = () => {
+        const clean = text.replace(/[^\d,.\-]/g, '').replace(/\./g, '').replace(',', '.')
+        const v = text.trim() === '' ? null : (isNaN(Number(clean)) ? value : Number(clean))
+        setFocused(false)
+        if (v !== value) onCommit(v)
+    }
+    return (
+        <input
+            value={focused ? text : (value === null || value === undefined ? '' : fmt(value))}
+            title="Pincha y escribe para ajustar (se guarda solo)"
+            onFocus={e => { setFocused(true); setText(value === null || value === undefined ? '' : String(value)); e.currentTarget.select() }}
+            onChange={e => setText(e.target.value)}
+            onBlur={commit}
+            onKeyDown={e => { if (e.key === 'Enter') { e.currentTarget.blur() } else if (e.key === 'Escape') { setFocused(false); e.currentTarget.blur() } }}
+            style={{ width: 66, padding: '3px 4px', textAlign: 'right', border: '1px dashed transparent', borderRadius: 5, background: 'transparent', color, fontWeight: bold ? 700 : 400, fontSize: 12, cursor: 'text', outline: 'none' }}
+            onMouseEnter={e => { if (document.activeElement !== e.currentTarget) e.currentTarget.style.border = '1px dashed var(--border-strong)' }}
+            onMouseLeave={e => { if (document.activeElement !== e.currentTarget) e.currentTarget.style.border = '1px dashed transparent' }}
+        />
+    )
+}
+
 export default function GananciasPage() {
     const { authorized } = useGuard('MODULE_DIRECCION')
 
@@ -27,6 +57,7 @@ export default function GananciasPage() {
     const [editMode, setEditMode] = useState(false)
     const [draft, setDraft] = useState<Record<string, GananciaRow[]> | null>(null)
     const [saving, setSaving] = useState(false)
+    const [showHelp, setShowHelp] = useState(false)  // modal "¿De dónde sale cada dato?"
 
     useEffect(() => {
         fetch('/api/ganancias-data', { cache: 'no-store' })
@@ -410,6 +441,47 @@ export default function GananciasPage() {
     const isGanancia = (label: string) => /real ganancias|^total ganancias/i.test(label)
     const isSubtotal = (label: string) => /^diferencia$/i.test(label)
 
+    // ── Edición DIRECTA de celdas (sin lápiz) ────────────────────────────────
+    // Solo las celdas MANUALES son editables: ni las calculadas (Totales, Real
+    // Ganancias, sin IVA) ni las que vienen EN VIVO ese mes (feeds). Al ajustar una
+    // celda se guarda sola en /api/ganancias-data (misma BD que usaba el lápiz).
+    const ffvvStart = useMemo(() => rows.findIndex(r => r.label === 'Total Ingresos FFVV'), [rows])
+    const _computed = new Set(['Total Ingresos Tiendas', 'Total Ingresos FFVV', 'Total Ingresos Tiendas+FFVV',
+        'TOTAL COBRADO sin IVA', 'Real Ganancias Tiendas', 'Real Ganancias FFVV'])
+    const isComputedRow = (label: string) => _computed.has(label) || /^Total Ganancias/i.test(label)
+    const cellIsLive = (label: string, i: number, mi: number): boolean => {
+        const m = mi + 1
+        const has = (ov: Record<number, number> | null | undefined) => !!(ov && ov[m] !== undefined)
+        if (gastosOverride && (label === 'Gastos Tiendas' || label === 'Gastos FFVV')) return true
+        if (label === 'Caja Tiendas') return has(cajaModOverride)
+        if (label === 'Comisiones Tiendas Locales') return has(comisLocalesOverride)
+        if ((label === 'PRV' || label === 'PRV Tiendas') && (ffvvStart < 0 || i < ffvvStart)) return has(prvOverride)
+        if ((label === 'PRV' || label === 'PRV FFVV') && ffvvStart >= 0 && i > ffvvStart) return has(prvFfvvOverride)
+        if (label === 'TOTAL COBRADO IVA Inc') return has(cobradoOverride)
+        if (label === 'Producción Plus' || label === 'Producción Básico') return !!(produccionOverride && produccionOverride[m] !== undefined)
+        return false
+    }
+    const persist = (data: Record<string, GananciaRow[]>) => {
+        fetch('/api/ganancias-data', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ data }),
+        }).catch(() => { /* silencioso: el valor ya está en pantalla */ })
+    }
+    const updateCell = (ri: number, mi: number, value: number | null) => {
+        const yearRows = baseData[year] || []
+        const newYearRows = yearRows.map((r, i) => {
+            if (i !== ri) return r
+            const months = [...r.months]; months[mi] = value
+            const nums = months.filter((x): x is number => x !== null && x !== undefined)
+            const total = nums.reduce((a, b) => a + b, 0)
+            const active = months.filter(mm => mm !== null && mm !== undefined && mm !== 0).length
+            return { ...r, months, total, media: active ? total / active : null }
+        })
+        const newData = { ...baseData, [year]: newYearRows }
+        setStoredData(newData)
+        persist(newData)
+    }
+
     const kpi = (label: string, value: number | null, Icon: any, accent: string) => (
         <div style={{
             flex: 1, minWidth: 200, background: 'var(--bg-card)', border: '1px solid var(--border-light)',
@@ -484,20 +556,13 @@ export default function GananciasPage() {
                 showBack={true}
                 backFallback="/direccion-tiendas"
                 headerActions={
-                    editMode ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <button onClick={cancelEdit} title="Cancelar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: '50%', background: 'transparent', border: '1px solid var(--border-strong)', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                                <X size={20} />
-                            </button>
-                            <button onClick={saveEdit} disabled={saving} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 16px', height: 40, borderRadius: 20, background: '#10b981', border: 'none', color: '#fff', fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>
-                                <Save size={18} /> {saving ? 'Guardando...' : 'Guardar'}
-                            </button>
-                        </div>
-                    ) : (
-                        <button onClick={enterEdit} title="Editar (añadir años, filas, importes)" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: '50%', background: 'transparent', border: '1px solid var(--border-strong)', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                            <Pencil size={18} />
-                        </button>
-                    )
+                    /* Botón AYUDA (cian, texto blanco): abre "¿De dónde sale cada dato?".
+                       Sin lápiz: los importes se ajustan pinchando la celda directamente. */
+                    <button onClick={() => setShowHelp(true)}
+                        title="¿De dónde sale cada dato? Cómo funciona esta pantalla"
+                        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 16px', height: 40, borderRadius: 20, background: 'var(--mercedes-cyan)', border: 'none', color: '#fff', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,173,239,0.3)' }}>
+                        <Info size={18} /> ¿De dónde sale?
+                    </button>
                 }
             />
 
@@ -596,9 +661,12 @@ export default function GananciasPage() {
                                         {row.months.map((v, mi) => {
                                             const neg = v != null && v < 0
                                             const c = (rojo || neg) ? '#dc2626' : (gan ? '#16a34a' : 'var(--text-muted)')
+                                            const editable = !isComputedRow(row.label) && !cellIsLive(row.label, ri, mi)
                                             return (
                                                 <td key={mi} style={{ padding: '4px 8px', textAlign: 'right', color: c, fontWeight: (gan || rojo) ? 700 : 400 }}>
-                                                    {eur(v)}
+                                                    {editable
+                                                        ? <EditableCell value={v} fmt={eur} color={c} bold={!!(gan || rojo)} onCommit={nv => updateCell(ri, mi, nv)} />
+                                                        : eur(v)}
                                                 </td>
                                             )
                                         })}
@@ -662,10 +730,55 @@ export default function GananciasPage() {
             )}
 
             <p style={{ marginTop: 16, fontSize: 12, color: 'var(--text-muted)' }}>
-                {editMode
-                    ? 'Modo edición: añade años/filas, edita importes y guarda. Las filas en vivo (Caja, Comisiones, PRV, Totales) se recalculan solas en la vista.'
-                    : 'Cifras del Excel «Ganancias 2014-2026» (editables con el lápiz). Las filas conectadas se actualizan solas.'}
+                💡 Pincha cualquier importe <b>manual</b> para ajustarlo (se guarda solo, sin botones). Las filas <b>en vivo</b> (Caja, Comisiones, PRV, Cobrado, Producción) y los <b>totales</b> se calculan solos y no se tocan. Pulsa <b>«¿De dónde sale?»</b> para ver de dónde viene cada dato.
             </p>
+
+            {/* ── Modal AYUDA: "¿De dónde sale cada dato?" ──────────────────────── */}
+            {showHelp && (
+                <div onClick={() => setShowHelp(false)}
+                    style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+                    <div onClick={e => e.stopPropagation()}
+                        style={{ background: 'var(--bg-card, #fff)', borderRadius: 16, maxWidth: 780, width: '100%', maxHeight: '86vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.35)' }}>
+                        <div style={{ position: 'sticky', top: 0, background: 'var(--mercedes-cyan)', color: '#fff', padding: '16px 24px', borderTopLeftRadius: 16, borderTopRightRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 800, fontSize: 18 }}><Info size={20} /> ¿De dónde sale cada dato?</span>
+                            <button onClick={() => setShowHelp(false)} title="Cerrar" style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex' }}><X size={22} /></button>
+                        </div>
+                        <div style={{ padding: '20px 24px', color: 'var(--text-main, #1f2937)', fontSize: 14, lineHeight: 1.65 }}>
+                            <p style={{ marginTop: 0 }}>
+                                Esta pantalla muestra <b>ingresos, gastos y rentabilidad por año</b> (Tiendas + FFVV) desde 2014.
+                                Cada mes se calcula solo con datos <b>en vivo</b>; los años históricos y los ajustes se ponen a mano con el lápiz ✏️.
+                            </p>
+
+                            <h4 style={{ color: 'var(--mercedes-cyan)', margin: '18px 0 6px' }}>🔄 En vivo (automático — no hace falta tocarlo)</h4>
+                            <ul style={{ margin: 0, paddingLeft: 20 }}>
+                                <li><b>Caja Tiendas</b> y <b>Comisiones Tiendas Locales</b> → del propio programa de Tiendas (MOD, por periodo).</li>
+                                <li><b>PRV Tiendas</b> → del ERP de Liquidaciones (Resumen Evolutivo · Retribuciones Base Tiendas, TCBP).</li>
+                                <li><b>PRV FFVV</b> → del ERP (Resumen Evolutivo · PRV por cartera, SAUT).</li>
+                                <li><b>Producción Plus / Básico</b> → del programa de FFVV.</li>
+                                <li><b>TOTAL COBRADO IVA Inc</b> → del ERP (Conciliación Bancaria · Ingresos Totales Telefónica). El <b>«sin IVA»</b> = ÷ 1,21.</li>
+                                <li><b>Gastos Tiendas / FFVV</b> → de «Informes de Gastos».</li>
+                                <li><b>Totales</b>, <b>Real Ganancias</b> y <b>Total Ganancias</b> → se recalculan solos (sumas y restas de lo de arriba).</li>
+                            </ul>
+
+                            <h4 style={{ color: 'var(--mercedes-cyan)', margin: '18px 0 6px' }}>✏️ A mano (editable con el lápiz)</h4>
+                            <ul style={{ margin: 0, paddingLeft: 20 }}>
+                                <li>Los <b>años históricos</b>, la <b>Caja FFVV</b> y cualquier fila sin fuente en vivo.</li>
+                                <li>Lo «en vivo» pisa <b>solo su mes</b>; el resto se queda como lo dejes.</li>
+                            </ul>
+
+                            <h4 style={{ color: 'var(--mercedes-cyan)', margin: '18px 0 6px' }}>📅 Automatización hacia delante</h4>
+                            <p style={{ margin: 0 }}>
+                                Tiendas se automatiza desde <b>junio 2026</b> y FFVV desde <b>abril/mayo 2026</b>. El pasado nunca se toca:
+                                lo de antes es histórico a mano. Si un mes no tiene dato en vivo todavía, muestra lo que tengas escrito.
+                            </p>
+
+                            <div style={{ marginTop: 18, padding: '10px 14px', background: 'var(--active-bg, #f0f9ff)', borderRadius: 10, fontSize: 13, color: 'var(--text-muted)' }}>
+                                💡 Resumen: los <b>ingresos y el cobrado</b> viajan solos desde el ERP y FFVV; los <b>gastos</b> desde Informes de Gastos; y tú solo tocas el <b>histórico</b> y los <b>ajustes puntuales</b> con el lápiz.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
