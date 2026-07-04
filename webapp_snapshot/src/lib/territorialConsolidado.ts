@@ -5,7 +5,7 @@
 // página Territorial PDV, la Entrada de Datos y el panel de Ganancias ("Comisiones
 // Tiendas Locales"). No duplicar.
 
-import { matchTipoVenta } from '@/hooks/useComisionesData'
+import { matchTipoVenta } from '@/lib/ventaMatching'
 import { TIENDAS_COMERCIALES } from '@/lib/constants'
 import { getEffectiveTiendaComerciales } from '@/lib/comercialRoster'
 import { getSaleCommission } from '@/lib/saleCommission'
@@ -170,6 +170,25 @@ export function calculateO2Importe(rule: any, totalSales: number): number {
 export function computeBonosO2(sales: any[], o2Rules: any[]): number {
   return (o2Rules || []).reduce((acc: number, rule: any) =>
     acc + calculateO2Importe(rule, getSalesDataForStoreAndType(sales, 'O2', rule.tipoVenta).value), 0)
+}
+
+// Bono O2 desglosado en sus 3 importes (Tramo Mes + Tramo Trimestre + Conectividad),
+// sumados sobre todas las reglas O2. total === computeBonosO2. Lo consume el ERP
+// para mostrar el PRV Territorial O2 en el consolidado de Liquidaciones.
+export function computeBonosO2Breakdown(sales: any[], o2Rules: any[]) {
+  const TRAMOS_MES = [
+    { key: '4_10', min: 4 }, { key: '11_14', min: 11 }, { key: '15_20', min: 15 },
+    { key: '21_30', min: 21 }, { key: '31_40', min: 31 }, { key: '41_plus', min: 41 }
+  ]
+  const TRAMOS_TRIM = [{ key: '5_9', min: 5 }, { key: '10_plus', min: 10 }]
+  let bonoMes = 0, bonoTrim = 0, conectividad = 0
+  for (const rule of (o2Rules || [])) {
+    const totalSales = getSalesDataForStoreAndType(sales, 'O2', rule.tipoVenta).value
+    for (const t of [...TRAMOS_MES].reverse()) { if (totalSales >= t.min) { bonoMes += parseNumber(rule.tramosMes?.[t.key] || '0'); break } }
+    for (const t of [...TRAMOS_TRIM].reverse()) { if (totalSales >= t.min) { bonoTrim += parseNumber(rule.tramosTrim?.[t.key] || '0'); break } }
+    if (totalSales > 0) conectividad += parseNumber(rule.conectividad || '0')
+  }
+  return { bonoMes, bonoTrim, conectividad, total: bonoMes + bonoTrim + conectividad }
 }
 
 // matching palanca -> regla de la Entrada de Datos. Prioriza el match EXACTO para no
