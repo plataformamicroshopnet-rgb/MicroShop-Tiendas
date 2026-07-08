@@ -22,6 +22,7 @@ type Product = {
   precio: number // Cost base (without IVA)
   coste: number // Cost base (without IVA)
   imei?: string
+  identificador?: string
   createdAt: string
   stocks: ProductStock[]
   isMovilFree?: boolean
@@ -1202,6 +1203,7 @@ export default function MicroShopAccesoriosApp() {
                   <thead>
                     <tr style={{ background: '#e3f2fd', color: '#00adef' }}>
                       <th style={{ padding: 10, borderRadius: '8px 0 0 8px' }}>Producto</th>
+                      <th style={{ padding: 10 }}>Identificador</th>
                       <th style={{ padding: 10 }}>Categoría</th>
                       <th style={{ padding: 10, textAlign: 'right' }}>Coste (PVD)</th>
                       <th style={{ padding: 10, textAlign: 'right' }}>PVP (con IVA)</th>
@@ -1234,6 +1236,13 @@ export default function MicroShopAccesoriosApp() {
                                 <input type="text" value={editProdData.nombre} onChange={(e) => setEditProdData({ ...editProdData, nombre: e.target.value })} style={{ padding: 4, width: '100%' }} />
                               ) : (
                                 <div style={{ fontWeight: 'bold' }}>{p.nombre}</div>
+                              )}
+                            </td>
+                            <td style={{ padding: 10 }}>
+                              {isEditing ? (
+                                <input type="text" value={editProdData.identificador || ''} onChange={(e) => setEditProdData({ ...editProdData, identificador: e.target.value.toUpperCase() })} placeholder="AL5000" style={{ padding: 4, width: 90, fontFamily: 'monospace', textTransform: 'uppercase' }} />
+                              ) : (
+                                <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: p.identificador ? '#00adef' : '#c0c7d0' }}>{p.identificador || '—'}</span>
                               )}
                             </td>
                             <td style={{ padding: 10 }}>
@@ -1331,7 +1340,7 @@ export default function MicroShopAccesoriosApp() {
                                   </>
                                 ) : (
                                   <>
-                                    <button onClick={() => { setEditingProductId(p.id); setEditProdData({ nombre: p.nombre, categoria: p.categoria, coste: p.coste, precio: p.precio, stocks: { 'Auxiliadora 45': getStock(p, 'Auxiliadora 45'), 'Correhuela': getStock(p, 'Correhuela'), 'Villamayor': getStock(p, 'Villamayor'), 'Béjar': getStock(p, 'Béjar'), 'O2': getStock(p, 'O2') }, imei: p.imei || '' }); }} style={{ background: '#e3f2fd', color: '#00adef', border: 'none', padding: '6px', borderRadius: 4, cursor: 'pointer' }}><Edit size={14} /></button>
+                                    <button onClick={() => { setEditingProductId(p.id); setEditProdData({ nombre: p.nombre, categoria: p.categoria, coste: p.coste, precio: p.precio, stocks: { 'Auxiliadora 45': getStock(p, 'Auxiliadora 45'), 'Correhuela': getStock(p, 'Correhuela'), 'Villamayor': getStock(p, 'Villamayor'), 'Béjar': getStock(p, 'Béjar'), 'O2': getStock(p, 'O2') }, imei: p.imei || '', identificador: p.identificador || '' }); }} style={{ background: '#e3f2fd', color: '#00adef', border: 'none', padding: '6px', borderRadius: 4, cursor: 'pointer' }}><Edit size={14} /></button>
                                     <button onClick={() => handleOpenTransfer(p)} style={{ background: '#e0f7fa', color: '#006064', border: 'none', padding: '6px', borderRadius: 4, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 2 }} title="Traspasar Stock"><ArrowLeftRight size={14} /> Traspasar</button>
                                     <button onClick={() => handleDeleteProduct(p.id)} style={{ background: '#ffebee', color: '#c62828', border: 'none', padding: '6px', borderRadius: 4, cursor: 'pointer' }}><Trash2 size={14} /></button>
                                   </>

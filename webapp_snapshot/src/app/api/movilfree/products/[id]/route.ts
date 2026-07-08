@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
+import { identificadorEnUso } from '@/lib/identificador'
 const prisma = new PrismaClient()
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -8,7 +9,21 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   try {
     const data = await req.json()
     const movistarStores = ['Auxiliadora 45', 'Correhuela', 'Villamayor', 'Béjar']
-    
+
+    // Identificador (columna nueva): editable a mano; mayusculas sin espacios;
+    // vacio => null; si otro producto ya lo usa, se rechaza con aviso.
+    let identPatch: Record<string, any> = {}
+    if (data.identificador !== undefined) {
+      const code = String(data.identificador || '').trim().toUpperCase()
+      if (code) {
+        const enUso = await identificadorEnUso(prisma, code, id)
+        if (enUso) {
+          return NextResponse.json({ error: `El identificador ${code} ya lo usa "${enUso}". Cada accesorio debe tener uno distinto.` }, { status: 400 })
+        }
+      }
+      identPatch = { identificador: code || null }
+    }
+
     // Check if it belongs to MicroShop
     const isMicroShop = await prisma.microShopProduct.findUnique({ where: { id: id } })
     if (isMicroShop) {
@@ -19,7 +34,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           categoria: data.categoria,
           precio: Number(data.precio),
           coste: Number(data.coste),
-          imei: data.imei || null
+          imei: data.imei || null,
+          ...identPatch
         }
       })
       
@@ -76,7 +92,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         categoria: data.categoria,
         precio: Number(data.precio),
         coste: Number(data.coste),
-        imei: data.imei || null
+        imei: data.imei || null,
+        ...identPatch
       }
     })
     

@@ -22,6 +22,7 @@ type Product = {
   coste: number
   createdAt: string
   imei?: string
+  identificador?: string
   stocks: ProductStock[]
   isMovilFree?: boolean
 }
@@ -1285,6 +1286,7 @@ export default function MovilFreeApp() {
                 <thead>
                   <tr style={{ background: lightPink, color: fuchsia }}>
                     <th style={{ padding: 10, borderRadius: '8px 0 0 8px' }}>Producto</th>
+                    <th style={{ padding: 10 }}>Identificador</th>
                     <th style={{ padding: 10 }}>Categoría</th>
                     <th style={{ padding: 10, textAlign: 'right' }}>Coste (PVD)</th>
                     <th style={{ padding: 10, textAlign: 'right' }}>PVP (con IVA)</th>
@@ -1313,6 +1315,7 @@ export default function MovilFreeApp() {
                       {editingProductId === p.id ? (
                         <>
                           <td style={{ padding: 10 }}><input value={editProdData?.nombre || ''} onChange={e => setEditProdData({...editProdData, nombre: e.target.value})} style={{ width: '100%', padding: 4, borderRadius: 4, border: '1px solid #E91E97', outline: 'none' }} /></td>
+                          <td style={{ padding: 10 }}><input value={editProdData?.identificador || ''} onChange={e => setEditProdData({...editProdData, identificador: e.target.value.toUpperCase()})} placeholder="AL5000" style={{ width: 90, padding: 4, borderRadius: 4, border: '1px solid #E91E97', outline: 'none', fontFamily: 'monospace', textTransform: 'uppercase' }} /></td>
                           <td style={{ padding: 10 }}>
                             <select value={editProdData?.categoria || ''} onChange={e => setEditProdData({...editProdData, categoria: e.target.value})} style={{ width: '100%', padding: 4, borderRadius: 4, border: '1px solid #E91E97', outline: 'none' }}>
                               <option>Terminal</option><option>Accesorio</option><option>Servicio</option><option>SAT</option><option>Paquetería</option>
@@ -1360,6 +1363,7 @@ export default function MovilFreeApp() {
                       ) : (
                         <>
                           <td style={{ padding: 10, fontWeight: 'bold' }}>{p.nombre}</td>
+                          <td style={{ padding: 10 }}><span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: p.identificador ? fuchsia : '#c9b6c2' }}>{p.identificador || '—'}</span></td>
                           <td style={{ padding: 10 }}>{p.categoria}</td>
                           <td style={{ padding: 10, textAlign: 'right' }}>{formatMoney(p.coste)}</td>
                           <td style={{ padding: 10, textAlign: 'right', fontWeight: 'bold', color: fuchsia }}>{formatMoney(p.precio * 1.21)}</td>
@@ -1391,7 +1395,7 @@ export default function MovilFreeApp() {
                           </td>
                           <td style={{ padding: 10, textAlign: 'center' }}>
                             <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
-                               <button onClick={() => { setEditingProductId(p.id); setEditProdData({ nombre: p.nombre, categoria: p.categoria, coste: p.coste, precio: p.precio, stocks: { 'Auxiliadora 45': getStock(p, 'Auxiliadora 45'), 'Correhuela': getStock(p, 'Correhuela'), 'Villamayor': getStock(p, 'Villamayor'), 'Béjar': getStock(p, 'Béjar'), 'O2': getStock(p, 'O2') }, imei: p.imei || '' }); }} style={{ background: lightPink, color: fuchsia, border: 'none', padding: '6px', borderRadius: 4, cursor: 'pointer' }} title="Editar"><Edit size={14} /></button>
+                               <button onClick={() => { setEditingProductId(p.id); setEditProdData({ nombre: p.nombre, categoria: p.categoria, coste: p.coste, precio: p.precio, stocks: { 'Auxiliadora 45': getStock(p, 'Auxiliadora 45'), 'Correhuela': getStock(p, 'Correhuela'), 'Villamayor': getStock(p, 'Villamayor'), 'Béjar': getStock(p, 'Béjar'), 'O2': getStock(p, 'O2') }, imei: p.imei || '', identificador: p.identificador || '' }); }} style={{ background: lightPink, color: fuchsia, border: 'none', padding: '6px', borderRadius: 4, cursor: 'pointer' }} title="Editar"><Edit size={14} /></button>
                               <button onClick={() => handleOpenTransfer(p)} style={{ background: '#e0f7fa', color: '#006064', border: 'none', padding: '6px', borderRadius: 4, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 2 }} title="Traspasar Stock"><ArrowLeftRight size={14} /> Traspasar</button>
                               <button onClick={() => handleDeleteProduct(p.id)} style={{ background: '#ffebee', color: '#c62828', border: 'none', padding: '6px', borderRadius: 4, cursor: 'pointer' }} title="Borrar"><Trash2 size={14} /></button>
                             </div>

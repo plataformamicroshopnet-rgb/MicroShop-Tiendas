@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
+import { nextIdentificador } from '@/lib/identificador'
 
 export const dynamic = 'force-dynamic'
 
@@ -60,6 +61,7 @@ export async function POST(req: Request) {
               precio: Number(p.precio) || 0,
               coste: Number(p.coste) || 0,
               imei: p.imei || null,
+              identificador: await nextIdentificador(prisma),
               ...(p.createdAt ? { createdAt: new Date(p.createdAt) } : {})
             }
           })
@@ -116,7 +118,8 @@ export async function POST(req: Request) {
           categoria: data.categoria || 'Accesorio',
           precio: Number(data.precio) || 0,
           coste: Number(data.coste) || 0,
-          imei: data.imei || null
+          imei: data.imei || null,
+          identificador: await nextIdentificador(prisma)
         }
       })
     } else {

@@ -519,6 +519,7 @@ model MovilFreeProduct {
   coste     Float                    @default(0)
   stock     Int                      @default(0)
   imei      String? // Opcional, 15 digitos
+  identificador String? // Codigo unico del accesorio (AL5000, AL5001...), compartido entre tiendas
   createdAt DateTime                 @default(now())
   updatedAt DateTime                 @updatedAt
   stocks    MovilFreeStock[]
@@ -789,6 +790,7 @@ model MicroShopProduct {
   precio    Float
   coste     Float                    @default(0)
   imei      String?
+  identificador String? // Codigo unico del accesorio (AL5000, AL5001...), compartido entre tiendas
   createdAt DateTime                 @default(now())
   updatedAt DateTime                 @updatedAt
   stocks    MicroShopStock[]
