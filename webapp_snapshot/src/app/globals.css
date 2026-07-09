@@ -422,3 +422,46 @@ button, input, select, textarea {
     color: #333 !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TARJETAS DE MENÚ — estilo unificado con el ERP
+   Título en MAYÚSCULAS azul + línea separadora fina; descripción gris.
+   Cubre las DOS familias de tarjetas de navegación (.hub-card y .premium-card).
+   El fondo de las tarjetas de menú se hace adaptable al tema.
+   Oscuro = por defecto (:root); azul marino en modo claro.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.premium-card:has(.card-title) {
+  background-color: var(--bg-card) !important;
+}
+.hub-card h3,
+.card-title {
+  text-transform: uppercase !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.3px !important;
+  line-height: 1.25 !important;
+  color: var(--mercedes-cyan) !important;                /* cian de marca (claro y oscuro) */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10) !important;
+  padding-bottom: 9px !important;
+  margin-bottom: 9px !important;
+}
+.hub-card p,
+.card-desc {
+  color: var(--text-muted) !important;
+  font-weight: 400 !important;
+}
+/* Todo el contenido pegado a la izquierda; icono + título anclados al inicio
+   (arriba-izquierda). Las tarjetas con FOTO a sangre usan align-items:stretch en
+   línea y se EXCLUYEN con :not([style*="stretch"]) para no romper la imagen. */
+.hub-card, .premium-card,
+.hub-card h3, .hub-card p,
+.card-title, .card-desc, .card-content {
+  text-align: left !important;
+}
+.hub-card:not([style*="stretch"]),
+.premium-card:has(.card-title):not([style*="stretch"]) {
+  align-items: flex-start !important;
+}
+[data-theme='light'] .hub-card h3,
+[data-theme='light'] .card-title {
+  border-bottom-color: #E7ECF2 !important;               /* separador claro en modo claro */
+}
