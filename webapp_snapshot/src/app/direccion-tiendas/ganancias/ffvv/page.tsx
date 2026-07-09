@@ -92,9 +92,11 @@ export default function FFVVGananciasPage() {
                                     <tr key={r.key} style={{ background: isBanq ? 'rgba(2,132,199,0.06)' : 'transparent', borderBottom: '1px solid var(--border-light)' }}>
                                         <td style={{ padding: '6px 12px', textAlign: 'left', fontWeight: isBanq ? 800 : 700, color: 'var(--text-main)' }}>{r.label}</td>
                                         <td style={{ padding: '4px 4px', textAlign: 'center', borderLeft: '2px solid var(--border-light)' }}>
-                                            <input type="number" step="0.01" min="0" title="Aplica a todos los meses"
-                                                value={nmap[year]?.[r.key]?.base ?? String(DEF[r.key])}
-                                                onChange={e => setBase(year, r.key, e.target.value)} style={{ ...nInput, width: 46 }} />
+                                            {ri === 0 && (
+                                                <input type="number" step="0.01" min="0" title="Nº de comerciales del año (aplica a todos los meses de esta fila)"
+                                                    value={nmap[year]?.[r.key]?.base ?? String(DEF[r.key])}
+                                                    onChange={e => setBase(year, r.key, e.target.value)} style={{ ...nInput, width: 46 }} />
+                                            )}
                                         </td>
                                         {MESES.map((_, m) => (
                                             <td key={m} style={{ padding: '3px 4px', textAlign: 'center', borderLeft: '1px solid var(--border-light)', fontVariantNumeric: 'tabular-nums' }}>
