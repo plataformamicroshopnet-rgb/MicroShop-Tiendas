@@ -1,14 +1,25 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
+import Link from 'next/link'
 import { useGuard } from '@/hooks/useGuard'
 import { PageHeader } from '@/components/PageHeader'
-import { Wallet, TrendingUp, TrendingDown, Building2, Briefcase, Pencil, Save, X, Plus, Trash2, CalendarPlus, Info } from 'lucide-react'
+import { Wallet, TrendingUp, TrendingDown, Building2, Briefcase, Pencil, Save, X, Plus, Trash2, CalendarPlus, Info, Users } from 'lucide-react'
 import { GANANCIAS_DATA, GananciaRow } from './data'
 import { computeMonthMetrics } from '@/lib/modMetrics'
 import { computeTerritorialTotal } from '@/lib/territorialConsolidado'
 
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+
+// Nombres «a la vista» de algunas filas (las claves internas NO cambian: se siguen
+// usando en los cálculos/feeds; solo se cambia el texto que se muestra).
+const DISPLAY_LABEL: Record<string, string> = {
+    'Total Ingresos Tiendas+FFVV': 'T. Importe Tiendas+FFVV',
+    'Total Ingresos Tiendas': 'T. Importe Tiendas',
+    'Total Ingresos FFVV': 'T. Importe FFVV',
+    'Comisiones Tiendas Locales': 'Comisiones Locales',
+}
+const displayLabel = (l: string) => DISPLAY_LABEL[l] ?? l
 
 const eur = (n: number | null | undefined) =>
     (n === null || n === undefined) ? '' : Math.round(n).toLocaleString('es-ES') + ' €'
@@ -610,10 +621,18 @@ export default function GananciasPage() {
             </div>
             )}
 
-            {!editMode && (gastosOverride || cajaModOverride || comisLocalesOverride || prvOverride || prvFfvvOverride) && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontSize: 12, color: '#0369a1', fontWeight: 600 }}>
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
-                    Ingresos Gastos ({year})
+            {!editMode && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+                    {(gastosOverride || cajaModOverride || comisLocalesOverride || prvOverride || prvFfvvOverride) && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#0369a1', fontWeight: 600 }}>
+                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+                            Ingresos Gastos ({year})
+                        </div>
+                    )}
+                    <Link href="/direccion-tiendas/ganancias/ffvv" title="Reparto FFVV por comercial (por año)"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none', background: 'var(--bg-card)', border: '1px solid #7dd3fc', color: '#0284c7', padding: '5px 12px', borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
+                        <Users size={15} /> Ver FFVV
+                    </Link>
                 </div>
             )}
 
@@ -661,7 +680,7 @@ export default function GananciasPage() {
                                 return (
                                     <tr key={ri} style={{ background: bg, borderBottom: '1px solid var(--border-light)' }}>
                                         <td title={tip} style={{ padding: '4px 10px', textAlign: 'left', fontWeight: gan ? 800 : 600, color: cobrado ? '#fff' : (rojo ? '#dc2626' : 'var(--text-main)'), position: 'sticky', left: 0, background: totGan ? '#cffafe' : (ingTot ? '#dcfce7' : (cobrado ? '#38bdf8' : (gan ? '#dcfce7' : (sub ? '#e0f2fe' : 'var(--bg-card)')))), borderRight: '1px solid var(--border-light)', cursor: tip ? 'help' : undefined }}>
-                                            {row.label}
+                                            {displayLabel(row.label)}
                                         </td>
                                         {row.months.map((v, mi) => {
                                             const neg = v != null && v < 0
