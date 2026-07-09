@@ -114,9 +114,12 @@ export default function GananciasPage() {
 
     // ── Tentáculo: fila "PRV" en vivo desde el ERP (mi-nuevo-erp). El scheduler del ERP
     // publica el "Beneficio Neto Total" mensual del PRV en /api/prv-feed (POST con secreto)
-    // y aquí se lee (GET). Aplica desde Septiembre 2025. Meses previos: dato del Excel.
-    const PRV_FROM_YEAR = 2025
-    const PRV_FROM_MONTH = 9
+    // y aquí se lee (GET). Los feeds en vivo (PRV Tiendas/FFVV y Cobrado) SOLO rellenan el
+    // año EN CURSO (2026+): los años ya cerrados (2025 y anteriores) muestran el Excel
+    // "Ganancias 2014-2026", que es el cierre oficial. (Cambiado jul-2026 a petición del
+    // usuario; antes arrancaban en sep-2025 y pisaban el 2025 cerrado.)
+    const PRV_FROM_YEAR = 2026
+    const PRV_FROM_MONTH = 1
     // PRV Tiendas ← /api/prv-tiendas-feed (ERP: Resumen Evolutivo Retribuciones Base Tiendas, TCBP)
     const [prvOverride, setPrvOverride] = useState<Record<number, number> | null>(null)
     // PRV FFVV ← /api/prv-feed (ERP: Resumen Evolutivo PRV por cartera, Desglose Mensual SAUT)
@@ -268,7 +271,7 @@ export default function GananciasPage() {
                     if (cancel || !d?.success || !d.data) return
                     const ov: Record<number, number> = {}
                     for (let m = 1; m <= 12; m++) {
-                        // Respetar "desde Septiembre 2025"
+                        // Feeds solo desde el año en curso (PRV_FROM_YEAR = 2026, mes 1)
                         if (yNum === PRV_FROM_YEAR && m < PRV_FROM_MONTH) continue
                         const key = `${yNum}_${String(m).padStart(2, '0')}`
                         const v = d.data[key]
@@ -285,6 +288,7 @@ export default function GananciasPage() {
     useEffect(() => {
         setCobradoOverride(null)
         const yNum = Number(year)
+        if (yNum < PRV_FROM_YEAR) return   // feeds solo año en curso (2026+); años cerrados = Excel
         let cancel = false
         fetch('/api/cobrado-feed', { cache: 'no-store' })
             .then(r => r.json())
@@ -336,7 +340,21 @@ export default function GananciasPage() {
     }, [baseData, year])
 
     const displayRows: GananciaRow[] = useMemo(() => {
-        if (!gastosOverride && !cajaModOverride && !comisLocalesOverride && !prvOverride && !prvFfvvOverride && !cobradoOverride && !produccionOverride) return rows
+        // "TOTAL COBRADO sin IVA" SIEMPRE = "TOTAL COBRADO IVA Inc" / 1,21 (haya feed o no),
+        // para que nunca quede descuadrado del IVA Inc si a un mes le falta el dato en el Excel.
+        const withSinIva = (rs: GananciaRow[]): GananciaRow[] => {
+            const ivaInc = rs.find(r => r.label === 'TOTAL COBRADO IVA Inc')
+            if (!ivaInc) return rs
+            return rs.map(r => {
+                if (r.label !== 'TOTAL COBRADO sin IVA') return r
+                const months = ivaInc.months.map(v => (v === null || v === undefined) ? v : v / 1.21)
+                const nums = months.filter((x): x is number => x !== null && x !== undefined)
+                const total = nums.reduce((a, b) => a + b, 0)
+                const active = months.filter(m => m !== null && m !== undefined && m !== 0).length
+                return { label: r.label, months, total, media: active ? total / active : null }
+            })
+        }
+        if (!gastosOverride && !cajaModOverride && !comisLocalesOverride && !prvOverride && !prvFfvvOverride && !cobradoOverride && !produccionOverride) return withSinIva(rows)
         const build = (months: number[]) => {
             const total = months.reduce((a, b) => a + b, 0)
             const active = months.filter(m => m !== 0).length
