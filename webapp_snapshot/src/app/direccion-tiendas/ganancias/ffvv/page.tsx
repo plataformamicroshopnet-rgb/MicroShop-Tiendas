@@ -20,12 +20,11 @@ const media = (vals: (number | null)[]): number | null => {
     return ok.length ? ok.reduce((a, b) => a + b, 0) / ok.length : null
 }
 
-const LS_KEY = 'ffvv_reparto_v1'
+const LS_KEY = 'ffvv_reparto_v2'
 const DEF: Record<'ffvv' | 'banquillo', number> = { ffvv: 6, banquillo: 7 }
 
-type NCfg = { base?: string; m?: Record<number, string> }
-type NMap = Record<string, { ffvv?: NCfg; banquillo?: NCfg }>
 type RowKey = 'ffvv' | 'banquillo'
+type NMap = Record<string, Partial<Record<RowKey, string>>>   // año -> { ffvv:"6", banquillo:"7" }
 
 // Importe mensual que se reparte = fila «Total Ingresos FFVV» de ese año (32.209,94 €
 // en enero-2025 → ÷6 = 5.368,32 €, que cuadra con el ejemplo).
@@ -45,16 +44,12 @@ export default function FFVVGananciasPage() {
     }, [])
     const persist = (next: NMap) => { setNmap(next); try { localStorage.setItem(LS_KEY, JSON.stringify(next)) } catch { /* noop */ } }
 
-    const setBase = (year: string, key: RowKey, val: string) =>
-        persist({ ...nmap, [year]: { ...(nmap[year] || {}), [key]: { base: val, m: {} } } })   // «aplicar a todos»
-    const setMonth = (year: string, key: RowKey, m: number, val: string) => {
-        const cur = nmap[year]?.[key] || {}
-        persist({ ...nmap, [year]: { ...(nmap[year] || {}), [key]: { ...cur, m: { ...(cur.m || {}), [m]: val } } } })
-    }
-    const nFor = (year: string, key: RowKey, m: number): number => {
-        const cfg = nmap[year]?.[key]
-        const parse = (s?: string) => { if (s === undefined || s === '') return null; const v = parseFloat(s.replace(',', '.')); return isFinite(v) && v > 0 ? v : null }
-        return parse(cfg?.m?.[m]) ?? parse(cfg?.base) ?? DEF[key]
+    const setN = (year: string, key: RowKey, val: string) =>
+        persist({ ...nmap, [year]: { ...(nmap[year] || {}), [key]: val } })
+    const nFor = (year: string, key: RowKey): number => {
+        const s = nmap[year]?.[key]
+        if (s !== undefined && s !== '') { const v = parseFloat(s.replace(',', '.')); if (isFinite(v) && v > 0) return v }
+        return DEF[key]
     }
 
     const years = useMemo(() => Object.keys(GANANCIAS_DATA)
@@ -85,28 +80,24 @@ export default function FFVVGananciasPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {ROWS.map((r, ri) => {
-                                const vals = MESES.map((_, m) => { const n = nFor(year, r.key, m); return (prv[m] != null && n > 0) ? (prv[m] as number) / n : null })
+                            {ROWS.map((r) => {
+                                const n = nFor(year, r.key)
+                                const vals = prv.map(v => (v != null && n > 0) ? v / n : null)
                                 const isBanq = r.key === 'banquillo'
                                 return (
                                     <tr key={r.key} style={{ background: isBanq ? 'rgba(2,132,199,0.06)' : 'transparent', borderBottom: '1px solid var(--border-light)' }}>
-                                        <td style={{ padding: '6px 12px', textAlign: 'left', fontWeight: isBanq ? 800 : 700, color: 'var(--text-main)' }}>{r.label}</td>
-                                        <td style={{ padding: '4px 4px', textAlign: 'center', borderLeft: '2px solid var(--border-light)' }}>
-                                            {ri === 0 && (
-                                                <input type="number" step="0.01" min="0" title="Nº de comerciales del año (aplica a todos los meses de esta fila)"
-                                                    value={nmap[year]?.[r.key]?.base ?? String(DEF[r.key])}
-                                                    onChange={e => setBase(year, r.key, e.target.value)} style={{ ...nInput, width: 46 }} />
-                                            )}
+                                        <td style={{ padding: '10px 12px', textAlign: 'left', fontWeight: isBanq ? 800 : 700, color: 'var(--text-main)' }}>{r.label}</td>
+                                        <td style={{ padding: '6px 4px', textAlign: 'center', borderLeft: '2px solid var(--border-light)' }}>
+                                            <input type="number" step="1" min="1" title="Nº de comerciales del año (divide todos los meses de esta fila)"
+                                                value={nmap[year]?.[r.key] ?? String(DEF[r.key])}
+                                                onChange={e => setN(year, r.key, e.target.value)} style={{ ...nInput, width: 46 }} />
                                         </td>
                                         {MESES.map((_, m) => (
-                                            <td key={m} style={{ padding: '3px 4px', textAlign: 'center', borderLeft: '1px solid var(--border-light)', fontVariantNumeric: 'tabular-nums' }}>
-                                                <input type="number" step="0.01" min="0" title="Nº comerciales de este mes"
-                                                    value={String(nFor(year, r.key, m))}
-                                                    onChange={e => setMonth(year, r.key, m, e.target.value)} style={nInput} />
-                                                <div style={{ fontWeight: 700, color: '#16a34a', marginTop: 2, fontSize: 11.5 }}>{eur2(vals[m])}</div>
+                                            <td key={m} style={{ padding: '10px 6px', textAlign: 'center', borderLeft: '1px solid var(--border-light)', fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#16a34a', fontSize: 12.5 }}>
+                                                {eur2(vals[m])}
                                             </td>
                                         ))}
-                                        <td style={{ padding: '4px 8px', textAlign: 'right', borderLeft: '2px solid var(--border-light)', fontWeight: 800, color: '#0284c7', fontVariantNumeric: 'tabular-nums' }}>{eur2(media(vals))}</td>
+                                        <td style={{ padding: '10px 10px', textAlign: 'right', borderLeft: '2px solid var(--border-light)', fontWeight: 800, color: '#0284c7', fontVariantNumeric: 'tabular-nums' }}>{eur2(media(vals))}</td>
                                     </tr>
                                 )
                             })}
@@ -121,7 +112,7 @@ export default function FFVVGananciasPage() {
         <div style={{ padding: '20px 24px', backgroundColor: 'var(--bg-app)', minHeight: '100vh' }}>
             <PageHeader
                 title={<span style={{ display: 'flex', alignItems: 'center', gap: 12 }}><Users color="#00adef" size={28} /> FFVV — Reparto por comercial</span>}
-                subtitle="Reparto del PRV FFVV entre los comerciales, por año y mes. Pon el Nº de comerciales de cada mes (fila normal y fila con banquillo) y el € por comercial se recalcula solo. Totales = media de los meses."
+                subtitle="Reparto del PRV FFVV entre los comerciales, por año. Pon el Nº de comerciales del año en cada fila (normal y con banquillo) y el € por comercial de cada mes se recalcula solo. Totales = media de los meses."
             />
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14, flexWrap: 'wrap' }}>
@@ -129,7 +120,7 @@ export default function FFVVGananciasPage() {
                     <ArrowLeft size={16} /> Volver a Ganancias
                 </Link>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#0369a1', fontWeight: 600 }}>
-                    <Info size={14} /> El importe FFVV mensual (T. Importe FFVV) se coge automático de Ganancias; el Nº de comerciales lo pones tú (se guarda en este navegador). La casilla «Nº Com.» aplica a todos los meses; luego puedes afinar mes a mes.
+                    <Info size={14} /> El importe FFVV mensual (T. Importe FFVV) se coge automático de Ganancias; tú pones el Nº de comerciales del año en cada fila (casilla «Nº Com.», se guarda en este navegador) y el € por comercial de cada mes se calcula solo. Totales = media de los meses.
                 </span>
             </div>
 
