@@ -621,13 +621,13 @@ export default function GananciasPage() {
             {!editMode && (
             <div style={{ background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border-light)', overflow: 'hidden', boxShadow: '0 4px 12px rgba(15,23,42,0.05)' }}>
                 <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, whiteSpace: 'nowrap', minWidth: 1100 }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, whiteSpace: 'nowrap', tableLayout: 'fixed' }}>
                         <thead>
                             <tr style={{ background: 'linear-gradient(90deg, #0ea5e9, #0284c7)', color: '#fff' }}>
-                                <th style={{ padding: '7px 12px', textAlign: 'left', position: 'sticky', left: 0, background: '#0ea5e9', minWidth: 210 }}>Concepto</th>
-                                {MESES.map(m => <th key={m} style={{ padding: '7px 8px', textAlign: 'center', fontWeight: 700 }}>{m}</th>)}
-                                <th style={{ padding: '7px 10px', textAlign: 'center', fontWeight: 800, borderLeft: '2px solid rgba(255,255,255,0.25)' }}>Total</th>
-                                <th style={{ padding: '7px 10px', textAlign: 'center', fontWeight: 700 }}>Media</th>
+                                <th style={{ padding: '6px 8px', textAlign: 'left', position: 'sticky', left: 0, background: '#0ea5e9', width: 150, borderRight: '1px solid rgba(255,255,255,0.2)' }}>Concepto</th>
+                                {MESES.map(m => <th key={m} style={{ padding: '6px 3px', textAlign: 'center', fontWeight: 700, borderLeft: '1px solid rgba(255,255,255,0.18)' }}>{m}</th>)}
+                                <th style={{ padding: '6px 5px', textAlign: 'center', fontWeight: 800, borderLeft: '2px solid rgba(255,255,255,0.25)' }}>Total</th>
+                                <th style={{ padding: '6px 5px', textAlign: 'center', fontWeight: 700, borderLeft: '1px solid rgba(255,255,255,0.18)' }}>Media</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -636,6 +636,8 @@ export default function GananciasPage() {
                                 const gan = isGanancia(row.label) || row.label === 'Total Ingresos Tiendas+FFVV'
                                 const sub = isSubtotal(row.label)
                                 const cobrado = /total cobrado/i.test(row.label)
+                                const ingTot = row.label === 'Total Ingresos Tiendas' || row.label === 'Total Ingresos FFVV'
+                                const totGan = /^Total Ganancias/i.test(row.label)
                                 const rojo = ['Gastos Tiendas', 'Comisiones Tiendas', 'Gastos FFVV'].includes(row.label)
                                 const tip = row.label === 'Gastos Tiendas'
                                     ? (gastosOverride ? 'En vivo de «Informes de Gastos»: Tiendas + Movilfree (Total gastos Fijos + Variables)' : 'Dato del Excel «Ganancias 2014-2026»')
@@ -652,29 +654,29 @@ export default function GananciasPage() {
                                     : row.label === 'Comisiones Tiendas'
                                     ? 'Dato del Excel «Ganancias 2014-2026»'
                                     : undefined
-                                const bg = gan ? 'rgba(34,197,94,0.10)' : (sub ? 'rgba(2,132,199,0.06)' : (cobrado ? '#bfdbfe' : (ri % 2 === 0 ? 'transparent' : 'var(--active-bg)')))
+                                const bg = totGan ? 'rgba(6,182,212,0.18)' : (ingTot ? 'rgba(34,197,94,0.14)' : (cobrado ? '#38bdf8' : (gan ? 'rgba(34,197,94,0.10)' : (sub ? 'rgba(2,132,199,0.06)' : (ri % 2 === 0 ? 'transparent' : 'var(--active-bg)')))))
                                 const totalColor = (gan || sub)
                                     ? ((row.total ?? 0) >= 0 ? '#16a34a' : '#dc2626')
                                     : 'var(--text-main)'
                                 return (
                                     <tr key={ri} style={{ background: bg, borderBottom: '1px solid var(--border-light)' }}>
-                                        <td title={tip} style={{ padding: '4px 12px', textAlign: 'left', fontWeight: gan ? 800 : 600, color: rojo ? '#dc2626' : 'var(--text-main)', position: 'sticky', left: 0, background: gan ? '#dcfce7' : (sub ? '#e0f2fe' : (cobrado ? '#bfdbfe' : 'var(--bg-card)')), cursor: tip ? 'help' : undefined }}>
+                                        <td title={tip} style={{ padding: '4px 10px', textAlign: 'left', fontWeight: gan ? 800 : 600, color: cobrado ? '#fff' : (rojo ? '#dc2626' : 'var(--text-main)'), position: 'sticky', left: 0, background: totGan ? '#cffafe' : (ingTot ? '#dcfce7' : (cobrado ? '#38bdf8' : (gan ? '#dcfce7' : (sub ? '#e0f2fe' : 'var(--bg-card)')))), borderRight: '1px solid var(--border-light)', cursor: tip ? 'help' : undefined }}>
                                             {row.label}
                                         </td>
                                         {row.months.map((v, mi) => {
                                             const neg = v != null && v < 0
-                                            const c = (rojo || neg) ? '#dc2626' : (gan ? '#16a34a' : 'var(--text-muted)')
+                                            const c = cobrado ? '#fff' : ((rojo || neg) ? '#dc2626' : (gan ? '#16a34a' : 'var(--text-muted)'))
                                             const editable = !isComputedRow(row.label) && !cellIsLive(row.label, ri, mi)
                                             return (
-                                                <td key={mi} style={{ padding: '4px 8px', textAlign: 'right', color: c, fontWeight: (gan || rojo) ? 700 : 400 }}>
+                                                <td key={mi} style={{ padding: '4px 5px', textAlign: 'right', color: c, fontWeight: (gan || rojo) ? 700 : 400, borderLeft: '1px solid var(--border-light)' }}>
                                                     {editable
                                                         ? <EditableCell value={v} fmt={eur} color={c} bold={!!(gan || rojo)} onCommit={nv => updateCell(ri, mi, nv)} />
                                                         : eur(v)}
                                                 </td>
                                             )
                                         })}
-                                        <td style={{ padding: '4px 10px', textAlign: 'right', fontWeight: 800, color: (rojo || (row.total != null && row.total < 0)) ? '#dc2626' : totalColor, borderLeft: '2px solid var(--border-light)' }}>{eur(row.total)}</td>
-                                        <td style={{ padding: '4px 10px', textAlign: 'right', color: (rojo || (row.media != null && row.media < 0)) ? '#dc2626' : 'var(--text-muted)', fontWeight: 600 }}>{eur(row.media)}</td>
+                                        <td style={{ padding: '4px 6px', textAlign: 'right', fontWeight: 800, color: cobrado ? '#fff' : ((rojo || (row.total != null && row.total < 0)) ? '#dc2626' : totalColor), borderLeft: '2px solid var(--border-light)' }}>{eur(row.total)}</td>
+                                        <td style={{ padding: '4px 6px', textAlign: 'right', color: cobrado ? '#fff' : ((rojo || (row.media != null && row.media < 0)) ? '#dc2626' : 'var(--text-muted)'), fontWeight: 600, borderLeft: '1px solid var(--border-light)' }}>{eur(row.media)}</td>
                                     </tr>
                                 )
                             })}
