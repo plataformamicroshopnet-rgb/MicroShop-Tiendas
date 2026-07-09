@@ -439,6 +439,7 @@ button, input, select, textarea {
   font-weight: 700 !important;
   letter-spacing: 0.3px !important;
   line-height: 1.25 !important;
+  font-size: 13px !important;                            /* título más pequeño (−7px aprox.) */
   color: var(--mercedes-cyan) !important;                /* cian de marca (claro y oscuro) */
   border-bottom: 1px solid rgba(255, 255, 255, 0.10) !important;
   padding-bottom: 9px !important;
@@ -448,6 +449,7 @@ button, input, select, textarea {
 .card-desc {
   color: var(--text-muted) !important;
   font-weight: 400 !important;
+  font-size: 10px !important;                            /* descripción más pequeña (−4px) */
 }
 /* Todo el contenido pegado a la izquierda; icono + título anclados al inicio
    (arriba-izquierda). Las tarjetas con FOTO a sangre usan align-items:stretch en
