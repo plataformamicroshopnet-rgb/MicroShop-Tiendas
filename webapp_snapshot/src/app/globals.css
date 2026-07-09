@@ -440,7 +440,7 @@ button, input, select, textarea {
   letter-spacing: 0.3px !important;
   line-height: 1.25 !important;
   font-size: 13px !important;                            /* título más pequeño (−7px aprox.) */
-  color: var(--mercedes-cyan) !important;                /* cian de marca (claro y oscuro) */
+  color: #4A9EEB !important;                             /* azul Telefónica (modo oscuro) */
   border-bottom: 1px solid rgba(255, 255, 255, 0.10) !important;
   padding-bottom: 9px !important;
   margin-bottom: 9px !important;
@@ -451,19 +451,25 @@ button, input, select, textarea {
   font-weight: 400 !important;
   font-size: 10px !important;                            /* descripción más pequeña (−4px) */
 }
-/* Todo el contenido pegado a la izquierda; icono + título anclados al inicio
-   (arriba-izquierda). Las tarjetas con FOTO a sangre usan align-items:stretch en
-   línea y se EXCLUYEN con :not([style*="stretch"]) para no romper la imagen. */
+/* Texto pegado a la izquierda. */
 .hub-card, .premium-card,
 .hub-card h3, .hub-card p,
 .card-title, .card-desc, .card-content {
   text-align: left !important;
 }
-.hub-card:not([style*="stretch"]),
-.premium-card:has(.card-title):not([style*="stretch"]) {
-  align-items: flex-start !important;
+/* Bloque de texto CENTRADO en vertical dentro de la carta: título arriba, la
+   línea separadora hacia el medio y la descripción debajo. Se apunta al
+   contenedor que contiene el título (por clase .card-content o por estructura),
+   nunca a la imagen (la foto a sangre sigue intacta). */
+.hub-card > div:has(> h3),
+.premium-card > div:has(> .card-title),
+.card-content {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
 }
 [data-theme='light'] .hub-card h3,
 [data-theme='light'] .card-title {
+  color: #0066CC !important;                             /* azul Telefónica (modo claro) */
   border-bottom-color: #E7ECF2 !important;               /* separador claro en modo claro */
 }
