@@ -53,9 +53,10 @@ export default function ConfiguradorTorneosPage() {
   const guardar = async () => {
     setSaving(true); setMsg('')
     try {
-      // pos secuencial por orden
+      // pos secuencial por orden. La métrica 'comisiones' no usa Tipo de Venta,
+      // así que no se le exige tipoVenta para guardarse.
       const limpio: TorneosConfig = {
-        concursos: config.concursos.filter(c => c.nombre.trim() && c.tipoVenta.trim()).map(c => ({
+        concursos: config.concursos.filter(c => c.nombre.trim() && (c.metrica === 'comisiones' || c.tipoVenta.trim())).map(c => ({
           ...c, premios: c.premios.map((p, i) => ({ ...p, pos: i + 1, importe: Number(p.importe) || 0 }))
         }))
       }
@@ -97,16 +98,25 @@ export default function ConfiguradorTorneosPage() {
                 <input style={{ ...ipt, width: '100%', marginTop: 4 }} value={c.nombre} placeholder="Ej: Seguros" onChange={e => updateConcurso(ci, { nombre: e.target.value })} />
               </div>
               <div>
-                <label style={{ fontSize: 12, color: 'var(--medium-gray,#64748b)', fontWeight: 600 }}>Ventas que cuentan (Tipo de Venta)</label>
-                <div style={{ marginTop: 4 }}>
-                  <ProductTreeSelector value={c.tipoVenta} onChange={v => updateConcurso(ci, { tipoVenta: v })} placeholder="Elegir ventas…" />
-                </div>
+                {c.metrica === 'comisiones' ? (
+                  <div style={{ marginTop: 22, fontSize: 12, color: 'var(--medium-gray,#64748b)', padding: '8px 10px', background: 'rgba(14,165,233,0.06)', border: '1px dashed var(--border-color,#cbd5e1)', borderRadius: 8 }}>
+                    Ranking por el <strong>total de comisiones del mes</strong> de cada comercial (misma fuente que Liquidación/MOD). El tipo de venta no aplica.
+                  </div>
+                ) : (
+                  <>
+                    <label style={{ fontSize: 12, color: 'var(--medium-gray,#64748b)', fontWeight: 600 }}>Ventas que cuentan (Tipo de Venta)</label>
+                    <div style={{ marginTop: 4 }}>
+                      <ProductTreeSelector value={c.tipoVenta} onChange={v => updateConcurso(ci, { tipoVenta: v })} placeholder="Elegir ventas…" />
+                    </div>
+                  </>
+                )}
               </div>
               <div>
                 <label style={{ fontSize: 12, color: 'var(--medium-gray,#64748b)', fontWeight: 600 }}>Se mide por</label>
                 <select style={{ ...ipt, width: '100%', marginTop: 4 }} value={c.metrica} onChange={e => updateConcurso(ci, { metrica: e.target.value as any })}>
                   <option value="count">Nº de ventas</option>
                   <option value="importe">Importe (€)</option>
+                  <option value="comisiones">Comisiones del comercial (€)</option>
                 </select>
               </div>
             </div>

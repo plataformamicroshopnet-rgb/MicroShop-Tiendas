@@ -1,25 +1,100 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { FileText, BookOpen, Library, Trophy, Flame, Target, Award, Star, Zap, Crown, Wifi, Smartphone, Shield, TrendingUp, Tv, Layers, Repeat } from 'lucide-react'
+import { Trophy, Flame, Target, Award, Zap, Crown, Wifi, Smartphone, Shield, TrendingUp, Tv, Layers, Repeat } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
 import Link from 'next/link'
 import { usePeriod } from '@/components/PeriodProvider'
-import { matchTipoVenta, matchesRule, getValueForRule } from '@/hooks/useComisionesData'
-import { isSaleActive } from '@/lib/salesUtils'
+import { isSaleActive, isSolar360, renderDashboardData } from '@/lib/salesUtils'
+import { getSaleCommission } from '@/lib/saleCommission'
 import { getEffectiveTiendaComerciales } from '@/lib/comercialRoster'
+import { can } from '@/lib/permissions'
 import { loadTorneosConfig, DEFAULT_TORNEOS_CONFIG, concursoSaleValue, TorneosConfig } from '@/lib/torneosConfig'
+import {
+  loadDashboardConfig,
+  DEFAULT_DASHBOARD_CONFIG,
+  DashboardConfig,
+  DashBloqueTipos,
+  DashMedalla,
+  DashMetrica,
+  TIPO_AUTO,
+  OBJETIVO_FALLBACKS,
+  bloqueMatches,
+  bloqueSaleValue,
+  fmtValor,
+} from '@/lib/dashboardConfig'
+
+// Avatar con fallback gestionado por React (jpg → jpeg → inicial). El patrón anterior
+// (onError + innerHTML) mutaba el DOM por fuera de React: con el polling de 8 s y un
+// ranking que se reordena podía dejar la inicial de otra persona en el hueco equivocado.
+// En Tiendas las fotos viven en la RAÍZ de /public como /{Nombre}.jpg o /{Nombre}.jpeg,
+// respetando la capitalización del nombre del vendedor.
+function FotoAvatar({ name, fontSize = 13 }: { name: string; fontSize?: number }) {
+  const [stage, setStage] = useState(0) // 0 = .jpg, 1 = .jpeg, 2 = inicial
+  useEffect(() => { setStage(0) }, [name])
+  if (stage >= 2) {
+    return <span style={{ color: '#fff', fontSize, fontWeight: 900 }}>{String(name || '?').charAt(0).toUpperCase()}</span>
+  }
+  const ext = stage === 0 ? 'jpg' : 'jpeg'
+  return (
+    <img
+      src={`/${name}.${ext}`}
+      alt={name}
+      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+      onError={() => setStage(s => s + 1)}
+    />
+  )
+}
+
+// Iconos y colores del Termómetro Diario: rotan por índice de la lista de KPIs del config.
+// El orden reproduce la estética histórica (Disp+Seg ámbar, BAF Total azul cielo, BAF
+// Convergente violeta, Swap teal, FTTR rosa, ARPU verde, Repo Fútbol azul).
+const KPI_ICONS = [Smartphone, Wifi, Layers, Repeat, Zap, TrendingUp, Tv, Shield]
+const KPI_COLORS = [
+  { color: '#f59e0b', grad: 'linear-gradient(90deg, #fbbf24, #d97706)', faltanCol: '#ef4444', faltanBg: 'rgba(239, 68, 68, 0.1)' },
+  { color: '#0ea5e9', grad: 'linear-gradient(90deg, #38bdf8, #0284c7)', faltanCol: '#ef4444', faltanBg: 'rgba(239, 68, 68, 0.1)' },
+  { color: '#8b5cf6', grad: 'linear-gradient(90deg, #8b5cf6, #7c3aed)', faltanCol: '#ef4444', faltanBg: 'rgba(239, 68, 68, 0.1)' },
+  { color: '#14b8a6', grad: 'linear-gradient(90deg, #2dd4bf, #0d9488)', faltanCol: '#ef4444', faltanBg: 'rgba(239, 68, 68, 0.1)' },
+  { color: '#ec4899', grad: 'linear-gradient(90deg, #f472b6, #db2777)', faltanCol: '#ef4444', faltanBg: 'rgba(239, 68, 68, 0.1)' },
+  // El 6º hueco (ARPU histórico) conserva su badge "Faltan" en ámbar, como siempre tuvo.
+  { color: '#10b981', grad: 'linear-gradient(90deg, #34d399, #059669)', faltanCol: '#f59e0b', faltanBg: 'rgba(245, 158, 11, 0.1)' },
+  { color: '#3b82f6', grad: 'linear-gradient(90deg, #60a5fa, #2563eb)', faltanCol: '#ef4444', faltanBg: 'rgba(239, 68, 68, 0.1)' },
+  { color: '#ef4444', grad: 'linear-gradient(90deg, #f87171, #dc2626)', faltanCol: '#ef4444', faltanBg: 'rgba(239, 68, 68, 0.1)' },
+]
+
+// Estilos oro/rojo/teal de la vitrina (rotan por índice, mismos 3 de siempre)
+const MEDAL_STYLES = [
+  { grad: 'linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%)', col: '#d97706', ring: 'rgba(245, 158, 11, 0.25)' },
+  { grad: 'linear-gradient(135deg, #fca5a5 0%, #ef4444 100%)', col: '#b91c1c', ring: 'rgba(239, 68, 68, 0.25)' },
+  { grad: 'linear-gradient(135deg, #5eead4 0%, #14b8a6 100%)', col: '#0d9488', ring: 'rgba(20, 184, 166, 0.25)' },
+]
+// Subtítulos históricos de las 3 medallas por defecto (solo se ven si nadie tiene la medalla)
+const MEDAL_SUBS: Record<string, string> = {
+  m1: 'Líder en Dispositivos',
+  m2: 'Más multi-paquete',
+  m3: 'Mejor vendedor de Swap del mes',
+}
+
+// Base del motor de comisiones (solo se carga si algún bloque usa la métrica 'comisiones')
+type ComisionesBase = {
+  periodKey: string
+  importesPyme: any[]
+  importesPlus: any[]
+  objetivos: any
+  grupos: any
+}
 
 export default function DashboardPage() {
-  const { activePeriodKey } = usePeriod()
+  const { activePeriodKey, availablePeriods } = usePeriod()
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [allSales, setAllSales] = useState<any[]>([])
   const [tiendaRules, setTiendaRules] = useState<any[]>([])
   const [tiendaHours, setTiendaHours] = useState<any[]>([])
-  const [o2Rules, setO2Rules] = useState<any[]>([])
   const [torneosConfig, setTorneosConfig] = useState<TorneosConfig>(DEFAULT_TORNEOS_CONFIG)
+  const [cfg, setCfg] = useState<DashboardConfig>(DEFAULT_DASHBOARD_CONFIG)
   const [catalogs, setCatalogs] = useState<Record<string, any[]>>({})
+  const [comisionesBase, setComisionesBase] = useState<ComisionesBase | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
@@ -30,19 +105,19 @@ export default function DashboardPage() {
   const fetchData = async (isInitial: boolean) => {
     if (!activePeriodKey) return;
     if (isInitial) setLoading(true);
-    
+
     try {
-      const [userRes, salesRes, tiendasRes, o2Res, catalogsRes, torneosCfg] = await Promise.all([
+      const [userRes, salesRes, tiendasRes, catalogsRes, torneosCfg, dashCfg] = await Promise.all([
         fetch('/api/auth/me').then(res => res.json()).catch(() => null),
         fetch(`/api/sales?periodKey=${activePeriodKey}&dashboard=true`).then(res => res.json()).catch(() => ({ success: false, logs: [] })),
         fetch(`/api/tiendas-comisiones?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({ success: false, rules: [] })),
-        fetch(`/api/settings?key=o2_rules_v2_${activePeriodKey}`).then(res => res.json()).catch(() => ({ value: null })),
         fetch('/api/catalogs').then(res => res.json()).catch(() => ({ success: false, catalogs: {} })),
-        loadTorneosConfig().catch(() => DEFAULT_TORNEOS_CONFIG)
+        loadTorneosConfig().catch(() => DEFAULT_TORNEOS_CONFIG),
+        loadDashboardConfig().catch(() => DEFAULT_DASHBOARD_CONFIG)
       ]);
 
       if (userRes) {
-        setCurrentUser(userRes);
+        setCurrentUser(userRes.user ? userRes.user : userRes);
       }
       if (catalogsRes && catalogsRes.success) {
         setCatalogs(catalogsRes.catalogs || {});
@@ -50,22 +125,15 @@ export default function DashboardPage() {
       if (torneosCfg) {
         setTorneosConfig(torneosCfg);
       }
+      if (dashCfg) {
+        setCfg(dashCfg);
+      }
       if (salesRes && salesRes.success && salesRes.logs) {
         setAllSales(salesRes.logs);
       }
       if (tiendasRes && tiendasRes.success) {
         setTiendaRules(tiendasRes.rules || []);
         setTiendaHours(tiendasRes.hours || []);
-      }
-      if (o2Res && o2Res.value) {
-        try {
-          const parsed = JSON.parse(o2Res.value);
-          setO2Rules(parsed.rules || []);
-        } catch (e) {
-          setO2Rules([]);
-        }
-      } else {
-        setO2Rules([]);
       }
     } catch (err) {
       console.error("Error loading dashboard data:", err);
@@ -93,368 +161,351 @@ export default function DashboardPage() {
     };
   }, [activePeriodKey]);
 
-  // ── Cómputo del Termómetro Diario (6 KPIs) ──
-  const teamSales = allSales.filter(s => !String(s.vendedor || '').toLowerCase().includes('marta') && isSaleActive(s));
+  // ── Permisos: mismo criterio que el botón Configurar de Torneos ──
+  const canConfig = can(currentUser, 'CARD_CONFIG_TORNEOS');
 
-  const getKPIMetrics = (kpiName: string, fallbackTarget: number, isPercentage: boolean) => {
-    const rule = tiendaRules.find(r => r.nombre.toLowerCase().trim() === kpiName.toLowerCase().trim());
-    let target = fallbackTarget;
-    if (rule && rule.objPrimerTramo) {
-      target = Number(rule.objPrimerTramo) || fallbackTarget;
-    }
+  // ── ¿Algún bloque o concurso usa la métrica 'comisiones'? Solo entonces se carga la base ──
+  const usaComisiones =
+    [cfg.mvpPrincipal, cfg.mvpNominado1, cfg.mvpNominado2, ...cfg.kpis, cfg.carrera, ...cfg.medallas]
+      .some(b => b.metrica === 'comisiones')
+    || torneosConfig.concursos.some(c => c.metrica === 'comisiones');
 
-    let productsCuentan = kpiName;
-    if (rule && rule.productosCuentan) {
-      productsCuentan = rule.productosCuentan;
-    }
-
-    let llevamos = 0;
-    teamSales.forEach(s => {
-      if (matchesRule(s, kpiName, productsCuentan)) {
-        const val = getValueForRule(s, kpiName);
-        if (isPercentage) {
-          llevamos += val;
-        } else {
-          llevamos += 1;
-        }
+  // Base de comisiones: una vez por periodo (NO en cada poll de 8 s); el mapa se
+  // recalcula en local cuando cambian las ventas, que es barato.
+  useEffect(() => {
+    if (!usaComisiones || !activePeriodKey) return;
+    let cancelado = false;
+    (async () => {
+      try {
+        const [pymeRes, plusRes, objRes] = await Promise.all([
+          fetch(`/api/importes-pyme?periodKey=${activePeriodKey}&strictPeriod=1`).catch(() => null),
+          fetch(`/api/importes-plus?periodKey=${activePeriodKey}&strictPeriod=1`).catch(() => null),
+          fetch(`/api/objetivos?periodKey=${activePeriodKey}&strictPeriod=1`).catch(() => null),
+        ]);
+        const pymeData = pymeRes && pymeRes.ok ? await pymeRes.json() : {};
+        const plusData = plusRes && plusRes.ok ? await plusRes.json() : {};
+        const objData = objRes && objRes.ok ? await objRes.json() : {};
+        if (cancelado) return;
+        setComisionesBase({
+          periodKey: activePeriodKey,
+          importesPyme: pymeData.importes || pymeData.data || [],
+          importesPlus: plusData.importes || plusData.data || [],
+          objetivos: objData.objetivos || { Pyme: {}, Captador: {} },
+          grupos: objData.grupos || { Pyme: {}, Captador: {} },
+        });
+      } catch (err) {
+        console.error('Error cargando la base de comisiones del dashboard:', err);
       }
-      if (s.seguroImporte && Number(s.seguroImporte) > 0 && String(s.categoria || s.detalle || s.sheet).toLowerCase() !== 'seguro') {
-        const virtualSeguro = { ...s, categoria: 'seguro', detalle: 'seguro', cuota: Number(s.seguroImporte) };
-        if (matchesRule(virtualSeguro, kpiName, productsCuentan)) {
-          const val = getValueForRule(virtualSeguro, kpiName);
-          if (isPercentage) {
-            llevamos += val;
-          } else {
-            llevamos += 1;
-          }
-        }
-      }
-    });
+    })();
+    return () => { cancelado = true };
+  }, [usaComisiones, activePeriodKey]);
 
-    const faltan = Math.max(0, target - llevamos);
-    const progressPct = target > 0 ? Math.min(100, (llevamos / target) * 100) : 0;
+  const activePeriodObj = availablePeriods.find(p => p.period_key === activePeriodKey);
 
-    return {
-      llevamos,
-      target,
-      faltan,
-      progressPct
+  // ── Mapa vendedor → € de comisión del periodo (receta EXACTA de Rentabilidad por Tienda:
+  //    renderDashboardData de ambos perfiles + getSaleCommission por venta activa no-Solar360
+  //    del periodo visualizado). Marta queda fuera, como en el resto del dashboard. ──
+  const comisionesMap = useMemo<Record<string, number> | null>(() => {
+    if (!usaComisiones || !comisionesBase || comisionesBase.periodKey !== activePeriodKey) return null;
+
+    const getCurrentMonthString = () => {
+      const now = new Date();
+      return `${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}`;
     };
+    const viewingPeriod = activePeriodObj
+      ? `${activePeriodObj.year}${String(activePeriodObj.month).padStart(2, '0')}`
+      : getCurrentMonthString();
+
+    const objetivosObj = comisionesBase.objetivos || { Pyme: {}, Captador: {} };
+    const objGruposObj = comisionesBase.grupos || { Pyme: {}, Captador: {} };
+    const pymeRows = renderDashboardData('Pyme', comisionesBase.importesPyme, objetivosObj.Pyme || {}, allSales, objGruposObj.Pyme || {}, activePeriodObj).rows;
+    const captadorRows = renderDashboardData('Captador', comisionesBase.importesPlus, objetivosObj.Captador || {}, allSales, objGruposObj.Captador || {}, activePeriodObj).rows;
+
+    const map: Record<string, number> = {};
+    allSales.forEach(sale => {
+      // Anuladas fuera (no comisionan), igual que la MOD y Rentabilidad por Tienda.
+      if (sale.anulado === 'Si' || sale.anulado === 'Sí' || sale.pendiente === 'Anulado') return;
+      // Solar360 fuera por completo (ni cuenta como operación ni paga).
+      if (isSolar360(sale)) return;
+      // Solo el periodo visualizado (filtro defensivo, como en Rentabilidad).
+      let saleMonth = '';
+      if (sale.fecha) {
+        const parts = String(sale.fecha).split('/');
+        if (parts.length === 3) saleMonth = `${parts[2]}${parts[1]}`;
+        else if (String(sale.fecha).includes('-')) {
+          const p = String(sale.fecha).split('-');
+          if (p.length >= 2) saleMonth = `${p[0]}${p[1]}`;
+        }
+      }
+      if (saleMonth && saleMonth !== viewingPeriod) return;
+
+      const v = String(sale.vendedor || '').trim();
+      if (!v || v.toLowerCase().includes('marta')) return;
+
+      const comisionReal = getSaleCommission(sale, {
+        catalogs,
+        dashRowsPlus: pymeRows,
+        dashRowsBasico: captadorRows,
+        viewingPeriod
+      });
+      map[v] = (map[v] || 0) + comisionReal;
+    });
+    return map;
+  }, [usaComisiones, comisionesBase, allSales, catalogs, activePeriodKey, activePeriodObj]);
+
+  // ── Mecánica de bloques (la de siempre, ahora parametrizada por el config) ──
+
+  // Ventas del equipo (sin Marta) y ventas activas: mismos filtros que el dashboard histórico.
+  const teamSales = allSales.filter(s => !String(s.vendedor || '').toLowerCase().includes('marta') && isSaleActive(s));
+  const ventasActivas = allSales.filter(s => isSaleActive(s));
+
+  const vendedorDe = (s: any) => String(s?.vendedor || '').trim();
+  const isPendiente = (s: any) =>
+    String(s?.pendiente || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim() === 'si';
+
+  // Venta virtual del seguro embebido: EXACTAMENTE la de siempre (una venta con
+  // seguroImporte > 0 que no es de la hoja Seguro genera una "venta" extra de seguro).
+  const esVirtualizable = (s: any) =>
+    s.seguroImporte && Number(s.seguroImporte) > 0 && String(s.categoria || s.detalle || s.sheet).toLowerCase() !== 'seguro';
+  const ventaVirtualSeguro = (s: any) => ({ ...s, categoria: 'seguro', detalle: 'seguro', cuota: Number(s.seguroImporte) });
+
+  // Bloque con tipoVenta 'Swap' exacto: cuenta por la casilla ¿Swap? y SIN venta virtual
+  // (una venta Swap que además lleve seguro se duplicaría), como el kpiSwap de siempre.
+  const esBloqueSwap = (b: DashBloqueTipos) => String(b.tipoVenta || '').trim().toLowerCase() === 'swap';
+
+  // El KPI histórico de ARPU se calculaba con el nombre de regla 'ARPU', que en matchesRule/
+  // getValueForRule activa su ruta especial (suma Suscripciones TV y Extra Repo Fútbol).
+  // El config lo muestra como 'ARPU Acumulado': para no perder ese cálculo, cuando el
+  // tipoVenta es exactamente 'ARPU' el cálculo usa 'ARPU' como nombre de regla.
+  const bloqueCalc = (b0: DashBloqueTipos): DashBloqueTipos => {
+    let b = b0;
+    // AUTOMÁTICO: el bloque sigue a la regla del mes homónima — sus tipos de venta
+    // (productosCuentan) mandan, como hacía la home de siempre. Sin regla ese mes,
+    // el token de respaldo es el nombre del KPI ('ARPU' para el ARPU, que activa
+    // su ruta especial).
+    if (String(b.tipoVenta || '').trim() === TIPO_AUTO) {
+      const rule = ruleFor(b.nombre);
+      const esArpu = String(b.nombre || '').trim().toLowerCase().startsWith('arpu');
+      const respaldo = esArpu ? 'ARPU' : b.nombre;
+      b = { ...b, tipoVenta: (rule && rule.productosCuentan) ? String(rule.productosCuentan) : respaldo };
+    }
+    return String(b.tipoVenta || '').trim().toLowerCase() === 'arpu' && String(b.nombre || '').trim().toLowerCase() !== 'arpu'
+      ? { ...b, nombre: 'ARPU' }
+      : b;
   };
 
-  const kpiBafTotal = getKPIMetrics('Alta BAF Total', 87, false);
-  const kpiBafConv = getKPIMetrics('Alta BAF Convergente', 53, false);
-  const kpiDispSeg = getKPIMetrics('Dispositivos + Seguros', 96542, true);
-  const kpiFttr = getKPIMetrics('FTTR', 8, false);
-  const kpiArpu = getKPIMetrics('ARPU', 50000, true);
-  const kpiRepoFutbol = getKPIMetrics('Repo Fútbol', 34, false);
-  // Swap: conteo directo de ventas con ¿Swap? marcado (sin pasar por el virtualSeguro de
-  // getKPIMetrics, que duplicaría una venta Swap que además lleve seguro). Objetivo de la regla 'swap'.
-  const kpiSwap = (() => {
-    const swapCount = teamSales.filter(s => s.isSwap === true || String(s.isSwap).toLowerCase() === 'true').length;
-    const swapRule = tiendaRules.find(r => String(r.nombre || '').toLowerCase().trim() === 'swap');
-    const swapTarget = swapRule && swapRule.objPrimerTramo ? Number(swapRule.objPrimerTramo) : 1;
-    return {
-      llevamos: swapCount,
-      target: swapTarget,
-      faltan: Math.max(0, swapTarget - swapCount),
-      progressPct: swapTarget > 0 ? Math.min(100, (swapCount / swapTarget) * 100) : 0,
-    };
-  })();
+  /** Aportación de UNA venta a un bloque: matching bloqueMatches + valor bloqueSaleValue,
+   *  con la venta virtual del seguro embebido (salvo en bloques Swap). */
+  const valorVentaBloque = (s: any, b0: DashBloqueTipos): number => {
+    if (b0.metrica === 'comisiones' || b0.metrica === 'clientesMulti') return 0;
+    const b = bloqueCalc(b0);
+    let total = bloqueSaleValue(s, b);
+    if (!esBloqueSwap(b) && esVirtualizable(s)) {
+      total += bloqueSaleValue(ventaVirtualSeguro(s), b);
+    }
+    return total;
+  };
 
-  // ── Cómputo del MVP y Nominados ──
-  const getMVPAndNominados = () => {
+  /** ¿La venta (real o su seguro virtual) casa con el bloque? Para el badge de pendientes. */
+  const matchBloqueConVirtual = (s: any, b0: DashBloqueTipos): boolean => {
+    const b = bloqueCalc(b0);
+    if (bloqueMatches(s, b)) return true;
+    if (esBloqueSwap(b)) return false;
+    return esVirtualizable(s) && bloqueMatches(ventaVirtualSeguro(s), b);
+  };
+
+  /** Métrica 'clientesMulti': nº de NIFs no vacíos con ≥2 ventas activas que casen con el
+   *  bloque (El Pulpo de siempre; con tipoVenta vacío cuentan todas las ventas). */
+  const clientesMultiNifs = (lista: any[], b0: DashBloqueTipos): number => {
+    const b = bloqueCalc(b0);
+    const nifs: Record<string, number> = {};
+    lista.forEach(s => {
+      if (!bloqueMatches(s, b)) return;
+      const n = String(s.nif || '').trim().toUpperCase();
+      if (n) nifs[n] = (nifs[n] || 0) + 1;
+    });
+    return Object.values(nifs).filter(c => c >= 2).length;
+  };
+
+  /** Total de un bloque sobre una lista de ventas (cualquier métrica). */
+  const totalBloque = (lista: any[], b: DashBloqueTipos): number => {
+    if (b.metrica === 'comisiones') return Object.values(comisionesMap || {}).reduce((a, v) => a + v, 0);
+    if (b.metrica === 'clientesMulti') return clientesMultiNifs(lista, b);
+    return lista.reduce((acc, s) => acc + valorVentaBloque(s, b), 0);
+  };
+
+  /** Totales por vendedor para un bloque (Marta fuera, como en todo el dashboard). */
+  const totalesPorVendedor = (lista: any[], b: DashBloqueTipos): Record<string, number> => {
+    // Comisiones: el total del periodo de cada comercial según el motor de comisiones.
+    if (b.metrica === 'comisiones') return { ...(comisionesMap || {}) };
+    const byV: Record<string, any[]> = {};
+    lista.forEach(s => {
+      const v = vendedorDe(s);
+      if (!v || v.toLowerCase().includes('marta')) return;
+      (byV[v] = byV[v] || []).push(s);
+    });
+    const out: Record<string, number> = {};
+    Object.entries(byV).forEach(([v, ops]) => {
+      out[v] = b.metrica === 'clientesMulti' ? clientesMultiNifs(ops, b) : ops.reduce((acc, s) => acc + valorVentaBloque(s, b), 0);
+    });
+    return out;
+  };
+
+  /** Tooltip humano de qué ventas cuentan en un bloque. */
+  const descBloque = (b: DashBloqueTipos): string => {
+    if (b.metrica === 'comisiones') return 'Comisiones del comercial (total del periodo, mismo cálculo que Rentabilidad por Tienda)';
+    if (String(b.tipoVenta || '').trim() === TIPO_AUTO) {
+      const rule = ruleFor(b.nombre);
+      return rule && rule.productosCuentan
+        ? `Automático (regla del mes): ${String(rule.productosCuentan)}`
+        : 'Automático (regla del mes)';
+    }
+    const tipos = String(b.tipoVenta || '').split(',').map(t => t.trim()).filter(Boolean);
+    return tipos.length > 0 ? tipos.join(' · ') : 'Todas las ventas activas';
+  };
+
+  // ── Cómputo del Termómetro Diario (KPIs del config) ──
+  const ruleFor = (nombre: string) =>
+    tiendaRules.find(r => String(r.nombre || '').toLowerCase().trim() === String(nombre || '').toLowerCase().trim());
+
+  const kpiData = cfg.kpis.map(k => {
+    const llevamos = totalBloque(teamSales, k);
+    // Objetivo del config; 0 = automático → objPrimerTramo de la regla del mes con
+    // este nombre y, si el mes no tiene regla, el respaldo histórico del KPI (los
+    // números que la home traía a fuego) — nunca un 1 espurio.
+    const rule = ruleFor(k.nombre);
+    const target = k.objetivo > 0
+      ? k.objetivo
+      : ((rule && rule.objPrimerTramo ? Number(rule.objPrimerTramo) : 0) || OBJETIVO_FALLBACKS[k.nombre] || 1);
+    const faltan = Math.max(0, target - llevamos);
+    const progressPct = target > 0 ? Math.min(100, (llevamos / target) * 100) : 0;
+    return { kpi: k, llevamos, target, faltan, progressPct };
+  });
+
+  const kpiFmt = (v: number, metrica: DashMetrica) =>
+    (metrica === 'importe' || metrica === 'comisiones') ? fmt(v) : String(Math.round(v));
+
+  // ── Cómputo del MVP y Nominados (parametrizado; ámbito MES u HOY con relevo por apartado) ──
+  const mvpInfo = (() => {
     const now = new Date();
     const d = String(now.getDate()).padStart(2, '0');
     const m = String(now.getMonth() + 1).padStart(2, '0');
     const y = now.getFullYear();
     const todayStr = `${d}/${m}/${y}`;
 
-    const activeSales = allSales.filter(s => isSaleActive(s));
-    let salesForMvp = activeSales.filter(s => s.fecha === todayStr);
-    let isToday = true;
+    const deHoy = ventasActivas.filter(s => String(s.fecha || '').trim() === todayStr);
 
-    if (salesForMvp.length === 0) {
-      salesForMvp = activeSales;
-      isToday = false;
-    }
-
-    // 1. Facturación (MVP)
-    const billingTotals: Record<string, number> = {};
-    const billingPendingSales: Record<string, number> = {};
-    // 2. Ventas miMovistar
-    const miMovistarTotals: Record<string, number> = {};
-    const miMovistarPendingSales: Record<string, number> = {};
-    // 3. Dispositivos + Seguros
-    const dispSegTotals: Record<string, number> = {};
-    const dispSegPendingSales: Record<string, number> = {};
-
-    salesForMvp.forEach(s => {
-      const vName = String(s.vendedor || '').trim();
-      if (!vName) return;
-
-      const isPending = String(s.pendiente || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === 'si';
-
-      // Facturación total
-      let amt = 0;
-      if (String(s.categoria || s.detalle || s.sheet).toLowerCase() === 'seguro') {
-        amt = Number(s.seguroImporte) || Number(s.cuota) || Number(s.importe) || 0;
-      } else {
-        amt = (Number(s.cuota || s.importe) || 0) + (s.seguroImporte && Number(s.seguroImporte) > 0 ? Number(s.seguroImporte) : 0);
-      }
-      billingTotals[vName] = (billingTotals[vName] || 0) + amt;
-      if (isPending) {
-        billingPendingSales[vName] = (billingPendingSales[vName] || 0) + 1;
-      }
-
-      // Ventas miMovistar
-      if (matchTipoVenta(s, 'mimovistar')) {
-        miMovistarTotals[vName] = (miMovistarTotals[vName] || 0) + 1;
-        if (isPending) {
-          miMovistarPendingSales[vName] = (miMovistarPendingSales[vName] || 0) + 1;
-        }
-      }
-
-      // Dispositivos + Seguros
-      let isDispSeg = matchTipoVenta(s, 'Dispositivos + Seguros');
-      if (isDispSeg) {
-        let val = Number(s.cuota) || 0;
-        if (String(s.categoria || s.detalle || s.sheet).toLowerCase() === 'seguro') {
-          val = Number(s.seguroImporte) || Number(s.cuota) || 0;
-        }
-        dispSegTotals[vName] = (dispSegTotals[vName] || 0) + val;
-        if (isPending) {
-          dispSegPendingSales[vName] = (dispSegPendingSales[vName] || 0) + 1;
-        }
-      }
-      if (s.seguroImporte && Number(s.seguroImporte) > 0 && String(s.categoria || s.detalle || s.sheet).toLowerCase() !== 'seguro') {
-        const virtualSeguro = { ...s, categoria: 'seguro', detalle: 'seguro', cuota: Number(s.seguroImporte) };
-        if (matchTipoVenta(virtualSeguro, 'Dispositivos + Seguros')) {
-          dispSegTotals[vName] = (dispSegTotals[vName] || 0) + Number(s.seguroImporte);
-          if (isPending && !isDispSeg) {
-            dispSegPendingSales[vName] = (dispSegPendingSales[vName] || 0) + 1;
-          }
-        }
-      }
-    });
-
-    // MVP
-    let mvpName = 'Nadie';
-    let mvpTotal = 0;
-    Object.entries(billingTotals).forEach(([name, val]) => {
-      if (val > mvpTotal) {
-        mvpTotal = val;
-        mvpName = name;
-      }
-    });
-
-    // Nominado miMovistar (excluyendo MVP para que no se repitan si es posible)
-    let miMovistarLeaderName = 'Nadie';
-    let miMovistarLeaderTotal = 0;
-    Object.entries(miMovistarTotals).forEach(([name, val]) => {
-      if (name !== mvpName || Object.keys(billingTotals).length <= 1) {
-        if (val > miMovistarLeaderTotal) {
-          miMovistarLeaderTotal = val;
-          miMovistarLeaderName = name;
-        }
-      }
-    });
-    if (miMovistarLeaderName === 'Nadie') {
-      Object.entries(miMovistarTotals).forEach(([name, val]) => {
-        if (val > miMovistarLeaderTotal) {
-          miMovistarLeaderTotal = val;
-          miMovistarLeaderName = name;
-        }
-      });
-    }
-
-    // Nominado Disp + Seguros (excluyendo MVP y miMovistar)
-    let dispSegLeaderName = 'Nadie';
-    let dispSegLeaderTotal = 0;
-    Object.entries(dispSegTotals).forEach(([name, val]) => {
-      if ((name !== mvpName && name !== miMovistarLeaderName) || Object.keys(billingTotals).length <= 2) {
-        if (val > dispSegLeaderTotal) {
-          dispSegLeaderTotal = val;
-          dispSegLeaderName = name;
-        }
-      }
-    });
-    if (dispSegLeaderName === 'Nadie') {
-      Object.entries(dispSegTotals).forEach(([name, val]) => {
-        if (val > dispSegLeaderTotal) {
-          dispSegLeaderTotal = val;
-          dispSegLeaderName = name;
-        }
-      });
-    }
-
-    return {
-      mvp: { name: mvpName, total: mvpTotal, pendingCount: billingPendingSales[mvpName] || 0 },
-      nominadoMiMovistar: { name: miMovistarLeaderName, total: miMovistarLeaderTotal, pendingCount: miMovistarPendingSales[miMovistarLeaderName] || 0 },
-      nominadoDispSeg: { name: dispSegLeaderName, total: dispSegLeaderTotal, pendingCount: dispSegPendingSales[dispSegLeaderName] || 0 },
-      isToday
-    };
-  };
-
-  const mvp = getMVPAndNominados();
-
-  // ── Cuenta Kilómetros ──
-  const userRules = String(currentUser?.username || '').toLowerCase().includes('marta') ? o2Rules : tiendaRules;
-  const userSales = allSales.filter(s => {
-    const v = String(s.vendedor || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-    const tgt = String(currentUser?.username || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-    return v === tgt && isSaleActive(s);
-  });
-
-  const getCuentaKilometros = () => {
-    if (!currentUser || userRules.length === 0) {
-      return {
-        vendedor: 'Equipo',
-        reglaNombre: 'Objetivo de Tienda',
-        llevamos: kpiBafTotal.llevamos,
-        target: kpiBafTotal.target,
-        faltan: kpiBafTotal.faltan,
-        progressPct: kpiBafTotal.progressPct,
-        isPercentage: false
-      };
-    }
-
-    const progressList = userRules.map(rule => {
-      const isPercentage = String(rule.importePrimerTramo || '').includes('%');
-      let target = Number(rule.objPrimerTramo) || 0;
-      
-      let llevamos = 0;
-      userSales.forEach(s => {
-        if (matchesRule(s, rule.nombre, rule.productosCuentan)) {
-          const val = getValueForRule(s, rule.nombre);
-          if (isPercentage) {
-            llevamos += val;
-          } else {
-            llevamos += 1;
-          }
-        }
-        if (s.seguroImporte && Number(s.seguroImporte) > 0 && String(s.categoria || s.detalle || s.sheet).toLowerCase() !== 'seguro') {
-          const virtualSeguro = { ...s, categoria: 'seguro', detalle: 'seguro', cuota: Number(s.seguroImporte) };
-          if (matchesRule(virtualSeguro, rule.nombre, rule.productosCuentan)) {
-            const val = getValueForRule(virtualSeguro, rule.nombre);
-            if (isPercentage) {
-              llevamos += val;
-            } else {
-              llevamos += 1;
-            }
-          }
-        }
-      });
-
-      const progressPct = target > 0 ? (llevamos / target) * 100 : 0;
-      const faltan = Math.max(0, target - llevamos);
-
-      return {
-        vendedor: currentUser.username,
-        reglaNombre: rule.nombre,
-        llevamos,
-        target,
-        faltan,
-        progressPct,
-        isPercentage
-      };
-    });
-
-    const incomplete = progressList.filter(p => p.progressPct < 100);
-    if (incomplete.length > 0) {
-      return incomplete.reduce((max, curr) => curr.progressPct > max.progressPct ? curr : max, incomplete[0]);
-    }
-    return progressList.reduce((max, curr) => curr.progressPct > max.progressPct ? curr : max, progressList[0]);
-  };
-
-  const cuentaKms = getCuentaKilometros();
-
-  // ── Ranking por vendedor (Torneos · Cuenta Kilómetros · Medallas) ──
-  const ranking = (() => {
-    const activos = allSales.filter(s => isSaleActive(s));
-    const byV: Record<string, any[]> = {};
-    activos.forEach(s => {
-      const v = String(s.vendedor || '').trim();
-      if (!v || v.toLowerCase() === 'marta') return;
-      (byV[v] = byV[v] || []).push(s);
-    });
-    const names = Object.keys(byV);
-
-    const dispSegVal = (ventas: any[]) => {
+    const intento = (lista: any[], b: DashBloqueTipos, excluidos: string[]) => {
+      const totals = totalesPorVendedor(lista, b);
+      const nombres = Object.keys(totals).filter(n => totals[n] > 0);
+      // Evita repetir a los ya destacados SOLO si hay alternativa con puntos (como siempre)
+      const hayAlternativa = nombres.some(n => !excluidos.includes(n));
+      let name = 'Nadie';
       let total = 0;
-      ventas.forEach(s => {
-        if (matchTipoVenta(s, 'Dispositivos + Seguros')) {
-          let val = Number(s.cuota) || 0;
-          if (String(s.categoria || s.detalle || s.sheet).toLowerCase() === 'seguro') val = Number(s.seguroImporte) || Number(s.cuota) || 0;
-          total += val;
-        }
-        if (s.seguroImporte && Number(s.seguroImporte) > 0 && String(s.categoria || s.detalle || s.sheet).toLowerCase() !== 'seguro') {
-          const vs = { ...s, categoria: 'seguro', detalle: 'seguro', cuota: Number(s.seguroImporte) };
-          if (matchTipoVenta(vs, 'Dispositivos + Seguros')) total += Number(s.seguroImporte);
+      nombres.forEach(n => {
+        if (hayAlternativa && excluidos.includes(n)) return;
+        if (totals[n] > total) {
+          total = totals[n];
+          name = n;
         }
       });
-      return total;
-    };
-    const convCount = (ventas: any[]) => ventas.filter(s => matchTipoVenta(s, 'Alta BAF Convergente')).length;
-    const pulpoCount = (ventas: any[]) => {
-      const nifs: Record<string, number> = {};
-      ventas.forEach(s => { const n = String(s.nif || '').trim().toUpperCase(); if (n) nifs[n] = (nifs[n] || 0) + 1; });
-      return Object.values(nifs).filter(c => c > 1).length;
-    };
-    const firstMin = (ventas: any[]): number | null => {
-      let best: number | null = null;
-      ventas.forEach(s => {
-        const t = s.createdAt ? new Date(s.createdAt) : null;
-        if (t && !isNaN(t.getTime())) { const m = t.getHours() * 60 + t.getMinutes(); if (best === null || m < best) best = m; }
-      });
-      return best;
+      const pendingCount = name === 'Nadie'
+        ? 0
+        : lista.filter(s => vendedorDe(s) === name && matchBloqueConVirtual(s, b) && isPendiente(s)).length;
+      return { name, total, pendingCount };
     };
 
-    const sortDesc = (f: (v: any[]) => number) => names.map(n => ({ name: n, value: f(byV[n]) })).filter(x => x.value > 0).sort((a, b) => b.value - a.value);
-    const dispSeg = sortDesc(dispSegVal);
-    const conv = sortDesc(convCount);
-    // Carrera "Cuenta Kilómetros": TODOS los vendedores, incluido quien lleva 0 (p.ej. Gabriel)
-    const convAll = names.map(n => ({ name: n, value: convCount(byV[n]) })).sort((a, b) => (b.value - a.value) || a.name.localeCompare(b.name));
-    const pulpo = sortDesc(pulpoCount);
-    const madruga = names.map(n => ({ name: n, value: firstMin(byV[n]) })).filter(x => x.value != null).sort((a, b) => (a.value as number) - (b.value as number));
-    // Mejor vendedor de Swap del mes (nº de ventas con ¿Swap? marcado).
-    const swapCount = (ventas: any[]) => ventas.filter(s => s.isSwap === true || String(s.isSwap).toLowerCase() === 'true').length;
-    const swap = sortDesc(swapCount);
-    return { dispSeg, conv, convAll, pulpo, madruga, swap };
+    const calc = (b: DashBloqueTipos, excluidos: string[]) => {
+      // Ámbito MES (por defecto): líderes del mes completo, coherente con la etiqueta.
+      // Ámbito HOY: líderes del día con relevo al mes POR APARTADO (si hoy nadie puntúa
+      // en un apartado, ese apartado enseña al líder del mes en vez de quedarse vacío).
+      if (cfg.mvpAmbito === 'HOY') {
+        const hoy = intento(deHoy, b, excluidos);
+        if (hoy.name !== 'Nadie') return { ...hoy, esHoy: true };
+      }
+      return { ...intento(ventasActivas, b, excluidos), esHoy: false };
+    };
+
+    const principal = calc(cfg.mvpPrincipal, []);
+    const nom1 = calc(cfg.mvpNominado1, principal.name !== 'Nadie' ? [principal.name] : []);
+    const nom2 = calc(cfg.mvpNominado2, [principal.name, nom1.name].filter(n => n !== 'Nadie'));
+    const todosHoy = [principal, nom1, nom2].every(r => r.name === 'Nadie' || r.esHoy);
+    const ningunoHoy = [principal, nom1, nom2].every(r => r.name === 'Nadie' || !r.esHoy);
+    return { principal, nom1, nom2, todosHoy, ningunoHoy };
   })();
 
-  // ── Torneos config-driven (mismo motor que la pantalla de Torneos) ──
+  // Texto del valor en el bloque MVP: € como siempre; nº como "3 Ventas miMovistar".
+  const valorMvp = (v: number, b: DashBloqueTipos): string => {
+    if (b.metrica === 'importe' || b.metrica === 'comisiones') return fmt(v);
+    if (b.metrica === 'clientesMulti') return `${Math.round(v)} clientes`;
+    return `${Math.round(v)} ${b.nombre}`;
+  };
+
+  const mvpRows = [
+    { b: cfg.mvpPrincipal, res: mvpInfo.principal, principal: true, color: '#ec4899', border: 'rgba(236, 72, 153, 0.3)', grad: 'linear-gradient(135deg, #f472b6 0%, #db2777 100%)', Icon: Crown, label: `${cfg.mvpPrincipal.nombre} (MVP)`, dot: '#10b981', lead: 'Liderando con' },
+    { b: cfg.mvpNominado1, res: mvpInfo.nom1, principal: false, color: '#0ea5e9', border: 'rgba(14, 165, 233, 0.2)', grad: 'linear-gradient(135deg, #38bdf8 0%, #0284c7 100%)', Icon: Wifi, label: cfg.mvpNominado1.nombre, dot: '#0ea5e9', lead: 'Destacado con' },
+    { b: cfg.mvpNominado2, res: mvpInfo.nom2, principal: false, color: '#f59e0b', border: 'rgba(245, 158, 11, 0.2)', grad: 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)', Icon: Smartphone, label: cfg.mvpNominado2.nombre, dot: '#f59e0b', lead: 'Destacado con' },
+  ];
+
+  // ── Cuenta Kilómetros (bloque carrera del config): mismo roster de siempre, es decir,
+  //    TODOS los vendedores con alguna venta activa este mes, incluido quien lleva 0. ──
+  const carreraData = (() => {
+    const totals = totalesPorVendedor(ventasActivas, cfg.carrera);
+    // Con métrica 'comisiones' el mapa solo trae a quien comisiona: se completa el roster.
+    ventasActivas.forEach(s => {
+      const v = vendedorDe(s);
+      if (!v || v.toLowerCase().includes('marta')) return;
+      if (!(v in totals)) totals[v] = 0;
+    });
+    return Object.entries(totals)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => (b.value - a.value) || a.name.localeCompare(b.name));
+  })();
+
+  // ── Vitrina de Medallas (config): oro y plata como siempre ──
+  const medallasData = cfg.medallas.map(m => {
+    const totals = totalesPorVendedor(ventasActivas, m);
+    const sorted = Object.entries(totals)
+      .map(([name, value]) => ({ name, value }))
+      .filter(x => x.value > 0)
+      .sort((a, b) => b.value - a.value);
+    return { medalla: m, oro: sorted[0] || null, plata: sorted[1] || null };
+  });
+
+  const valorMedalla = (v: number, m: DashMedalla): string => {
+    if (m.metrica === 'importe' || m.metrica === 'comisiones') return eur(v);
+    if (m.metrica === 'clientesMulti') return `${Math.round(v)} ops`;
+    return esBloqueSwap(m) ? `${Math.round(v)} swaps` : String(Math.round(v));
+  };
+
+  // ── Torneos config-driven (mismo motor que la pantalla de Torneos + métrica 'comisiones') ──
   const eurFmt = (v: number) => v.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
   const torneoColumns = (() => {
-    const activos = allSales.filter(s => isSaleActive(s));
     return torneosConfig.concursos.map(c => {
-      const byV: Record<string, number> = {};
-      activos.forEach(s => {
-        const v = String(s.vendedor || '').trim();
-        if (!v || v.toLowerCase() === 'marta') return;
-        byV[v] = (byV[v] || 0) + concursoSaleValue(s, c, catalogs);
-      });
-      const data = Object.entries(byV)
-        .map(([name, value]) => ({ name, value }))
+      const isCurrency = c.metrica === 'importe' || c.metrica === 'comisiones';
+      let entries: { name: string, value: number }[];
+      if (c.metrica === 'comisiones') {
+        // Totales por comercial del mapa de comisiones (mismo cálculo que Rentabilidad).
+        entries = Object.entries(comisionesMap || {}).map(([name, value]) => ({ name, value }));
+      } else {
+        const byV: Record<string, number> = {};
+        ventasActivas.forEach(s => {
+          const v = String(s.vendedor || '').trim();
+          if (!v || v.toLowerCase() === 'marta') return;
+          byV[v] = (byV[v] || 0) + concursoSaleValue(s, c, catalogs);
+        });
+        entries = Object.entries(byV).map(([name, value]) => ({ name, value }));
+      }
+      const data = entries
         .filter(x => x.value > 0)
         .sort((a, b) => b.value - a.value);
-      const isCurrency = c.metrica === 'importe';
       return { concurso: c, isCurrency, data, fmt: (v: number) => isCurrency ? eurFmt(v) : String(v) };
     });
   })();
 
-  const fotoSrc = (n: string) => `/${n}.jpg`;
-  const hhmm = (mins: number) => `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
   const eur = (v: number) => v.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
-  const fotoErr = (e: any, name: string) => {
-    const img = e.currentTarget;
-    if (!img.dataset.triedJpeg) { img.dataset.triedJpeg = '1'; img.src = `/${name}.jpeg`; return; }
-    img.style.display = 'none';
-    const parent = img.parentElement;
-    if (parent) parent.innerHTML = `<span style="color:#fff; font-size:13px; font-weight:900">${name.charAt(0).toUpperCase()}</span>`;
-  };
 
-  // ── Reto motivador Disp+Seg: lo que falta repartido entre comerciales y días laborables ──
+  // ── Reto motivador del PRIMER KPI: lo que falta repartido entre comerciales y días laborables ──
   const nComercialesTiendas = Object.entries(getEffectiveTiendaComerciales(tiendaHours))
     .filter(([k]) => k !== 'O2')
     .reduce((acc, [, v]) => acc + (v as string[]).length, 0);
@@ -467,7 +518,7 @@ export default function DashboardPage() {
     const finMes = new Date(y, m, 0);          // último día del mes
     const inicioMes = new Date(y, m - 1, 1);
     const cursor = new Date(Math.max(hoy.getTime(), inicioMes.getTime())); cursor.setHours(0, 0, 0, 0);
-    if (cursor > finMes) return 0;             // mes ya cerrado
+    if (cursor > finMes) return 0;             // mes ya cerrado: no hay reto diario que repartir
     let count = 0;
     for (const d = new Date(cursor); d <= finMes; d.setDate(d.getDate() + 1)) {
       const wd = d.getDay();                   // 0=dom, 6=sáb
@@ -475,21 +526,44 @@ export default function DashboardPage() {
     }
     return count;
   })();
-  const retoDiarioEquipo = diasLaborablesRestantes > 0 ? kpiDispSeg.faltan / diasLaborablesRestantes : 0;
+  const kpiPrincipal = kpiData[0];
+  const retoDiarioEquipo = (kpiPrincipal && diasLaborablesRestantes > 0) ? kpiPrincipal.faltan / diasLaborablesRestantes : 0;
   const retoDiarioComercial = (diasLaborablesRestantes > 0 && nComercialesTiendas > 0) ? retoDiarioEquipo / nComercialesTiendas : 0;
+  // El reto con métrica de nº necesita 1 decimal: redondear a entero mostraría "0/día"
+  // en cuanto el ritmo baje de una venta diaria por persona.
+  const fmtReto = (v: number, metrica: DashMetrica) =>
+    (metrica === 'importe' || metrica === 'comisiones')
+      ? fmt(v)
+      : v.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 1 });
 
   if (loading && allSales.length === 0) return <div style={{ padding: 20 }}>Cargando datos del Dashboard...</div>
 
   return (
     <div style={{ padding: 20 }}>
-      <PageHeader 
+      <PageHeader
         title={<>Dashboard <span className="text-cyan">Tiempo Real</span></>}
         subtitle="Sincronizado directamente con las celdas del Excel central."
         showTheme={true}
         showBack={false}
+        headerActions={canConfig ? (
+          <button
+            type="button"
+            onClick={() => router.push('/config-dashboard')}
+            title="Configurar los bloques del Dashboard"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8,
+              background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--medium-gray)',
+              fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s'
+            }}
+            onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-main)'; e.currentTarget.style.borderColor = 'var(--mercedes-cyan)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--medium-gray)'; e.currentTarget.style.borderColor = 'var(--border-color)' }}
+          >
+            ⚙ Configurar Dashboard
+          </button>
+        ) : undefined}
       />
 
-      
+
       {/* FILA 1: TORNEOS Y MVP */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '16px' }}>
         <Link href="/torneos-ventas" style={{ textDecoration: 'none', display: 'block', marginBottom: '0', outline: 'none' }}>
@@ -526,16 +600,16 @@ export default function DashboardPage() {
             </div>
           ) : (
           <div style={{ display: 'grid', gridTemplateColumns: `repeat(${torneoColumns.length}, 1fr)`, gap: '14px' }}>
-            {torneoColumns.map((col, ci) => (
+            {torneoColumns.map((col) => (
               <div key={col.concurso.id}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8, textAlign: 'center', borderBottom: '2px solid rgba(14,165,233,0.2)', paddingBottom: 6 }}>{col.concurso.nombre}</div>
                 {col.data.slice(0, 5).map((r, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 6px', borderRadius: 8, background: i === 0 ? 'rgba(245,158,11,0.12)' : 'transparent', marginBottom: 3 }}>
+                  <div key={r.name} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 6px', borderRadius: 8, background: i === 0 ? 'rgba(245,158,11,0.12)' : 'transparent', marginBottom: 3 }}>
                     {['🥇', '🥈', '🥉'][i]
                       ? <span style={{ fontSize: 14, width: 18, textAlign: 'center', display: 'inline-block' }}>{['🥇', '🥈', '🥉'][i]}</span>
                       : <span style={{ fontSize: 11, fontWeight: 800, color: '#94a3b8', width: 18, textAlign: 'center', display: 'inline-block' }}>{i + 1}º</span>}
                     <div style={{ width: 26, height: 26, borderRadius: '50%', overflow: 'hidden', background: '#0ea5e9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <img src={fotoSrc(r.name)} alt={r.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => fotoErr(e, r.name)} />
+                      <FotoAvatar name={r.name} fontSize={13} />
                     </div>
                     <span style={{ flex: 1, fontSize: 12.5, fontWeight: 600, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</span>
                     <span style={{ fontSize: 12.5, fontWeight: 800, color: '#0ea5e9', whiteSpace: 'nowrap' }}>{col.fmt(r.value)}</span>
@@ -570,176 +644,65 @@ export default function DashboardPage() {
             <div>
               <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'var(--text-main)' }}>Destacados y Nominados MVP</h3>
               <p style={{ margin: 0, fontSize: '13px', color: 'var(--medium-gray)', fontWeight: 500 }}>
-                {mvp.isToday ? 'Rendimiento y Liderazgo Hoy' : 'Rendimiento y Liderazgo del Mes'}
+                {cfg.mvpAmbito !== 'HOY'
+                  ? 'Rendimiento y Liderazgo del Mes'
+                  : mvpInfo.todosHoy
+                    ? 'Rendimiento y Liderazgo Hoy'
+                    : mvpInfo.ningunoHoy
+                      ? 'Rendimiento y Liderazgo del Mes'
+                      : 'Rendimiento Hoy · sin ventas hoy, manda el Mes'}
               </p>
             </div>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1, justifyContent: 'center' }}>
-            {/* MVP Principal */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--bg-body)', padding: '10px 12px', borderRadius: '12px', border: '1px solid rgba(236, 72, 153, 0.3)' }}>
-              <div style={{ 
-                width: 40, height: 40, borderRadius: '50%', 
-                boxShadow: '0 4px 10px rgba(219, 39, 119, 0.3)', 
-                border: '2px solid #ec4899',
-                overflow: 'hidden', flexShrink: 0,
-                background: 'linear-gradient(135deg, #f472b6 0%, #db2777 100%)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center'
-              }}>
-                {mvp.mvp.name !== 'Nadie' ? (
-                  <img 
-                    src={`/${mvp.mvp.name}.jpg`} 
-                    alt={mvp.mvp.name} 
-                    onError={(e) => {
-                      const img = e.currentTarget;
-                      if (img.src.endsWith('.jpg')) {
-                        img.src = img.src.replace('.jpg', '.jpeg');
-                      } else {
-                        img.style.display = 'none';
-                        const parent = img.parentElement;
-                        if (parent) {
-                          parent.innerHTML = `<span style="color:#fff; font-size:16px; font-weight:900">${mvp.mvp.name.charAt(0).toUpperCase()}</span>`;
-                        }
-                      }
-                    }}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                  />
-                ) : (
-                  <Crown size={20} color="#fff" />
-                )}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: 'var(--text-main)' }}>{mvp.mvp.name}</h4>
-                  <span style={{ fontSize: '11px', fontWeight: 700, color: '#ec4899', background: 'rgba(236, 72, 153, 0.1)', padding: '2px 8px', borderRadius: '10px' }}>Facturación (MVP)</span>
-                </div>
-                <div style={{ fontSize: '12px', color: 'var(--medium-gray)', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                  <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#10b981' }}></span>
-                  {mvp.mvp.name !== 'Nadie' ? (
-                    <>
-                      Liderando con <strong style={{ color: 'var(--text-main)' }}>{fmt(mvp.mvp.total)}</strong>
-                      {mvp.mvp.pendingCount > 0 && (
-                        <span style={{ fontSize: '11px', color: '#d97706', marginLeft: '6px', fontWeight: 700, backgroundColor: 'rgba(217, 119, 6, 0.1)', padding: '1px 6px', borderRadius: '4px' }}>
-                          ({mvp.mvp.pendingCount} pendientes)
-                        </span>
+            {mvpRows.map((row, ri) => {
+              const size = row.principal ? 40 : 36;
+              return (
+                <div key={ri} style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--bg-body)', padding: '10px 12px', borderRadius: '12px', border: `1px solid ${row.border}` }}>
+                  <div style={{
+                    width: size, height: size, borderRadius: '50%',
+                    boxShadow: row.principal ? '0 4px 10px rgba(219, 39, 119, 0.3)' : `0 2px 6px ${row.border}`,
+                    border: `2px solid ${row.color}`,
+                    overflow: 'hidden', flexShrink: 0,
+                    background: row.grad,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    {row.res.name !== 'Nadie' ? (
+                      <FotoAvatar name={row.res.name} fontSize={row.principal ? 16 : 14} />
+                    ) : (
+                      <row.Icon size={row.principal ? 20 : 16} color="#fff" />
+                    )}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <h4 style={{ margin: 0, fontSize: row.principal ? '15px' : '14px', fontWeight: 800, color: 'var(--text-main)' }}>{row.res.name}</h4>
+                      <span title={descBloque(row.b)} style={{ fontSize: row.principal ? '11px' : '10px', fontWeight: 700, color: row.color, background: `${row.color}1a`, padding: row.principal ? '2px 8px' : '2px 6px', borderRadius: row.principal ? '10px' : '8px' }}>{row.label}</span>
+                    </div>
+                    <div style={{ fontSize: row.principal ? '12px' : '11px', color: 'var(--medium-gray)', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                      <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: row.dot }}></span>
+                      {row.res.name !== 'Nadie' ? (
+                        <>
+                          {row.lead} <strong style={{ color: 'var(--text-main)' }}>{valorMvp(row.res.total, row.b)}</strong>
+                          {cfg.mvpAmbito === 'HOY' && (
+                            <span style={{ fontSize: '10.5px', color: 'var(--medium-gray)', fontWeight: 600 }}>
+                              · {row.res.esHoy ? 'hoy' : 'mes'}
+                            </span>
+                          )}
+                          {row.res.pendingCount > 0 && (
+                            <span style={{ fontSize: '11px', color: '#d97706', marginLeft: '6px', fontWeight: 700, backgroundColor: 'rgba(217, 119, 6, 0.1)', padding: '1px 6px', borderRadius: '4px' }}>
+                              ({row.res.pendingCount} pendientes)
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span>Esperando ventas...</span>
                       )}
-                    </>
-                  ) : (
-                    <span>Esperando ventas...</span>
-                  )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-
-            {/* Nominado 1: Ventas miMovistar */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--bg-body)', padding: '10px 12px', borderRadius: '12px', border: '1px solid rgba(14, 165, 233, 0.2)' }}>
-              <div style={{ 
-                width: 36, height: 36, borderRadius: '50%', 
-                boxShadow: '0 2px 6px rgba(14, 165, 233, 0.2)', 
-                border: '2px solid #0ea5e9',
-                overflow: 'hidden', flexShrink: 0,
-                background: 'linear-gradient(135deg, #38bdf8 0%, #0284c7 100%)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center'
-              }}>
-                {mvp.nominadoMiMovistar.name !== 'Nadie' ? (
-                  <img 
-                    src={`/${mvp.nominadoMiMovistar.name}.jpg`} 
-                    alt={mvp.nominadoMiMovistar.name} 
-                    onError={(e) => {
-                      const img = e.currentTarget;
-                      if (img.src.endsWith('.jpg')) {
-                        img.src = img.src.replace('.jpg', '.jpeg');
-                      } else {
-                        img.style.display = 'none';
-                        const parent = img.parentElement;
-                        if (parent) {
-                          parent.innerHTML = `<span style="color:#fff; font-size:14px; font-weight:900">${mvp.nominadoMiMovistar.name.charAt(0).toUpperCase()}</span>`;
-                        }
-                      }
-                    }}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                  />
-                ) : (
-                  <Wifi size={16} color="#fff" />
-                )}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: 'var(--text-main)' }}>{mvp.nominadoMiMovistar.name}</h4>
-                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#0ea5e9', background: 'rgba(14, 165, 233, 0.1)', padding: '2px 6px', borderRadius: '8px' }}>Ventas miMovistar</span>
-                </div>
-                <div style={{ fontSize: '11px', color: 'var(--medium-gray)', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                  <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#0ea5e9' }}></span>
-                  {mvp.nominadoMiMovistar.name !== 'Nadie' ? (
-                    <>
-                      Destacado con <strong style={{ color: 'var(--text-main)' }}>{mvp.nominadoMiMovistar.total} Ventas miMovistar</strong>
-                      {mvp.nominadoMiMovistar.pendingCount > 0 && (
-                        <span style={{ fontSize: '11px', color: '#d97706', marginLeft: '6px', fontWeight: 700, backgroundColor: 'rgba(217, 119, 6, 0.1)', padding: '1px 6px', borderRadius: '4px' }}>
-                          ({mvp.nominadoMiMovistar.pendingCount} pendientes)
-                        </span>
-                      )}
-                    </>
-                  ) : (
-                    <span>Esperando ventas...</span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Nominado 2: Dispositivos + Seguros */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--bg-body)', padding: '10px 12px', borderRadius: '12px', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
-              <div style={{ 
-                width: 36, height: 36, borderRadius: '50%', 
-                boxShadow: '0 2px 6px rgba(245, 158, 11, 0.2)', 
-                border: '2px solid #f59e0b',
-                overflow: 'hidden', flexShrink: 0,
-                background: 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center'
-              }}>
-                {mvp.nominadoDispSeg.name !== 'Nadie' ? (
-                  <img 
-                    src={`/${mvp.nominadoDispSeg.name}.jpg`} 
-                    alt={mvp.nominadoDispSeg.name} 
-                    onError={(e) => {
-                      const img = e.currentTarget;
-                      if (img.src.endsWith('.jpg')) {
-                        img.src = img.src.replace('.jpg', '.jpeg');
-                      } else {
-                        img.style.display = 'none';
-                        const parent = img.parentElement;
-                        if (parent) {
-                          parent.innerHTML = `<span style="color:#fff; font-size:14px; font-weight:900">${mvp.nominadoDispSeg.name.charAt(0).toUpperCase()}</span>`;
-                        }
-                      }
-                    }}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                  />
-                ) : (
-                  <Smartphone size={16} color="#fff" />
-                )}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: 'var(--text-main)' }}>{mvp.nominadoDispSeg.name}</h4>
-                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#f59e0b', background: 'rgba(245, 158, 11, 0.1)', padding: '2px 6px', borderRadius: '8px' }}>Héroe Disp. + Seguros</span>
-                </div>
-                <div style={{ fontSize: '11px', color: 'var(--medium-gray)', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                  <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#f59e0b' }}></span>
-                  {mvp.nominadoDispSeg.name !== 'Nadie' ? (
-                    <>
-                      Destacado con <strong style={{ color: 'var(--text-main)' }}>{fmt(mvp.nominadoDispSeg.total)}</strong>
-                      {mvp.nominadoDispSeg.pendingCount > 0 && (
-                        <span style={{ fontSize: '11px', color: '#d97706', marginLeft: '6px', fontWeight: 700, backgroundColor: 'rgba(217, 119, 6, 0.1)', padding: '1px 6px', borderRadius: '4px' }}>
-                          ({mvp.nominadoDispSeg.pendingCount} pendientes)
-                        </span>
-                      )}
-                    </>
-                  ) : (
-                    <span>Esperando ventas...</span>
-                  )}
-                </div>
-              </div>
-            </div>
+              );
+            })}
           </div>
         </div>
 
@@ -760,203 +723,63 @@ export default function DashboardPage() {
           </div>
           <div>
             <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: 'var(--text-main)' }}>Termómetro Diario de la Empresa</h3>
-            <p style={{ margin: 0, fontSize: '14px', color: 'var(--medium-gray)', fontWeight: 500 }}>Seguimiento en vivo de los 7 KPIs críticos para llegar al objetivo del mes.</p>
+            <p style={{ margin: 0, fontSize: '14px', color: 'var(--medium-gray)', fontWeight: 500 }}>Seguimiento en vivo de los {kpiData.length} KPIs críticos para llegar al objetivo del mes.</p>
           </div>
         </div>
 
+        {kpiData.length === 0 ? (
+          <div style={{ fontSize: 13, color: 'var(--medium-gray)', textAlign: 'center', padding: '20px 8px' }}>
+            No hay KPIs configurados.
+          </div>
+        ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-          
-          {/* 1. Altas BAF Total */}
-          <div style={{ background: 'var(--bg-body)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Wifi size={18} color="#0ea5e9" />
-                <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>Altas BAF Total</span>
-              </div>
-              {kpiBafTotal.faltan > 0 ? (
-                <span style={{ fontSize: '12px', fontWeight: 700, color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
-                  Faltan {kpiBafTotal.faltan}
-                </span>
-              ) : (
-                <span style={{ fontSize: '12px', fontWeight: 700, color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
-                  ¡Logrado!
-                </span>
-              )}
-            </div>
-            <div style={{ width: '100%', height: '8px', background: 'var(--border-strong)', borderRadius: '4px', overflow: 'hidden', marginBottom: 4 }}>
-              <div style={{ width: `${kpiBafTotal.progressPct}%`, height: '100%', background: 'linear-gradient(90deg, #38bdf8, #0284c7)', borderRadius: '4px' }} />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--medium-gray)', fontWeight: 600 }}>
-              <span>Llevamos: <strong style={{ color: 'var(--text-main)' }}>{kpiBafTotal.llevamos}</strong></span>
-              <span>Objetivo: {kpiBafTotal.target}</span>
-            </div>
-          </div>
-
-          {/* 2. Alta BAF Convergente */}
-          <div style={{ background: 'var(--bg-body)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Layers size={18} color="#8b5cf6" />
-                <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>BAF Convergente</span>
-              </div>
-              {kpiBafConv.faltan > 0 ? (
-                <span style={{ fontSize: '12px', fontWeight: 700, color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
-                  Faltan {kpiBafConv.faltan}
-                </span>
-              ) : (
-                <span style={{ fontSize: '12px', fontWeight: 700, color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
-                  ¡Logrado!
-                </span>
-              )}
-            </div>
-            <div style={{ width: '100%', height: '8px', background: 'var(--border-strong)', borderRadius: '4px', overflow: 'hidden', marginBottom: 4 }}>
-              <div style={{ width: `${kpiBafConv.progressPct}%`, height: '100%', background: 'linear-gradient(90deg, #8b5cf6, #7c3aed)', borderRadius: '4px' }} />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--medium-gray)', fontWeight: 600 }}>
-              <span>Llevamos: <strong style={{ color: 'var(--text-main)' }}>{kpiBafConv.llevamos}</strong></span>
-              <span>Objetivo: {kpiBafConv.target}</span>
-            </div>
-          </div>
-
-          {/* 3. Swap */}
-          <div style={{ background: 'var(--bg-body)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Repeat size={18} color="#14b8a6" />
-                <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>Swap</span>
-              </div>
-              {kpiSwap.faltan > 0 ? (
-                <span style={{ fontSize: '12px', fontWeight: 700, color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
-                  Faltan {kpiSwap.faltan}
-                </span>
-              ) : (
-                <span style={{ fontSize: '12px', fontWeight: 700, color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
-                  ¡Logrado!
-                </span>
-              )}
-            </div>
-            <div style={{ width: '100%', height: '8px', background: 'var(--border-strong)', borderRadius: '4px', overflow: 'hidden', marginBottom: 4 }}>
-              <div style={{ width: `${kpiSwap.progressPct}%`, height: '100%', background: 'linear-gradient(90deg, #2dd4bf, #0d9488)', borderRadius: '4px' }} />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--medium-gray)', fontWeight: 600 }}>
-              <span>Llevamos: <strong style={{ color: 'var(--text-main)' }}>{kpiSwap.llevamos}</strong></span>
-              <span>Objetivo: {kpiSwap.target}</span>
-            </div>
-          </div>
-
-          {/* Dispositivos + Seguros: la más importante → fila completa arriba (order -1) */}
-          <div style={{ background: 'var(--bg-body)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border-light)', gridColumn: '1 / -1', order: -1 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Smartphone size={18} color="#f59e0b" />
-                <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>Dispositivos + Seguros</span>
-              </div>
-              {kpiDispSeg.faltan > 0 ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                  <span style={{ fontSize: '12px', fontWeight: 700, color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
-                    Faltan {fmt(kpiDispSeg.faltan)}
-                  </span>
-                  {diasLaborablesRestantes > 0 && (
-                    <span style={{ fontSize: 11.5, fontWeight: 600, color: '#d97706' }}>
-                      💪 ≈ {fmt(retoDiarioComercial)}/día por comercial · {fmt(retoDiarioEquipo)}/día entre todos
-                      <span style={{ color: 'var(--medium-gray)', fontWeight: 500 }}> ({diasLaborablesRestantes} días lab. · {nComercialesTiendas} comerciales)</span>
+          {kpiData.map((k, i) => {
+            const Icono = KPI_ICONS[i % KPI_ICONS.length];
+            const pal = KPI_COLORS[i % KPI_COLORS.length];
+            const esPrincipal = i === 0; // el primer KPI del config ocupa la fila completa arriba
+            return (
+              <div key={k.kpi.id} style={{ background: 'var(--bg-body)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border-light)', ...(esPrincipal ? { gridColumn: '1 / -1' as const, order: -1 } : {}) }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Icono size={18} color={pal.color} />
+                    <span title={descBloque(k.kpi)} style={{ fontWeight: 700, color: 'var(--text-main)' }}>{k.kpi.nombre}</span>
+                  </div>
+                  {k.faltan > 0 ? (
+                    esPrincipal ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 700, color: pal.faltanCol, background: pal.faltanBg, padding: '2px 8px', borderRadius: '12px' }}>
+                          Faltan {kpiFmt(k.faltan, k.kpi.metrica)}
+                        </span>
+                        {diasLaborablesRestantes > 0 && (
+                          <span style={{ fontSize: 11.5, fontWeight: 600, color: '#d97706' }}>
+                            💪 ≈ {fmtReto(retoDiarioComercial, k.kpi.metrica)}/día por comercial · {fmtReto(retoDiarioEquipo, k.kpi.metrica)}/día entre todos
+                            <span style={{ color: 'var(--medium-gray)', fontWeight: 500 }}> ({diasLaborablesRestantes} días lab. · {nComercialesTiendas} comerciales)</span>
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: pal.faltanCol, background: pal.faltanBg, padding: '2px 8px', borderRadius: '12px' }}>
+                        Faltan {kpiFmt(k.faltan, k.kpi.metrica)}
+                      </span>
+                    )
+                  ) : (
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
+                      ¡Logrado!
                     </span>
                   )}
                 </div>
-              ) : (
-                <span style={{ fontSize: '12px', fontWeight: 700, color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
-                  ¡Logrado!
-                </span>
-              )}
-            </div>
-            <div style={{ width: '100%', height: '8px', background: 'var(--border-strong)', borderRadius: '4px', overflow: 'hidden', marginBottom: 4 }}>
-              <div style={{ width: `${kpiDispSeg.progressPct}%`, height: '100%', background: 'linear-gradient(90deg, #fbbf24, #d97706)', borderRadius: '4px' }} />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--medium-gray)', fontWeight: 600 }}>
-              <span>Llevamos: <strong style={{ color: 'var(--text-main)' }}>{fmt(kpiDispSeg.llevamos)}</strong></span>
-              <span>Objetivo: {fmt(kpiDispSeg.target)}</span>
-            </div>
-          </div>
-
-          {/* 4. FTTR */}
-          <div style={{ background: 'var(--bg-body)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Zap size={18} color="#ec4899" />
-                <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>FTTR</span>
+                <div style={{ width: '100%', height: '8px', background: 'var(--border-strong)', borderRadius: '4px', overflow: 'hidden', marginBottom: 4 }}>
+                  <div style={{ width: `${k.progressPct}%`, height: '100%', background: pal.grad, borderRadius: '4px' }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--medium-gray)', fontWeight: 600 }}>
+                  <span>Llevamos: <strong style={{ color: 'var(--text-main)' }}>{kpiFmt(k.llevamos, k.kpi.metrica)}</strong></span>
+                  <span>Objetivo: {kpiFmt(k.target, k.kpi.metrica)}</span>
+                </div>
               </div>
-              {kpiFttr.faltan > 0 ? (
-                <span style={{ fontSize: '12px', fontWeight: 700, color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
-                  Faltan {kpiFttr.faltan}
-                </span>
-              ) : (
-                <span style={{ fontSize: '12px', fontWeight: 700, color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
-                  ¡Logrado!
-                </span>
-              )}
-            </div>
-            <div style={{ width: '100%', height: '8px', background: 'var(--border-strong)', borderRadius: '4px', overflow: 'hidden', marginBottom: 4 }}>
-              <div style={{ width: `${kpiFttr.progressPct}%`, height: '100%', background: 'linear-gradient(90deg, #f472b6, #db2777)', borderRadius: '4px' }} />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--medium-gray)', fontWeight: 600 }}>
-              <span>Llevamos: <strong style={{ color: 'var(--text-main)' }}>{kpiFttr.llevamos}</strong></span>
-              <span>Objetivo: {kpiFttr.target}</span>
-            </div>
-          </div>
-
-          {/* 5. ARPU */}
-          <div style={{ background: 'var(--bg-body)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <TrendingUp size={18} color="#10b981" />
-                <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>ARPU Acumulado</span>
-              </div>
-              {kpiArpu.faltan > 0 ? (
-                <span style={{ fontSize: '12px', fontWeight: 700, color: '#f59e0b', background: 'rgba(245, 158, 11, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
-                  Faltan {fmt(kpiArpu.faltan)}
-                </span>
-              ) : (
-                <span style={{ fontSize: '12px', fontWeight: 700, color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
-                  ¡Logrado!
-                </span>
-              )}
-            </div>
-            <div style={{ width: '100%', height: '8px', background: 'var(--border-strong)', borderRadius: '4px', overflow: 'hidden', marginBottom: 4 }}>
-              <div style={{ width: `${kpiArpu.progressPct}%`, height: '100%', background: 'linear-gradient(90deg, #34d399, #059669)', borderRadius: '4px' }} />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--medium-gray)', fontWeight: 600 }}>
-              <span>Llevamos: <strong style={{ color: 'var(--text-main)' }}>{fmt(kpiArpu.llevamos)}</strong></span>
-              <span>Objetivo: {fmt(kpiArpu.target)}</span>
-            </div>
-          </div>
-
-          {/* 6. Repo Fútbol */}
-          <div style={{ background: 'var(--bg-body)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Tv size={18} color="#3b82f6" />
-                <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>Repo Fútbol</span>
-              </div>
-              {kpiRepoFutbol.faltan > 0 ? (
-                <span style={{ fontSize: '12px', fontWeight: 700, color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
-                  Faltan {kpiRepoFutbol.faltan}
-                </span>
-              ) : (
-                <span style={{ fontSize: '12px', fontWeight: 700, color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
-                  ¡Logrado!
-                </span>
-              )}
-            </div>
-            <div style={{ width: '100%', height: '8px', background: 'var(--border-strong)', borderRadius: '4px', overflow: 'hidden', marginBottom: 4 }}>
-              <div style={{ width: `${kpiRepoFutbol.progressPct}%`, height: '100%', background: 'linear-gradient(90deg, #60a5fa, #2563eb)', borderRadius: '4px' }} />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--medium-gray)', fontWeight: 600 }}>
-              <span>Llevamos: <strong style={{ color: 'var(--text-main)' }}>{kpiRepoFutbol.llevamos}</strong></span>
-              <span>Objetivo: {kpiRepoFutbol.target}</span>
-            </div>
-          </div>
-
+            );
+          })}
         </div>
+        )}
       </div>
 
       {/* FILA 3: CUENTA KMS Y MEDALLAS */}
@@ -982,29 +805,30 @@ export default function DashboardPage() {
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'var(--text-main)' }}>Cuenta Kilómetros</h3>
-              <p style={{ margin: 0, fontSize: '13px', color: 'var(--medium-gray)', fontWeight: 500 }}>
-                Carrera hacia Alta BAF Convergente
+              <p title={descBloque(cfg.carrera)} style={{ margin: 0, fontSize: '13px', color: 'var(--medium-gray)', fontWeight: 500 }}>
+                Carrera hacia {cfg.carrera.nombre}
               </p>
             </div>
           </div>
 
           <div style={{ flex: 1, display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 14, alignItems: 'center', alignContent: 'center', justifyContent: 'center' }}>
-            {(ranking.convAll.length === 0 || ranking.convAll[0].value === 0) ? (
-              <p style={{ margin: 'auto', fontSize: 14, color: 'var(--medium-gray)', textAlign: 'center' }}>Aún no hay altas convergentes este mes.</p>
-            ) : ranking.convAll.slice(0, 6).map((r, i) => {
-              const lider = ranking.convAll[0].value;
+            {(carreraData.length === 0 || carreraData[0].value === 0) ? (
+              <p style={{ margin: 'auto', fontSize: 14, color: 'var(--medium-gray)', textAlign: 'center' }}>Aún no hay ventas de {cfg.carrera.nombre} este mes.</p>
+            ) : carreraData.slice(0, 6).map((r, i) => {
+              const lider = carreraData[0].value;
               const faltan = lider - r.value;
+              const esImporte = cfg.carrera.metrica === 'importe' || cfg.carrera.metrica === 'comisiones';
               return (
-                <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, width: 78 }}>
+                <div key={r.name} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, width: esImporte ? 92 : 78 }}>
                   <div style={{ position: 'relative', width: 50, height: 50, flexShrink: 0 }}>
                     <div style={{ width: 50, height: 50, borderRadius: '50%', overflow: 'hidden', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', border: i === 0 ? '2px solid #f59e0b' : '2px solid transparent' }}>
-                      <img src={fotoSrc(r.name)} alt={r.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => fotoErr(e, r.name)} />
+                      <FotoAvatar name={r.name} fontSize={13} />
                     </div>
                     {i === 0 && <span style={{ position: 'absolute', top: -7, right: -5, fontSize: 15 }}>🏆</span>}
                   </div>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-main)', maxWidth: 78, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</span>
-                  <span style={{ fontSize: 20, fontWeight: 900, color: '#10b981', lineHeight: 1 }}>{r.value}</span>
-                  <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{i === 0 ? 'Líder' : (faltan > 0 ? `faltan ${faltan}` : 'empatado')}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-main)', maxWidth: esImporte ? 92 : 78, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</span>
+                  <span style={{ fontSize: esImporte ? 13 : 20, fontWeight: 900, color: '#10b981', lineHeight: esImporte ? 1.2 : 1, whiteSpace: 'nowrap' }}>{fmtValor(r.value, cfg.carrera.metrica)}</span>
+                  <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{i === 0 ? 'Líder' : (faltan > 0 ? `faltan ${fmtValor(faltan, cfg.carrera.metrica)}` : 'empatado')}</span>
                   <div style={{ width: '100%', height: 6, background: 'var(--bg-input)', borderRadius: 3, overflow: 'hidden' }}>
                     <div style={{ width: `${lider > 0 ? (r.value / lider) * 100 : 0}%`, height: '100%', background: 'linear-gradient(90deg, #10b981 0%, #34d399 100%)', borderRadius: 3 }} />
                   </div>
@@ -1015,10 +839,10 @@ export default function DashboardPage() {
         </div>
 
 
-        
-        
-        
-        
+
+
+
+
         {/* VITRINA DE LOGROS (Estilo PlayStation) */}
         <div style={{
           background: 'var(--bg-card)',
@@ -1040,39 +864,45 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', flex: 1 }}>
-            {[
-              { titulo: 'Rey de Dispositivos', sub: 'Líder en Dispositivos', holder: ranking.dispSeg[0], second: ranking.dispSeg[1], valor: (v: number) => eur(v), grad: 'linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%)', col: '#d97706', ring: 'rgba(245, 158, 11, 0.25)' },
-              { titulo: 'El Pulpo', sub: 'Más multi-paquete', holder: ranking.pulpo[0], second: ranking.pulpo[1], valor: (v: number) => `${v} ops`, grad: 'linear-gradient(135deg, #fca5a5 0%, #ef4444 100%)', col: '#b91c1c', ring: 'rgba(239, 68, 68, 0.25)' },
-              { titulo: 'Rey del Swap', sub: 'Mejor vendedor de Swap del mes', holder: ranking.swap[0], second: ranking.swap[1], valor: (v: number) => `${v} swaps`, grad: 'linear-gradient(135deg, #5eead4 0%, #14b8a6 100%)', col: '#0d9488', ring: 'rgba(20, 184, 166, 0.25)' },
-            ].map((m, i) => (
-              <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', background: 'var(--bg-body)', padding: '12px', borderRadius: '12px', border: `1px solid ${m.ring}` }}>
-                <div style={{ position: 'relative', width: 48, height: 48 }}>
-                  <div style={{ width: 48, height: 48, borderRadius: '50%', overflow: 'hidden', background: m.grad, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 12px ${m.ring}` }}>
-                    {m.holder
-                      ? <img src={fotoSrc(m.holder.name)} alt={m.holder.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => fotoErr(e, m.holder!.name)} />
-                      : <Award size={22} color="#fff" />}
-                  </div>
-                  {m.holder && <span style={{ position: 'absolute', top: -6, right: -6, fontSize: 14 }}>🥇</span>}
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 800, color: m.col, marginBottom: 2 }}>{m.titulo}</div>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-main)' }}>{m.holder ? m.holder.name : '—'}</div>
-                  <div style={{ fontSize: '10px', color: 'var(--medium-gray)' }}>{m.holder ? m.valor(m.holder.value as number) : m.sub}</div>
-                </div>
-                {m.second && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 'auto', paddingTop: 8, borderTop: '1px solid var(--border-light)', width: '100%', justifyContent: 'center' }}>
-                    <span style={{ fontSize: 11 }}>🥈</span>
-                    <div style={{ width: 20, height: 20, borderRadius: '50%', overflow: 'hidden', background: m.grad, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <img src={fotoSrc(m.second.name)} alt={m.second.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => fotoErr(e, m.second!.name)} />
+          {medallasData.length === 0 ? (
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--medium-gray)' }}>
+              No hay medallas configuradas.
+            </div>
+          ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${medallasData.length}, 1fr)`, gap: '12px', flex: 1 }}>
+            {medallasData.map((m, i) => {
+              const st = MEDAL_STYLES[i % MEDAL_STYLES.length];
+              const sub = MEDAL_SUBS[m.medalla.id] || 'Sin datos aún';
+              return (
+                <div key={m.medalla.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', background: 'var(--bg-body)', padding: '12px', borderRadius: '12px', border: `1px solid ${st.ring}` }}>
+                  <div style={{ position: 'relative', width: 48, height: 48 }}>
+                    <div style={{ width: 48, height: 48, borderRadius: '50%', overflow: 'hidden', background: st.grad, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 12px ${st.ring}` }}>
+                      {m.oro
+                        ? <FotoAvatar name={m.oro.name} fontSize={13} />
+                        : <Award size={22} color="#fff" />}
                     </div>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 52 }}>{m.second.name}</span>
-                    <span style={{ fontSize: 9.5, color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{m.valor(m.second.value as number)}</span>
+                    {m.oro && <span style={{ position: 'absolute', top: -6, right: -6, fontSize: 14 }}>{m.medalla.emoji}</span>}
                   </div>
-                )}
-              </div>
-            ))}
+                  <div style={{ textAlign: 'center' }}>
+                    <div title={descBloque(m.medalla)} style={{ fontSize: '12px', fontWeight: 800, color: st.col, marginBottom: 2 }}>{m.medalla.nombre}</div>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-main)' }}>{m.oro ? m.oro.name : '—'}</div>
+                    <div style={{ fontSize: '10px', color: 'var(--medium-gray)' }}>{m.oro ? valorMedalla(m.oro.value, m.medalla) : sub}</div>
+                  </div>
+                  {m.plata && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 'auto', paddingTop: 8, borderTop: '1px solid var(--border-light)', width: '100%', justifyContent: 'center' }}>
+                      <span style={{ fontSize: 11 }}>🥈</span>
+                      <div style={{ width: 20, height: 20, borderRadius: '50%', overflow: 'hidden', background: st.grad, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <FotoAvatar name={m.plata.name} fontSize={13} />
+                      </div>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 52 }}>{m.plata.name}</span>
+                      <span style={{ fontSize: 9.5, color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{valorMedalla(m.plata.value, m.medalla)}</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
+          )}
         </div>
 
 

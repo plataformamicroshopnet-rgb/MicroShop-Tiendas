@@ -4,10 +4,11 @@ import { matchesRule, getValueForRule } from '@/hooks/useComisionesData'
 // Config GLOBAL (persiste de un mes a otro; se edita desde el configurador).
 // El usuario decide cuántos concursos (0-3), su nombre, qué ventas cuentan
 // (mismo sistema que «Reglas Globales y Tramos», columna Tipo de Venta), si se
-// mide por nº de ventas o por € (importe), y los premios por posición.
+// mide por nº de ventas, por € (importe) o por las comisiones del comercial,
+// y los premios por posición.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type TorneoMetrica = 'count' | 'importe'
+export type TorneoMetrica = 'count' | 'importe' | 'comisiones'
 
 export interface TorneoPremio {
   pos: number          // 1, 2, 3...
@@ -48,7 +49,7 @@ export function parseTorneosConfig(raw: any): TorneosConfig {
         id: String(c.id || `c${i + 1}`),
         nombre: String(c.nombre || '').trim(),
         tipoVenta: String(c.tipoVenta || ''),
-        metrica: c.metrica === 'importe' ? 'importe' : 'count',
+        metrica: c.metrica === 'importe' ? 'importe' : c.metrica === 'comisiones' ? 'comisiones' : 'count',
         premios: Array.isArray(c.premios) ? c.premios.map((p: any) => ({
           pos: Number(p.pos) || 0,
           importe: Number(p.importe) || 0,
@@ -73,6 +74,11 @@ export async function loadTorneosConfig(): Promise<TorneosConfig> {
 // Aportación de UNA venta a UN concurso (0 si no cuenta; 1 si métrica nº; € si métrica importe).
 // Usa EXACTAMENTE el mismo matching/valor que el panel de Comisiones.
 export function concursoSaleValue(sale: any, concurso: Concurso, catalogs?: Record<string, any[]>): number {
+  // La métrica 'comisiones' NO se mide venta a venta: el ranking es el total de
+  // comisiones del mes de cada comercial (getSaleCommission, la misma receta que
+  // Liquidación/Rentabilidad por Tiendas) y se agrega por comercial FUERA de esta
+  // función, en la pantalla de Torneos. Aquí devolvemos 0 para no sumar nada.
+  if (concurso.metrica === 'comisiones') return 0
   if (!matchesRule(sale, concurso.nombre, concurso.tipoVenta)) return 0
   return concurso.metrica === 'importe' ? (getValueForRule(sale, concurso.nombre, catalogs) || 0) : 1
 }

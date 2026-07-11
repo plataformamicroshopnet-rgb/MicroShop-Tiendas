@@ -5,8 +5,15 @@ import Link from 'next/link'
 import { PageHeader } from '@/components/PageHeader'
 import { Trophy, Settings } from 'lucide-react'
 import { useComisionesData } from '@/hooks/useComisionesData'
+import { usePeriod } from '@/components/PeriodProvider'
+import { renderDashboardData, isSolar360 } from '@/lib/salesUtils'
+import { getSaleCommission } from '@/lib/saleCommission'
 import { can } from '@/lib/permissions'
 import { loadTorneosConfig, DEFAULT_TORNEOS_CONFIG, concursoSaleValue, premioLabel, TorneosConfig } from '@/lib/torneosConfig'
+
+// Nombre de vendedor normalizado (minúsculas, sin acentos) para casar el mapa de
+// comisiones con el roster, igual que hace useComisionesData con los vendedores.
+const normName = (v: any) => String(v || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
 
 const getMedal = (pos: number) => {
   if (pos === 1) return '🥇';
@@ -62,15 +69,103 @@ const ChartBars = ({ data, maxValue, barColor }: { data: any[], maxValue: number
 
 export default function TorneosVentasPage() {
   const { sellerStats, loading, catalogs } = useComisionesData();
+  const { activePeriodKey, availablePeriods } = usePeriod();
   const [config, setConfig] = useState<TorneosConfig>(DEFAULT_TORNEOS_CONFIG);
   const [user, setUser] = useState<any>(null);
+
+  // ── Métrica 'comisiones': mapa vendedor(normalizado) → total de comisiones (€) del mes ──
+  // Misma receta que Liquidación/Rentabilidad por Tiendas: getSaleCommission (fuente única,
+  // la que usan MOD, Resumen MOD y Liquidaciones) con los dashboards Pyme/Captador.
+  const necesitaComisiones = config.concursos.some(c => c.metrica === 'comisiones');
+  const [comisionesMap, setComisionesMap] = useState<Record<string, number>>({});
+  const [comisionesListas, setComisionesListas] = useState(false);
 
   useEffect(() => {
     loadTorneosConfig().then(setConfig);
     fetch('/api/auth/me').then(r => r.json()).then(d => setUser(d?.user ?? d)).catch(() => {});
   }, []);
 
-  if (loading) {
+  useEffect(() => {
+    // Los fetches extra SOLO se hacen si algún concurso usa la métrica 'comisiones'.
+    if (!necesitaComisiones || !activePeriodKey || availablePeriods.length === 0) return;
+    let cancelado = false;
+    const cargar = async () => {
+      setComisionesListas(false);
+      try {
+        const periodObj = availablePeriods.find(p => p.period_key === activePeriodKey);
+        const [salesRes, catRes, pymeRes, plusRes, objRes] = await Promise.all([
+          // dashboard=true: ventas de TODO el equipo también para un COMERCIAL
+          // (sin ello, /api/sales le devuelve solo las suyas y el ranking de
+          // comisiones saldría a 0,00 € para el resto).
+          fetch(`/api/sales?periodKey=${activePeriodKey}&dashboard=true`).catch(() => null),
+          fetch(`/api/catalogs?_t=${Date.now()}`).catch(() => null),
+          fetch(`/api/importes-pyme?periodKey=${activePeriodKey}&strictPeriod=1`).catch(() => null),
+          fetch(`/api/importes-plus?periodKey=${activePeriodKey}&strictPeriod=1`).catch(() => null),
+          fetch(`/api/objetivos?periodKey=${activePeriodKey}&strictPeriod=1`).catch(() => null),
+        ]);
+
+        const salesData = salesRes && salesRes.ok ? await salesRes.json() : { logs: [] };
+        const catData = catRes && catRes.ok ? await catRes.json() : {};
+        const pymeData = pymeRes && pymeRes.ok ? await pymeRes.json() : {};
+        const plusData = plusRes && plusRes.ok ? await plusRes.json() : {};
+        const objData = objRes && objRes.ok ? await objRes.json() : {};
+
+        const fetchedSales = salesData.logs || [];
+        const cats = catData.catalogs || catData || {};
+        const importesPyme = pymeData.importes || pymeData.data || [];
+        const importesPlus = plusData.importes || plusData.data || [];
+        const objetivosObj = objData.objetivos || { Pyme: {}, Captador: {} };
+        const objGruposObj = objData.grupos || { Pyme: {}, Captador: {} };
+
+        const parsedPyme = renderDashboardData('Pyme', importesPyme, objetivosObj.Pyme || {}, fetchedSales, objGruposObj.Pyme || {}, periodObj);
+        const parsedCaptador = renderDashboardData('Captador', importesPlus, objetivosObj.Captador || {}, fetchedSales, objGruposObj.Captador || {}, periodObj);
+
+        const now = new Date();
+        const viewingPeriod = periodObj
+          ? `${periodObj.year}${String(periodObj.month).padStart(2, '0')}`
+          : `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+        const mapa: Record<string, number> = {};
+        fetchedSales.forEach((sale: any) => {
+          // Igual que Rentabilidad por Tiendas: anuladas y Solar360 fuera.
+          if (sale.anulado === 'Si' || sale.anulado === 'Sí' || sale.pendiente === 'Anulado') return;
+          if (isSolar360(sale)) return;
+          // Solo el periodo visualizado (ya vienen strictPeriod; filtro defensivo).
+          let saleMonth = '';
+          if (sale.fecha) {
+            const parts = String(sale.fecha).split('/');
+            if (parts.length === 3) saleMonth = `${parts[2]}${parts[1]}`;
+            else if (String(sale.fecha).includes('-')) {
+              const p = String(sale.fecha).split('-');
+              if (p.length >= 2) saleMonth = `${p[0]}${p[1]}`;
+            }
+          }
+          if (saleMonth && saleMonth !== viewingPeriod) return;
+
+          const comision = getSaleCommission(sale, {
+            catalogs: cats,
+            dashRowsPlus: parsedPyme.rows,
+            dashRowsBasico: parsedCaptador.rows,
+            viewingPeriod,
+          });
+          const key = normName(sale.vendedor);
+          if (!key) return;
+          mapa[key] = (mapa[key] || 0) + comision;
+        });
+
+        if (!cancelado) setComisionesMap(mapa);
+      } catch (err) {
+        console.error('Error cargando comisiones para los torneos:', err);
+        if (!cancelado) setComisionesMap({});
+      } finally {
+        if (!cancelado) setComisionesListas(true);
+      }
+    };
+    cargar();
+    return () => { cancelado = true; };
+  }, [necesitaComisiones, activePeriodKey, availablePeriods]);
+
+  if (loading || (necesitaComisiones && !comisionesListas)) {
     return (
       <div className="w-full" style={{ backgroundColor: '#f8fafc', minHeight: '100vh', padding: 40, textAlign: 'center', color: '#3b82f6', fontWeight: 600 }}>
         <Trophy size={48} className="mx-auto animate-pulse" />
@@ -106,6 +201,14 @@ export default function TorneosVentasPage() {
   const COL_COLORS = ['#3b82f6', '#65a30d', '#f97316'];
   const COL_HEADER = ['header-blue', 'header-green', 'header-orange'];
   const columns = config.concursos.map((c) => {
+    // Métrica 'comisiones': el ranking sale del mapa vendedor→€ (total de comisiones
+    // del mes, receta de Liquidación/Rentabilidad). Solo compiten los mismos
+    // comerciales que el resto de concursos (validSellers, sin Marta).
+    if (c.metrica === 'comisiones') {
+      const arr = validSellers.map(s => ({ name: s.name, value: comisionesMap[normName(s.name)] || 0 }));
+      const data = processCol(arr, true);
+      return { concurso: c, isCurrency: true, data, max: Math.max(...data.map(d => d.value), 0) };
+    }
     const isCurrency = c.metrica === 'importe';
     const arr = validSellers.map(s => {
       let val = 0;
