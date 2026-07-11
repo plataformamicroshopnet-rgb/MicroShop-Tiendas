@@ -76,6 +76,20 @@ export function isVentaWithinDates(ventaFechaParam?: string | null, validFrom?: 
 }
 
 /**
+ * Clave de producto EXACTA para casar venta↔catálogo: quita acentos, espacios y
+ * mayúsculas pero CONSERVA los símbolos. normalizeString borra el "+" y colapsa
+ * "Galaxy S26" con "Galaxy S26+" (pares reales del catálogo Rent que solo se
+ * distinguen por el símbolo), aplicando la tarifa del modelo equivocado.
+ */
+export function productKeyExact(str: string): string {
+    return String(str || '')
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // Remove accents
+        .replace(/\s+/g, "")             // Remove whitespace (keep symbols!)
+        .toLowerCase()
+}
+
+/**
  * VIGENCIAS — FUENTE ÚNICA del "¿qué fila del catálogo le toca a esta venta?".
  * Un producto puede tener varias filas con ventanas Desde/Hasta distintas (p. ej.
  * un Rent que cambia de precio a mitad de mes). El desempate es siempre:
@@ -85,8 +99,12 @@ export function isVentaWithinDates(ventaFechaParam?: string | null, validFrom?: 
  * la primera fila, otras a la última) y con dos vigencias el cuadre entre
  * Liquidación/Comisiones/Operaciones se rompía en silencio. Cualquier lookup de
  * catálogo por producto debe pasar por aquí y NO recrear el filtro a mano.
- * `matcher` opcional para claves compuestas (O2: producto+subcategoría, etc.);
- * por defecto casa por nombre de producto normalizado.
+ *
+ * Matching en DOS NIVELES: primero por clave exacta (productKeyExact, que
+ * conserva el "+" y demás símbolos → no confunde S26 con S26+); solo si esa
+ * clave no casa NADA se cae a normalizeString (el criterio histórico, tolerante
+ * con puntuación), para que ninguna venta antigua pierda el match que ya tenía.
+ * `matcher` opcional para claves compuestas (O2: producto+subcategoría, etc.).
  */
 export function findCatalogVigente(
     list: any[],
@@ -94,8 +112,17 @@ export function findCatalogVigente(
     fechaVenta?: string | null,
     matcher?: (c: any) => boolean
 ): any | null {
-    const target = normalizeString(producto)
-    const cands = (list || []).filter((c: any) => matcher ? matcher(c) : normalizeString(c?.producto) === target)
+    let cands: any[]
+    if (matcher) {
+        cands = (list || []).filter(matcher)
+    } else {
+        const exact = productKeyExact(producto)
+        cands = (list || []).filter((c: any) => productKeyExact(c?.producto) === exact)
+        if (cands.length === 0) {
+            const target = normalizeString(producto)
+            cands = (list || []).filter((c: any) => normalizeString(c?.producto) === target)
+        }
+    }
     if (cands.length === 0) return null
     if (cands.length === 1) return cands[0]
     const covering = cands.find((c: any) => isVentaWithinDates(fechaVenta, c.validFrom, c.validTo))
