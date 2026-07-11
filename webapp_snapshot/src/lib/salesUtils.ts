@@ -75,6 +75,33 @@ export function isVentaWithinDates(ventaFechaParam?: string | null, validFrom?: 
     return true; // Match!
 }
 
+/**
+ * VIGENCIAS — FUENTE ÚNICA del "¿qué fila del catálogo le toca a esta venta?".
+ * Un producto puede tener varias filas con ventanas Desde/Hasta distintas (p. ej.
+ * un Rent que cambia de precio a mitad de mes). El desempate es siempre:
+ *   1º la fila cuya ventana CUBRE la fecha de la venta,
+ *   2º si ninguna cubre (o la venta no tiene fecha), la primera que casa.
+ * Antes cada pantalla repetía este filtro con desempates distintos (unas caían a
+ * la primera fila, otras a la última) y con dos vigencias el cuadre entre
+ * Liquidación/Comisiones/Operaciones se rompía en silencio. Cualquier lookup de
+ * catálogo por producto debe pasar por aquí y NO recrear el filtro a mano.
+ * `matcher` opcional para claves compuestas (O2: producto+subcategoría, etc.);
+ * por defecto casa por nombre de producto normalizado.
+ */
+export function findCatalogVigente(
+    list: any[],
+    producto: string,
+    fechaVenta?: string | null,
+    matcher?: (c: any) => boolean
+): any | null {
+    const target = normalizeString(producto)
+    const cands = (list || []).filter((c: any) => matcher ? matcher(c) : normalizeString(c?.producto) === target)
+    if (cands.length === 0) return null
+    if (cands.length === 1) return cands[0]
+    const covering = cands.find((c: any) => isVentaWithinDates(fechaVenta, c.validFrom, c.validTo))
+    return covering || cands[0]
+}
+
 
 /**
  * Guesses the assigned Grupo/Categoria based on common substrings in the product name.

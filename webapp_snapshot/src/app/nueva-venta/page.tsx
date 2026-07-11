@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { FilePlus, ShieldPlus } from 'lucide-react'
 import { CODIGOS_TRAMITACION } from '@/lib/constants'
 import { getEffectiveTiendaComerciales, getEffectiveSellers } from '@/lib/comercialRoster'
+import { isVentaWithinDates } from '@/lib/salesUtils'
 import { useGuard } from '@/hooks/useGuard'
 import { usePeriod } from '@/components/PeriodProvider'
 
@@ -225,6 +226,47 @@ export default function NuevaVentaPage() {
 
   // Handlers
   const handleInputChange = (field: string, value: any) => {
+    // Al cambiar la FECHA de la venta, re-elegir la vigencia del catálogo que
+    // cubre esa fecha en las líneas Rent/Seguro y re-preciar SOLO los importes
+    // de autorrelleno (los que coinciden con alguna tarifa del producto). Un
+    // precio tecleado a mano (descuento) no se toca jamás.
+    if (field === 'fechaVenta') {
+      setFormData((prev: any) => {
+        const fechaEs = String(value || '').split('-').reverse().join('/')
+        const num = (x: any) => { const n = parseFloat(String(x ?? '').replace(',', '.')); return isNaN(n) ? null : n }
+        const newProducts = (prev.productos || []).map((prod: any) => {
+          const cat = prod.categoria
+          if ((cat !== 'Rent' && cat !== 'Seguro') || !prod.producto) return prod
+          const catList = catalogs[cat] || []
+          const cands = catList.filter((p: any) => p.producto === prod.producto)
+          if (cands.length < 2) return prod
+          const sel = cands.find((p: any) => isVentaWithinDates(fechaEs, p.validFrom, p.validTo)) || cands[0]
+          const impNum = num(prod.importe)
+          if (cat === 'Rent') {
+            const tarifas = cands.map((p: any) => num(p.anual || p.mensual)).filter((t: any): t is number => t !== null)
+            const esAutofill = !String(prod.importe || '').trim() || (impNum !== null && tarifas.some((t: number) => Math.abs(t - impNum) < 0.005))
+            if (!esAutofill) return prod
+            return { ...prod, importe: sel.anual || sel.mensual || '', fabricante: sel.fabricante || prod.fabricante, subcategoria: sel.subcategoria || prod.subcategoria, gama: sel.gama || prod.gama }
+          }
+          // Seguro: importe = comisión; seguroImporte = prima anual (Cuota Total).
+          // La prima es el ÚNICO campo económico visible para un comercial, así
+          // que el detector de autofill debe mirar TAMBIÉN seguroImporte: una
+          // prima negociada a mano no se repone jamás (mismo criterio que el
+          // reprice del servidor).
+          const tarifasCom = cands.map((p: any) => num(p.comision)).filter((t: any): t is number => t !== null)
+          const comAutofill = !String(prod.importe || '').trim() || (impNum !== null && tarifasCom.some((t: number) => Math.abs(t - impNum) < 0.005))
+          const tarifasPrima = cands.map((p: any) => num(p.anual)).filter((t: any): t is number => t !== null)
+          const primaNum = num(prod.seguroImporte)
+          const primaAutofill = primaNum === null || primaNum === 0 || tarifasPrima.some((t: number) => Math.abs(t - primaNum) < 0.005)
+          if (!comAutofill || !primaAutofill) return prod
+          const upd: any = { ...prod, importe: sel.comision || '' }
+          if (sel.anual) upd.seguroImporte = parseFloat(String(sel.anual).replace(',', '.')) || 0
+          return upd
+        })
+        return { ...prev, [field]: value, productos: newProducts }
+      })
+      return
+    }
     setFormData((prev: any) => ({ ...prev, [field]: value }))
   }
 
@@ -366,7 +408,7 @@ export default function NuevaVentaPage() {
 
          const actualCat = newProducts[index].categoria === 'Traslado miMovistar' ? 'miMovistar' : newProducts[index].categoria;
          const catList = catalogs[actualCat] || []
-         const selectedItem = catList.find((p: any) => {
+         const matchFn = (p: any) => {
            if (newProducts[index].categoria === 'miMovistar' || newProducts[index].categoria === 'Resto BAF' || newProducts[index].categoria === 'Traslado miMovistar') {
              return p.producto === value && p.subcategoria === newProducts[index].subcategoria && p.gama === newProducts[index].gama;
            }
@@ -374,7 +416,16 @@ export default function NuevaVentaPage() {
              return p.producto === value && p.subcategoria === newProducts[index].subcategoria;
            }
            return p.producto === value;
-         })
+         }
+         // VIGENCIAS: si el producto tiene varias filas con fechas Desde/Hasta
+         // (p.ej. un Rent o un Seguro que cambia de precio a mitad de mes), se
+         // autofilla con la tarifa cuya ventana CUBRE la fecha de la venta; si
+         // ninguna cubre, la primera (mejor un precio que ninguno).
+         const candidatos = catList.filter(matchFn)
+         const fechaVentaEs = String(prev.fechaVenta || '').split('-').reverse().join('/')
+         const selectedItem = candidatos.length > 1
+           ? (candidatos.find((p: any) => isVentaWithinDates(fechaVentaEs, p.validFrom, p.validTo)) || candidatos[0])
+           : candidatos[0]
          if (selectedItem) {
              const parseSafeNum = (val: any) => {
                if (!val) return 0;

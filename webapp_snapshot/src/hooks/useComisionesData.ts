@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { getProfile, getGroupVisual, mapObjectiveGroup, ALL_GROUPS } from '@/lib/comisiones';
 import { getEffectiveSellers } from '@/lib/comercialRoster';
 import { usePeriod } from '@/components/PeriodProvider';
-import { isSolar360 } from '@/lib/salesUtils';
+import { isSolar360, findCatalogVigente } from '@/lib/salesUtils';
 // matchProductFormula/matchTipoVenta se movieron a un módulo PURO (lib/ventaMatching)
 // para poder usarlos en endpoints de servidor; se re-exportan aquí para no romper los
 // muchos imports existentes `from '@/hooks/useComisionesData'`.
@@ -67,9 +67,8 @@ export const getValueForRule = (s: any, ruleName: string, catalogs?: Record<stri
     let cuotaValue = parseSafeFloat(s.cuota);
     if (String(s.categoria || s.detalle || s.sheet).toLowerCase() === 'seguro') {
         if (catalogs) {
-            const list = catalogs['Seguro'] || [];
-            const norm = (str: string) => String(str || '').toLowerCase().normalize("NFD").replace(/[^a-zA-Z0-9]/g, "").trim();
-            const found = list.find((c: any) => norm(c.producto) === norm(s.producto));
+            // Vigencias: con dos precios del mismo seguro gana el que cubre la fecha de la venta.
+            const found = findCatalogVigente(catalogs['Seguro'] || [], s.producto, s.fecha);
             if (found && found.anual) {
                 return parseSafeFloat(found.anual);
             }

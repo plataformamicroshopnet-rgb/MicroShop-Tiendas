@@ -12,7 +12,7 @@ import { normalizeRole } from '@/lib/appConfig'
 import { useEffect } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts'
 import { AuditableCell } from '@/components/AuditableCell'
-import { normalizeString } from '@/lib/salesUtils'
+import { normalizeString, findCatalogVigente } from '@/lib/salesUtils'
 
 // ── Modal detalle de ventas ────────────────────────────────────────────────
 const SalesDetailModal = ({ isOpen, onClose, title, sales }: { isOpen: boolean; onClose: () => void; title: string; sales: any[] }) => {
@@ -350,8 +350,8 @@ const getCuotaTotal = (sale: any, catalogs?: Record<string, any[]>): number => {
     
     if (isSeguro) {
         if (catalogs) {
-            const list = catalogs['Seguro'] || [];
-            const found = list.find((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
+            // Vigencias: con dos precios del mismo seguro gana el que cubre la fecha de la venta.
+            const found = findCatalogVigente(catalogs['Seguro'] || [], sale.producto, sale.fecha);
             if (found && found.anual) {
                 return parse(found.anual);
             }

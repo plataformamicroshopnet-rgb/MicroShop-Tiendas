@@ -10,7 +10,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { PeriodSelector } from '@/components/PeriodSelector'
 import { usePeriod } from '@/components/PeriodProvider'
 import { OBJECTIVE_KEYS, OBJECTIVE_MAPPING } from '@/lib/constants'
-import { calculateDynamicCommission, sanitizeSale, normalizeString, getCurrentMonthString, isVentaWithinDates, renderDashboardData, isSaleActive } from '@/lib/salesUtils'
+import { calculateDynamicCommission, sanitizeSale, normalizeString, getCurrentMonthString, isVentaWithinDates, renderDashboardData, isSaleActive, findCatalogVigente } from '@/lib/salesUtils'
 import { getSaleCommissionBase, getSwapBonus } from '@/lib/saleCommission'
 import { computeBonosO2, computeTerritorialTotal, computeTerritorialRows, calculateO2Importe } from '@/lib/territorialConsolidado'
 import { can, canEdit } from '@/lib/permissions'
@@ -2002,8 +2002,8 @@ export default function LiquidacionesPage() {
             const isSeguro = det === 'seguro' || cat === 'seguro';
             
             if (isSeguro) {
-                const seguroList = catalogs['Seguro'] || [];
-                const foundSeguro = seguroList.find((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
+                // Vigencias: con dos precios del mismo seguro gana el que cubre la fecha de la venta.
+                const foundSeguro = findCatalogVigente(catalogs['Seguro'] || [], sale.producto, sale.fecha);
                 if (foundSeguro && foundSeguro.anual) {
                     return parse(foundSeguro.anual);
                 }
@@ -2016,13 +2016,7 @@ export default function LiquidacionesPage() {
             if (isRent) {
                 // Cuota Total = precio del dispositivo = 'anual' del catálogo (fuente fiable).
                 // Si no hay match en catálogo, se usa la cuota guardada en la venta.
-                const list = catalogs['Rent'] || [];
-                const matching = list.filter((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
-                let found = matching[0];
-                if (matching.length > 1) {
-                    const dated = matching.find((c: any) => isVentaWithinDates(sale.fecha, c.validFrom, c.validTo));
-                    if (dated) found = dated;
-                }
+                const found = findCatalogVigente(catalogs['Rent'] || [], sale.producto, sale.fecha);
                 if (found && found.anual) {
                     const v = parse(found.anual);
                     if (v > 0) return v;

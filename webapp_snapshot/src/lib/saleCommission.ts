@@ -1,4 +1,4 @@
-import { calculateDynamicCommission, normalizeString, isVentaWithinDates, isSaleCancelled } from './salesUtils'
+import { calculateDynamicCommission, findCatalogVigente, isSaleCancelled } from './salesUtils'
 
 // ─────────────────────────────────────────────────────────────────────────
 // FUENTE ÚNICA DE LA COMISIÓN POR VENTA (empresa / Telefónica)
@@ -65,8 +65,7 @@ export function getSaleCommissionBase(sale: any, ctx: SaleCommissionCtx): number
       if (det === 'tma' || det === 'rent') catalogKey = 'Rent'
       if (det === 'micro') catalogKey = 'Micro'
 
-      const list = catalogs[catalogKey] || []
-      const found = list.find((c: any) => normalizeString(c.producto) === normalizeString(sale.producto))
+      const found = findCatalogVigente(catalogs[catalogKey] || [], sale.producto, sale.fecha)
       if (found) val = parseSafeFloat(found.anual)
     }
     return parseSafeFloat(val)
@@ -79,8 +78,8 @@ export function getSaleCommissionBase(sale: any, ctx: SaleCommissionCtx): number
   const isTV = det === 'suscripciones tv' || det === 'suscripcion tv'
   if (det === 'o2' || det === 'seguro' || det === 'mimovistar' || det === 'repos' || det === 'varios' || det === 'accesorios' || isTV || det === 'prepago' || det === 'resto baf' || det === 'traslado mimovistar') {
     if (det === 'seguro') {
-      const seguroList = catalogs['Seguro'] || []
-      const foundSeguro = seguroList.find((c: any) => normalizeString(c.producto) === normalizeString(sale.producto))
+      // Vigencias: con dos precios del mismo seguro gana el que cubre la fecha de la venta.
+      const foundSeguro = findCatalogVigente(catalogs['Seguro'] || [], sale.producto, sale.fecha)
       if (foundSeguro && foundSeguro.comision) {
         return parseSafeFloat(foundSeguro.comision)
       }
@@ -96,14 +95,7 @@ export function getSaleCommissionBase(sale: any, ctx: SaleCommissionCtx): number
     if (det === 'tma' || det === 'rent') catalogKey = 'Rent'
     if (det === 'micro') catalogKey = 'Micro'
 
-    const list = catalogs[catalogKey] || []
-    const matchingProducts = list.filter((c: any) => normalizeString(c.producto) === normalizeString(sale.producto))
-
-    let found = matchingProducts[0]
-    if (matchingProducts.length > 1) {
-      const correctlyDated = matchingProducts.find((c: any) => isVentaWithinDates(sale.fecha, c.validFrom, c.validTo))
-      if (correctlyDated) found = correctlyDated
-    }
+    const found = findCatalogVigente(catalogs[catalogKey] || [], sale.producto, sale.fecha)
 
     if (found) {
       overrideBaseValue = Number(String(found.anual || 0).replace(',', '.'))

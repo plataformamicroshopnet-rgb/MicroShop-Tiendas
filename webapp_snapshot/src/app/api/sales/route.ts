@@ -4,7 +4,7 @@ import { getSession } from '@/lib/auth'
 import { PrismaClient } from '@prisma/client'
 import { ROLES } from '@/lib/appConfig'
 import { can, canEdit, canView } from '@/lib/permissions'
-import { isVentaWithinDates } from '@/lib/salesUtils'
+import { findCatalogVigente } from '@/lib/salesUtils'
 import { runExtrasEngine } from '@/lib/extrasEngine'
 const prisma = new PrismaClient()
 
@@ -93,15 +93,12 @@ export async function GET(request: Request) {
         const seguroCatalog = await prisma.productCatalog.findMany({
           where: { periodId: wp.id, categoria: 'Seguro' }
         });
-        const catalogByProduct: Record<string, number> = {};
-        for (const c of seguroCatalog) {
-          if (c.producto && c.anual) {
-            catalogByProduct[c.producto.toLowerCase().trim()] = parseFloat(String(c.anual).replace(',', '.')) || 0;
-          }
-        }
         sales = sales.map(s => {
           if ((String(s.detalle || '').toLowerCase() === 'seguro' || String(s.sheet || '').toLowerCase() === 'seguro') && (!s.seguroImporte || s.seguroImporte === 0)) {
-            const cuotaFromCatalog = catalogByProduct[String(s.producto || '').toLowerCase().trim()];
+            // Vigencias: la prima que se rellena es la de la fila que cubre la fecha de la venta
+            // (antes se indexaba solo por producto y con dos vigencias ganaba la última fila).
+            const found = findCatalogVigente(seguroCatalog, String(s.producto || ''), s.fecha);
+            const cuotaFromCatalog = found && found.anual ? (parseFloat(String(found.anual).replace(',', '.')) || 0) : 0;
             if (cuotaFromCatalog && cuotaFromCatalog > 0) {
               return { ...s, seguroImporte: cuotaFromCatalog };
             }
@@ -301,12 +298,8 @@ export async function PATCH(request: Request) {
           });
 
           if (matchingCatalogs.length > 0) {
-             let targetCatalog = matchingCatalogs[0]; // fallback
-             
-             if (matchingCatalogs.length > 1) {
-                 const properlyDated = matchingCatalogs.find((c: any) => isVentaWithinDates(effectiveFecha, c.validFrom, c.validTo));
-                 if (properlyDated) targetCatalog = properlyDated;
-             }
+             // Vigencias unificadas: la fila que cubre la fecha efectiva de la venta, o la primera.
+             const targetCatalog = findCatalogVigente(matchingCatalogs, effectiveProducto, effectiveFecha) || matchingCatalogs[0];
 
              // Aplicar los nuevos valores derivados encontrados en la fuente de la verdad
              const basePrice = targetCatalog.anual ? parseFloat(String(targetCatalog.anual).replace(',', '.')) : null;

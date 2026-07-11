@@ -3,6 +3,7 @@ import ComisionesO2Tab from './ComisionesO2Tab'
 import TerritorialTab from '@/components/TerritorialTab'
 
 import { useEffect, useState, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { Save, Search, Plus, Trash2, FileText, AlertCircle, Target, Euro, Box, ChevronLeft, Lock } from 'lucide-react'
 import Link from 'next/link'
 
@@ -92,7 +93,8 @@ const getTabStyle = (cat: string, isActive: boolean) => {
 
 export default function CatalogosPage() {
   const { authorized } = useGuard('MODULE_ADMIN', 'MANAGE_CATALOG')
-  const { activePeriodKey, availablePeriods, isLoadingPeriods } = usePeriod()
+  const router = useRouter()
+  const { activePeriodKey, setActivePeriodKey, availablePeriods, isLoadingPeriods } = usePeriod()
 
   // Encontrar estado del periodo maestro
   const activePeriodObj = availablePeriods.find(p => p.period_key === activePeriodKey)
@@ -118,9 +120,64 @@ export default function CatalogosPage() {
   const [bulkText, setBulkText] = useState('')
   const [showBulk, setShowBulk] = useState(false)
 
-  // Fetch from API
+  // ── Cambios sin guardar: los cambios solo viven en memoria hasta pulsar el
+  // botón verde. Se marca "dirty" en cada edición y se avisa antes de perderlos
+  // (salir de la pantalla, cambiar de periodo o cerrar/recargar el navegador).
+  const [dirty, setDirty] = useState(false)
+  const dirtyRef = useRef(false)
+  useEffect(() => { dirtyRef.current = dirty }, [dirty])
+  const prevKeyRef = useRef<string | null>(null)
+  const revertingRef = useRef(false)
+
+  const MSG_SIN_GUARDAR = '⚠️ Tienes cambios SIN GUARDAR en el catálogo.\n\nSi sales ahora se perderán. Pulsa "Cancelar" para quedarte y darle a "Guardar Cambios", o "Aceptar" para salir sin guardar.'
+
+  // Cerrar/recargar el navegador con cambios sin guardar → aviso nativo
+  useEffect(() => {
+    const h = (e: BeforeUnloadEvent) => {
+      if (dirtyRef.current) { e.preventDefault(); e.returnValue = '' }
+    }
+    window.addEventListener('beforeunload', h)
+    return () => window.removeEventListener('beforeunload', h)
+  }, [])
+
+  // Navegación interna (menú lateral, enlaces) con cambios sin guardar → confirmación
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (!dirtyRef.current) return
+      // ctrl/cmd/shift/clic central = abrir en otra pestaña: no se pierde nada aquí
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+      const a = (e.target as HTMLElement | null)?.closest?.('a[href]') as HTMLAnchorElement | null
+      if (!a) return
+      const href = a.getAttribute('href') || ''
+      if (!href.startsWith('/') || a.target === '_blank') return
+      if (!window.confirm(MSG_SIN_GUARDAR)) {
+        e.preventDefault()
+        e.stopPropagation()
+      }
+    }
+    document.addEventListener('click', h, true)
+    return () => document.removeEventListener('click', h, true)
+  }, [])
+
+  // Fetch from API (con guardia: cambiar de periodo con cambios sin guardar pide
+  // confirmación; si cancelas, se vuelve al periodo anterior sin perder nada)
   useEffect(() => {
     if (!activePeriodKey) return
+    if (revertingRef.current) {
+      // Volvemos al periodo anterior tras cancelar: NO recargar (mantener ediciones)
+      revertingRef.current = false
+      prevKeyRef.current = activePeriodKey
+      return
+    }
+    if (dirtyRef.current && prevKeyRef.current && prevKeyRef.current !== activePeriodKey) {
+      if (!window.confirm(MSG_SIN_GUARDAR)) {
+        revertingRef.current = true
+        setActivePeriodKey(prevKeyRef.current)
+        return
+      }
+    }
+    prevKeyRef.current = activePeriodKey
+    setDirty(false)
     setLoading(true)
     fetch(`/api/catalogs?periodKey=${activePeriodKey}&strictPeriod=1`)
       .then(res => res.json())
@@ -165,13 +222,16 @@ export default function CatalogosPage() {
       return isEnd ? 99999999 : 0;
     }
 
+    // 1) Construir la parrilla a exportar, agrupando variantes por clave completa
+    //    (producto|subcategoria|gama|fabricante) para el control de fechas
     const exportCatalogs: Record<string, any[]> = {}
+    const gruposPorCat: [string, Record<string, any[]>][] = []
     for (const [cat, items] of Object.entries(catalogs)) {
-       
+
        // Agrupamos para validar colisiones de fecha
        const byProduct: Record<string, any[]> = {};
        const seenExactDuplicates = new Set<string>();
-       
+
        exportCatalogs[cat] = items
          .filter(it => it.importStatus !== 'missing') // AUTO-DELETE: Ignorar productos obsoletos
          .filter(it => {
@@ -189,7 +249,7 @@ export default function CatalogosPage() {
             .join('|');
 
           if (!byProduct[pName]) byProduct[pName] = [];
-          
+
           const expItem = {
              producto: it.producto,
              mensual: String(it.cuotaMensual !== undefined ? it.cuotaMensual : (it.cuota || '')),
@@ -205,9 +265,83 @@ export default function CatalogosPage() {
           byProduct[pName].push(expItem);
           return expItem;
        })
+       gruposPorCat.push([cat, byProduct])
+    }
 
-       // Revisar cada producto con múltiples vigencias
-       for (const [pName, variations] of Object.entries(byProduct)) {
+    // 1.5) VALIDACIÓN Y NORMALIZACIÓN DE FECHAS. Sin esto, un año a 2 cifras
+    // ("01/07/26" se interpreta como 1926) o un rango invertido (Hasta < Desde)
+    // se colarían y el cierre automático guardaría un catálogo corrupto en
+    // silencio. Se exige dd/mm/yyyy con año de 4 cifras y se normaliza el
+    // relleno de ceros (7/7/2026 → 07/07/2026).
+    const normFecha = (v: any): string | null | undefined => {
+       if (v === null || v === undefined || !String(v).trim()) return null
+       const m = String(v).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+       if (!m) return undefined
+       const d = +m[1], mo = +m[2], y = +m[3]
+       if (mo < 1 || mo > 12 || d < 1 || d > 31) return undefined
+       return `${String(d).padStart(2, '0')}/${String(mo).padStart(2, '0')}/${y}`
+    }
+    for (const [cat, items] of Object.entries(exportCatalogs)) {
+       for (const it of items) {
+          const nf = normFecha(it.validFrom)
+          if (nf === undefined) {
+             return alert(`❌ FECHA INVÁLIDA en "${it.producto}" (${cat}): Desde = "${it.validFrom}".\nUsa el formato dd/mm/yyyy con el año de 4 cifras (ej. 07/07/2026).`)
+          }
+          const nt = normFecha(it.validTo)
+          if (nt === undefined) {
+             return alert(`❌ FECHA INVÁLIDA en "${it.producto}" (${cat}): Hasta = "${it.validTo}".\nUsa el formato dd/mm/yyyy con el año de 4 cifras (ej. 07/07/2026).`)
+          }
+          it.validFrom = nf
+          it.validTo = nt
+          if (nf && nt && pDate(nf, false) > pDate(nt, true)) {
+             return alert(`❌ RANGO INVERTIDO en "${it.producto}" (${cat}):\nel "Desde" (${nf}) es posterior al "Hasta" (${nt}). Corrígelo antes de guardar.`)
+          }
+       }
+    }
+
+    // 2) CIERRE AUTOMÁTICO DE VIGENCIAS. El caso real: el catálogo anterior se
+    // dejó sin "Hasta" (vigencia abierta) y el nuevo llega con un "Desde"
+    // posterior (p.ej. el precio de un Rent o un Seguro cambia a mitad de mes).
+    // Antes eso bloqueaba con ERROR DE SOLAPAMIENTO y obligaba a teclear el
+    // "Hasta" a mano en cada producto. Ahora la vigencia anterior se cierra
+    // sola el día antes de que empiece la nueva (con resumen y confirmación).
+    const minusOneDay = (ddmmyyyy: string) => {
+       const [d, m, y] = ddmmyyyy.split('/').map(Number)
+       const dt = new Date(y, m - 1, d)
+       dt.setDate(dt.getDate() - 1)
+       return `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${dt.getFullYear()}`
+    }
+    const ajustes: string[] = []
+    for (const [cat, byProduct] of gruposPorCat) {
+       for (const variations of Object.values(byProduct)) {
+          if (variations.length < 2) continue
+          const orden = [...variations].sort((a, b) => pDate(a.validFrom, false) - pDate(b.validFrom, false))
+          for (let i = 0; i < orden.length - 1; i++) {
+             const A = orden[i], B = orden[i + 1]
+             const bStart = pDate(B.validFrom, false)
+             if (!bStart) continue                                    // B sin "Desde": no hay frontera clara
+             if (pDate(A.validFrom, false) === bStart) continue       // mismo inicio: duplicado real → error abajo
+             if (pDate(A.validTo, true) >= bStart) {
+                const nuevoHasta = minusOneDay(B.validFrom)
+                ajustes.push(`· ${A.producto} (${cat}): la vigencia "${A.validFrom || 'sin inicio'} → ${A.validTo || 'abierta'}" se cierra el ${nuevoHasta}`)
+                A.validTo = nuevoHasta
+             }
+          }
+       }
+    }
+    if (ajustes.length > 0) {
+       const resumen = ajustes.slice(0, 12).join('\n') + (ajustes.length > 12 ? `\n… y ${ajustes.length - 12} más` : '')
+       const ok = window.confirm(
+          `🗓️ AJUSTE AUTOMÁTICO DE VIGENCIAS (${ajustes.length}):\n\n` +
+          `Cuando un producto recibe una vigencia nueva, la anterior se cierra el día antes para que no choquen:\n\n${resumen}\n\n` +
+          `¿Guardar el catálogo con estos ajustes?`)
+       if (!ok) return
+    }
+
+    // 3) Validación de solapamientos (tras el cierre automático solo saltará
+    // con conflictos reales, p.ej. dos vigencias que empiezan el mismo día)
+    for (const [cat, byProduct] of gruposPorCat) {
+       for (const [, variations] of Object.entries(byProduct)) {
           if (variations.length > 1) {
              for (let i = 0; i < variations.length; i++) {
                 for (let j = i + 1; j < variations.length; j++) {
@@ -219,7 +353,7 @@ export default function CatalogosPage() {
                    // Condition for overlap: StartA <= EndB AND EndA >= StartB
                    if (startA <= endB && endA >= startB) {
                       setSaving(false);
-                      return alert(`❌ ERROR DE SOLAPAMIENTO:\nEl producto "${variations[i].producto}" en "${cat}" tiene vigencias bloqueadas por chocar entre sí.\nPor favor, corrige las fechas de Inicio y Fin asegurando que no se crucen ningún día.`);
+                      return alert(`❌ ERROR DE SOLAPAMIENTO:\nEl producto "${variations[i].producto}" en "${cat}" tiene dos vigencias que chocan:\n· ${variations[i].validFrom || 'sin inicio'} → ${variations[i].validTo || 'abierta'}\n· ${variations[j].validFrom || 'sin inicio'} → ${variations[j].validTo || 'abierta'}\nCorrige las fechas (o borra la fila duplicada) y vuelve a guardar.`);
                    }
                 }
              }
@@ -236,7 +370,46 @@ export default function CatalogosPage() {
       })
       const data = await res.json()
       if (data.success) {
-        alert('✅ Catálogo del periodo guardado correctamente.')
+        setDirty(false)
+        // Mientras corren el reprice y el refetch la parrilla se desmonta
+        // (loading): si siguiera editable, el refetch pisaría las teclas del
+        // usuario en silencio y dejaría el badge "sin guardar" encendido.
+        setLoading(true)
+        // 4) Corrección de operaciones: la venta guarda una foto del precio al
+        // teclearla (cuota / prima del seguro), así que cambiar el catálogo no
+        // corrige lo ya tecleado. Se ofrece recalcular las ventas del periodo
+        // (Rent y Seguros) para que su importe siga la vigencia que cubre la
+        // fecha de cada venta.
+        const reprice = window.confirm(
+          '✅ Catálogo del periodo guardado correctamente.\n\n' +
+          '¿Quieres CORREGIR ahora las operaciones ya tecleadas de este periodo (Rent y Seguros) ' +
+          'para que su importe siga las vigencias nuevas según la fecha de cada venta?')
+        if (reprice) {
+          try {
+            const r2 = await fetch('/api/catalogs/reprice', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ periodKey: activePeriodKey })
+            })
+            const d2 = await r2.json()
+            if (d2.success) {
+              const lineas = (d2.detalles || []).slice(0, 10)
+                .map((x: any) => `   · ${x.fecha} ${x.producto} (${x.vendedor}): ${x.de ?? '—'} → ${x.a} €`)
+                .join('\n')
+              alert(
+                `🔁 Operaciones del periodo revisadas:\n` +
+                `· Corregidas: ${d2.actualizadas}\n` +
+                `· Ya estaban bien: ${d2.sinCambio}\n` +
+                `· Precio tecleado a mano (RESPETADO, no se toca): ${d2.manuales}\n` +
+                `· Sin vigencia que cubra su fecha (no se tocan): ${d2.sinVigencia}` +
+                (lineas ? `\n\nCorregidas:\n${lineas}${(d2.detalles || []).length > 10 ? '\n   … y ' + (d2.actualizadas - 10) + ' más' : ''}` : ''))
+            } else {
+              alert('❌ No se pudieron corregir las operaciones: ' + d2.error)
+            }
+          } catch {
+            alert('❌ Error de conexión al corregir operaciones.')
+          }
+        }
         // REFRESH DATA to clear the colored import statuses
         const freshRes = await fetch(`/api/catalogs?periodKey=${activePeriodKey}&strictPeriod=1`)
         const freshData = await freshRes.json()
@@ -260,6 +433,7 @@ export default function CatalogosPage() {
             }
             setCatalogs(mapped)
         }
+        setDirty(false)
       } else {
         alert('❌ Error: ' + data.error)
       }
@@ -267,6 +441,7 @@ export default function CatalogosPage() {
       alert('Error de conexión')
     } finally {
       setSaving(false)
+      setLoading(false)
     }
   }
 
@@ -304,6 +479,7 @@ export default function CatalogosPage() {
                  return
               }
               setCatalogs(mapped) // Memory loading, zero persistence
+              setDirty(true)
               alert('✅ Catálogo clonado en memoria. Revisa los datos y pulsa "Guardar Cambios" para hacerlo definitivo.')
           }
       } catch(e) {
@@ -346,6 +522,7 @@ export default function CatalogosPage() {
                return
             }
             setCatalogs(mapped)
+            setDirty(true)
             alert('✅ Catálogo Legacy importado en memoria. Revisa los datos y pulsa "Guardar Cambios" para hacerlo definitivo.')
         }
     } catch(e) {
@@ -357,6 +534,7 @@ export default function CatalogosPage() {
 
   const updateItem = (cat: string, index: number, field: keyof ProductItem, value: any) => {
     if (isHistoric) return
+    setDirty(true)
     setCatalogs(prev => {
       const currentArr = prev[cat] || []
       if (!currentArr[index]) return prev
@@ -380,6 +558,7 @@ export default function CatalogosPage() {
 
   const addItem = (cat: string) => {
     setSearch('')
+    setDirty(true)
     setCatalogs(prev => {
       const newItem: ProductItem = { id: Date.now().toString(), producto: '', validFrom: '', validTo: '' }
       if (cat === 'Ti' || cat === 'Rent' || cat === 'Micro') {
@@ -420,6 +599,7 @@ export default function CatalogosPage() {
   }
 
   const dupItem = (cat: string, index: number) => {
+    setDirty(true)
     setCatalogs(prev => {
       const currentArr = prev[cat] || []
       if (!currentArr[index]) return prev
@@ -437,6 +617,7 @@ export default function CatalogosPage() {
 
   const removeItem = (cat: string, index: number) => {
     if (!confirm('¿Seguro que quieres borrar este producto?')) return
+    setDirty(true)
     setCatalogs(prev => {
       const newCat = [...(prev[cat] || [])]
       newCat.splice(index, 1)
@@ -877,6 +1058,7 @@ export default function CatalogosPage() {
       }
     })
 
+    setDirty(true)
     setBulkText('')
     setShowBulk(false)
   }
@@ -896,7 +1078,13 @@ export default function CatalogosPage() {
             showBack={true}
             backFallback="/admin"
             showPeriodSelector={false}
-            onBack={!isProductTab ? () => setActiveTab('Ti') : undefined}
+            onBack={() => {
+              // La flecha Volver navega en cliente (router), así que no pasa por el
+              // beforeunload ni por el interceptor de <a href>: la guarda va aquí.
+              if (dirtyRef.current && !window.confirm(MSG_SIN_GUARDAR)) return
+              if (!isProductTab) { setActiveTab('Ti'); return }
+              router.push('/admin')
+            }}
             helpContent={
               <div>
                 <h4 style={{ margin: '0 0 12px 0', color: 'var(--mercedes-cyan)', fontSize: 15 }}>Manual: Entrada de Datos</h4>
@@ -907,15 +1095,24 @@ export default function CatalogosPage() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          {dirty && (
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              backgroundColor: '#FEF3C7', color: '#92400E', border: '1px solid #F59E0B',
+              borderRadius: 999, padding: '4px 12px', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap'
+            }}>
+              ⬤ Cambios sin guardar
+            </span>
+          )}
           <PeriodSelector />
 
           {isProductTab && !isHistoric && (
-            <TooltipBox title="Guardar Cambios" content="Persiste en la base de datos todos los productos y precios que ves en pantalla para el periodo activo. Antes de guardar, el sistema valida automáticamente que no haya solapamientos de fechas de vigencia en el mismo producto. Sin pulsar este botón, los cambios solo existen en memoria y se perderán al recargar la página.">
-              <button 
+            <TooltipBox title="Guardar Cambios" content="Persiste en la base de datos todos los productos y precios que ves en pantalla para el periodo activo. Antes de guardar, el sistema valida automáticamente que no haya solapamientos de fechas de vigencia en el mismo producto (cerrando solo la vigencia anterior cuando entra una nueva). Sin pulsar este botón, los cambios solo existen en memoria y se perderán al recargar la página.">
+              <button
                 onClick={handleSave}
                 disabled={saving}
                 className="btn btn-primary"
-                style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 'bold', backgroundColor: '#34C759', color: 'var(--bg-card)', border: 'none' }}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 'bold', backgroundColor: '#34C759', color: 'var(--bg-card)', border: 'none', boxShadow: dirty ? '0 0 0 3px #F59E0B' : undefined }}
               >
                 <Save size={18} />
                 {saving ? 'Guardando...' : 'Guardar Cambios'}

@@ -7,7 +7,7 @@ import { usePeriod } from '@/components/PeriodProvider'
 import { PageHeader } from '@/components/PageHeader'
 import { PeriodSelector } from '@/components/PeriodSelector'
 import { Globe, ArrowLeft, Info, Percent, AlertCircle } from 'lucide-react'
-import { renderDashboardData, calculateDynamicCommission, sanitizeSale, normalizeString, isVentaWithinDates, isSaleCancelled } from '@/lib/salesUtils'
+import { renderDashboardData, calculateDynamicCommission, sanitizeSale, normalizeString, isSaleCancelled, findCatalogVigente } from '@/lib/salesUtils'
 import { computeTerritorialRows } from '@/lib/territorialConsolidado'
 
 // STATIC_PALANCAS + el cálculo de las filas viven en lib/territorialConsolidado (fuente única).
@@ -136,8 +136,7 @@ export default function TerritorialPdvPage() {
                    if (det === 'tma' || det === 'rent') catalogKey = 'Rent';
                    if (det === 'micro') catalogKey = 'Micro';
                    
-                   const list = catalogs[catalogKey] || [];
-                   const found = list.find((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
+                   const found = findCatalogVigente(catalogs[catalogKey] || [], sale.producto, sale.fecha);
                    if (found) {
                        val = parseSafeFloat(found.anual);
                    }
@@ -153,8 +152,8 @@ export default function TerritorialPdvPage() {
           
           if (det === 'o2' || det === 'seguro' || det === 'mimovistar' || det === 'repos' || det === 'varios' || det === 'accesorios' || isTV || det === 'prepago' || det === 'resto baf' || det === 'traslado mimovistar') {
               if (det === 'seguro') {
-                  const list = catalogs['Seguro'] || [];
-                  const found = list.find((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
+                  // Vigencias: con dos precios del mismo seguro gana el que cubre la fecha de la venta.
+                  const found = findCatalogVigente(catalogs['Seguro'] || [], sale.producto, sale.fecha);
                   if (found && found.comision) {
                       return parseSafeFloat(found.comision);
                   }
@@ -169,14 +168,7 @@ export default function TerritorialPdvPage() {
               if (det === 'tma' || det === 'rent') catalogKey = 'Rent';
               if (det === 'micro') catalogKey = 'Micro';
               
-              const list = catalogs[catalogKey] || [];
-              const matchingProducts = list.filter((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
-              
-              let found = matchingProducts[0];
-              if (matchingProducts.length > 1) {
-                  const correctlyDated = matchingProducts.find((c: any) => isVentaWithinDates(sale.fecha, c.validFrom, c.validTo));
-                  if (correctlyDated) found = correctlyDated;
-              }
+              const found = findCatalogVigente(catalogs[catalogKey] || [], sale.producto, sale.fecha);
 
               if (found) {
                   overrideBaseValue = Number(String(found.anual || 0).replace(',','.'));

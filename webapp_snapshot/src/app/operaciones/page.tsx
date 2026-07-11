@@ -6,7 +6,7 @@ import { FilterX, Search, Save, X, Edit2, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { PageHeader } from '@/components/PageHeader'
 import { can, canEdit as canEditMacro, canView } from '@/lib/permissions'
-import { renderDashboardData, calculateDynamicCommission, sanitizeSale, getCurrentMonthString, normalizeString, isVentaWithinDates, isSaleCancelled } from '@/lib/salesUtils'
+import { renderDashboardData, calculateDynamicCommission, sanitizeSale, getCurrentMonthString, normalizeString, isSaleCancelled, findCatalogVigente } from '@/lib/salesUtils'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { useGuard } from '@/hooks/useGuard'
 import { usePeriod } from '@/components/PeriodProvider'
@@ -139,8 +139,8 @@ const getCuotaTotal = (sale: any, catalogs?: Record<string, any[]>): number => {
   
   if (isSeguro) {
     if (catalogs) {
-      const list = catalogs['Seguro'] || [];
-      const found = list.find((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
+      // Vigencias: con dos precios del mismo seguro gana el que cubre la fecha de la venta.
+      const found = findCatalogVigente(catalogs['Seguro'] || [], sale.producto, sale.fecha);
       if (found && found.anual) {
         return parse(found.anual);
       }
@@ -155,13 +155,7 @@ const getCuotaTotal = (sale: any, catalogs?: Record<string, any[]>): number => {
     // Cuota Total = precio del dispositivo = 'anual' del catálogo (fuente fiable).
     // Si no hay match en catálogo, se usa la cuota guardada en la venta.
     if (catalogs) {
-      const list = catalogs['Rent'] || [];
-      const matching = list.filter((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
-      let found = matching[0];
-      if (matching.length > 1) {
-        const dated = matching.find((c: any) => isVentaWithinDates(sale.fecha, c.validFrom, c.validTo));
-        if (dated) found = dated;
-      }
+      const found = findCatalogVigente(catalogs['Rent'] || [], sale.producto, sale.fecha);
       if (found && found.anual) {
         const v = parse(found.anual);
         if (v > 0) return v;

@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { usePeriod } from '@/components/PeriodProvider'
 import { useGuard } from '@/hooks/useGuard'
 import { ExcelIcon } from '@/components/ActionIcons'
-import { renderDashboardData, calculateDynamicCommission, isVentaWithinDates, normalizeString, getCurrentMonthString, isSaleActive, isSolar360 } from '@/lib/salesUtils'
+import { renderDashboardData, calculateDynamicCommission, normalizeString, getCurrentMonthString, isSaleActive, isSolar360, findCatalogVigente } from '@/lib/salesUtils'
 import { getSaleCommission, isLegacySwap } from '@/lib/saleCommission'
 import { computeTerritorialRows, computeBonosO2 } from '@/lib/territorialConsolidado'
 import { matchesRule, getValueForRule, matchTipoVenta } from '@/hooks/useComisionesData'
@@ -507,21 +507,11 @@ function GrupoClienteContent() {
   const allPlusSales   = useMemo(() => sales.filter(s => isPlus(s.codigo)),   [sales])
 
   const getRentCommission = (sale: any) => {
-    const list = catalogs['Rent'] || [];
-    const matchingProducts = list.filter((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
-    
-    let found = matchingProducts[0];
-    
-    // If there are multiple versions of the same product, apply validity window filtering
-    if (matchingProducts.length > 1) {
-        const correctlyDated = matchingProducts.find((c: any) => isVentaWithinDates(sale.fecha, c.validFrom, c.validTo));
-        if (correctlyDated) {
-            found = correctlyDated;
-        } else {
-            found = matchingProducts[matchingProducts.length - 1]; // Fallback to the latest one
-        }
-    }
-    
+    // Vigencias unificadas (findCatalogVigente): gana la fila que cubre la fecha de la
+    // venta; sin cobertura, la PRIMERA (antes aquí caía a la última y descuadraba
+    // con Liquidación/Comisiones, que caen a la primera).
+    const found = findCatalogVigente(catalogs['Rent'] || [], sale.producto, sale.fecha);
+
     if (found) {
         const isConCoste = sale.rentConCoste && (sale.rentConCoste.toLowerCase() === 'sí' || sale.rentConCoste.toLowerCase() === 'si');
         if (isConCoste) {
@@ -534,19 +524,8 @@ function GrupoClienteContent() {
   }
 
   const getSeguroImporte = (sale: any) => {
-    const list = catalogs['Seguro'] || [];
-    const matchingProducts = list.filter((c: any) => normalizeString(c.producto) === normalizeString(sale.producto));
-    
-    let found = matchingProducts[0];
-    if (matchingProducts.length > 1) {
-        const correctlyDated = matchingProducts.find((c: any) => isVentaWithinDates(sale.fecha, c.validFrom, c.validTo));
-        if (correctlyDated) {
-            found = correctlyDated;
-        } else {
-            found = matchingProducts[matchingProducts.length - 1];
-        }
-    }
-    
+    const found = findCatalogVigente(catalogs['Seguro'] || [], sale.producto, sale.fecha);
+
     if (found) {
         return Number(String(found.anual || 0).replace(',','.'));
     }
