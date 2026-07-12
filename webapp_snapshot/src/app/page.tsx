@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Trophy, Flame, Target, Award, Zap, Crown, Wifi, Smartphone, Shield, TrendingUp, Tv, Layers, Repeat } from 'lucide-react'
+import { Trophy, Flame, Target, Award, Zap, Crown, Wifi, Smartphone, Shield, TrendingUp, Tv, Layers, Repeat, X } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
 import Link from 'next/link'
 import { usePeriod } from '@/components/PeriodProvider'
@@ -16,6 +16,7 @@ import {
   DEFAULT_DASHBOARD_CONFIG,
   DashboardConfig,
   DashBloqueTipos,
+  DashKpi,
   DashMedalla,
   DashMetrica,
   TIPO_AUTO,
@@ -95,6 +96,9 @@ export default function DashboardPage() {
   const [cfg, setCfg] = useState<DashboardConfig>(DEFAULT_DASHBOARD_CONFIG)
   const [catalogs, setCatalogs] = useState<Record<string, any[]>>({})
   const [comisionesBase, setComisionesBase] = useState<ComisionesBase | null>(null)
+  // Detalle de un KPI del Termómetro: las operaciones que suman en él,
+  // SIN ninguna columna de comisión de empresa.
+  const [kpiModal, setKpiModal] = useState<{ kpi: DashKpi; ops: any[] } | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
@@ -381,6 +385,22 @@ export default function DashboardPage() {
     const progressPct = target > 0 ? Math.min(100, (llevamos / target) * 100) : 0;
     return { kpi: k, llevamos, target, faltan, progressPct };
   });
+
+  // Detalle al pulsar una tarjeta del Termómetro: las operaciones que suman en
+  // ese KPI (fecha, comercial, producto, cliente…), SIN comisiones de empresa.
+  const pFechaNum = (f: any) => {
+    const p = String(f || '').split('/');
+    return p.length === 3 ? Number(p[2]) * 10000 + Number(p[1]) * 100 + Number(p[0]) : 0;
+  };
+  const abrirKpi = (k: DashKpi) => {
+    if (k.metrica === 'comisiones') return; // esa métrica ES la comisión: sin detalle
+    const esSwap = esBloqueSwap(bloqueCalc(k));
+    const filtro: DashBloqueTipos = k.metrica === 'clientesMulti' ? { ...k, metrica: 'count' } : k;
+    const ops = teamSales
+      .filter(s => esSwap ? s.isSwap === true : matchBloqueConVirtual(s, filtro))
+      .sort((a, b) => pFechaNum(b.fecha) - pFechaNum(a.fecha));
+    setKpiModal({ kpi: k, ops });
+  };
 
   const kpiFmt = (v: number, metrica: DashMetrica) =>
     (metrica === 'importe' || metrica === 'comisiones') ? fmt(v) : String(Math.round(v));
@@ -738,7 +758,12 @@ export default function DashboardPage() {
             const pal = KPI_COLORS[i % KPI_COLORS.length];
             const esPrincipal = i === 0; // el primer KPI del config ocupa la fila completa arriba
             return (
-              <div key={k.kpi.id} style={{ background: 'var(--bg-body)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border-light)', ...(esPrincipal ? { gridColumn: '1 / -1' as const, order: -1 } : {}) }}>
+              <div
+                key={k.kpi.id}
+                onClick={() => abrirKpi(k.kpi)}
+                title={k.kpi.metrica === 'comisiones' ? undefined : 'Ver las operaciones que cuentan en este KPI'}
+                style={{ background: 'var(--bg-body)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border-light)', cursor: k.kpi.metrica === 'comisiones' ? 'default' : 'pointer', ...(esPrincipal ? { gridColumn: '1 / -1' as const, order: -1 } : {}) }}
+              >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <Icono size={18} color={pal.color} />
@@ -908,6 +933,73 @@ export default function DashboardPage() {
 
 
       </div>
+
+      {/* DETALLE DE UN KPI DEL TERMÓMETRO: operaciones que cuentan, SIN comisiones */}
+      {kpiModal && (
+        <div
+          onClick={() => setKpiModal(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border-strong)', width: 'min(920px, 96vw)', maxHeight: '84vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 24px 60px rgba(0,0,0,0.35)' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '14px 18px', borderBottom: '1px solid var(--border-strong)' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: 'var(--text-main)' }}>
+                  {kpiModal.kpi.nombre} <span style={{ color: 'var(--medium-gray)', fontWeight: 600, fontSize: 13 }}>· {kpiModal.ops.length} operaciones</span>
+                </h3>
+                <p style={{ margin: '2px 0 0 0', fontSize: 12, color: 'var(--medium-gray)' }}>
+                  Operaciones que cuentan en este KPI ({descBloque(kpiModal.kpi)}). Sin comisiones de empresa.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setKpiModal(null)}
+                style={{ background: 'transparent', border: '1px solid var(--border-color)', borderRadius: 8, padding: 6, cursor: 'pointer', color: 'var(--medium-gray)', display: 'flex' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ overflowY: 'auto', padding: '6px 12px 14px 12px' }}>
+              {kpiModal.ops.length === 0 ? (
+                <div style={{ padding: 24, textAlign: 'center', fontSize: 13, color: 'var(--medium-gray)' }}>Aún no hay operaciones en este KPI.</div>
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
+                  <thead>
+                    <tr>
+                      {['Fecha', 'Comercial', 'Producto', 'Cliente', 'Teléfono', ...(kpiModal.kpi.metrica === 'importe' ? ['Importe'] : []), 'Estado'].map(h => (
+                        <th key={h} style={{ textAlign: h === 'Importe' ? 'right' : 'left', padding: '8px 6px', color: 'var(--medium-gray)', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4, borderBottom: '1px solid var(--border-strong)', position: 'sticky', top: 0, background: 'var(--bg-card)' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {kpiModal.ops.map((s: any, i: number) => (
+                      <tr key={s.id || i} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                        <td style={{ padding: '7px 6px', whiteSpace: 'nowrap', color: 'var(--text-main)' }}>{s.fecha}</td>
+                        <td style={{ padding: '7px 6px', fontWeight: 700, color: 'var(--text-main)' }}>{s.vendedor}</td>
+                        <td style={{ padding: '7px 6px', color: 'var(--text-main)' }}>{s.producto}</td>
+                        <td style={{ padding: '7px 6px', color: 'var(--medium-gray)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.nombreCliente || '—'}</td>
+                        <td style={{ padding: '7px 6px', whiteSpace: 'nowrap', color: 'var(--medium-gray)' }}>{s.telf || s.telefonoMovil || s.telefonoFijo || '—'}</td>
+                        {kpiModal.kpi.metrica === 'importe' && (
+                          <td style={{ padding: '7px 6px', textAlign: 'right', fontWeight: 700, whiteSpace: 'nowrap', color: 'var(--text-main)' }}>
+                            {kpiFmt(valorVentaBloque(s, kpiModal.kpi), 'importe')}
+                          </td>
+                        )}
+                        <td style={{ padding: '7px 6px', whiteSpace: 'nowrap' }}>
+                          {isPendiente(s)
+                            ? <span style={{ fontSize: 11, fontWeight: 700, color: '#d97706', background: 'rgba(217, 119, 6, 0.12)', padding: '2px 8px', borderRadius: 8 }}>Pendiente</span>
+                            : <span style={{ fontSize: 11, fontWeight: 700, color: '#10b981', background: 'rgba(16, 185, 129, 0.12)', padding: '2px 8px', borderRadius: 8 }}>Confirmada</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   )
