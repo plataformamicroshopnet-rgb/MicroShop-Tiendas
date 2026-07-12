@@ -584,7 +584,7 @@ export default function DashboardPage() {
       />
 
 
-      {/* FILA 1: TORNEOS Y MVP */}
+      {/* FILA 1: TORNEOS Y VITRINA DE MEDALLAS */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '16px' }}>
         <Link href="/torneos-ventas" style={{ textDecoration: 'none', display: 'block', marginBottom: '0', outline: 'none' }}>
         <div
@@ -642,6 +642,212 @@ export default function DashboardPage() {
           )}
         </div>
       </Link>
+        {/* VITRINA DE LOGROS (Estilo PlayStation) */}
+        <div style={{
+          background: 'var(--bg-card)',
+          borderRadius: 16,
+          padding: '12px',
+          border: '1px solid var(--border-strong)',
+          boxShadow: '0 4px 14px -5px rgba(0,0,0,0.05)',
+          display: 'flex',
+          flexDirection: 'column',
+          position: 'relative'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+            <div style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)', padding: '10px', borderRadius: '12px' }}>
+              <Award size={24} color="#8b5cf6" />
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'var(--text-main)' }}>Tus Medallas y Logros</h3>
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--medium-gray)', fontWeight: 500 }}>Desbloqueos recientes esta semana</p>
+            </div>
+          </div>
+
+          {medallasData.length === 0 ? (
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--medium-gray)' }}>
+              No hay medallas configuradas.
+            </div>
+          ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${medallasData.length}, 1fr)`, gap: '12px', flex: 1 }}>
+            {medallasData.map((m, i) => {
+              const st = MEDAL_STYLES[i % MEDAL_STYLES.length];
+              const sub = MEDAL_SUBS[m.medalla.id] || 'Sin datos aún';
+              return (
+                <div key={m.medalla.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', background: 'var(--bg-body)', padding: '12px', borderRadius: '12px', border: `1px solid ${st.ring}` }}>
+                  <div style={{ position: 'relative', width: 48, height: 48 }}>
+                    <div style={{ width: 48, height: 48, borderRadius: '50%', overflow: 'hidden', background: st.grad, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 12px ${st.ring}` }}>
+                      {m.oro
+                        ? <FotoAvatar name={m.oro.name} fontSize={13} />
+                        : <Award size={22} color="#fff" />}
+                    </div>
+                    {m.oro && <span style={{ position: 'absolute', top: -6, right: -6, fontSize: 14 }}>{m.medalla.emoji}</span>}
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div title={descBloque(m.medalla)} style={{ fontSize: '12px', fontWeight: 800, color: st.col, marginBottom: 2 }}>{m.medalla.nombre}</div>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-main)' }}>{m.oro ? m.oro.name : '—'}</div>
+                    <div style={{ fontSize: '10px', color: 'var(--medium-gray)' }}>{m.oro ? valorMedalla(m.oro.value, m.medalla) : sub}</div>
+                  </div>
+                  {m.plata && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 'auto', paddingTop: 8, borderTop: '1px solid var(--border-light)', width: '100%', justifyContent: 'center' }}>
+                      <span style={{ fontSize: 11 }}>🥈</span>
+                      <div style={{ width: 20, height: 20, borderRadius: '50%', overflow: 'hidden', background: st.grad, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <FotoAvatar name={m.plata.name} fontSize={13} />
+                      </div>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 52 }}>{m.plata.name}</span>
+                      <span style={{ fontSize: 9.5, color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{valorMedalla(m.plata.value, m.medalla)}</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          )}
+        </div>
+
+
+
+      </div>
+
+      {/* TERMÓMETRO DIARIO DE LA EMPRESA */}
+      <div style={{
+        background: 'var(--bg-card)',
+        borderRadius: 16,
+        padding: '12px',
+        border: '1px solid var(--border-strong)',
+        boxShadow: '0 4px 14px -5px rgba(0,0,0,0.05)',
+        marginBottom: '16px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+          <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '10px', borderRadius: '12px' }}>
+            <Flame size={24} color="#ef4444" />
+          </div>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: 'var(--text-main)' }}>Termómetro Diario de la Empresa</h3>
+            <p style={{ margin: 0, fontSize: '14px', color: 'var(--medium-gray)', fontWeight: 500 }}>Seguimiento en vivo de los {kpiData.length} KPIs críticos para llegar al objetivo del mes.</p>
+          </div>
+        </div>
+
+        {kpiData.length === 0 ? (
+          <div style={{ fontSize: 13, color: 'var(--medium-gray)', textAlign: 'center', padding: '20px 8px' }}>
+            No hay KPIs configurados.
+          </div>
+        ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+          {kpiData.map((k, i) => {
+            const Icono = KPI_ICONS[i % KPI_ICONS.length];
+            const pal = KPI_COLORS[i % KPI_COLORS.length];
+            const esPrincipal = i === 0; // el primer KPI del config ocupa la fila completa arriba
+            return (
+              <div
+                key={k.kpi.id}
+                onClick={() => abrirKpi(k.kpi)}
+                title={k.kpi.metrica === 'comisiones' ? undefined : 'Ver las operaciones que cuentan en este KPI'}
+                style={{ background: 'var(--bg-body)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border-light)', cursor: k.kpi.metrica === 'comisiones' ? 'default' : 'pointer', ...(esPrincipal ? { gridColumn: '1 / -1' as const, order: -1 } : {}) }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Icono size={18} color={pal.color} />
+                    <span title={descBloque(k.kpi)} style={{ fontWeight: 700, color: 'var(--text-main)' }}>{k.kpi.nombre}</span>
+                  </div>
+                  {k.faltan > 0 ? (
+                    esPrincipal ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 700, color: pal.faltanCol, background: pal.faltanBg, padding: '2px 8px', borderRadius: '12px' }}>
+                          Faltan {kpiFmt(k.faltan, k.kpi.metrica)}
+                        </span>
+                        {diasLaborablesRestantes > 0 && (
+                          <span style={{ fontSize: 11.5, fontWeight: 600, color: '#d97706' }}>
+                            💪 ≈ {fmtReto(retoDiarioComercial, k.kpi.metrica)}/día por comercial · {fmtReto(retoDiarioEquipo, k.kpi.metrica)}/día entre todos
+                            <span style={{ color: 'var(--medium-gray)', fontWeight: 500 }}> ({diasLaborablesRestantes} días lab. · {nComercialesTiendas} comerciales)</span>
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: pal.faltanCol, background: pal.faltanBg, padding: '2px 8px', borderRadius: '12px' }}>
+                        Faltan {kpiFmt(k.faltan, k.kpi.metrica)}
+                      </span>
+                    )
+                  ) : (
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
+                      ¡Logrado!
+                    </span>
+                  )}
+                </div>
+                <div style={{ width: '100%', height: '8px', background: 'var(--border-strong)', borderRadius: '4px', overflow: 'hidden', marginBottom: 4 }}>
+                  <div style={{ width: `${k.progressPct}%`, height: '100%', background: pal.grad, borderRadius: '4px' }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--medium-gray)', fontWeight: 600 }}>
+                  <span>Llevamos: <strong style={{ color: 'var(--text-main)' }}>{kpiFmt(k.llevamos, k.kpi.metrica)}</strong></span>
+                  <span>Objetivo: {kpiFmt(k.target, k.kpi.metrica)}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        )}
+      </div>
+
+      {/* FILA 3: CUENTA KMS Y MVP */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '24px' }}>
+        {/* CUENTA KILÓMETROS DEL SALTO DE TRAMO */}
+        <div style={{
+          background: 'var(--bg-card)',
+          borderRadius: 16,
+          padding: '12px',
+          border: '1px solid var(--border-strong)',
+          boxShadow: '0 4px 14px -5px rgba(0,0,0,0.05)',
+          display: 'flex',
+          flexDirection: 'column',
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          {/* Subtle background glow */}
+          <div style={{ position: 'absolute', top: -50, right: -50, width: 150, height: 150, background: 'radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0) 70%)', borderRadius: '50%' }} />
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+            <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '10px', borderRadius: '12px' }}>
+              <Target size={24} color="#10b981" />
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'var(--text-main)' }}>Cuenta Kilómetros</h3>
+              <p title={descBloque(cfg.carrera)} style={{ margin: 0, fontSize: '13px', color: 'var(--medium-gray)', fontWeight: 500 }}>
+                Carrera hacia {cfg.carrera.nombre}
+              </p>
+            </div>
+          </div>
+
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 14, alignItems: 'center', alignContent: 'center', justifyContent: 'center' }}>
+            {(carreraData.length === 0 || carreraData[0].value === 0) ? (
+              <p style={{ margin: 'auto', fontSize: 14, color: 'var(--medium-gray)', textAlign: 'center' }}>Aún no hay ventas de {cfg.carrera.nombre} este mes.</p>
+            ) : carreraData.slice(0, 6).map((r, i) => {
+              const lider = carreraData[0].value;
+              const faltan = lider - r.value;
+              const esImporte = cfg.carrera.metrica === 'importe' || cfg.carrera.metrica === 'comisiones';
+              return (
+                <div key={r.name} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, width: esImporte ? 92 : 78 }}>
+                  <div style={{ position: 'relative', width: 50, height: 50, flexShrink: 0 }}>
+                    <div style={{ width: 50, height: 50, borderRadius: '50%', overflow: 'hidden', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', border: i === 0 ? '2px solid #f59e0b' : '2px solid transparent' }}>
+                      <FotoAvatar name={r.name} fontSize={13} />
+                    </div>
+                    {i === 0 && <span style={{ position: 'absolute', top: -7, right: -5, fontSize: 15 }}>🏆</span>}
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-main)', maxWidth: esImporte ? 92 : 78, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</span>
+                  <span style={{ fontSize: esImporte ? 13 : 20, fontWeight: 900, color: '#10b981', lineHeight: esImporte ? 1.2 : 1, whiteSpace: 'nowrap' }}>{fmtValor(r.value, cfg.carrera.metrica)}</span>
+                  <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{i === 0 ? 'Líder' : (faltan > 0 ? `faltan ${fmtValor(faltan, cfg.carrera.metrica)}` : 'empatado')}</span>
+                  <div style={{ width: '100%', height: 6, background: 'var(--bg-input)', borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{ width: `${lider > 0 ? (r.value / lider) * 100 : 0}%`, height: '100%', background: 'linear-gradient(90deg, #10b981 0%, #34d399 100%)', borderRadius: 3 }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+
+
+
+
+
         {/* EL MVP ROTATIVO */}
         <div style={{
           background: 'var(--bg-card)',
@@ -725,212 +931,6 @@ export default function DashboardPage() {
             })}
           </div>
         </div>
-
-      </div>
-
-      {/* TERMÓMETRO DIARIO DE LA EMPRESA */}
-      <div style={{
-        background: 'var(--bg-card)',
-        borderRadius: 16,
-        padding: '12px',
-        border: '1px solid var(--border-strong)',
-        boxShadow: '0 4px 14px -5px rgba(0,0,0,0.05)',
-        marginBottom: '16px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-          <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '10px', borderRadius: '12px' }}>
-            <Flame size={24} color="#ef4444" />
-          </div>
-          <div>
-            <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: 'var(--text-main)' }}>Termómetro Diario de la Empresa</h3>
-            <p style={{ margin: 0, fontSize: '14px', color: 'var(--medium-gray)', fontWeight: 500 }}>Seguimiento en vivo de los {kpiData.length} KPIs críticos para llegar al objetivo del mes.</p>
-          </div>
-        </div>
-
-        {kpiData.length === 0 ? (
-          <div style={{ fontSize: 13, color: 'var(--medium-gray)', textAlign: 'center', padding: '20px 8px' }}>
-            No hay KPIs configurados.
-          </div>
-        ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-          {kpiData.map((k, i) => {
-            const Icono = KPI_ICONS[i % KPI_ICONS.length];
-            const pal = KPI_COLORS[i % KPI_COLORS.length];
-            const esPrincipal = i === 0; // el primer KPI del config ocupa la fila completa arriba
-            return (
-              <div
-                key={k.kpi.id}
-                onClick={() => abrirKpi(k.kpi)}
-                title={k.kpi.metrica === 'comisiones' ? undefined : 'Ver las operaciones que cuentan en este KPI'}
-                style={{ background: 'var(--bg-body)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border-light)', cursor: k.kpi.metrica === 'comisiones' ? 'default' : 'pointer', ...(esPrincipal ? { gridColumn: '1 / -1' as const, order: -1 } : {}) }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Icono size={18} color={pal.color} />
-                    <span title={descBloque(k.kpi)} style={{ fontWeight: 700, color: 'var(--text-main)' }}>{k.kpi.nombre}</span>
-                  </div>
-                  {k.faltan > 0 ? (
-                    esPrincipal ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                        <span style={{ fontSize: '12px', fontWeight: 700, color: pal.faltanCol, background: pal.faltanBg, padding: '2px 8px', borderRadius: '12px' }}>
-                          Faltan {kpiFmt(k.faltan, k.kpi.metrica)}
-                        </span>
-                        {diasLaborablesRestantes > 0 && (
-                          <span style={{ fontSize: 11.5, fontWeight: 600, color: '#d97706' }}>
-                            💪 ≈ {fmtReto(retoDiarioComercial, k.kpi.metrica)}/día por comercial · {fmtReto(retoDiarioEquipo, k.kpi.metrica)}/día entre todos
-                            <span style={{ color: 'var(--medium-gray)', fontWeight: 500 }}> ({diasLaborablesRestantes} días lab. · {nComercialesTiendas} comerciales)</span>
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <span style={{ fontSize: '12px', fontWeight: 700, color: pal.faltanCol, background: pal.faltanBg, padding: '2px 8px', borderRadius: '12px' }}>
-                        Faltan {kpiFmt(k.faltan, k.kpi.metrica)}
-                      </span>
-                    )
-                  ) : (
-                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
-                      ¡Logrado!
-                    </span>
-                  )}
-                </div>
-                <div style={{ width: '100%', height: '8px', background: 'var(--border-strong)', borderRadius: '4px', overflow: 'hidden', marginBottom: 4 }}>
-                  <div style={{ width: `${k.progressPct}%`, height: '100%', background: pal.grad, borderRadius: '4px' }} />
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--medium-gray)', fontWeight: 600 }}>
-                  <span>Llevamos: <strong style={{ color: 'var(--text-main)' }}>{kpiFmt(k.llevamos, k.kpi.metrica)}</strong></span>
-                  <span>Objetivo: {kpiFmt(k.target, k.kpi.metrica)}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        )}
-      </div>
-
-      {/* FILA 3: CUENTA KMS Y MEDALLAS */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '24px' }}>
-        {/* CUENTA KILÓMETROS DEL SALTO DE TRAMO */}
-        <div style={{
-          background: 'var(--bg-card)',
-          borderRadius: 16,
-          padding: '12px',
-          border: '1px solid var(--border-strong)',
-          boxShadow: '0 4px 14px -5px rgba(0,0,0,0.05)',
-          display: 'flex',
-          flexDirection: 'column',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          {/* Subtle background glow */}
-          <div style={{ position: 'absolute', top: -50, right: -50, width: 150, height: 150, background: 'radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0) 70%)', borderRadius: '50%' }} />
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-            <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '10px', borderRadius: '12px' }}>
-              <Target size={24} color="#10b981" />
-            </div>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'var(--text-main)' }}>Cuenta Kilómetros</h3>
-              <p title={descBloque(cfg.carrera)} style={{ margin: 0, fontSize: '13px', color: 'var(--medium-gray)', fontWeight: 500 }}>
-                Carrera hacia {cfg.carrera.nombre}
-              </p>
-            </div>
-          </div>
-
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 14, alignItems: 'center', alignContent: 'center', justifyContent: 'center' }}>
-            {(carreraData.length === 0 || carreraData[0].value === 0) ? (
-              <p style={{ margin: 'auto', fontSize: 14, color: 'var(--medium-gray)', textAlign: 'center' }}>Aún no hay ventas de {cfg.carrera.nombre} este mes.</p>
-            ) : carreraData.slice(0, 6).map((r, i) => {
-              const lider = carreraData[0].value;
-              const faltan = lider - r.value;
-              const esImporte = cfg.carrera.metrica === 'importe' || cfg.carrera.metrica === 'comisiones';
-              return (
-                <div key={r.name} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, width: esImporte ? 92 : 78 }}>
-                  <div style={{ position: 'relative', width: 50, height: 50, flexShrink: 0 }}>
-                    <div style={{ width: 50, height: 50, borderRadius: '50%', overflow: 'hidden', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', border: i === 0 ? '2px solid #f59e0b' : '2px solid transparent' }}>
-                      <FotoAvatar name={r.name} fontSize={13} />
-                    </div>
-                    {i === 0 && <span style={{ position: 'absolute', top: -7, right: -5, fontSize: 15 }}>🏆</span>}
-                  </div>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-main)', maxWidth: esImporte ? 92 : 78, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</span>
-                  <span style={{ fontSize: esImporte ? 13 : 20, fontWeight: 900, color: '#10b981', lineHeight: esImporte ? 1.2 : 1, whiteSpace: 'nowrap' }}>{fmtValor(r.value, cfg.carrera.metrica)}</span>
-                  <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{i === 0 ? 'Líder' : (faltan > 0 ? `faltan ${fmtValor(faltan, cfg.carrera.metrica)}` : 'empatado')}</span>
-                  <div style={{ width: '100%', height: 6, background: 'var(--bg-input)', borderRadius: 3, overflow: 'hidden' }}>
-                    <div style={{ width: `${lider > 0 ? (r.value / lider) * 100 : 0}%`, height: '100%', background: 'linear-gradient(90deg, #10b981 0%, #34d399 100%)', borderRadius: 3 }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-
-
-
-
-
-        {/* VITRINA DE LOGROS (Estilo PlayStation) */}
-        <div style={{
-          background: 'var(--bg-card)',
-          borderRadius: 16,
-          padding: '12px',
-          border: '1px solid var(--border-strong)',
-          boxShadow: '0 4px 14px -5px rgba(0,0,0,0.05)',
-          display: 'flex',
-          flexDirection: 'column',
-          position: 'relative'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-            <div style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)', padding: '10px', borderRadius: '12px' }}>
-              <Award size={24} color="#8b5cf6" />
-            </div>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'var(--text-main)' }}>Tus Medallas y Logros</h3>
-              <p style={{ margin: 0, fontSize: '13px', color: 'var(--medium-gray)', fontWeight: 500 }}>Desbloqueos recientes esta semana</p>
-            </div>
-          </div>
-
-          {medallasData.length === 0 ? (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--medium-gray)' }}>
-              No hay medallas configuradas.
-            </div>
-          ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${medallasData.length}, 1fr)`, gap: '12px', flex: 1 }}>
-            {medallasData.map((m, i) => {
-              const st = MEDAL_STYLES[i % MEDAL_STYLES.length];
-              const sub = MEDAL_SUBS[m.medalla.id] || 'Sin datos aún';
-              return (
-                <div key={m.medalla.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', background: 'var(--bg-body)', padding: '12px', borderRadius: '12px', border: `1px solid ${st.ring}` }}>
-                  <div style={{ position: 'relative', width: 48, height: 48 }}>
-                    <div style={{ width: 48, height: 48, borderRadius: '50%', overflow: 'hidden', background: st.grad, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 12px ${st.ring}` }}>
-                      {m.oro
-                        ? <FotoAvatar name={m.oro.name} fontSize={13} />
-                        : <Award size={22} color="#fff" />}
-                    </div>
-                    {m.oro && <span style={{ position: 'absolute', top: -6, right: -6, fontSize: 14 }}>{m.medalla.emoji}</span>}
-                  </div>
-                  <div style={{ textAlign: 'center' }}>
-                    <div title={descBloque(m.medalla)} style={{ fontSize: '12px', fontWeight: 800, color: st.col, marginBottom: 2 }}>{m.medalla.nombre}</div>
-                    <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-main)' }}>{m.oro ? m.oro.name : '—'}</div>
-                    <div style={{ fontSize: '10px', color: 'var(--medium-gray)' }}>{m.oro ? valorMedalla(m.oro.value, m.medalla) : sub}</div>
-                  </div>
-                  {m.plata && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 'auto', paddingTop: 8, borderTop: '1px solid var(--border-light)', width: '100%', justifyContent: 'center' }}>
-                      <span style={{ fontSize: 11 }}>🥈</span>
-                      <div style={{ width: 20, height: 20, borderRadius: '50%', overflow: 'hidden', background: st.grad, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <FotoAvatar name={m.plata.name} fontSize={13} />
-                      </div>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 52 }}>{m.plata.name}</span>
-                      <span style={{ fontSize: 9.5, color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{valorMedalla(m.plata.value, m.medalla)}</span>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-          )}
-        </div>
-
-
 
       </div>
 
