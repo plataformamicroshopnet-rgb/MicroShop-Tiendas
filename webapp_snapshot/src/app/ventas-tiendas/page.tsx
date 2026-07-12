@@ -138,7 +138,7 @@ export default function VentasTiendasPage() {
         }
       />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '24px', marginTop: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '24px', marginTop: '24px' }}>
         {displayedComerciales.map((c, idx) => (
           <div 
             key={idx} 

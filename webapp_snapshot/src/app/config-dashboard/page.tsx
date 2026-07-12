@@ -63,7 +63,7 @@ function BloqueEditor({ bloque, onChange, allowClientesMulti = false, allowComis
   const esAuto = String(bloque.tipoVenta || '').trim() === TIPO_AUTO
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1.2fr 1fr', gap: 12, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, alignItems: 'start' }}>
         <div>
           <label style={lbl}>Nombre del bloque</label>
           <input

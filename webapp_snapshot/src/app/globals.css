@@ -284,7 +284,9 @@ button, input, select, textarea {
 
   /* Rejillas en línea de 3+ columnas: a 2 columnas máximo */
   .main-content div[style*="grid-template-columns: 1fr 1.5fr 1fr"],
-  .main-content div[style*="grid-template-columns: 1fr 1fr 1fr"] {
+  .main-content div[style*="grid-template-columns:1fr 1.5fr 1fr"],
+  .main-content div[style*="grid-template-columns: 1fr 1fr 1fr"],
+  .main-content div[style*="grid-template-columns:1fr 1fr 1fr"] {
     grid-template-columns: 1fr 1fr !important;
   }
 
@@ -472,4 +474,20 @@ button, input, select, textarea {
 [data-theme='light'] .card-title {
   color: #0066CC !important;                             /* azul Telefónica (modo claro) */
   border-bottom-color: #E7ECF2 !important;               /* separador claro en modo claro */
+}
+
+/* ── Dashboard Tiempo Real: parrillas adaptables (móvil = 1 columna) ───────── */
+.dash-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+.dash-grid-kpi {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+@media (max-width: 900px) {
+  .dash-grid-2 { grid-template-columns: 1fr; }
+  .dash-grid-kpi { grid-template-columns: 1fr; }
 }

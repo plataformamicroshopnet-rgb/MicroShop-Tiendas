@@ -115,14 +115,14 @@ function SimulatorContent() {
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 400px', gap: '32px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 400px), 1fr))', gap: '32px' }}>
                 
                 {/* MATRIZ DE TABLA BASE */}
                 <div style={{ backgroundColor: '#ffffff', padding: '0', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
                     <h3 style={{ fontSize: 16, backgroundColor: '#0078D4', padding: '16px 24px', margin: '0', color: '#ffffff', display: 'flex', alignItems: 'center', gap: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
                         <Euro size={18} color="#ffffff" /> Importe potencial del mes por Comisión
                     </h3>
-                    <div style={{ padding: '24px' }}>
+                    <div style={{ padding: '24px', overflowX: 'auto' }}>
                         {/* CABECERA DE COLUMNAS */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 16px 12px 16px', borderBottom: '2px solid #e2e8f0', marginBottom: 12 }}>
                             <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>

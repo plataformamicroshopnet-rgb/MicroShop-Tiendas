@@ -465,7 +465,7 @@ export default function ComisionesDashboardPage() {
             </div>
 
             {/* 1. PRIMERA FILA (KPIs SUPERIORES - ANCHURA TOTAL x 4) */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 19, marginTop: 25, marginBottom: 25 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 19, marginTop: 25, marginBottom: 25 }}>
                 
                 {/* Mayor Comisión */}
                 <div className="card" style={{ padding: '18px 19px', display: 'flex', flexDirection: 'column', gap: 5, borderLeft: '4px solid #FFD700', backgroundColor: 'rgba(255, 215, 0, 0.05)' }}>
@@ -590,7 +590,7 @@ export default function ComisionesDashboardPage() {
                                 }}
                             >
                             {/* CABECERA ULTRA COMPACTA Y KPIS */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', rowGap: 8 }}>
                                 {/* IZQUIERDA: Info del Asesor */}
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
                                     <div style={{ 

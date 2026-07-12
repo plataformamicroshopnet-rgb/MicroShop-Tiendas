@@ -295,6 +295,10 @@ export default function TorneosVentasPage() {
             border-radius: 16px;
           }
 
+          @media (max-width: 767px) {
+            .grid-container { grid-template-columns: 1fr !important; }
+          }
+
           .row-oro td {
             background: linear-gradient(90deg, rgba(250,204,21,0.06) 0%, rgba(250,204,21,0.18) 100%);
             font-weight: 800;

@@ -92,7 +92,7 @@ export default function ConfiguradorTorneosPage() {
               <button onClick={() => removeConcurso(ci)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}><Trash2 size={16} /> Quitar</button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1.5fr 1fr', gap: 14, alignItems: 'start' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 14, alignItems: 'start' }}>
               <div>
                 <label style={{ fontSize: 12, color: 'var(--medium-gray,#64748b)', fontWeight: 600 }}>Nombre del concurso</label>
                 <input style={{ ...ipt, width: '100%', marginTop: 4 }} value={c.nombre} placeholder="Ej: Seguros" onChange={e => updateConcurso(ci, { nombre: e.target.value })} />

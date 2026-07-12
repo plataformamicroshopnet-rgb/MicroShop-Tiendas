@@ -585,7 +585,7 @@ export default function DashboardPage() {
 
 
       {/* FILA 1: TORNEOS Y VITRINA DE MEDALLAS */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '16px' }}>
+      <div className="dash-grid-2" style={{ marginBottom: '16px' }}>
         <Link href="/torneos-ventas" style={{ textDecoration: 'none', display: 'block', marginBottom: '0', outline: 'none' }}>
         <div
           style={{
@@ -619,7 +619,7 @@ export default function DashboardPage() {
               No hay torneos configurados.
             </div>
           ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${torneoColumns.length}, 1fr)`, gap: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '14px' }}>
             {torneoColumns.map((col) => (
               <div key={col.concurso.id}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8, textAlign: 'center', borderBottom: '2px solid rgba(14,165,233,0.2)', paddingBottom: 6 }}>{col.concurso.nombre}</div>
@@ -669,7 +669,7 @@ export default function DashboardPage() {
               No hay medallas configuradas.
             </div>
           ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${medallasData.length}, 1fr)`, gap: '12px', flex: 1 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '12px', flex: 1 }}>
             {medallasData.map((m, i) => {
               const st = MEDAL_STYLES[i % MEDAL_STYLES.length];
               const sub = MEDAL_SUBS[m.medalla.id] || 'Sin datos aún';
@@ -733,7 +733,7 @@ export default function DashboardPage() {
             No hay KPIs configurados.
           </div>
         ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+        <div className="dash-grid-kpi">
           {kpiData.map((k, i) => {
             const Icono = KPI_ICONS[i % KPI_ICONS.length];
             const pal = KPI_COLORS[i % KPI_COLORS.length];
@@ -789,7 +789,7 @@ export default function DashboardPage() {
       </div>
 
       {/* FILA 3: CUENTA KMS Y MVP */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '24px' }}>
+      <div className="dash-grid-2" style={{ marginBottom: '24px' }}>
         {/* CUENTA KILÓMETROS DEL SALTO DE TRAMO */}
         <div style={{
           background: 'var(--bg-card)',
@@ -962,7 +962,7 @@ export default function DashboardPage() {
                 <X size={18} />
               </button>
             </div>
-            <div style={{ overflowY: 'auto', padding: '6px 12px 14px 12px' }}>
+            <div style={{ overflowY: 'auto', overflowX: 'auto', padding: '6px 12px 14px 12px' }}>
               {kpiModal.ops.length === 0 ? (
                 <div style={{ padding: 24, textAlign: 'center', fontSize: 13, color: 'var(--medium-gray)' }}>Aún no hay operaciones en este KPI.</div>
               ) : (

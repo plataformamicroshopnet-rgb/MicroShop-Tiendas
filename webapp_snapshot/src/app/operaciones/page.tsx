@@ -372,7 +372,7 @@ function CommercialDashboard({ data, activeExtras = [], isComercial, isAdmin, ca
       </div>
 
       {/* Main Charts */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 400px), 1fr))', gap: 24 }}>
         <div className="card" style={{ padding: '24px', minHeight: '340px' }}>
           <h3 style={{ fontSize: 16, color: '#333333', marginBottom: 24 }}>Top Ventas</h3>
           <ResponsiveContainer width="100%" height={Math.max(260, productData.length * 45)}>
