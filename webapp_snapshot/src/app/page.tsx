@@ -651,7 +651,8 @@ export default function DashboardPage() {
           boxShadow: '0 4px 14px -5px rgba(0,0,0,0.05)',
           display: 'flex',
           flexDirection: 'column',
-          position: 'relative'
+          position: 'relative',
+          height: '100%' // misma altura que la tarjeta de Torneos (su pareja de fila)
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
             <div style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)', padding: '10px', borderRadius: '12px' }}>
@@ -688,13 +689,13 @@ export default function DashboardPage() {
                     <div style={{ fontSize: '10px', color: 'var(--medium-gray)' }}>{m.oro ? valorMedalla(m.oro.value, m.medalla) : sub}</div>
                   </div>
                   {m.plata && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 'auto', paddingTop: 8, borderTop: '1px solid var(--border-light)', width: '100%', justifyContent: 'center' }}>
-                      <span style={{ fontSize: 11 }}>🥈</span>
-                      <div style={{ width: 20, height: 20, borderRadius: '50%', overflow: 'hidden', background: st.grad, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <FotoAvatar name={m.plata.name} fontSize={13} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 'auto', paddingTop: 10, borderTop: '1px solid var(--border-light)', width: '100%', justifyContent: 'center' }}>
+                      <span style={{ fontSize: 14 }}>🥈</span>
+                      <div style={{ width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', background: st.grad, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <FotoAvatar name={m.plata.name} fontSize={14} />
                       </div>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 52 }}>{m.plata.name}</span>
-                      <span style={{ fontSize: 9.5, color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{valorMedalla(m.plata.value, m.medalla)}</span>
+                      <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 78 }}>{m.plata.name}</span>
+                      <span style={{ fontSize: 10.5, color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{valorMedalla(m.plata.value, m.medalla)}</span>
                     </div>
                   )}
                 </div>
