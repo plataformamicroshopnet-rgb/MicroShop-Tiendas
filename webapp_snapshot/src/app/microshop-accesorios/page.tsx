@@ -957,8 +957,8 @@ export default function MicroShopAccesoriosApp() {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                           <span style={{ fontSize: 10, color: '#888', fontWeight: 'bold', textTransform: 'uppercase' }}>{p.categoria}</span>
                           {p.imei && (
-                            <span style={{ fontSize: 9, color: '#00adef', fontFamily: 'monospace', fontWeight: 'bold', background: '#E3F2FD', padding: '2px 4px', borderRadius: 4 }}>
-                              IMEI
+                            <span style={{ fontSize: 11, color: '#00adef', fontFamily: 'monospace', fontWeight: 'bold', background: '#E3F2FD', padding: '2px 6px', borderRadius: 4 }}>
+                              {p.imei}
                             </span>
                           )}
                         </div>
