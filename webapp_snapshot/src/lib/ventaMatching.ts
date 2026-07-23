@@ -6,12 +6,12 @@
 // Parseador de Fórmulas de Productos (soporta exclusiones con " -").
 export const matchProductFormula = (productName: string, formula: string) => {
     if (!formula || !productName) return false;
-    const p = String(productName).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+    const p = String(productName).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
     const orBlocks = formula.split('+').map((b: string) => b.trim());
     for (const block of orBlocks) {
         if (!block) continue;
-        const parts = block.split(' -').map(part => part.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim());
+        const parts = block.split(' -').map(part => part.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim());
         const mustInclude = parts[0];
         const mustNotIncludes = parts.slice(1);
 
@@ -46,8 +46,16 @@ export const matchTipoVenta = (sale: any, tipoVentaRaw: string) => {
         if (cat === 'o2') {
             const target = String(tipoVenta).trim().toLowerCase();
             if (target === 'o2') {
-                const prodName = prod.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
-                matched = prodName.startsWith('fibra') || prodName.startsWith('interna');
+                const prodName = prod.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                // Comodín 'O2' = SOLO fibras: externas ('Fibra …') + internas ('Interna
+                // Fibra …'). Regla del dueño (transmitida por O2, jul-2026): las Fibras
+                // Adicionales y las líneas móviles NO cuentan para los bonos. Antes el
+                // prefijo 'interna*' arrastraba las 'Interna Linea Movil …' (líneas
+                // móviles) y 'fibra*' las 'Fibra Adicional …' a los bonos mensual y
+                // trimestral. Si algún mes deben contar, se añaden por nombre EXACTO
+                // a la lista "Tipo de Venta" de la regla.
+                matched = (prodName.startsWith('fibra') || prodName.startsWith('interna fibra'))
+                    && !prodName.includes('adicional');
             } else {
                 matched = (prod === target);
             }

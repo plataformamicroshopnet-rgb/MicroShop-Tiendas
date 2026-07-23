@@ -90,7 +90,8 @@ export function getSalesDataForStoreAndType(sales: any[], storeName: string, tip
       const det = String(s.detalle || s.categoria || '').toLowerCase().trim()
       if (det !== 'o2') return false
       // La lista "Tipo de Venta" de la regla MANDA (el token 'O2' de la lista = comodín
-      // fibra*/interna* heredado). Antes un prefijo hardcodeado ignoraba la lista y editar
+      // SOLO fibras externas+internas, sin Adicionales ni líneas móviles — ver
+      // matchTipoVenta). Antes un prefijo hardcodeado ignoraba la lista y editar
       // los productos de la regla no cambiaba el bono.
       return isProductMatch(s)
     })

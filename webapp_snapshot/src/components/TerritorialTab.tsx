@@ -152,8 +152,9 @@ export default function TerritorialTab() {
 
     if (storeName === 'O2') {
       // Contar las ventas O2 (detalle/categoria = 'o2') que casen con la lista "Tipo de
-      // Venta" de la regla: la LISTA MANDA (el token 'O2' = comod\u00edn fibra*/interna*
-      // heredado). Antes un prefijo hardcodeado ignoraba la lista.
+      // Venta" de la regla: la LISTA MANDA (el token 'O2' = comod\u00edn SOLO fibras
+      // externas+internas, sin Adicionales ni l\u00edneas m\u00f3viles \u2014 ver matchTipoVenta).
+      // Antes un prefijo hardcodeado ignoraba la lista.
       filtered = sales.filter(s => {
         if (isSaleCancelled(s)) return false;
         const det = String(s.detalle || s.categoria || '').toLowerCase().trim();

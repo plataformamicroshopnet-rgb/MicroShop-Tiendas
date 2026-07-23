@@ -12,7 +12,7 @@ import { usePeriod } from '@/components/PeriodProvider'
 import { OBJECTIVE_KEYS, OBJECTIVE_MAPPING } from '@/lib/constants'
 import { calculateDynamicCommission, sanitizeSale, normalizeString, getCurrentMonthString, isVentaWithinDates, renderDashboardData, isSaleActive, findCatalogVigente } from '@/lib/salesUtils'
 import { getSaleCommissionBase, getSwapBonus } from '@/lib/saleCommission'
-import { computeBonosO2, computeTerritorialTotal, computeTerritorialRows, calculateO2Importe } from '@/lib/territorialConsolidado'
+import { computeBonosO2, computeTerritorialTotal, computeTerritorialRows, calculateO2Importe, getSalesDataForStoreAndType } from '@/lib/territorialConsolidado'
 import { can, canEdit } from '@/lib/permissions'
 import { useGuard } from '@/hooks/useGuard'
 import { useComisionesData } from '@/hooks/useComisionesData'
@@ -1216,11 +1216,15 @@ export default function LiquidacionesPage() {
             { key: '31_40', min: 31, max: 40, label: '31–40' }, { key: '41_plus', min: 41, max: 99999, label: '≥41' },
         ]
         const TRAMOS_TRIM = [{ key: '5_9', min: 5, max: 9, label: '5–9' }, { key: '10_plus', min: 10, max: 99999, label: '≥10' }]
-        const o2AltasSales = salesRawF.filter((s: any) => { if (isAnul(s)) return false; const d = String(s.detalle || s.categoria || '').toLowerCase().trim(); if (d !== 'o2') return false; const p = String(s.producto || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim(); return p.startsWith('fibra') || p.startsWith('interna') })
-        const o2Count = o2AltasSales.length
-        const o2AltasDrill = o2AltasSales.map(toDrill)
         const o2Det: any[] = []
         ;(territorialO2Rules || []).forEach((r: any) => {
+            // MISMO criterio que la Entrada de Datos y el feed del ERP (territorialConsolidado):
+            // la lista "Tipo de Venta" de la regla MANDA (token 'O2' = comodín SOLO fibras,
+            // sin Adicionales ni líneas móviles). Antes un prefijo fibra*/interna* hardcodeado
+            // arrastraba las 'Interna Linea Movil …' y las 'Fibra Adicional …' a este desglose.
+            const o2AltasSales = getSalesDataForStoreAndType(salesRawF, 'O2', r.tipoVenta).logs
+            const o2Count = o2AltasSales.length
+            const o2AltasDrill = o2AltasSales.map(toDrill)
             const mesT = TRAMOS_MES.find(t => o2Count >= t.min && o2Count <= t.max)
             const trimT = TRAMOS_TRIM.find(t => o2Count >= t.min && o2Count <= t.max)
             const mesImp = mesT ? parseNum(r.tramosMes?.[mesT.key]) : 0

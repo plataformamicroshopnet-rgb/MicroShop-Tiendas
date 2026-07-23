@@ -66,18 +66,21 @@ export const matchesRule = (s: any, ruleName: string, ruleProductosCuentan: stri
 
         // La lista "Tipo de Venta" de la regla MANDA (Reglas Globales O2 / MovilFree): lo que
         // se selecciona cuenta y lo que se quita deja de contar. matchTipoVenta casa las ventas
-        // O2 por nombre EXACTO de producto (el token 'O2' de la lista = comodín fibra*/interna*
-        // heredado). Antes se emparejaba por PREFIJO hardcodeado y editar la lista no surtía
-        // efecto (caso "Fibra Adicional" en junio-2026).
+        // O2 por nombre EXACTO de producto (el token 'O2' de la lista = comodín SOLO fibras,
+        // sin Adicionales ni líneas móviles — regla del dueño jul-2026). Antes se emparejaba
+        // por PREFIJO hardcodeado y editar la lista no surtía efecto (caso "Fibra Adicional"
+        // en junio-2026).
         if (String(ruleProductosCuentan || '').trim()) {
             return matchTipoVenta(s, ruleProductosCuentan);
         }
-        // Compat: regla sin lista configurada -> prefijo de siempre.
+        // Compat: regla sin lista configurada -> prefijo, ENDURECIDO (jul-2026): solo fibras.
+        // Las 'Fibra Adicional …' y las líneas móviles ('Interna Linea Movil …') no cuentan
+        // por defecto; si un mes deben contar, se añaden por nombre exacto a la lista.
         if (normRule.includes('altas/portas') || normRule.includes('altas fibra') || normRule === 'altas/portas fibra') {
-            return prodName.startsWith('fibra');
+            return prodName.startsWith('fibra') && !prodName.includes('adicional');
         }
         if (normRule.includes('internas') || normRule === 'internas fibra') {
-            return prodName.startsWith('interna');
+            return prodName.startsWith('interna fibra') && !prodName.includes('adicional');
         }
         return false;
     }
