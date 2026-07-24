@@ -78,6 +78,15 @@ function cita(t: string): string {
     return s
 }
 
+// Reglas de tono comunes a los dos encargos (completo y de historia única).
+const TONO_BASE =
+    'TONO Y ESTILO:\n' +
+    '- Cercano y empático. Jamás culpabilices a los padres ni al niño.\n' +
+    '- Frases cortas, una idea por línea, separadas por líneas en blanco (como se lee en una historia de Instagram).\n' +
+    '- Emojis con moderación (2 a 5 por historia), nada recargado.\n' +
+    '- Nada de promesas milagro, tecnicismos ni jerga de psicología.\n' +
+    '- Consejos realistas de organización y estudio propios de primaria.\n'
+
 function construirEncargo(consulta: string): string {
     return 'Eres quien escribe los textos de Instagram de Selene, profesora particular de apoyo de ' +
         'primaria, especializada en organización, hábitos y técnicas de estudio. Muy importante: su ' +
@@ -87,12 +96,7 @@ function construirEncargo(consulta: string): string {
         'Escribe una secuencia de 8 historias de Instagram sobre esa consulta siguiendo EXACTAMENTE ' +
         'este arco narrativo:\n\n' +
         ARCO_PASOS.map((p, i) => 'HISTORIA ' + (i + 1) + ' — ' + p.n + ': ' + p.guia).join('\n') + '\n\n' +
-        'TONO Y ESTILO:\n' +
-        '- Cercano y empático. Jamás culpabilices a los padres ni al niño.\n' +
-        '- Frases cortas, una idea por línea, separadas por líneas en blanco (como se lee en una historia de Instagram).\n' +
-        '- Emojis con moderación (2 a 5 por historia), nada recargado.\n' +
-        '- Nada de promesas milagro, tecnicismos ni jerga de psicología.\n' +
-        '- Consejos realistas de organización y estudio propios de primaria.\n' +
+        TONO_BASE +
         '- La HISTORIA 1 empieza citando la consulta tal cual (Me escribe una familia: “…”) y termina con «👉 Sí / No (encuesta)».\n' +
         '- La HISTORIA 8 cierra con la filosofía de Selene (que el niño acabe haciéndolo solo: autonomía) ' +
         'más una invitación suave del tipo «Comenta PALABRA y te cuento», eligiendo una PALABRA clave ' +
@@ -104,6 +108,33 @@ function construirEncargo(consulta: string): string {
         'Responde ÚNICAMENTE con los 8 bloques, cada uno encabezado por una línea que diga exactamente ' +
         'HISTORIA 1, HISTORIA 2… hasta HISTORIA 8, y debajo el texto completo de esa historia. ' +
         'Sin saludo, sin comentarios antes ni después, sin numeración adicional y sin negritas de markdown.'
+}
+
+// ── MODO HISTORIA ÚNICA: el ✨ de cada tarjeta pide reescribir SOLO un paso
+// del arco. Encargo corto: rol de Selene + consulta citada + la guía de ESE
+// paso + la historia actual con instrucción de escribir UNA versión distinta
+// y mejor, mismo tono, sin encabezados. ──
+function construirEncargoHistoria(consulta: string, paso: number, historiaActual: string): string {
+    const p = ARCO_PASOS[paso - 1]
+    return 'Eres quien escribe los textos de Instagram de Selene, profesora particular de apoyo de ' +
+        'primaria, especializada en organización, hábitos y técnicas de estudio. Muy importante: su ' +
+        'cliente es el PADRE o la MADRE del alumno (quien la contrata y quien la sigue en Instagram), ' +
+        'no el niño.\n\n' +
+        'Una familia le ha escrito esta consulta:\n\n«' + cita(consulta) + '»\n\n' +
+        'Selene publica una secuencia de 8 historias de Instagram sobre esa consulta siguiendo un ' +
+        'arco narrativo fijo. Ahora mismo SOLO te toca la HISTORIA ' + paso + ' — ' + p.n + ': ' + p.guia + '\n\n' +
+        (historiaActual
+            ? 'La versión actual de esa historia es esta:\n\n' + historiaActual + '\n\n' +
+              'Escribe UNA versión DISTINTA y mejor de esa misma historia (solo esa), sin repetir sus frases.\n\n'
+            : 'Escribe esa historia (solo esa).\n\n') +
+        TONO_BASE +
+        (paso === 1 ? '- Esta historia empieza citando la consulta tal cual (Me escribe una familia: “…”) y termina con «👉 Sí / No (encuesta)».\n' : '') +
+        (paso === 8 ? '- Esta historia cierra con la filosofía de Selene (que el niño acabe haciéndolo solo: autonomía) ' +
+            'más una invitación suave del tipo «Comenta PALABRA y te cuento», eligiendo una PALABRA clave ' +
+            'EN MAYÚSCULAS acorde al tema.\n' : '') +
+        '\nFORMATO DE SALIDA (estricto):\n' +
+        'Responde ÚNICAMENTE con el texto de esa historia, sin encabezado (nada de «HISTORIA ' + paso + '»), ' +
+        'sin comentarios antes ni después y sin negritas de markdown.'
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -152,10 +183,24 @@ function respuestaEnlatada(): { texto: string; input_tokens: number; output_toke
     return { texto: bloques.join('\n\n'), input_tokens: 1200, output_tokens: 900 }
 }
 
-async function llamarAnthropic(encargo: string): Promise<{ texto: string; input_tokens: number; output_tokens: number }> {
+// Contador del modo prueba de historia única: cada llamada devuelve una versión
+// DISTINTA (persiste mientras viva el proceso del dev server, que es lo que se
+// necesita para verificar que ✨ sustituye de verdad el texto).
+let fakeContadorHistoria = 0
+function respuestaEnlatadaHistoria(paso: number): { texto: string; input_tokens: number; output_tokens: number } {
+    fakeContadorHistoria += 1
+    const p = ARCO_PASOS[paso - 1]
+    const texto = '(Versión de PRUEBA nº ' + fakeContadorHistoria + ' — paso «' + p.n + '»)\n\n' +
+        'Historia única reescrita en modo prueba.\n\n' +
+        'Cada clic en ✨ da una versión distinta. 🌱' +
+        (paso === 1 ? '\n\n👉 Sí / No (encuesta)' : paso === 8 ? '\n\nComenta PRUEBA y te cuento. ✨' : '')
+    return { texto, input_tokens: 420, output_tokens: 130 }
+}
+
+async function llamarAnthropic(encargo: string, maxTokens: number, pasoFake?: number): Promise<{ texto: string; input_tokens: number; output_tokens: number }> {
     const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) throw new Error('El servidor no tiene configurada la clave de la IA (ANTHROPIC_API_KEY).')
-    if (apiKey === 'fake') return respuestaEnlatada()
+    if (apiKey === 'fake') return pasoFake ? respuestaEnlatadaHistoria(pasoFake) : respuestaEnlatada()
 
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -166,7 +211,7 @@ async function llamarAnthropic(encargo: string): Promise<{ texto: string; input_
         },
         body: JSON.stringify({
             model: 'claude-sonnet-5',
-            max_tokens: 3000,
+            max_tokens: maxTokens,
             messages: [{ role: 'user', content: encargo }],
         }),
     })
@@ -209,9 +254,21 @@ export async function POST(request: Request) {
         return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401, headers: CORS_HEADERS })
     }
     let consulta = ''
+    let paso: number | null = null           // 1..8 → modo historia única (✨ por tarjeta)
+    let historiaActual = ''
     try {
         const body = await request.json()
         consulta = String(body?.consulta || '').trim()
+        if (body?.paso !== undefined && body?.paso !== null) {
+            const n = Number(body.paso)
+            if (!Number.isInteger(n) || n < 1 || n > 8) {
+                return NextResponse.json({ ok: false, error: 'el paso debe ser un número entero del 1 al 8' },
+                    { status: 400, headers: CORS_HEADERS })
+            }
+            paso = n
+        }
+        // La historia actual solo se usa como contexto: se recorta con generosidad.
+        historiaActual = String(body?.historiaActual || '').trim().slice(0, 1500)
     } catch {
         return NextResponse.json({ ok: false, error: 'cuerpo inválido (se espera JSON con "consulta")' },
             { status: 400, headers: CORS_HEADERS })
@@ -226,12 +283,15 @@ export async function POST(request: Request) {
     }
 
     try {
-        const encargo = construirEncargo(consulta)
-        const r = await llamarAnthropic(encargo)
+        const encargo = paso
+            ? construirEncargoHistoria(consulta, paso, historiaActual)
+            : construirEncargo(consulta)
+        const r = await llamarAnthropic(encargo, paso ? 600 : 3000, paso || undefined)
         const costeUsd = r.input_tokens * USD_IN_PER_TOKEN + r.output_tokens * USD_OUT_PER_TOKEN
         apuntarEnLog({
             fecha: new Date().toISOString(),
-            consulta: consulta.slice(0, 200),
+            // El modo historia única se marca en el log con «H{paso}» delante.
+            consulta: (paso ? '«H' + paso + '» ' : '') + consulta.slice(0, 190),
             tokensIn: r.input_tokens,
             tokensOut: r.output_tokens,
             costeUsd,
