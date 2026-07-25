@@ -34,13 +34,14 @@ const TEXTAREA_MAX_HEIGHT = 420
 // SU tamaño manda: no tocamos la altura y el exceso de texto da scroll interno.
 const autoResizeTextarea = (el: HTMLTextAreaElement | null) => {
   if (!el) return
-  if (el.dataset.manualSize === '1') {
-    el.style.overflowY = el.scrollHeight > el.clientHeight + 1 ? 'auto' : 'hidden'
-    return
-  }
+  // overflowY SIEMPRE 'auto': con 'hidden' Chrome/Edge NO dibujan el tirador de
+  // la esquina (resize:both queda invisible). Como la altura se fija al alto
+  // exacto del contenido (bordes incluidos), la barra no llega a aparecer.
+  el.style.overflowY = 'auto'
+  if (el.dataset.manualSize === '1') return
   el.style.height = 'auto'
-  el.style.height = Math.min(el.scrollHeight, TEXTAREA_MAX_HEIGHT) + 'px'
-  el.style.overflowY = el.scrollHeight > TEXTAREA_MAX_HEIGHT ? 'auto' : 'hidden'
+  const bordes = el.offsetHeight - el.clientHeight   // box-sizing: border-box
+  el.style.height = Math.min(el.scrollHeight + bordes, TEXTAREA_MAX_HEIGHT) + 'px'
 }
 
 export default function AdminMonthlyConditionsPage() {
@@ -245,7 +246,11 @@ export default function AdminMonthlyConditionsPage() {
 
   return (
     <div className="w-full" style={{ padding: '24px 32px', backgroundColor: 'var(--bg-app)', minHeight: '100vh' }}>
-      <PageHeader 
+      {/* El resizer nativo (gris, casi invisible sobre el fondo del input) se
+          oculta: el tirador visible lo dibuja el propio fondo del textarea. */}
+      <style dangerouslySetInnerHTML={{ __html:
+        'textarea.mc-resizable::-webkit-resizer{background:transparent}' }} />
+      <PageHeader
         title={<><Target color="#3b82f6" size={28} /> Condiciones, Comisiones Extras del mes y Penalizaciones</>}
         subtitle="Administrador de comisiones extra por periodo."
         showBack={true}
@@ -447,7 +452,14 @@ export default function AdminMonthlyConditionsPage() {
                         onChange={e => { setEditForm({ ...editForm, text: e.target.value }); autoResizeTextarea(e.target) }}
                         onMouseDown={handleTextareaResizeStart}
                         rows={3}
-                        style={{ padding: '12px', borderRadius: '8px', border: '1px solid var(--border-strong)', background: 'var(--bg-input)', color: 'var(--text-main)', width: '100%', resize: 'both', overflowY: 'hidden', minHeight: '86px', maxWidth: '100%', minWidth: '120px' }}
+                        title="Arrastra esta esquina ⤡ para cambiar el tamaño de la caja"
+                        className="mc-resizable"
+                        style={{ padding: '12px', paddingBottom: '18px', borderRadius: '8px', border: '1px solid var(--border-strong)', background: 'var(--bg-input)', color: 'var(--text-main)', width: '100%', resize: 'both', overflowY: 'auto', minHeight: '86px', maxWidth: '100%', minWidth: '120px',
+                          // Tirador VISIBLE dibujado con el propio fondo del textarea (el
+                          // grip nativo es gris y casi no se ve): dos rayas diagonales en
+                          // la esquina, en el color del texto → contrasta en claro y oscuro.
+                          backgroundImage: 'linear-gradient(135deg, transparent 0 40%, currentColor 40% 52%, transparent 52% 62%, currentColor 62% 74%, transparent 74%)',
+                          backgroundSize: '13px 13px', backgroundPosition: 'right 4px bottom 4px', backgroundRepeat: 'no-repeat' }}
                       />
                       {manualSized && (
                         <button
