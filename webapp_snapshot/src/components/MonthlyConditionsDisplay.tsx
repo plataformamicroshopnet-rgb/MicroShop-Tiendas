@@ -184,11 +184,11 @@ export function MonthlyConditionsDisplay() {
       `}} />
 
       <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-        gap: '20px',
-        padding: '0',
-        alignItems: 'start' /* UI: cada tarjeta con su altura natural, sin igualarse a la más alta */
+        /* UI mosaico: columnas CSS responsive (mismo ancho base que el minmax(250px) del
+           grid anterior); las tarjetas se apilan en vertical rellenando los huecos */
+        columnWidth: '250px',
+        columnGap: '20px',
+        padding: '0'
       }}>
         {sortedConditions.map((condition, i) => {
           const config = TYPE_CONFIG[condition.type]
@@ -208,7 +208,9 @@ export function MonthlyConditionsDisplay() {
               borderBottom: '1px solid var(--border-strong)',
               borderLeft: `4px solid ${condition.color || config.textColor}`,
               boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
-              transition: 'transform 0.2s ease'
+              transition: 'transform 0.2s ease',
+              breakInside: 'avoid', /* UI mosaico: la tarjeta no se parte entre columnas */
+              marginBottom: '20px' /* UI mosaico: separación vertical (sustituye al gap del grid) */
             }}>
               {isEditMode && (
                 <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 10, display: 'flex', gap: 4, background: 'var(--bg-card)', padding: 4, borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.1)', border: '1px solid var(--border-light)' }}>

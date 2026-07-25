@@ -29,9 +29,15 @@ const TYPE_OPTIONS: { value: ConditionType; label: string; icon: any; color: str
 // UI: tope del textarea (~18-20 líneas); a partir de ahí, scroll interno
 const TEXTAREA_MAX_HEIGHT = 420
 
-// UI: ajusta la altura del textarea a SU contenido (solo presentación, sin tocar datos)
+// UI: ajusta la altura del textarea a SU contenido (solo presentación, sin tocar datos).
+// Si el usuario lo ha redimensionado a mano desde la esquina (dataset.manualSize),
+// SU tamaño manda: no tocamos la altura y el exceso de texto da scroll interno.
 const autoResizeTextarea = (el: HTMLTextAreaElement | null) => {
   if (!el) return
+  if (el.dataset.manualSize === '1') {
+    el.style.overflowY = el.scrollHeight > el.clientHeight + 1 ? 'auto' : 'hidden'
+    return
+  }
   el.style.height = 'auto'
   el.style.height = Math.min(el.scrollHeight, TEXTAREA_MAX_HEIGHT) + 'px'
   el.style.overflowY = el.scrollHeight > TEXTAREA_MAX_HEIGHT ? 'auto' : 'hidden'
@@ -54,6 +60,26 @@ export default function AdminMonthlyConditionsPage() {
   // Editor state
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<Partial<IMonthlyCondition>>({})
+
+  // UI: true si la caja en edición se ha redimensionado a mano desde la esquina
+  const [manualSized, setManualSized] = useState(false)
+  useEffect(() => { setManualSized(false) }, [editingId])
+
+  // UI: detecta el redimensionado manual (mousedown en el textarea + mouseup a nivel
+  // documento comparando tamaños); si cambió, el tamaño del usuario pasa a mandar
+  const handleTextareaResizeStart = (e: React.MouseEvent<HTMLTextAreaElement>) => {
+    const el = e.currentTarget
+    const w = el.offsetWidth, h = el.offsetHeight
+    const onUp = () => {
+      document.removeEventListener('mouseup', onUp)
+      if (Math.abs(el.offsetWidth - w) > 2 || Math.abs(el.offsetHeight - h) > 2) {
+        el.dataset.manualSize = '1'
+        autoResizeTextarea(el) // en modo manual solo decide el scroll interno
+        setManualSized(true)
+      }
+    }
+    document.addEventListener('mouseup', onUp)
+  }
 
   useEffect(() => {
     if (activePeriodKey && authorized) {
@@ -267,10 +293,10 @@ export default function AdminMonthlyConditionsPage() {
 
       <div style={{
         marginTop: '32px',
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-        gap: '20px',
-        alignItems: 'start' /* UI: cada tarjeta con su altura natural, sin igualarse a la más alta */
+        /* UI mosaico: columnas CSS responsive (mismo ancho base que el minmax(260px) del
+           grid anterior); las tarjetas se apilan en vertical rellenando los huecos */
+        columnWidth: '260px',
+        columnGap: '20px'
       }}>
         {loading ? (
           <div style={{ color: 'var(--text-muted)' }}>Cargando...</div>
@@ -303,7 +329,9 @@ export default function AdminMonthlyConditionsPage() {
                 boxShadow: isEditing ? '0 0 0 4px rgba(59,130,246,0.1)' : '0 2px 6px rgba(0,0,0,0.02)',
                 display: 'flex',
                 flexDirection: 'column',
-                transition: 'all 0.2s ease-in-out'
+                transition: 'all 0.2s ease-in-out',
+                breakInside: 'avoid', /* UI mosaico: la tarjeta no se parte entre columnas */
+                marginBottom: '20px' /* UI mosaico: separación vertical (sustituye al gap del grid) */
               }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
                   {isEditing ? (
@@ -417,9 +445,24 @@ export default function AdminMonthlyConditionsPage() {
                         ref={autoResizeTextarea}
                         value={displayData.text || ''}
                         onChange={e => { setEditForm({ ...editForm, text: e.target.value }); autoResizeTextarea(e.target) }}
+                        onMouseDown={handleTextareaResizeStart}
                         rows={3}
-                        style={{ padding: '12px', borderRadius: '8px', border: '1px solid var(--border-strong)', background: 'var(--bg-input)', color: 'var(--text-main)', width: '100%', resize: 'none', overflowY: 'hidden', minHeight: '86px' }}
+                        style={{ padding: '12px', borderRadius: '8px', border: '1px solid var(--border-strong)', background: 'var(--bg-input)', color: 'var(--text-main)', width: '100%', resize: 'both', overflowY: 'hidden', minHeight: '86px', maxWidth: '100%', minWidth: '120px' }}
                       />
+                      {manualSized && (
+                        <button
+                          title="Volver al ajuste automático de tamaño"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            const el = document.getElementById(`text-${c.id}`) as HTMLTextAreaElement | null
+                            if (el) { delete el.dataset.manualSize; el.style.width = '100%'; autoResizeTextarea(el) }
+                            setManualSized(false)
+                          }}
+                          style={{ alignSelf: 'flex-start', padding: '2px 10px', borderRadius: '6px', border: '1px dashed var(--border-strong)', background: 'transparent', color: 'var(--text-muted)', fontSize: '12px', cursor: 'pointer' }}
+                        >
+                          ↺ Tamaño automático
+                        </button>
+                      )}
                     </>
                   ) : (
                     <>
