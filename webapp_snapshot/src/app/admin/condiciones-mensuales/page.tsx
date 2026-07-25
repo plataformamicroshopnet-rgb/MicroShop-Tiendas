@@ -26,6 +26,17 @@ const TYPE_OPTIONS: { value: ConditionType; label: string; icon: any; color: str
   { value: 'NOTA', label: 'Nota', icon: Info, color: '#f59e0b', rgb: '245, 158, 11' }
 ]
 
+// UI: tope del textarea (~18-20 líneas); a partir de ahí, scroll interno
+const TEXTAREA_MAX_HEIGHT = 420
+
+// UI: ajusta la altura del textarea a SU contenido (solo presentación, sin tocar datos)
+const autoResizeTextarea = (el: HTMLTextAreaElement | null) => {
+  if (!el) return
+  el.style.height = 'auto'
+  el.style.height = Math.min(el.scrollHeight, TEXTAREA_MAX_HEIGHT) + 'px'
+  el.style.overflowY = el.scrollHeight > TEXTAREA_MAX_HEIGHT ? 'auto' : 'hidden'
+}
+
 export default function AdminMonthlyConditionsPage() {
   const { authorized } = useGuard('MODULE_ADMIN')
   const { activePeriodKey, availablePeriods } = usePeriod()
@@ -49,6 +60,13 @@ export default function AdminMonthlyConditionsPage() {
       loadConditions()
     }
   }, [activePeriodKey, authorized])
+
+  // UI: re-ajusta la altura del textarea en edición cuando cambia su texto
+  // (cubre el tecleo y los botones de formato B/A que insertan etiquetas)
+  useEffect(() => {
+    if (!editingId) return
+    autoResizeTextarea(document.getElementById(`text-${editingId}`) as HTMLTextAreaElement | null)
+  }, [editingId, editForm.text])
 
   const loadConditions = async () => {
     setLoading(true)
@@ -247,11 +265,12 @@ export default function AdminMonthlyConditionsPage() {
         </div>
       </div>
 
-      <div style={{ 
-        marginTop: '32px', 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', 
-        gap: '20px' 
+      <div style={{
+        marginTop: '32px',
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+        gap: '20px',
+        alignItems: 'start' /* UI: cada tarjeta con su altura natural, sin igualarse a la más alta */
       }}>
         {loading ? (
           <div style={{ color: 'var(--text-muted)' }}>Cargando...</div>
@@ -284,8 +303,7 @@ export default function AdminMonthlyConditionsPage() {
                 boxShadow: isEditing ? '0 0 0 4px rgba(59,130,246,0.1)' : '0 2px 6px rgba(0,0,0,0.02)',
                 display: 'flex',
                 flexDirection: 'column',
-                transition: 'all 0.2s ease-in-out',
-                height: '100%'
+                transition: 'all 0.2s ease-in-out'
               }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
                   {isEditing ? (
@@ -394,12 +412,13 @@ export default function AdminMonthlyConditionsPage() {
                           A
                         </button>
                       </div>
-                      <textarea 
+                      <textarea
                         id={`text-${c.id}`}
+                        ref={autoResizeTextarea}
                         value={displayData.text || ''}
-                        onChange={e => setEditForm({ ...editForm, text: e.target.value })}
+                        onChange={e => { setEditForm({ ...editForm, text: e.target.value }); autoResizeTextarea(e.target) }}
                         rows={3}
-                        style={{ padding: '12px', borderRadius: '8px', border: '1px solid var(--border-strong)', background: 'var(--bg-input)', color: 'var(--text-main)', width: '100%', resize: 'vertical' }}
+                        style={{ padding: '12px', borderRadius: '8px', border: '1px solid var(--border-strong)', background: 'var(--bg-input)', color: 'var(--text-main)', width: '100%', resize: 'none', overflowY: 'hidden', minHeight: '86px' }}
                       />
                     </>
                   ) : (
