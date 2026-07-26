@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client'
 import { computePanelComisionesTiendas } from '@/lib/panelComisionesTiendas'
 import { findCatalogVigente } from '@/lib/salesUtils'
 import { tiendaDeComercial, norm } from '@/lib/comercialRoster'
+import { computeComisionJefeTiendas, JEFE_PCT_DEFAULTS, JEFE_PCT_SETTING_KEYS, JefePcts } from '@/lib/comisionJefeTiendas'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMISIÓN POR OPERACIÓN de cada comercial para un mes (liquidación) — TIENDAS.
@@ -302,7 +303,83 @@ export async function POST(request: Request) {
       }
     })
 
-    return NextResponse.json({ success: true, mes, porComercial, excluidas })
+    // (7) Comisión del JEFE DE TIENDAS (Salva): 4 palancas (Disp+Seg, ARPU,
+    // Altas Total BAF, BAF Convergente), cada una = base € × % del tramo MÁS
+    // ALTO alcanzado — el MISMO helper que la pantalla «Comisiones Jefe Tiendas»
+    // (src/lib/comisionJefeTiendas). Se calcula sobre el universo YA filtrado
+    // por excluirIds: las bajas del ERP recalculan bases y tramos solas en cada
+    // re-verificación. Mismo patrón que el jefe del programa FFVV: entrada extra
+    // en porComercial (su total en UN extra, el ERP no coteja extras) + campo
+    // top-level `jefe` con el desglose.
+    let jefe: any = null
+    if (porComercial.length > 0) {
+      const [pctSettings, territorialTiendasSetting, jefeUser] = await Promise.all([
+        prisma.appSetting.findMany({ where: { key: { in: Object.values(JEFE_PCT_SETTING_KEYS) } } }),
+        prisma.appSetting.findUnique({ where: { key: `territorial_tiendas_${mes}` } }),
+        prisma.user.findFirst({ where: { role: 'JEFE DE VENTAS' } }),
+      ])
+      // Los 9 % del Jefe: AppSettings GLOBALES con los defaults del código (los
+      // mismos con los que arranca la pantalla).
+      const settingByKey = new Map(pctSettings.map(s => [s.key, s.value]))
+      const pcts: JefePcts = { ...JEFE_PCT_DEFAULTS }
+      for (const k of Object.keys(JEFE_PCT_SETTING_KEYS) as (keyof JefePcts)[]) {
+        const raw = settingByKey.get(JEFE_PCT_SETTING_KEYS[k])
+        if (raw !== undefined && raw !== null) {
+          const n = Number(raw)
+          if (Number.isFinite(n)) pcts[k] = n
+        }
+      }
+      let territorialTiendasRules: any[] = []
+      if (territorialTiendasSetting?.value) {
+        try { territorialTiendasRules = JSON.parse(territorialTiendasSetting.value) || [] } catch {}
+      }
+
+      const cj = computeComisionJefeTiendas({
+        sellerStats: result.sellerStats,
+        adjustedTiendaRules: result.adjustedTiendaRules,
+        territorialTiendasRules,
+        monthSales: ventas,
+        catalogs,
+        viewingPeriod: mes.replace(/[_-]/g, ''),
+        pcts,
+      })
+
+      const nombreJefe = jefeUser?.username || 'Salva'
+      jefe = {
+        comercial: nombreJefe,
+        porcentajes: pcts,
+        palancas: cj.palancas.map(p => ({
+          ...p,
+          base: r2(p.base),
+          importe: r2(p.importe),
+          tramos: p.tramos.map(t => ({ ...t, amount: r2(t.amount) })),
+        })),
+        totalCondicionado: r2(cj.totalCondicionado),
+        total: r2(cj.total),
+      }
+
+      // El jefe viaja como un comercial más con su importe en UN extra: el ERP
+      // ya trata los extras sin cotejo contra Telefónica (no son ventas).
+      const resumenPalancas = cj.palancas
+        .filter(p => p.tramoAlcanzado > 0)
+        .map(p => `${p.palanca} T${p.tramoAlcanzado} (${p.pctAplicado}%)`)
+        .join(', ') || 'sin objetivos alcanzados'
+      porComercial.push({
+        comercial: nombreJefe,
+        perfil: 'Jefe de Tiendas',
+        lineas: [],
+        extras: [{
+          concepto: `Comisión Jefe de Tiendas — ${resumenPalancas}`,
+          importe: r2(cj.total),
+        }],
+        objetivos: [],
+        totalLineas: 0,
+        totalExtras: r2(cj.total),
+        total: r2(cj.total),
+      } as any)
+    }
+
+    return NextResponse.json({ success: true, mes, porComercial, jefe, excluidas })
   } catch (e: any) {
     console.error('[POST comisiones-liquidacion]', e)
     return NextResponse.json({ success: false, error: String(e?.message || e) }, { status: 500 })

@@ -2,12 +2,11 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { PageHeader } from '@/components/PageHeader'
-import { useComisionesData, matchTipoVenta, parseSafeFloat } from '@/hooks/useComisionesData'
+import { useComisionesData } from '@/hooks/useComisionesData'
 import { useGuard } from '@/hooks/useGuard'
 import { useRouter } from 'next/navigation'
 import { AuditableCell } from '@/components/AuditableCell'
-import { computeTerritorialRows } from '@/lib/territorialConsolidado'
-import { getSaleCommission } from '@/lib/saleCommission'
+import { computeComisionJefeTiendas } from '@/lib/comisionJefeTiendas'
 
 export default function ComisionesJefeTiendasPage() {
     const router = useRouter()
@@ -74,133 +73,34 @@ export default function ComisionesJefeTiendasPage() {
         }
     }
 
-    const { tableData, totalDispVentas, totalArpuVentas, globalDispObj1, globalDispObj2, globalDispObj3, globalArpuObj1, globalArpuObj2 } = useMemo(() => {
-        if (!sellerStats || sellerStats.length === 0) {
-            return { tableData: [], totalDispVentas: 0, totalArpuVentas: 0, globalDispObj1: 0, globalDispObj2: 0, globalDispObj3: 0, globalArpuObj1: 0, globalArpuObj2: 0 }
-        }
+    // ── FUENTE ÚNICA: el mismo helper que usa /api/comisiones-liquidacion ──
+    // (src/lib/comisionJefeTiendas). Aquí solo se pinta lo que devuelve.
+    const cj = useMemo(() => computeComisionJefeTiendas({
+        sellerStats: sellerStats || [],
+        adjustedTiendaRules: tiendaRules || [],
+        territorialTiendasRules: territorialTiendasRules || [],
+        monthSales: monthSales || [],
+        catalogs: catalogs || {},
+        viewingPeriod: activePeriodKey ? String(activePeriodKey).replace(/[_-]/g, '') : '',
+        pcts: { dispPct1, dispPct2, dispPct3, arpuPct1, arpuPct2, bafPct1, bafPct2, convPct1, convPct2 },
+    }), [sellerStats, tiendaRules, territorialTiendasRules, monthSales, catalogs, activePeriodKey,
+        dispPct1, dispPct2, dispPct3, arpuPct1, arpuPct2, bafPct1, bafPct2, convPct1, convPct2])
 
-        const dispRule = tiendaRules?.find(r => r.nombre?.toLowerCase().includes('dispositivo') && r.nombre?.toLowerCase().includes('seguro'))
-        const arpuRule = tiendaRules?.find(r => r.nombre?.toLowerCase().includes('arpu'))
+    const [pDisp, pArpu, pBaf, pConv] = cj.palancas
+    const tableData = cj.porComercial
+    const totalDispVentas = pDisp.base
+    const totalArpuVentas = pArpu.base
+    const globalDispObj1 = pDisp.obj1
+    const globalDispObj2 = pDisp.obj2
+    const globalDispObj3 = pDisp.obj3 || 0
+    const globalArpuObj1 = pArpu.obj1
+    const globalArpuObj2 = pArpu.obj2
+    const baf = { obj1: pBaf.obj1, obj2: pBaf.obj2, uds: pBaf.uds || 0, base: pBaf.base }
+    const conv = { obj1: pConv.obj1, obj2: pConv.obj2, uds: pConv.uds || 0, base: pConv.base }
 
-        const gDispObj1 = dispRule ? Number(dispRule.objPrimerTramo || 0) : 0
-        const gDispObj2 = dispRule ? Number(dispRule.objSegundoTramo || 0) : 0
-        const gDispObj3 = dispRule ? Number(dispRule.objTercerTramo || 0) : 0
-        const gArpuObj1 = arpuRule ? Number(arpuRule.objPrimerTramo || 0) : 0
-        const gArpuObj2 = arpuRule ? Number(arpuRule.objSegundoTramo || 0) : 0
-
-        // tipoVenta de las palancas BAF para el desglose por comercial (mismo filtro que el
-        // territorial). Comisión por venta de empresa, O2 excluido (cuadra con la base).
-        const _n = (x: string) => String(x || '').toLowerCase()
-        const bafTipo = (territorialTiendasRules.find(r => _n(r.nombre).includes('baf') && !_n(r.nombre).includes('convergente'))?.tipoVenta) || 'Alta BAF Total'
-        const convTipo = (territorialTiendasRules.find(r => _n(r.nombre).includes('baf') && _n(r.nombre).includes('convergente'))?.tipoVenta) || 'Alta BAF Convergente'
-        const _ctx = {
-            catalogs,
-            dashRowsPlus: [] as any[],
-            dashRowsBasico: [] as any[],
-            viewingPeriod: activePeriodKey ? String(activePeriodKey).replace(/[_-]/g, '') : ''
-        }
-        const _notO2 = (sale: any) => String(sale.detalle || sale.categoria || '').toLowerCase().trim() !== 'o2'
-        const comisionPalanca = (rawSales: any[], tipo: string) =>
-            (rawSales || []).filter(sale => _notO2(sale) && matchTipoVenta(sale, tipo))
-                            .reduce((acc, sale) => acc + getSaleCommission(sale, _ctx), 0)
-
-        let tDisp = 0
-        let tArpu = 0
-
-            // Filtrar a Marta
-        const validSellers = sellerStats.filter(s => !s.name.toLowerCase().includes('marta'))
-
-        const data = validSellers.map(s => {
-            // Utilizar groupCounts que ya viene calculado y validado por useComisionesData
-            const dispKey = Object.keys(s.groupCounts || {}).find(k => k.toLowerCase().includes('dispositivo') && k.toLowerCase().includes('seguro'))
-            const arpuKey = Object.keys(s.groupCounts || {}).find(k => k.toLowerCase().includes('arpu'))
-
-            const dispEur = dispKey ? (s.groupCounts[dispKey] || 0) : 0
-            const arpuEur = arpuKey ? (s.groupCounts[arpuKey] || 0) : 0
-            const bafEur = comisionPalanca(s.rawSales, bafTipo)
-            const convEur = comisionPalanca(s.rawSales, convTipo)
-
-            tDisp += dispEur
-            tArpu += arpuEur
-
-            return {
-                name: s.name,
-                dispEur,
-                arpuEur,
-                bafEur,
-                convEur
-            }
-        })
-
-        return {
-            tableData: data,
-            totalDispVentas: tDisp,
-            totalArpuVentas: tArpu,
-            globalDispObj1: gDispObj1,
-            globalDispObj2: gDispObj2,
-            globalDispObj3: gDispObj3,
-            globalArpuObj1: gArpuObj1,
-            globalArpuObj2: gArpuObj2
-        }
-    }, [sellerStats, tiendaRules, territorialTiendasRules, catalogs, activePeriodKey])
-
-    // BAF y Convergente: objetivos (uds) + base de comisiones (€) desde TERRITORIAL TIENDAS.
-    // Reusa el mismo motor (computeTerritorialRows) → cuadra con el territorial por construcción.
-    const { baf, conv } = useMemo(() => {
-        const empty = { obj1: 0, obj2: 0, uds: 0, base: 0 }
-        if (!monthSales || monthSales.length === 0 || !territorialTiendasRules || territorialTiendasRules.length === 0) {
-            return { baf: empty, conv: empty }
-        }
-        const rows = computeTerritorialRows({
-            sales: monthSales,
-            territorialRules: territorialTiendasRules,
-            catalogs,
-            viewingPeriod: activePeriodKey ? String(activePeriodKey).replace(/[_-]/g, '') : ''
-        } as any)
-        const get = (key: string) => {
-            const r = rows.find((x: any) => x.key === key)
-            if (!r) return empty
-            return { obj1: r.obj1Target || 0, obj2: r.obj2Target || 0, uds: r.ventasBase || 0, base: r.comisionBase || 0 }
-        }
-        return { baf: get('altas_baf'), conv: get('altas_baf_conv') }
-    }, [monthSales, territorialTiendasRules, catalogs, activePeriodKey])
-
-    // Avance del Jefe: su % sobre la base de comisiones de la palanca; el tramo (más alto
-    // alcanzado) se decide por las UNIDADES vs el objetivo del territorial.
-    const avanceBaf1 = baf.base * (bafPct1 / 100)
-    const avanceBaf2 = baf.base * (bafPct2 / 100)
-    const avanceConv1 = conv.base * (convPct1 / 100)
-    const avanceConv2 = conv.base * (convPct2 / 100)
-
-    let finalBaf = 0
-    if (baf.obj2 > 0 && baf.uds >= baf.obj2) finalBaf = avanceBaf2
-    else if (baf.obj1 > 0 && baf.uds >= baf.obj1) finalBaf = avanceBaf1
-    let finalConv = 0
-    if (conv.obj2 > 0 && conv.uds >= conv.obj2) finalConv = avanceConv2
-    else if (conv.obj1 > 0 && conv.uds >= conv.obj1) finalConv = avanceConv1
-
-    // Cálculos de Avance
-    const avanceDisp1 = totalDispVentas * (dispPct1 / 100)
-    const avanceDisp2 = totalDispVentas * (dispPct2 / 100)
-    const avanceDisp3 = totalDispVentas * (dispPct3 / 100)
-
-    const avanceArpu1 = totalArpuVentas * (arpuPct1 / 100)
-    const avanceArpu2 = totalArpuVentas * (arpuPct2 / 100)
-
-    // Total Condicionado (El máximo posible: el tramo más alto configurado)
-    const totalCondicionado = (globalDispObj3 > 0 ? avanceDisp3 : avanceDisp2) + avanceArpu2 + avanceBaf2 + avanceConv2
-
-    // Comisión Final (Real) - el tramo más alto alcanzado manda
-    let finalDisp = 0
-    if (totalDispVentas >= globalDispObj3 && globalDispObj3 > 0) finalDisp = avanceDisp3
-    else if (totalDispVentas >= globalDispObj2 && globalDispObj2 > 0) finalDisp = avanceDisp2
-    else if (totalDispVentas >= globalDispObj1 && globalDispObj1 > 0) finalDisp = avanceDisp1
-
-    let finalArpu = 0
-    if (totalArpuVentas >= globalArpuObj2 && globalArpuObj2 > 0) finalArpu = avanceArpu2
-    else if (totalArpuVentas >= globalArpuObj1 && globalArpuObj1 > 0) finalArpu = avanceArpu1
-
-    const comisionFinal = finalDisp + finalArpu + finalBaf + finalConv
+    // Total Condicionado (máximo teórico) y Comisión Final (tramo más alto manda)
+    const totalCondicionado = cj.totalCondicionado
+    const comisionFinal = cj.total
 
     // Celda "Avance de Importe": cada tramo con su icono (1/2/3). SOLO el tramo más alto
     // alcanzado se pone VERDE con ✓ (es el ÚNICO que se cobra). Los tramos inferiores ya
@@ -594,11 +494,7 @@ export default function ComisionesJefeTiendasPage() {
                                             {totalDispVentas > 0 ? `${totalDispVentas.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : '- €'}
                                         </td>
                                         <td rowSpan={tableData.length} style={{ verticalAlign: 'middle', padding: 0 }}>
-                                            {renderAvance([
-                                                { n: 1, amount: avanceDisp1, reached: globalDispObj1 > 0 && totalDispVentas >= globalDispObj1 },
-                                                { n: 2, amount: avanceDisp2, reached: globalDispObj2 > 0 && totalDispVentas >= globalDispObj2 },
-                                                ...(globalDispObj3 > 0 ? [{ n: 3, amount: avanceDisp3, reached: totalDispVentas >= globalDispObj3 }] : [])
-                                            ])}
+                                            {renderAvance(pDisp.tramos)}
                                         </td>
                                     </>
                                 )}
@@ -613,10 +509,7 @@ export default function ComisionesJefeTiendasPage() {
                                             {totalArpuVentas > 0 ? `${totalArpuVentas.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : '- €'}
                                         </td>
                                         <td rowSpan={tableData.length} style={{ verticalAlign: 'middle', padding: 0 }}>
-                                            {renderAvance([
-                                                { n: 1, amount: avanceArpu1, reached: globalArpuObj1 > 0 && totalArpuVentas >= globalArpuObj1 },
-                                                { n: 2, amount: avanceArpu2, reached: globalArpuObj2 > 0 && totalArpuVentas >= globalArpuObj2 }
-                                            ])}
+                                            {renderAvance(pArpu.tramos)}
                                         </td>
                                     </>
                                 )}
@@ -631,10 +524,7 @@ export default function ComisionesJefeTiendasPage() {
                                             {baf.base > 0 ? `${baf.base.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : '- €'}
                                         </td>
                                         <td rowSpan={tableData.length} style={{ verticalAlign: 'middle', padding: 0 }}>
-                                            {renderAvance([
-                                                { n: 1, amount: avanceBaf1, reached: baf.obj1 > 0 && baf.uds >= baf.obj1 },
-                                                { n: 2, amount: avanceBaf2, reached: baf.obj2 > 0 && baf.uds >= baf.obj2 }
-                                            ])}
+                                            {renderAvance(pBaf.tramos)}
                                         </td>
                                     </>
                                 )}
@@ -649,10 +539,7 @@ export default function ComisionesJefeTiendasPage() {
                                             {conv.base > 0 ? `${conv.base.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : '- €'}
                                         </td>
                                         <td rowSpan={tableData.length} style={{ verticalAlign: 'middle', padding: 0 }}>
-                                            {renderAvance([
-                                                { n: 1, amount: avanceConv1, reached: conv.obj1 > 0 && conv.uds >= conv.obj1 },
-                                                { n: 2, amount: avanceConv2, reached: conv.obj2 > 0 && conv.uds >= conv.obj2 }
-                                            ])}
+                                            {renderAvance(pConv.tramos)}
                                         </td>
                                     </>
                                 )}
