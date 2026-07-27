@@ -265,7 +265,10 @@ export default function CatalogosPage() {
           byProduct[pName].push(expItem);
           return expItem;
        })
-       gruposPorCat.push([cat, byProduct])
+       // El cierre automático de vigencias y el control de solapamientos solo
+       // aplican a las pestañas visibles; las categorías heredadas sin pestaña
+       // (p.ej. 'Fija y Móvil' de datos antiguos) viajan tal cual.
+       if (CATEGORIES.includes(cat)) gruposPorCat.push([cat, byProduct])
     }
 
     // 1.5) VALIDACIÓN Y NORMALIZACIÓN DE FECHAS. Sin esto, un año a 2 cifras
@@ -281,20 +284,36 @@ export default function CatalogosPage() {
        if (mo < 1 || mo > 12 || d < 1 || d > 31) return undefined
        return `${String(d).padStart(2, '0')}/${String(mo).padStart(2, '0')}/${y}`
     }
+    // Nombre de pestaña TAL CUAL se ve en pantalla (la clave interna 'Ti' se
+    // muestra como «Contratos Móvil», etc.) — para que el aviso sea seguible.
+    const nombrePestana = (c: string) =>
+       c === 'Ti' ? 'Contratos Móvil' : c === 'O2' ? 'O2 MovilFree' : c === 'Repos' ? 'Arpu (Repos)' : c
     for (const [cat, items] of Object.entries(exportCatalogs)) {
+       // Categorías heredadas SIN pestaña (p.ej. 'Fija y Móvil' de datos
+       // antiguos): el usuario no puede verlas ni corregirlas, así que una
+       // fecha con basura ("15 €") NO bloquea el guardado — se limpia sola y
+       // la fila viaja intacta en todo lo demás. Sin esto, una fila invisible
+       // dejaba el catálogo ENTERO sin poder guardarse.
+       if (!CATEGORIES.includes(cat)) {
+          for (const it of items) {
+             if (normFecha(it.validFrom) === undefined) it.validFrom = null
+             if (normFecha(it.validTo) === undefined) it.validTo = null
+          }
+          continue
+       }
        for (const it of items) {
           const nf = normFecha(it.validFrom)
           if (nf === undefined) {
-             return alert(`❌ FECHA INVÁLIDA en "${it.producto}" (${cat}): Desde = "${it.validFrom}".\nUsa el formato dd/mm/yyyy con el año de 4 cifras (ej. 07/07/2026).`)
+             return alert(`❌ FECHA INVÁLIDA en la pestaña «${nombrePestana(cat)}» — producto "${it.producto}": Desde = "${it.validFrom}".\n\nOJO: el guardado revisa TODAS las pestañas, no solo la que acabas de pegar. Abre la pestaña «${nombrePestana(cat)}» y corrige esa casilla.\nFormato: dd/mm/yyyy con año de 4 cifras (ej. 07/07/2026).`)
           }
           const nt = normFecha(it.validTo)
           if (nt === undefined) {
-             return alert(`❌ FECHA INVÁLIDA en "${it.producto}" (${cat}): Hasta = "${it.validTo}".\nUsa el formato dd/mm/yyyy con el año de 4 cifras (ej. 07/07/2026).`)
+             return alert(`❌ FECHA INVÁLIDA en la pestaña «${nombrePestana(cat)}» — producto "${it.producto}": Hasta = "${it.validTo}".\n\nOJO: el guardado revisa TODAS las pestañas, no solo la que acabas de pegar. Abre la pestaña «${nombrePestana(cat)}» y corrige esa casilla.\nFormato: dd/mm/yyyy con año de 4 cifras (ej. 07/07/2026).`)
           }
           it.validFrom = nf
           it.validTo = nt
           if (nf && nt && pDate(nf, false) > pDate(nt, true)) {
-             return alert(`❌ RANGO INVERTIDO en "${it.producto}" (${cat}):\nel "Desde" (${nf}) es posterior al "Hasta" (${nt}). Corrígelo antes de guardar.`)
+             return alert(`❌ RANGO INVERTIDO en "${it.producto}" (pestaña «${nombrePestana(cat)}»):\nel "Desde" (${nf}) es posterior al "Hasta" (${nt}). Corrígelo antes de guardar.`)
           }
        }
     }
@@ -716,14 +735,37 @@ export default function CatalogosPage() {
           let pHasta = '';
 
           const tail = parts.slice(1);
+          // Excel arrastra tabs de celdas vacías al final de la fila: fuera,
+          // que inflan la longitud y descolocan el reparto por posiciones.
+          while (tail.length && !(tail[tail.length - 1] || '').trim()) tail.pop();
           const isDate = (str: string) => /^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/.test((str || '').trim());
           const isMoney = (str: string) => str.includes('€') || /^\d/.test((str || '').trim());
 
           if (tail.length >= 4) {
-             pDesc = tail[0];
-             pAmt = tail[1];
-             pDesde = tail[2];
-             pHasta = tail[3];
+             // Posiciones estándar: Desc | Importe | Desde | Hasta. Pero si la
+             // hoja trae una columna de más o corrida, el importe caía en
+             // «Desde» («15 €» como fecha → guardado bloqueado). Si las
+             // posiciones no cuadran por TIPO, se localizan las fechas por
+             // formato y el importe es la última celda con pinta de dinero.
+             const posOk = tail.length === 4 && !isDate(tail[1]) &&
+                           (!tail[2] || isDate(tail[2])) && (!tail[3] || isDate(tail[3]));
+             if (posOk) {
+                pDesc = tail[0];
+                pAmt = tail[1];
+                pDesde = tail[2];
+                pHasta = tail[3];
+             } else {
+                const fechas = tail.filter(isDate);
+                const resto = tail.filter(x => (x || '').trim() && !isDate(x));
+                let iAmt = -1;
+                for (let k = resto.length - 1; k >= 0; k--) {
+                   if (isMoney(resto[k])) { iAmt = k; break }
+                }
+                pAmt = iAmt >= 0 ? resto[iAmt] : '0';
+                pDesc = resto.filter((_, k) => k !== iAmt).join(' ').trim();
+                pDesde = fechas[0] || '';
+                pHasta = fechas[1] || '';
+             }
           } else if (tail.length === 3) {
              if (isDate(tail[1]) && isDate(tail[2])) {
                 pAmt = tail[0];
