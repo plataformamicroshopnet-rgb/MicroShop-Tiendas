@@ -101,6 +101,9 @@ export default function DashboardPage() {
   const [allSales, setAllSales] = useState<any[]>([])
   const [tiendaRules, setTiendaRules] = useState<any[]>([])
   const [tiendaHours, setTiendaHours] = useState<any[]>([])
+  // Reglas del PRV Territorial (Entrada de Datos): de ahí salen los objetivos
+  // POR TIENDA del mes, que es donde el usuario los teclea de verdad.
+  const [territorialRules, setTerritorialRules] = useState<any[]>([])
   const [torneosConfig, setTorneosConfig] = useState<TorneosConfig>(DEFAULT_TORNEOS_CONFIG)
   const [cfg, setCfg] = useState<DashboardConfig>(DEFAULT_DASHBOARD_CONFIG)
   const [catalogs, setCatalogs] = useState<Record<string, any[]>>({})
@@ -120,14 +123,16 @@ export default function DashboardPage() {
     if (isInitial) setLoading(true);
 
     try {
-      const [userRes, salesRes, tiendasRes, catalogsRes, torneosCfg, dashCfg] = await Promise.all([
+      const [userRes, salesRes, tiendasRes, catalogsRes, torneosCfg, dashCfg, territorialRes] = await Promise.all([
         fetch('/api/auth/me').then(res => res.json()).catch(() => null),
         fetch(`/api/sales?periodKey=${activePeriodKey}&dashboard=true`).then(res => res.json()).catch(() => ({ success: false, logs: [] })),
         fetch(`/api/tiendas-comisiones?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({ success: false, rules: [] })),
         fetch('/api/catalogs').then(res => res.json()).catch(() => ({ success: false, catalogs: {} })),
         loadTorneosConfig().catch(() => DEFAULT_TORNEOS_CONFIG),
-        loadDashboardConfig().catch(() => DEFAULT_DASHBOARD_CONFIG)
+        loadDashboardConfig().catch(() => DEFAULT_DASHBOARD_CONFIG),
+        fetch(`/api/territorial?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({ success: false, tiendas: [] }))
       ]);
+      setTerritorialRules((territorialRes && territorialRes.tiendas) || []);
 
       if (userRes) {
         setCurrentUser(userRes.user ? userRes.user : userRes);
@@ -381,15 +386,49 @@ export default function DashboardPage() {
   const ruleFor = (nombre: string) =>
     tiendaRules.find(r => String(r.nombre || '').toLowerCase().trim() === String(nombre || '').toLowerCase().trim());
 
+  // Objetivo del mes tecleado en el PRV Territorial (Entrada de Datos): la
+  // suma de los objetivos POR TIENDA (o el global si la fila es global). Es la
+  // fuente que el usuario mantiene cada mes — antes el Termómetro no la miraba
+  // y enseñaba el de la regla de comisiones (caso FTTR: 1 en vez de 9).
+  const objetivoTerritorial = (k: DashKpi): number => {
+    const nom = String(k.nombre || '').toLowerCase().trim();
+    const tipo = String(k.tipoVenta || '').toLowerCase().trim();
+    const fila = territorialRules.find(r => {
+      const tv = String(r?.tipoVenta || '').toLowerCase().trim();
+      if (!tv) return false;
+      return tv === nom || tv === tipo || nom.includes(tv) || tv.includes(nom);
+    });
+    if (!fila) return 0;
+    const num = (v: any) => {
+      const n = parseFloat(String(v ?? '').replace(/[^\d,.-]/g, '').replace(',', '.'));
+      return Number.isFinite(n) ? n : 0;
+    };
+    if (String(fila.obj1Type) === 'per_store') {
+      return Object.values(fila.obj1Stores || {}).reduce((a: number, v: any) => a + num(v), 0);
+    }
+    return num(fila.obj1Global);
+  };
+
   const kpiData = cfg.kpis.map(k => {
     const llevamos = totalBloque(teamSales, k);
-    // Objetivo del config; 0 = automático → objPrimerTramo de la regla del mes con
-    // este nombre y, si el mes no tiene regla, el respaldo histórico del KPI (los
-    // números que la home traía a fuego) — nunca un 1 espurio.
-    const rule = ruleFor(k.nombre);
+    // Objetivo, por orden: (1) el tecleado en Configurar Dashboard; (2) el del
+    // PRV Territorial del mes (solo para KPIs de UNIDADES: sus objetivos son
+    // ventas por tienda, no euros); (3) objPrimerTramo de la regla del mes con
+    // ESTE nombre; (4) el respaldo histórico. Si no hay ninguno, 0 = «sin
+    // objetivo»: antes caía a un `|| 1` que se veía como un objetivo real de 1
+    // unidad y disparaba «¡Logrado!» y porcentajes de 2200%.
+    const esUnidades = String(k.metrica || '') !== 'importe' && String(k.metrica || '') !== 'comisiones';
+    // ARPU: el KPI se llama «ARPU Acumulado» pero la regla del mes es «ARPU»
+    // (el matching ya usa ese alias; el objetivo se había quedado sin él y
+    // cogía el respaldo de 50.000 € contra un objetivo real de 1.100 €).
+    const esArpu = String(k.nombre || '').trim().toLowerCase().startsWith('arpu');
+    const rule = ruleFor(k.nombre) || (esArpu ? ruleFor('ARPU') : undefined);
+    const objTerr = esUnidades ? objetivoTerritorial(k) : 0;
     const target = k.objetivo > 0
       ? k.objetivo
-      : ((rule && rule.objPrimerTramo ? Number(rule.objPrimerTramo) : 0) || OBJETIVO_FALLBACKS[k.nombre] || 1);
+      : (objTerr
+        || (rule && rule.objPrimerTramo ? Number(rule.objPrimerTramo) : 0)
+        || OBJETIVO_FALLBACKS[k.nombre] || 0);
     const faltan = Math.max(0, target - llevamos);
     const progressPct = target > 0 ? Math.min(100, (llevamos / target) * 100) : 0;
     return { kpi: k, llevamos, target, faltan, progressPct };
@@ -759,7 +798,11 @@ export default function DashboardPage() {
                     <Icono size={18} color={pal.color} />
                     <span title={descBloque(k.kpi)} style={{ fontWeight: 700, color: 'var(--text-main)' }}>{k.kpi.nombre}</span>
                   </div>
-                  {k.faltan > 0 ? (
+                  {k.target <= 0 ? (
+                    <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#b45309', background: 'rgba(245, 158, 11, 0.16)', padding: '2px 8px', borderRadius: '12px' }}>
+                      Sin objetivo este mes
+                    </span>
+                  ) : k.faltan > 0 ? (
                     esPrincipal ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                         <span style={{ fontSize: '12px', fontWeight: 700, color: pal.faltanCol, background: pal.faltanBg, padding: '2px 8px', borderRadius: '12px' }}>
@@ -783,9 +826,11 @@ export default function DashboardPage() {
                     </span>
                   )}
                 </div>
-                <div style={{ width: '100%', height: '8px', background: 'var(--border-strong)', borderRadius: '4px', overflow: 'hidden', marginBottom: 4 }}>
-                  <div style={{ width: `${k.progressPct}%`, height: '100%', background: pal.grad, borderRadius: '4px' }} />
-                </div>
+                {k.target > 0 && (
+                  <div style={{ width: '100%', height: '8px', background: 'var(--border-strong)', borderRadius: '4px', overflow: 'hidden', marginBottom: 4 }}>
+                    <div style={{ width: `${k.progressPct}%`, height: '100%', background: pal.grad, borderRadius: '4px' }} />
+                  </div>
+                )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontSize: '12px', color: 'var(--medium-gray)', fontWeight: 600 }}>
                   <span>Llevamos: <strong style={{ color: 'var(--text-main)' }}>{kpiFmt(k.llevamos, k.kpi.metrica)}</strong></span>
                   {k.target > 0 && (() => {
@@ -797,7 +842,9 @@ export default function DashboardPage() {
                       </span>
                     )
                   })()}
-                  <span>Objetivo: {kpiFmt(k.target, k.kpi.metrica)}</span>
+                  <span>{k.target > 0
+                    ? `Objetivo: ${kpiFmt(k.target, k.kpi.metrica)}`
+                    : 'Objetivo: — (ponlo en Entrada de Datos o en Configurar Dashboard)'}</span>
                 </div>
               </div>
             );
