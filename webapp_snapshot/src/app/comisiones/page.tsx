@@ -121,6 +121,34 @@ const AspirationalSimulatorButton = ({ s }: { s: any }) => {
     )
 }
 
+// Mismo chip que el Simulador, al lado: el parte de ayer del comercial.
+const ParteDiarioButton = ({ s }: { s: any }) => {
+    const [isHovered, setIsHovered] = React.useState(false);
+    const router = useRouter();
+
+    return (
+        <div
+            onClick={() => router.push(`/comisiones/parte-diario?seller=${encodeURIComponent(s.name)}`)}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            style={{
+                display: 'flex', alignItems: 'center', gap: 6, backgroundColor: isHovered ? '#eff6ff' : '#ffffff',
+                padding: '5px 11px', borderRadius: 10, border: '1px solid', borderColor: isHovered ? '#0078D4' : '#e2e8f0',
+                boxShadow: isHovered ? '0 8px 20px rgba(0,120,212,0.15)' : '0 2px 5px rgba(0,0,0,0.05)',
+                cursor: 'pointer', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                transform: isHovered ? 'scale(1.02)' : 'none'
+            }}
+            title="Cómo fue ayer y cómo va el mes, palanca a palanca"
+        >
+            <span style={{ fontSize: 14, lineHeight: 1 }}>📋</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                <span style={{ fontSize: 8, textTransform: 'uppercase', color: '#0078D4', letterSpacing: 0.5, fontWeight: 800 }}>Mi parte</span>
+                <span style={{ fontSize: 12, fontWeight: 900, color: '#1e293b' }}>Diario</span>
+            </div>
+        </div>
+    )
+}
+
 const FinancialTelemetryModal = ({ isOpen, onClose, currentAmount, name }: { isOpen: boolean, onClose: () => void, currentAmount: number, name: string }) => {
     if (!isOpen) return null;
 
@@ -624,6 +652,9 @@ export default function ComisionesDashboardPage() {
 
                                 {/* CENTRO: Herramientas (Modo Dios y Telemetría) */}
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                                    <div className="no-print">
+                                        <ParteDiarioButton s={s} />
+                                    </div>
                                     <div className="no-print">
                                         <AspirationalSimulatorButton s={s} />
                                     </div>

@@ -67,6 +67,54 @@ export function getMonthBusinessDays(year: number, month: number, upToDay?: numb
   return days;
 }
 
+
+/** ¿Es festivo en Salamanca? (usa el mismo calendario que getMonthBusinessDays) */
+function esFestivoSalamanca(d: Date): boolean {
+  const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return SALAMANCA_HOLIDAYS.includes(iso);
+}
+
+// ── Días laborables de un periodo YYYY_MM (L-V, DESCONTANDO los festivos de
+// Salamanca — decisión del dueño: si la tienda cierra, ese día no puede
+// repartirse el reto). Mismo calendario que el Seguimiento Diario de Jefatura
+// (SALAMANCA_HOLIDAYS), así que las dos pantallas cuentan igual.
+
+/** Laborables que QUEDAN del mes contando desde hoy (incluido). 0 si ya se cerró. */
+export function getDiasLaborablesRestantes(periodKey: string, hoyRef?: Date): number {
+  if (!periodKey) return 0;
+  const [yStr, mStr] = String(periodKey).split(/[_-]/);
+  const y = Number(yStr), m = Number(mStr); // m = 1..12
+  if (!y || !m) return 0;
+  const hoy = hoyRef ? new Date(hoyRef) : new Date(); hoy.setHours(0, 0, 0, 0);
+  const finMes = new Date(y, m, 0);          // último día del mes
+  const inicioMes = new Date(y, m - 1, 1);
+  const cursor = new Date(Math.max(hoy.getTime(), inicioMes.getTime())); cursor.setHours(0, 0, 0, 0);
+  if (cursor > finMes) return 0;             // mes ya cerrado: no hay reto diario que repartir
+  let count = 0;
+  for (const d = new Date(cursor); d <= finMes; d.setDate(d.getDate() + 1)) {
+    const wd = d.getDay();                   // 0=dom, 6=sáb
+    if (wd !== 0 && wd !== 6 && !esFestivoSalamanca(d)) count++;
+  }
+  return count;
+}
+
+/** Laborables TRANSCURRIDOS del mes, del día 1 hasta `hasta` (incluido). */
+export function getDiasLaborablesHasta(periodKey: string, hasta: Date): number {
+  if (!periodKey || !hasta) return 0;
+  const [yStr, mStr] = String(periodKey).split(/[_-]/);
+  const y = Number(yStr), m = Number(mStr);
+  if (!y || !m) return 0;
+  const finMes = new Date(y, m, 0);
+  const tope = new Date(Math.min(new Date(hasta.getFullYear(), hasta.getMonth(), hasta.getDate()).getTime(), finMes.getTime()));
+  if (tope < new Date(y, m - 1, 1)) return 0; // la fecha es anterior al mes
+  let count = 0;
+  for (const d = new Date(y, m - 1, 1); d <= tope; d.setDate(d.getDate() + 1)) {
+    const wd = d.getDay();
+    if (wd !== 0 && wd !== 6 && !esFestivoSalamanca(d)) count++;
+  }
+  return count;
+}
+
 export function getPeriodBusinessDays(year: number, month: number) {
   const today = new Date();
   const isCurrentMonth = today.getFullYear() === year && (today.getMonth() + 1) === month;

@@ -10,6 +10,7 @@ import { isSaleActive, isSolar360, renderDashboardData } from '@/lib/salesUtils'
 import { getSaleCommission } from '@/lib/saleCommission'
 import { getEffectiveTiendaComerciales } from '@/lib/comercialRoster'
 import { can } from '@/lib/permissions'
+import { getDiasLaborablesRestantes } from '@/lib/trackingCalculations'
 import { loadTorneosConfig, DEFAULT_TORNEOS_CONFIG, concursoSaleValue, TorneosConfig } from '@/lib/torneosConfig'
 import {
   loadDashboardConfig,
@@ -577,23 +578,7 @@ export default function DashboardPage() {
   const nComercialesTiendas = Object.entries(getEffectiveTiendaComerciales(tiendaHours))
     .filter(([k]) => k !== 'O2')
     .reduce((acc, [, v]) => acc + (v as string[]).length, 0);
-  const diasLaborablesRestantes = (() => {
-    if (!activePeriodKey) return 0;
-    const [yStr, mStr] = String(activePeriodKey).split(/[_-]/);
-    const y = Number(yStr), m = Number(mStr); // m = 1..12
-    if (!y || !m) return 0;
-    const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
-    const finMes = new Date(y, m, 0);          // último día del mes
-    const inicioMes = new Date(y, m - 1, 1);
-    const cursor = new Date(Math.max(hoy.getTime(), inicioMes.getTime())); cursor.setHours(0, 0, 0, 0);
-    if (cursor > finMes) return 0;             // mes ya cerrado: no hay reto diario que repartir
-    let count = 0;
-    for (const d = new Date(cursor); d <= finMes; d.setDate(d.getDate() + 1)) {
-      const wd = d.getDay();                   // 0=dom, 6=sáb
-      if (wd !== 0 && wd !== 6) count++;
-    }
-    return count;
-  })();
+  const diasLaborablesRestantes = getDiasLaborablesRestantes(activePeriodKey);
   const kpiPrincipal = kpiData[0];
   const retoDiarioEquipo = (kpiPrincipal && diasLaborablesRestantes > 0) ? kpiPrincipal.faltan / diasLaborablesRestantes : 0;
   const retoDiarioComercial = (diasLaborablesRestantes > 0 && nComercialesTiendas > 0) ? retoDiarioEquipo / nComercialesTiendas : 0;
