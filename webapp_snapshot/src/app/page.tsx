@@ -48,6 +48,15 @@ function FotoAvatar({ name, fontSize = 13 }: { name: string; fontSize?: number }
   )
 }
 
+// «% del objetivo» del Termómetro: el color dice de un vistazo si vamos bien
+// (verde/azul) o hay que apretar (ámbar/rojo). El % es el REAL, sin capar:
+// si se supera el objetivo se ve el 120%, no un 100% raso.
+const pctBadge = (pct: number) =>
+  pct >= 100 ? { color: '#059669', background: 'rgba(16, 185, 129, 0.12)' }
+  : pct >= 75 ? { color: '#0369a1', background: 'rgba(14, 165, 233, 0.12)' }
+  : pct >= 50 ? { color: '#b45309', background: 'rgba(245, 158, 11, 0.16)' }
+  : { color: '#b91c1c', background: 'rgba(239, 68, 68, 0.10)' }
+
 // Iconos y colores del Termómetro Diario: rotan por índice de la lista de KPIs del config.
 // El orden reproduce la estética histórica (Disp+Seg ámbar, BAF Total azul cielo, BAF
 // Convergente violeta, Swap teal, FTTR rosa, ARPU verde, Repo Fútbol azul).
@@ -777,8 +786,17 @@ export default function DashboardPage() {
                 <div style={{ width: '100%', height: '8px', background: 'var(--border-strong)', borderRadius: '4px', overflow: 'hidden', marginBottom: 4 }}>
                   <div style={{ width: `${k.progressPct}%`, height: '100%', background: pal.grad, borderRadius: '4px' }} />
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--medium-gray)', fontWeight: 600 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontSize: '12px', color: 'var(--medium-gray)', fontWeight: 600 }}>
                   <span>Llevamos: <strong style={{ color: 'var(--text-main)' }}>{kpiFmt(k.llevamos, k.kpi.metrica)}</strong></span>
+                  {k.target > 0 && (() => {
+                    const pctReal = (k.llevamos / k.target) * 100
+                    const est = pctBadge(pctReal)
+                    return (
+                      <span style={{ fontSize: 11.5, fontWeight: 800, color: est.color, background: est.background, padding: '1px 8px', borderRadius: '10px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                        {Math.round(pctReal)}% del objetivo
+                      </span>
+                    )
+                  })()}
                   <span>Objetivo: {kpiFmt(k.target, k.kpi.metrica)}</span>
                 </div>
               </div>
