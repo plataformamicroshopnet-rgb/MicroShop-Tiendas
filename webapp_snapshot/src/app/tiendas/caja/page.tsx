@@ -8,6 +8,10 @@ import { canView } from '@/lib/permissions'
 
 // Importamos el mapeo de tiendas para saber dónde cae el usuario actual
 import { TIENDAS_COMERCIALES, VENDEDORES } from '@/lib/constants'
+import {
+  CONCEPTOS, TIENDAS_CON_CAJA, DESTINO_BANCO, destinosDesde, esDestinoExterno,
+  normalizarImporte, signoDeConcepto, cajaDeUsuario,
+} from '@/lib/caja'
 
 type CajaEntry = {
   id: string
@@ -19,22 +23,16 @@ type CajaEntry = {
   createdAt: string
   vendedor: string | null
   estadoTrazabilidad: 'ROJO' | 'NARANJA' | 'VERDE' | null
+  // Traspasos de efectivo entre cajas
+  tipo: string | null
+  traspasoId: string | null
+  entregadoPor: string | null
+  receptor: string | null
+  tiendaOrigen: string | null
+  tiendaDestino: string | null
+  conciliadoPor: string | null
+  conciliadoEn: string | null
 }
-
-const CONCEPTOS = [
-  '(+) Caja SIAC',
-  '(+) Ajuste SIAC',
-  '(+) Facturación Microshop',
-  '(+) Otras entradas',
-  '(+) Facturación MovilFree',
-  '(+) Tarjeta MovilFree',
-  '(+/-) Corrección',
-  '(-) Recogida de Efectivo',
-  '(-) Pago Servicio Técnico',
-  '(-) Material de oficina',
-  '(-) Ingreso en Banco',
-  '(-) Otras salidas'
-];
 
 export default function CajaTiendasPage() {
   const { authorized, user } = useGuard('CARD_CAJA')
@@ -42,21 +40,19 @@ export default function CajaTiendasPage() {
 
   const [entries, setEntries] = useState<CajaEntry[]>([])
   const [loading, setLoading] = useState(true)
+  const [errorCarga, setErrorCarga] = useState<string | null>(null)
 
-  // Mapeo de tienda
-  const userTienda = useMemo(() => {
-    if (!user) return null
-    if (user.role === 'ADMIN' || canView(user, 'HUB_CRISTINA')) return 'ADMIN'
-    
-    for (const [store, members] of Object.entries(TIENDAS_COMERCIALES)) {
-      if (members.includes(user.username)) {
-        return store === 'Auxiliadora 45' ? 'Auxiliadora' : store
-      }
-    }
-    
-    if (canView(user, 'CARD_CAJA') || canView(user, 'HUB_BACKOFFICE')) return 'ADMIN'
-    return null
-  }, [user])
+  // En qué caja está el usuario. MISMA función que usa el servidor: cuando
+  // cada lado tenía su copia de la regla, a Salva (jefe de ventas) la pantalla
+  // le daba mando total y el servidor le contestaba «sin tienda asignada».
+  // Y el mapeo del grupo «O2» a la caja «MovilFree» solo estaba en un lado,
+  // así que Marta trabajaba en una pestaña que no era ninguna caja.
+  const userTienda = useMemo(
+    () => cajaDeUsuario(user, TIENDAS_COMERCIALES, {
+      mandaSobreTodas: canView(user, 'HUB_CRISTINA'),
+      puedeCaja: canView(user, 'CARD_CAJA') || canView(user, 'HUB_BACKOFFICE'),
+    }),
+    [user])
 
   const [activeTab, setActiveTab] = useState<string>('')
 
@@ -81,12 +77,21 @@ export default function CajaTiendasPage() {
       }
 
       const res = await fetch(url)
-      const data = await res.json()
-      if (data.entries) {
-        setEntries(data.entries)
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        // Ahora la API pide sesión: si caduca, antes se quedaba la tabla con
+        // datos viejos y sin decir nada. Con dinero delante eso no vale.
+        setErrorCarga(res.status === 401
+          ? 'Tu sesión ha caducado. Vuelve a entrar para ver la caja.'
+          : (data?.error || 'No se han podido cargar los movimientos.'))
+        setEntries([])
+        return
       }
+      setErrorCarga(null)
+      setEntries(data.entries || [])
     } catch (error) {
       console.error(error)
+      setErrorCarga('No se han podido cargar los movimientos.')
     } finally {
       setLoading(false)
     }
@@ -105,26 +110,66 @@ export default function CajaTiendasPage() {
     detalle: ''
   })
 
-  // --- Modal Imprimir ---
+  // --- Modal Salida de efectivo (registra Y imprime) ---
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false)
+  const [guardandoSalida, setGuardandoSalida] = useState(false)
+  const [errorSalida, setErrorSalida] = useState<string | null>(null)
   const [printData, setPrintData] = useState({
     fecha: new Date().toISOString().split('T')[0],
     vendedor: '',
     receptor: '',
+    destino: 'Central',
     concepto: '',
     importe: ''
   })
-  
-  const handlePrint = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsPrintModalOpen(false);
-    
+
+  /**
+   * Reimprime el justificante de una salida YA REGISTRADA.
+   *
+   * Sin esto, si el navegador bloqueaba la ventana emergente la única forma de
+   * conseguir el papel era volver a registrar la salida entera: dos traspasos
+   * por la misma entrega y el dinero descontado dos veces.
+   */
+  const reimprimir = (e: CajaEntry) => {
+    setPrintData({
+      fecha: e.fecha,
+      vendedor: e.entregadoPor || e.vendedor || '',
+      receptor: e.receptor || '',
+      destino: e.tiendaDestino || '',
+      concepto: e.detalle || '',
+      importe: String(Math.abs(e.importe)),
+    })
+    // Al siguiente pintado, con printData ya actualizado, sale el papel.
+    setTimeout(imprimirJustificante, 0)
+  }
+
+  /**
+   * Abre la salida de efectivo con un destino que tenga sentido.
+   *
+   * El desplegable esconde la caja en la que estás (no puedes mandarte dinero a
+   * ti mismo), así que si el destino guardado es justo esa —el caso de Central,
+   * que es el valor por defecto— hay que moverlo antes de abrir. Si no, el
+   * desplegable enseñaba una cosa y se enviaba otra, y el servidor rechazaba la
+   * salida con «el origen y el destino no pueden ser la misma caja».
+   */
+  const abrirSalida = () => {
+    const destinos = destinosDesde(activeTab)
+    setPrintData(p => ({
+      ...p,
+      destino: destinos.includes(p.destino) ? p.destino : (destinos[0] || DESTINO_BANCO),
+    }))
+    setErrorSalida(null)
+    setIsPrintModalOpen(true)
+  }
+
+  /** Solo saca el papel. Se llama DESPUÉS de haber registrado el movimiento. */
+  const imprimirJustificante = () => {
     const printElement = document.getElementById('print-receipt-container');
     if (!printElement) return;
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
-       alert('Por favor, permite las ventanas emergentes (pop-ups) para imprimir el justificante.');
+       alert('El movimiento SÍ ha quedado registrado, pero el navegador ha bloqueado la ventana de impresión.\n\nNo vuelvas a registrar la salida: la tienes en la tabla y puedes reimprimir el justificante con el botón de la impresora de esa línea.');
        return;
     }
 
@@ -152,13 +197,68 @@ export default function CajaTiendasPage() {
     printWindow.document.close();
   }
 
+  /**
+   * Registra la salida de efectivo Y LUEGO imprime el justificante.
+   *
+   * Antes este botón SOLO imprimía: se firmaba el papel y en el programa no
+   * quedaba nada, así que el dinero no se descontaba de la tienda ni aparecía
+   * en el destino. Ahora primero se graba (la salida en la tienda y, si va a
+   * otra caja, la entrada correspondiente) y el papel sale después.
+   */
+  const handleSalida = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (guardandoSalida) return;
+    setErrorSalida(null);
+    setGuardandoSalida(true);
+    try {
+      const res = await fetch('/api/caja/traspaso', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tiendaOrigen: activeTab,
+          tiendaDestino: printData.destino,
+          fecha: printData.fecha,
+          importe: Number(printData.importe),
+          receptor: printData.receptor,
+          entregadoPor: printData.vendedor,
+          detalle: printData.concepto,
+        })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setErrorSalida(data?.error || 'No se ha podido registrar la salida.');
+        return;
+      }
+      setIsPrintModalOpen(false);
+      await fetchEntries();
+      // El papel, solo cuando el movimiento ya está guardado.
+      imprimirJustificante();
+      // Y se limpia el formulario: si se queda relleno es fácil registrar dos
+      // veces la misma entrega sin darse cuenta.
+      setPrintData({
+        fecha: new Date().toISOString().split('T')[0],
+        vendedor: '', receptor: '', destino: 'Central', concepto: '', importe: ''
+      });
+    } catch (err: any) {
+      setErrorSalida(String(err?.message || err));
+    } finally {
+      setGuardandoSalida(false);
+    }
+  }
+
+  const [guardandoApunte, setGuardandoApunte] = useState(false)
+  const [errorApunte, setErrorApunte] = useState<string | null>(null)
+
   const handleAddEntry = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newEntry.importe || isNaN(Number(newEntry.importe))) return
+    if (guardandoApunte) return
+    setErrorApunte(null)
+    setGuardandoApunte(true)
 
-    const isSalidaTransito = newEntry.concepto.includes('Recogida de Efectivo') || 
+    const isSalidaTransito = newEntry.concepto.includes('Recogida de Efectivo') ||
                              (newEntry.concepto.includes('salidas') && newEntry.detalle.toLowerCase().includes('central'));
-    
+
     const estado = isSalidaTransito ? 'ROJO' : null;
 
     try {
@@ -185,14 +285,28 @@ export default function CajaTiendasPage() {
           detalle: ''
         })
         fetchEntries()
+      } else {
+        // Antes, si el servidor rechazaba el apunte, el modal se quedaba
+        // igual y parecía que no habías pulsado.
+        const data = await res.json().catch(() => ({}))
+        setErrorApunte(data?.error || 'No se ha podido guardar el movimiento.')
       }
     } catch (error) {
       console.error(error)
+      setErrorApunte('No se ha podido guardar el movimiento.')
+    } finally {
+      setGuardandoApunte(false)
     }
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Estás seguro de borrar este movimiento?')) return;
+    // Si es un traspaso se van las DOS patas: borrar solo una haría aparecer o
+    // desaparecer dinero. Se avisa con todas las letras antes de hacerlo.
+    const entry = entries.find(x => x.id === id)
+    const aviso = entry?.traspasoId
+      ? 'Esto es un TRASPASO: se borrarán las dos anotaciones, la salida y la entrada en el destino. ¿Seguro?'
+      : '¿Estás seguro de borrar este movimiento?'
+    if (!confirm(aviso)) return;
     try {
       await fetch(`/api/caja?id=${id}`, { method: 'DELETE' })
       fetchEntries()
@@ -203,21 +317,35 @@ export default function CajaTiendasPage() {
 
   const cycleStatus = async (entry: CajaEntry) => {
     if (!entry.estadoTrazabilidad) return;
-    
+
     let nextStatus: 'ROJO' | 'NARANJA' | 'VERDE' | null = null;
     if (entry.estadoTrazabilidad === 'ROJO') nextStatus = 'NARANJA';
     else if (entry.estadoTrazabilidad === 'NARANJA') nextStatus = 'VERDE';
     else if (entry.estadoTrazabilidad === 'VERDE') nextStatus = 'ROJO';
 
+    // Salir de VERDE borra la firma de quien dio el dinero por recibido, así
+    // que no puede pasar por un clic de más.
+    if (entry.estadoTrazabilidad === 'VERDE' && !confirm(
+      `Este traspaso está confirmado${entry.conciliadoPor ? ` por ${entry.conciliadoPor}` : ''}. ` +
+      'Si lo devuelves a rojo se borra esa confirmación. ¿Seguro?')) return;
+
     try {
-      await fetch('/api/caja', {
+      const res = await fetch('/api/caja', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: entry.id, estadoTrazabilidad: nextStatus })
       })
+      if (!res.ok) {
+        // Antes el 403 se tragaba en silencio: el semáforo no cambiaba y no
+        // había forma de saber por qué.
+        const data = await res.json().catch(() => ({}))
+        alert(data?.error || 'No se ha podido cambiar el estado del traspaso.')
+        return
+      }
       fetchEntries()
     } catch (e) {
       console.error(e)
+      alert('No se ha podido cambiar el estado del traspaso.')
     }
   }
 
@@ -226,14 +354,34 @@ export default function CajaTiendasPage() {
   
   const currentSaldo = activeEntries.reduce((acc, curr) => acc + curr.importe, 0)
 
-  // Resumen de todas las tiendas (solo para Central)
+  // Resumen de todas las cajas (solo para Central).
+  // Central va DENTRO del resumen: es la caja donde acaba el efectivo que
+  // recogemos de las tiendas. Antes no aparecía, así que un traspaso a Central
+  // hacía bajar el «Total Tiendas» y el dinero parecía esfumarse.
   const allStores = ['Auxiliadora', 'Villamayor', 'Béjar', 'Correhuela', 'MovilFree'];
-  const storeBalances = allStores.map(tienda => {
-    const storeEntries = entries.filter(e => e.tienda === tienda);
-    const balance = storeEntries.reduce((acc, curr) => acc + curr.importe, 0);
-    return { tienda, balance };
-  });
+  const saldoDe = (tienda: string) =>
+    entries.filter(e => e.tienda === tienda).reduce((acc, curr) => acc + curr.importe, 0);
+  const storeBalances = allStores.map(tienda => ({ tienda, balance: saldoDe(tienda) }));
   const totalStores = storeBalances.reduce((acc, curr) => acc + curr.balance, 0);
+  const saldoCentral = saldoDe('Central');
+  const totalGeneral = totalStores + saldoCentral;
+
+  // Dinero que salió de una caja y que nadie ha dado todavía por recibido.
+  // Se mide por el SEMÁFORO y el signo, no por el tipo de apunte: si mirásemos
+  // solo los traspasos nuevos, las «(-) Recogida de Efectivo» que se siguen
+  // metiendo a mano —y que también nacen en rojo— quedarían fuera, y el panel
+  // afirmaría una cifra de dinero en la calle que no es la de verdad.
+  const sinConfirmar = (e: CajaEntry) =>
+    e.importe < 0 && !!e.estadoTrazabilidad && e.estadoTrazabilidad !== 'VERDE';
+  const enTransito = entries
+    .filter(sinConfirmar)
+    .reduce((acc, curr) => acc + Math.abs(curr.importe), 0);
+
+  // Lo que viene de camino HACIA la caja que se está mirando (para que una
+  // tienda vea el dinero que le han mandado y aún no ha dado por recibido).
+  const entrandoAqui = entries
+    .filter(e => e.tienda === activeTab && e.tipo === 'TRASPASO_ENTRADA' && e.estadoTrazabilidad !== 'VERDE')
+    .reduce((acc, curr) => acc + curr.importe, 0);
 
   if (!authorized || !userTienda) return null
 
@@ -267,8 +415,8 @@ export default function CajaTiendasPage() {
                 Saldo {activeTab}: {currentSaldo.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
              </div>
              
-             <button onClick={() => setIsPrintModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 20px', height: 44, borderRadius: 12, background: '#ffffff', border: '1px solid #e2e8f0', color: '#334155', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(15, 23, 42, 0.05)' }}>
-                <Printer size={18} /> Imprimir Salida
+             <button onClick={() => { abrirSalida(); }} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 20px', height: 44, borderRadius: 12, background: '#ffffff', border: '1px solid #e2e8f0', color: '#334155', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(15, 23, 42, 0.05)' }}>
+                <Printer size={18} /> Salida de Efectivo
              </button>
              <button onClick={() => setIsModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 20px', height: 44, borderRadius: 12, background: '#00adef', border: 'none', color: '#fff', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 10px rgba(0, 173, 239, 0.3)', transition: 'all 0.2s' }}>
                 <Plus size={18} /> Añadir Movimiento
@@ -304,6 +452,20 @@ export default function CajaTiendasPage() {
           </div>
         )}
 
+        {/* Aviso para la caja que está mirando: dinero que le han mandado y
+            todavía no ha dado por recibido. Sin esto, la tienda de destino no
+            tenía forma de saber que le venía dinero de camino. */}
+        {entrandoAqui > 0 && (
+          <div style={{ marginBottom: 20, background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.35)', borderRadius: 14, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <span style={{ color: '#b45309', fontWeight: 900, fontSize: 16 }}>
+              {entrandoAqui.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+            </span>
+            <span style={{ color: '#92400e', fontWeight: 600, fontSize: 14 }}>
+              de camino a {activeTab} sin confirmar. Cuando lo tengas en el cajón, pulsa el semáforo de esa línea hasta dejarlo en verde.
+            </span>
+          </div>
+        )}
+
         <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
           
           {/* Main Table */}
@@ -314,16 +476,19 @@ export default function CajaTiendasPage() {
                   <th style={{ padding: '16px 20px', fontSize: 13, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Fecha</th>
                   <th style={{ padding: '16px 20px', fontSize: 13, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Concepto</th>
                   <th style={{ padding: '16px 20px', fontSize: 13, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Detalle</th>
+                  <th style={{ padding: '16px 20px', fontSize: 13, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Quién / A dónde</th>
                   <th style={{ padding: '16px 20px', fontSize: 13, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', textAlign: 'right' }}>Importe</th>
                   <th style={{ padding: '16px 20px', fontSize: 13, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', textAlign: 'center' }}>Trazabilidad</th>
-                  {user.role === 'ADMIN' && <th style={{ padding: '16px 20px', width: 60 }}></th>}
+                  <th style={{ padding: '16px 20px', width: 80 }}></th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={6} style={{ textAlign: 'center', padding: 40, color: '#64748b' }}>Cargando movimientos...</td></tr>
+                  <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40, color: '#64748b' }}>Cargando movimientos...</td></tr>
+                ) : errorCarga ? (
+                  <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40, color: '#b91c1c', fontWeight: 700 }}>{errorCarga}</td></tr>
                 ) : activeEntries.length === 0 ? (
-                  <tr><td colSpan={6} style={{ textAlign: 'center', padding: 40, color: '#64748b' }}>No hay movimientos en la caja. Añade una corrección inicial.</td></tr>
+                  <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40, color: '#64748b' }}>No hay movimientos en la caja. Añade una corrección inicial.</td></tr>
                 ) : (
                   activeEntries.map((e, i) => (
                     <tr key={e.id} style={{ borderBottom: '1px solid #f1f5f9', background: i % 2 === 0 ? '#ffffff' : '#f8fafc', transition: 'background 0.2s' }}>
@@ -332,6 +497,27 @@ export default function CajaTiendasPage() {
                       </td>
                       <td style={{ padding: '16px 20px', fontWeight: 600, color: '#0f172a' }}>{e.concepto}</td>
                       <td style={{ padding: '16px 20px', color: '#64748b', fontSize: 14 }}>{e.detalle}</td>
+                      {/* El rastro del dinero: quién se lo llevó y a qué caja va o de cuál viene */}
+                      <td style={{ padding: '16px 20px', fontSize: 13.5 }}>
+                        {e.receptor || e.tiendaDestino || e.tiendaOrigen ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            {e.receptor && (
+                              <span style={{ color: '#0f172a', fontWeight: 700 }}>{e.receptor}</span>
+                            )}
+                            {e.tiendaDestino && (
+                              <span style={{ color: '#64748b' }}>→ {e.tiendaDestino}</span>
+                            )}
+                            {e.tiendaOrigen && (
+                              <span style={{ color: '#64748b' }}>← {e.tiendaOrigen}</span>
+                            )}
+                            {e.entregadoPor && (
+                              <span style={{ color: '#94a3b8', fontSize: 12 }}>entrega: {e.entregadoPor}</span>
+                            )}
+                          </div>
+                        ) : (
+                          <span style={{ color: '#cbd5e1' }}>-</span>
+                        )}
+                      </td>
                       <td style={{ padding: '16px 20px', fontWeight: 700, textAlign: 'right', color: e.importe >= 0 ? '#10b981' : '#ef4444' }}>
                         {e.importe.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
                       </td>
@@ -348,7 +534,11 @@ export default function CajaTiendasPage() {
                                  backgroundColor: e.estadoTrazabilidad === 'ROJO' ? 'rgba(239, 68, 68, 0.1)' : 
                                                   e.estadoTrazabilidad === 'NARANJA' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(16, 185, 129, 0.1)'
                                }}
-                               title={userTienda === 'ADMIN' ? "Clic para cambiar estado" : "Estado actual"}
+                               title={
+                                 e.conciliadoPor
+                                   ? `Confirmado por ${e.conciliadoPor}${e.conciliadoEn ? ' el ' + new Date(e.conciliadoEn).toLocaleDateString('es-ES') : ''}`
+                                   : (userTienda === 'ADMIN' ? "Clic para cambiar estado" : "Estado actual")
+                               }
                             >
                                {e.estadoTrazabilidad === 'ROJO' && <CircleDashed size={14} />}
                                {e.estadoTrazabilidad === 'NARANJA' && <Clock size={14} />}
@@ -359,13 +549,18 @@ export default function CajaTiendasPage() {
                            <span style={{ color: '#cbd5e1' }}>-</span>
                          )}
                       </td>
-                      {user.role === 'ADMIN' && (
-                        <td style={{ padding: '16px 20px', textAlign: 'center' }}>
+                      <td style={{ padding: '16px 20px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                         {e.tipo === 'TRASPASO_SALIDA' && (
+                           <button onClick={() => reimprimir(e)} style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', opacity: 0.75, marginRight: 6 }} title="Volver a imprimir el justificante de esta salida">
+                              <Printer size={16} />
+                           </button>
+                         )}
+                         {user.role === 'ADMIN' && (
                            <button onClick={() => handleDelete(e.id)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', opacity: 0.7 }} title="Borrar entrada">
                               <Trash2 size={16} />
                            </button>
-                        </td>
-                      )}
+                         )}
+                      </td>
                     </tr>
                   ))
                 )}
@@ -395,6 +590,36 @@ export default function CajaTiendasPage() {
                      {totalStores.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
                   </span>
                </div>
+
+               {/* Central y total general: el dinero recogido de las tiendas
+                   está aquí, no desaparecido. */}
+               <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#64748b', fontWeight: 500, fontSize: 14 }}>Central</span>
+                  <span style={{ color: saldoCentral >= 0 ? '#10b981' : '#ef4444', fontWeight: 700 }}>
+                     {saldoCentral.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                  </span>
+               </div>
+               <div style={{ marginTop: 12, paddingTop: 12, borderTop: '2px solid #0f172a', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#0f172a', fontWeight: 900 }}>Total General</span>
+                  <span style={{ color: totalGeneral >= 0 ? '#0f172a' : '#ef4444', fontWeight: 900, fontSize: 20 }}>
+                     {totalGeneral.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                  </span>
+               </div>
+
+               {enTransito > 0 && (
+                 <div style={{ marginTop: 16, background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: 12, padding: '12px 14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                       <span style={{ color: '#b45309', fontWeight: 800, fontSize: 13 }}>En tránsito</span>
+                       <span style={{ color: '#b45309', fontWeight: 900 }}>
+                          {enTransito.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                       </span>
+                    </div>
+                    <p style={{ margin: '6px 0 0 0', fontSize: 12, color: '#92400e', lineHeight: 1.45 }}>
+                       Dinero que ha salido de una tienda y que el destino todavía no ha dado por recibido.
+                       Ya está contado en los saldos de arriba.
+                    </p>
+                 </div>
+               )}
             </div>
           )}
 
@@ -467,6 +692,19 @@ export default function CajaTiendasPage() {
                      </select>
                      <ChevronDown size={18} style={{ position: 'absolute', right: 16, top: 15, color: '#64748b', pointerEvents: 'none' }} />
                    </div>
+                   {/* Antes el «(-)» del nombre era pura decoración: el importe se
+                       guardaba tal cual y la caja SUBÍA. Ahora el signo lo pone el
+                       concepto, y aquí se ve antes de guardar. */}
+                   {newEntry.importe !== '' && !isNaN(Number(newEntry.importe)) && (
+                     <p style={{ margin: '8px 0 0 0', fontSize: 13, fontWeight: 700, color: signoDeConcepto(newEntry.concepto) === -1 ? '#ef4444' : '#10b981' }}>
+                       {signoDeConcepto(newEntry.concepto) === -1
+                         ? 'Se RESTA de la caja: '
+                         : signoDeConcepto(newEntry.concepto) === 1
+                           ? 'Se SUMA a la caja: '
+                           : 'Se guarda tal cual: '}
+                       {normalizarImporte(newEntry.concepto, Number(newEntry.importe)).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                     </p>
+                   )}
                  </div>
 
                  <div>
@@ -476,8 +714,14 @@ export default function CajaTiendasPage() {
                    <textarea className="premium-input" required value={newEntry.detalle} onChange={e => setNewEntry({...newEntry, detalle: e.target.value})} style={{ width: '100%', height: 86, borderRadius: 12, padding: '14px 16px', fontSize: 15, resize: 'none', fontFamily: 'inherit', fontWeight: 500 }} placeholder="Escribe observaciones o detalles aquí..." />
                  </div>
 
-                 <button className="premium-btn" type="submit" style={{ marginTop: 8, height: 52, borderRadius: 14, background: 'linear-gradient(135deg, #00adef 0%, #008fcc 100%)', color: '#fff', border: 'none', fontWeight: 800, fontSize: 16, cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 14px rgba(0, 173, 239, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, letterSpacing: '0.5px' }}>
-                   AÑADIR A CAJA <CheckCircle2 size={18} />
+                 {errorApunte && (
+                   <div style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#b91c1c', borderRadius: 12, padding: '10px 14px', fontSize: 13.5, fontWeight: 600 }}>
+                     {errorApunte}
+                   </div>
+                 )}
+
+                 <button className="premium-btn" type="submit" disabled={guardandoApunte} style={{ marginTop: 8, height: 52, borderRadius: 14, background: guardandoApunte ? '#94a3b8' : 'linear-gradient(135deg, #00adef 0%, #008fcc 100%)', color: '#fff', border: 'none', fontWeight: 800, fontSize: 16, cursor: guardandoApunte ? 'wait' : 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 14px rgba(0, 173, 239, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, letterSpacing: '0.5px' }}>
+                   {guardandoApunte ? 'GUARDANDO…' : <>AÑADIR A CAJA <CheckCircle2 size={18} /></>}
                  </button>
 
               </form>
@@ -501,12 +745,12 @@ export default function CajaTiendasPage() {
                   <Printer size={24} strokeWidth={2.5} />
                </div>
                <div>
-                  <h2 style={{ margin: 0, fontSize: 24, fontWeight: 900, color: '#0f172a', letterSpacing: '-0.5px' }}>Imprimir Justificante</h2>
-                  <p style={{ margin: 0, color: '#64748b', fontSize: 14, fontWeight: 500 }}>Genera un documento PDF/Papel de salida</p>
+                  <h2 style={{ margin: 0, fontSize: 24, fontWeight: 900, color: '#0f172a', letterSpacing: '-0.5px' }}>Salida de Efectivo</h2>
+                  <p style={{ margin: 0, color: '#64748b', fontSize: 14, fontWeight: 500 }}>Se descuenta de esta caja y se imprime el justificante</p>
                </div>
             </div>
 
-            <form onSubmit={handlePrint} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <form onSubmit={handleSalida} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                
                <div style={{ display: 'flex', gap: 16 }}>
                   <div style={{ flex: 1 }}>
@@ -545,6 +789,28 @@ export default function CajaTiendasPage() {
                  <input className="premium-input" type="text" required value={printData.receptor} onChange={e => setPrintData({...printData, receptor: e.target.value})} placeholder="Nombre del receptor" style={{ width: '100%', height: 44, borderRadius: 12, padding: '0 16px', fontSize: 15, fontWeight: 500 }} />
                </div>
 
+               {/* A dónde va el dinero: lo que faltaba para poder seguirle el
+                   rastro. Si va a otra caja, entra allí automáticamente. */}
+               <div>
+                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#475569', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                   A dónde va
+                 </label>
+                 <div style={{ position: 'relative' }}>
+                   <select className="premium-input" required value={printData.destino} onChange={e => setPrintData({...printData, destino: e.target.value})} style={{ width: '100%', height: 44, borderRadius: 12, padding: '0 16px', fontSize: 15, appearance: 'none', cursor: 'pointer', fontWeight: 600 }}>
+                     {destinosDesde(activeTab).map(t => (
+                       <option key={t} value={t}>{t}</option>
+                     ))}
+                   </select>
+                   <ChevronDown size={18} style={{ position: 'absolute', right: 16, top: 13, color: '#64748b', pointerEvents: 'none' }} />
+                 </div>
+                 <p style={{ margin: '8px 0 0 0', fontSize: 12.5, color: '#64748b', lineHeight: 1.45 }}>
+                   {esDestinoExterno(printData.destino)
+                     ? <>Sale del circuito: se descuenta de <b>{activeTab}</b> y no entra en ninguna otra caja.</>
+                     : <>Se descuenta de <b>{activeTab}</b> y entra en <b>{printData.destino}</b>, en rojo hasta que allí lo den por recibido.</>}
+                   {activeTab === 'Central' && ' Desde Central el efectivo solo sale a Banco o a Varios.'}
+                 </p>
+               </div>
+
                <div>
                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#475569', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                    Concepto
@@ -559,8 +825,14 @@ export default function CajaTiendasPage() {
                  <input className="premium-input" type="number" step="0.01" required value={printData.importe} onChange={e => setPrintData({...printData, importe: e.target.value})} placeholder="0.00" style={{ width: '100%', height: 44, borderRadius: 12, padding: '0 16px', fontSize: 18, fontWeight: 800 }} />
                </div>
 
-               <button className="premium-btn" type="submit" style={{ marginTop: 12, height: 52, borderRadius: 14, background: '#1e293b', color: '#fff', border: 'none', fontWeight: 800, fontSize: 16, cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 14px rgba(15, 23, 42, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, letterSpacing: '0.5px' }}>
-                 GENERAR E IMPRIMIR <Printer size={18} />
+               {errorSalida && (
+                 <div style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#b91c1c', borderRadius: 12, padding: '10px 14px', fontSize: 13.5, fontWeight: 600 }}>
+                   {errorSalida}
+                 </div>
+               )}
+
+               <button className="premium-btn" type="submit" disabled={guardandoSalida} style={{ marginTop: 12, height: 52, borderRadius: 14, background: guardandoSalida ? '#94a3b8' : '#1e293b', color: '#fff', border: 'none', fontWeight: 800, fontSize: 16, cursor: guardandoSalida ? 'wait' : 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 14px rgba(15, 23, 42, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, letterSpacing: '0.5px' }}>
+                 {guardandoSalida ? 'REGISTRANDO…' : <>REGISTRAR E IMPRIMIR <Printer size={18} /></>}
                </button>
 
             </form>
@@ -603,6 +875,8 @@ export default function CajaTiendasPage() {
                 <div style={{ flex: 1 }}>
                    <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Receptor (Entregado a)</p>
                    <p style={{ margin: '4px 0 0 0', fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>{printData.receptor || '-'}</p>
+                   <p style={{ margin: '8px 0 0 0', fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Destino del dinero</p>
+                   <p style={{ margin: '4px 0 0 0', fontSize: '15px', fontWeight: 800, color: '#0f172a' }}>{printData.destino || '-'}</p>
                 </div>
                 <div style={{ flex: 1 }}>
                    <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Importe Total</p>
@@ -670,6 +944,8 @@ export default function CajaTiendasPage() {
                 <div style={{ flex: 1 }}>
                    <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Receptor (Entregado a)</p>
                    <p style={{ margin: '4px 0 0 0', fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>{printData.receptor || '-'}</p>
+                   <p style={{ margin: '8px 0 0 0', fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Destino del dinero</p>
+                   <p style={{ margin: '4px 0 0 0', fontSize: '15px', fontWeight: 800, color: '#0f172a' }}>{printData.destino || '-'}</p>
                 </div>
                 <div style={{ flex: 1 }}>
                    <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Importe Total</p>

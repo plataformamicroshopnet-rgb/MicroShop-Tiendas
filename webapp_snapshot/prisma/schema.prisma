@@ -509,6 +509,26 @@ model CajaEntry {
   updatedAt          DateTime @updatedAt
   vendedor           String? // Usuario que lo registrÃ³
   estadoTrazabilidad String? // 'ROJO', 'NARANJA', 'VERDE', null
+
+  // ── Traspaso de efectivo entre cajas ──────────────────────────────────────
+  // Un traspaso son DOS apuntes hermanos con el mismo traspasoId: la salida en
+  // la tienda de origen (importe negativo) y la entrada en el destino (positivo).
+  // Antes el dinero salia de la tienda y no entraba en ningun sitio.
+  // TODOS opcionales a proposito: el TPV crea apuntes de caja desde 16 sitios
+  // sin conocer estos campos, y en produccion el esquema se nivela al arrancar
+  // con `prisma db push --accept-data-loss` (scripts/start-prod.js) — una
+  // columna obligatoria ahi seria una perdida de datos.
+  tipo               String? // 'TRASPASO_SALIDA' | 'TRASPASO_ENTRADA' (null = movimiento suelto)
+  traspasoId         String? // misma referencia en las dos patas del traspaso
+  entregadoPor       String? // quien saca el dinero del cajon
+  receptor           String? // quien se lo lleva (persona)
+  tiendaOrigen       String? // de donde sale (se rellena en la pata de entrada)
+  tiendaDestino      String? // a donde va (se rellena en la pata de salida)
+  conciliadoPor      String? // quien puso el semaforo en VERDE
+  conciliadoEn       DateTime?
+
+  @@index([traspasoId])
+  @@index([tienda, fecha])
 }
 
 model MovilFreeProduct {
