@@ -107,8 +107,18 @@ export default function CajaTiendasPage() {
     fecha: new Date().toISOString().split('T')[0],
     importe: '',
     concepto: CONCEPTOS[0],
-    detalle: ''
+    detalle: '',
+    // Cuando el concepto es una SALIDA, aquí va el rastro del dinero. Estos
+    // tres campos vivían solo en el otro botón (el de imprimir), que es donde
+    // nadie los buscaba: se apuntaba la salida y seguía sin saberse a quién se
+    // le había dado ni a dónde iba.
+    destino: 'Central',
+    receptor: '',
+    entregadoPor: '',
   })
+
+  /** ¿El concepto elegido saca dinero de la caja? Entonces hay que saber a dónde va. */
+  const esSalida = signoDeConcepto(newEntry.concepto) === -1
 
   // --- Modal Salida de efectivo (registra Y imprime) ---
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false)
@@ -141,6 +151,18 @@ export default function CajaTiendasPage() {
     })
     // Al siguiente pintado, con printData ya actualizado, sale el papel.
     setTimeout(imprimirJustificante, 0)
+  }
+
+  /** Abre «Añadir Movimiento» con un destino válido para la caja actual. */
+  const abrirApunte = () => {
+    const destinos = destinosDesde(activeTab)
+    setNewEntry(p => ({
+      ...p,
+      destino: destinos.includes(p.destino) ? p.destino : (destinos[0] || DESTINO_BANCO),
+      entregadoPor: p.entregadoPor || (user?.username ?? ''),
+    }))
+    setErrorApunte(null)
+    setIsModalOpen(true)
   }
 
   /**
@@ -256,25 +278,36 @@ export default function CajaTiendasPage() {
     setErrorApunte(null)
     setGuardandoApunte(true)
 
-    const isSalidaTransito = newEntry.concepto.includes('Recogida de Efectivo') ||
-                             (newEntry.concepto.includes('salidas') && newEntry.detalle.toLowerCase().includes('central'));
-
-    const estado = isSalidaTransito ? 'ROJO' : null;
-
     try {
-      const res = await fetch('/api/caja', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tienda: activeTab,
-          fecha: newEntry.fecha,
-          concepto: newEntry.concepto,
-          detalle: newEntry.detalle,
-          importe: Number(newEntry.importe),
-          vendedor: user?.username,
-          estadoTrazabilidad: estado
-        })
-      })
+      // Si el concepto SACA dinero, esto es un traspaso: se apunta la salida
+      // aquí y la entrada en el destino, atadas. Antes cualquier salida moría
+      // en esta tienda y no aparecía en ningún sitio.
+      const res = esSalida
+        ? await fetch('/api/caja/traspaso', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              tiendaOrigen: activeTab,
+              tiendaDestino: newEntry.destino,
+              fecha: newEntry.fecha,
+              importe: Math.abs(Number(newEntry.importe)),
+              receptor: newEntry.receptor,
+              entregadoPor: newEntry.entregadoPor,
+              detalle: [newEntry.concepto, newEntry.detalle].filter(Boolean).join(' · '),
+            })
+          })
+        : await fetch('/api/caja', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              tienda: activeTab,
+              fecha: newEntry.fecha,
+              concepto: newEntry.concepto,
+              detalle: newEntry.detalle,
+              importe: Number(newEntry.importe),
+              estadoTrazabilidad: null,
+            })
+          })
 
       if (res.ok) {
         setIsModalOpen(false)
@@ -282,7 +315,10 @@ export default function CajaTiendasPage() {
           fecha: new Date().toISOString().split('T')[0],
           importe: '',
           concepto: CONCEPTOS[0],
-          detalle: ''
+          detalle: '',
+          destino: 'Central',
+          receptor: '',
+          entregadoPor: '',
         })
         fetchEntries()
       } else {
@@ -416,9 +452,9 @@ export default function CajaTiendasPage() {
              </div>
              
              <button onClick={() => { abrirSalida(); }} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 20px', height: 44, borderRadius: 12, background: '#ffffff', border: '1px solid #e2e8f0', color: '#334155', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(15, 23, 42, 0.05)' }}>
-                <Printer size={18} /> Salida de Efectivo
+                <Printer size={18} /> Salida + justificante
              </button>
-             <button onClick={() => setIsModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 20px', height: 44, borderRadius: 12, background: '#00adef', border: 'none', color: '#fff', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 10px rgba(0, 173, 239, 0.3)', transition: 'all 0.2s' }}>
+             <button onClick={() => abrirApunte()} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 20px', height: 44, borderRadius: 12, background: '#00adef', border: 'none', color: '#fff', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 10px rgba(0, 173, 239, 0.3)', transition: 'all 0.2s' }}>
                 <Plus size={18} /> Añadir Movimiento
              </button>
           </div>
@@ -706,6 +742,60 @@ export default function CajaTiendasPage() {
                      </p>
                    )}
                  </div>
+
+                 {/* SALE dinero: hay que poder decir a quién y a dónde. Estos
+                     campos aparecen solos al elegir un concepto «(-)». */}
+                 {esSalida && (
+                   <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                     <div style={{ fontSize: 12.5, fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                       Sale dinero de {activeTab}: ¿a quién y a dónde?
+                     </div>
+
+                     <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+                       <div style={{ flex: 1, minWidth: 160 }}>
+                         <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                           A dónde va
+                         </label>
+                         <div style={{ position: 'relative' }}>
+                           <select className="premium-input" required value={newEntry.destino} onChange={e => setNewEntry({...newEntry, destino: e.target.value})} style={{ width: '100%', height: 44, borderRadius: 12, padding: '0 16px', fontSize: 15, appearance: 'none', cursor: 'pointer', fontWeight: 600 }}>
+                             {destinosDesde(activeTab).map(t => <option key={t} value={t}>{t}</option>)}
+                           </select>
+                           <ChevronDown size={18} style={{ position: 'absolute', right: 14, top: 13, color: '#64748b', pointerEvents: 'none' }} />
+                         </div>
+                       </div>
+
+                       <div style={{ flex: 1, minWidth: 160 }}>
+                         <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                           Quién entrega
+                         </label>
+                         <div style={{ position: 'relative' }}>
+                           <select className="premium-input" required value={newEntry.entregadoPor} onChange={e => setNewEntry({...newEntry, entregadoPor: e.target.value})} style={{ width: '100%', height: 44, borderRadius: 12, padding: '0 16px', fontSize: 15, appearance: 'none', cursor: 'pointer', fontWeight: 600 }}>
+                             <option value="" disabled>Selecciona...</option>
+                             {VENDEDORES.map(v => <option key={v} value={v}>{v}</option>)}
+                             {user?.username && !VENDEDORES.includes(user.username) && (
+                               <option value={user.username}>{user.username}</option>
+                             )}
+                           </select>
+                           <ChevronDown size={18} style={{ position: 'absolute', right: 14, top: 13, color: '#64748b', pointerEvents: 'none' }} />
+                         </div>
+                       </div>
+                     </div>
+
+                     <div>
+                       <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                         A quién se lo dan
+                       </label>
+                       <input className="premium-input" type="text" required value={newEntry.receptor} onChange={e => setNewEntry({...newEntry, receptor: e.target.value})} placeholder="Nombre de quien se lleva el dinero" style={{ width: '100%', height: 44, borderRadius: 12, padding: '0 16px', fontSize: 15, fontWeight: 500 }} />
+                     </div>
+
+                     <p style={{ margin: 0, fontSize: 12.5, color: '#64748b', lineHeight: 1.45 }}>
+                       {esDestinoExterno(newEntry.destino)
+                         ? <>Sale del circuito: se descuenta de <b>{activeTab}</b> y no entra en ninguna otra caja.</>
+                         : <>Se descuenta de <b>{activeTab}</b> y entra en <b>{newEntry.destino}</b>, en rojo hasta que allí lo den por recibido.</>}
+                       {activeTab === 'Central' && ' Desde Central el efectivo solo sale a Banco o a Varios.'}
+                     </p>
+                   </div>
+                 )}
 
                  <div>
                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#475569', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
