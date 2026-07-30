@@ -21,43 +21,97 @@ export default function ModPage() {
     const [manualImportePrev, setManualImportePrev] = useState<string>('')
     const [manualOpsPrev, setManualOpsPrev] = useState<string>('')
     const [manualDaysPrev, setManualDaysPrev] = useState<string>('')
+    const [estadoManual, setEstadoManual] = useState<string>('')
+
+    // ── Los datos del año anterior, tecleados a mano ─────────────────────────
+    // ANTES vivían en localStorage, que es la libretita privada del navegador:
+    // no llegaban al servidor, así que desde otro ordenador, otro navegador o
+    // con otro usuario la fila salía vacía, y cualquier limpieza de datos del
+    // navegador se los llevaba. Ahora se guardan en AppSetting como todo lo
+    // demás: se teclean una vez y quedan para todos.
+    //
+    // La clave es el MES QUE DESCRIBEN (julio de 2025), no el mes que se esté
+    // mirando, para que se entienda a qué fila pertenecen.
+    const prevYearKeyManual = React.useMemo(() => {
+        if (!activePeriodKey) return ''
+        const [y, m] = String(activePeriodKey).split('_')
+        return (y && m) ? `${Number(y) - 1}_${m}` : ''
+    }, [activePeriodKey])
+    const claveManual = prevYearKeyManual ? `mod_manual_prev_${prevYearKeyManual}` : ''
+
+    const temporizadorManual = React.useRef<any>(null)
+
+    const guardarManual = (valores: { importe: string; ops: string; days: string }, inmediato = false) => {
+        if (!claveManual) return
+        if (temporizadorManual.current) clearTimeout(temporizadorManual.current)
+        setEstadoManual('Guardando…')
+        const hacer = async () => {
+            try {
+                const r = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: claveManual, value: JSON.stringify(valores) }),
+                })
+                const j = await r.json().catch(() => ({}))
+                setEstadoManual(r.ok && j?.success
+                    ? 'Guardado'
+                    : (j?.error || 'No se ha podido guardar.'))
+            } catch {
+                setEstadoManual('No se ha podido guardar.')
+            }
+        }
+        // Al teclear se espera un momento para no mandar una petición por letra.
+        if (inmediato) hacer(); else temporizadorManual.current = setTimeout(hacer, 700)
+    }
 
     useEffect(() => {
-        if (!activePeriodKey) return;
-        const savedImporte = localStorage.getItem(`mod_manual_importe_prev_${activePeriodKey}`);
-        const savedOps = localStorage.getItem(`mod_manual_ops_prev_${activePeriodKey}`);
-        const savedDays = localStorage.getItem(`mod_manual_days_prev_${activePeriodKey}`);
-        setManualImportePrev(savedImporte || '');
-        setManualOpsPrev(savedOps || '');
-        setManualDaysPrev(savedDays || '');
-    }, [activePeriodKey]);
+        if (!claveManual) return
+        let vivo = true
+        ;(async () => {
+            try {
+                const r = await fetch(`/api/settings?key=${encodeURIComponent(claveManual)}`)
+                const j = await r.json().catch(() => ({}))
+                let val: any = null
+                try { val = j?.value ? JSON.parse(j.value) : null } catch { val = null }
+
+                // Rescate: si en ESTE navegador quedaba algo de la época de
+                // localStorage, se sube al servidor para no perderlo.
+                if (!val) {
+                    const viejo = {
+                        importe: localStorage.getItem(`mod_manual_importe_prev_${activePeriodKey}`) || '',
+                        ops: localStorage.getItem(`mod_manual_ops_prev_${activePeriodKey}`) || '',
+                        days: localStorage.getItem(`mod_manual_days_prev_${activePeriodKey}`) || '',
+                    }
+                    if (viejo.importe || viejo.ops || viejo.days) {
+                        val = viejo
+                        guardarManual(viejo, true)
+                    }
+                }
+                if (!vivo) return
+                setManualImportePrev(val?.importe || '')
+                setManualOpsPrev(val?.ops || '')
+                setManualDaysPrev(val?.days || '')
+            } catch {
+                // Sin conexión con el servidor la fila se queda con lo calculado.
+            }
+        })()
+        return () => { vivo = false }
+    }, [claveManual])
 
     const handleManualImporteChange = (val: string) => {
-        setManualImportePrev(val);
-        if (val.trim() === '') {
-            localStorage.removeItem(`mod_manual_importe_prev_${activePeriodKey}`);
-        } else {
-            localStorage.setItem(`mod_manual_importe_prev_${activePeriodKey}`, val);
-        }
-    };
+        setManualImportePrev(val)
+        guardarManual({ importe: val, ops: manualOpsPrev, days: manualDaysPrev })
+    }
 
     const handleManualOpsChange = (val: string) => {
-        setManualOpsPrev(val);
-        if (val.trim() === '') {
-            localStorage.removeItem(`mod_manual_ops_prev_${activePeriodKey}`);
-        } else {
-            localStorage.setItem(`mod_manual_ops_prev_${activePeriodKey}`, val);
-        }
-    };
+        setManualOpsPrev(val)
+        guardarManual({ importe: manualImportePrev, ops: val, days: manualDaysPrev })
+    }
 
     const handleManualDaysChange = (val: string) => {
-        setManualDaysPrev(val);
-        if (val.trim() === '') {
-            localStorage.removeItem(`mod_manual_days_prev_${activePeriodKey}`);
-        } else {
-            localStorage.setItem(`mod_manual_days_prev_${activePeriodKey}`, val);
-        }
-    };
+        setManualDaysPrev(val)
+        guardarManual({ importe: manualImportePrev, ops: manualOpsPrev, days: val })
+    }
 
     useEffect(() => {
         if (!activePeriodKey) return;
@@ -487,6 +541,22 @@ export default function ModPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Aviso de guardado de los datos del año anterior. Antes se
+                escribían en el navegador sin decir nada y se perdían sin que
+                nadie se enterase; ahora se ve que han quedado grabados. */}
+            {estadoManual && (
+                <div style={{
+                    position: 'fixed', right: 24, bottom: 24, zIndex: 60,
+                    padding: '10px 16px', borderRadius: 12, fontSize: 13.5, fontWeight: 700,
+                    boxShadow: '0 8px 24px -8px rgba(15,23,42,0.35)',
+                    background: estadoManual === 'Guardado' ? '#dcfce7' : estadoManual === 'Guardando…' ? '#e2e8f0' : '#fee2e2',
+                    color: estadoManual === 'Guardado' ? '#166534' : estadoManual === 'Guardando…' ? '#334155' : '#b91c1c',
+                    border: `1px solid ${estadoManual === 'Guardado' ? '#86efac' : estadoManual === 'Guardando…' ? '#cbd5e1' : '#fecaca'}`,
+                }}>
+                    {estadoManual === 'Guardado' ? '✓ Guardado para todos' : estadoManual}
+                </div>
+            )}
 
         </div>
     )
