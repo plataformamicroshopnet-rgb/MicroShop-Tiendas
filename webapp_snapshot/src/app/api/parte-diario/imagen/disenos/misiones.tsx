@@ -199,7 +199,7 @@ const altoJefe = (d: DatosParte) => {
 // Textos largos de la cabecera: se calculan igual para medir y para dibujar.
 const textoVeredicto = (d: DatosParte) => {
   const c = d.c
-  return `Ayer fue ${d.veredicto.calificacion}: ${c.ayer.ops} operaciones`
+  return `${d.a.dia.El} fue ${d.veredicto.calificacion}: ${c.ayer.ops} operaciones`
     + (c.ayer.importe > 0 ? ` por ${d.a.eur0(c.ayer.importe)}` : '')
     + (c.ayer.ops > 0 && c.posicionDia > 0 ? `, ${c.posicionDia}.º del equipo` : '')
     + (c.ayer.ops > 0 && d.data.equipo.media > 0
@@ -209,7 +209,7 @@ const textoVeredicto = (d: DatosParte) => {
 }
 
 const textoBotin = (d: DatosParte) =>
-  `Botín de ayer: ${d.a.eur2(d.c.ayer.comision)} · botín del mes: ${d.a.eur2(d.c.mes.comisionTotal)} · ${d.c.mes.ops} ventas en la partida.`
+  `Botín ${d.a.dia.del}: ${d.a.eur2(d.c.ayer.comision)} · botín del mes: ${d.a.eur2(d.c.mes.comisionTotal)} · ${d.c.mes.ops} ventas en la partida.`
 
 // ── Dibujo ──────────────────────────────────────────────────────────────────
 
@@ -253,10 +253,10 @@ const Mision = ({ d, p, ancho }: any) => {
             ancho={dentro} tam={20} color={C.suave} colorFuerte="#fff"
             partes={[
               ...(delDia && delDia.uds > 0
-                ? [{ t: 'Ayer sumaste ' },
+                ? [{ t: `${d.a.dia.El} sumaste ` },
                    { t: p.esImporte ? d.a.eur0(delDia.importe) : `${delDia.uds} ${d.a.unidad(p.nombre, delDia.uds)}`, b: true },
                    { t: '. ' }]
-                : [{ t: 'Ayer, ' }, { t: 'ninguna', b: true }, { t: '. ' }]),
+                : [{ t: `${d.a.dia.El}, ` }, { t: 'ninguna', b: true }, { t: '. ' }]),
               { t: 'Llevas ' },
               { t: p.esImporte ? d.a.eur2(p.llevamos) : d.a.num(p.llevamos), b: true },
               ...(p.objetivo > 0
@@ -367,7 +367,7 @@ const diseno: Diseno = {
             <Frase
               ancho={anchoTexto} tam={22} color="#C7CCF5" colorFuerte="#fff"
               partes={[
-                { t: 'Ayer fue ' }, { t: d.veredicto.calificacion, b: true }, { t: ': ' },
+                { t: `${d.a.dia.El} fue ` }, { t: d.veredicto.calificacion, b: true }, { t: ': ' },
                 { t: `${c.ayer.ops} ${c.ayer.ops === 1 ? 'operación' : 'operaciones'}`, b: true },
                 c.ayer.importe > 0 ? { t: ' por ' } : null,
                 c.ayer.importe > 0 ? { t: d.a.eur0(c.ayer.importe), b: true } : null,
@@ -385,7 +385,7 @@ const diseno: Diseno = {
             <Frase
               ancho={anchoTexto} tam={21} color={C.tenue} colorFuerte={C.verde}
               partes={[
-                { t: 'Botín de ayer: ' }, { t: d.a.eur2(c.ayer.comision), b: true },
+                { t: `Botín ${d.a.dia.del}: ` }, { t: d.a.eur2(c.ayer.comision), b: true },
                 { t: ' · botín del mes: ' }, { t: d.a.eur2(c.mes.comisionTotal), b: true },
                 { t: ' · ' }, { t: `${c.mes.ops}`, b: true }, { t: ' ventas en la partida.' },
               ]}

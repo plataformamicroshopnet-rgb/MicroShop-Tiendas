@@ -107,7 +107,7 @@ const altoStats = (d: DatosParte, anchoStat: number) => {
 
 const DENTRO_TARJETA = (ancho: number) => ancho - 36
 
-/** Tarjeta de palanca: título, lo de ayer, lo que falta y el entrenador. */
+/** Tarjeta de palanca: título, lo del día del parte, lo que falta y el entrenador. */
 const altoTarjeta = (d: DatosParte, p: ParteDiarioPalanca, ancho: number) => {
   const dentro = DENTRO_TARJETA(ancho)
   return 14 + 34
@@ -335,10 +335,10 @@ const diseno: Diseno = {
               ancho={dentro} tam={19} color={V.suave} colorFuerte="#FFFFFF"
               partes={[
                 ...(delDia && delDia.uds > 0
-                  ? [{ t: 'Ayer ' },
+                  ? [{ t: `${a.dia.El} ` },
                      { t: p.esImporte ? a.eur0(delDia.importe) : `${delDia.uds} ${a.unidad(p.nombre, delDia.uds)}`, b: true },
                      { t: '. ' }]
-                  : [{ t: 'Ayer, ' }, { t: 'ninguna', b: true }, { t: '. ' }]),
+                  : [{ t: `${a.dia.El}, ` }, { t: 'ninguna', b: true }, { t: '. ' }]),
                 { t: 'Llevas ' },
                 { t: p.esImporte ? a.eur2(p.llevamos) : a.num(p.llevamos), b: true },
                 ...(p.objetivo > 0
@@ -398,7 +398,7 @@ const diseno: Diseno = {
                   {a.eur0(d.c.ayer.importe).replace(' €', '')}
                 </div>
                 <div style={{ display: 'flex', marginTop: 6, fontSize: 16, fontWeight: 700, letterSpacing: 3, color: V.menta }}>
-                  EUROS DE AYER
+                  {`EUROS ${a.dia.DEL}`}
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', width: 190, flexShrink: 0, paddingBottom: 26 }}>

@@ -51,6 +51,21 @@ const eur2 = (v: number) => {
   return `${signo}${_miles(ent)},${dec} €`
 }
 
+/**
+ * El día del que habla el resumen, en dos formas: «el lunes» y «DEL LUNES».
+ *
+ * Igual que en los partes individuales: no se dice «ayer», porque el correo se
+ * abre cuando se abre —el del viernes lo lee el jefe el lunes— y así el texto es
+ * verdad siempre. Además, el comercial y su jefe leen lo mismo el mismo día.
+ */
+const diaDelParte = (iso: string) => {
+  const [y, m, d] = iso.split('-').map(Number)
+  const nombre = (y && m && d)
+    ? new Date(y, m - 1, d).toLocaleDateString('es-ES', { weekday: 'long' })
+    : 'día'
+  return { el: `el ${nombre}`, EL: `EL ${nombre.toUpperCase()}`, DEL: `DEL ${nombre.toUpperCase()}` }
+}
+
 const fechaLarga = (iso: string) => {
   const [y, m, d] = iso.split('-').map(Number)
   if (!y || !m || !d) return iso
@@ -98,7 +113,7 @@ export async function GET(request: Request) {
   const lista = data.comerciales || []
   if (!lista.length) return new Response('Sin comerciales ese día', { status: 404 })
 
-  // Orden: el que más vendió AYER arriba; a igualdad, el que más lleva del mes.
+  // Orden: el que más vendió ESE DÍA arriba; a igualdad, el que más lleva del mes.
   const filas = [...lista].sort(
     (a, b) => b.ayer.importe - a.ayer.importe || b.mes.importe - a.mes.importe)
 
@@ -111,6 +126,7 @@ export async function GET(request: Request) {
     comisionMes: acc.comisionMes + c.mes.comisionTotal,
   }), { ops: 0, importe: 0, comision: 0, opsMes: 0, importeMes: 0, comisionMes: 0 })
 
+  const dia = diaDelParte(data.fecha)
   const conVentas = filas.filter(c => c.ayer.ops > 0).length
   const sinVentas = filas.length - conVentas
 
@@ -127,9 +143,9 @@ export async function GET(request: Request) {
   const alto = Math.round(24 + altoCabecera + 18 + altoCifras + altoTabla + 20 + 44)
 
   const cifras: { rotulo: string; valor: string; color: string }[] = [
-    { rotulo: 'OPERACIONES DE AYER', valor: String(tot.ops), color: C.tinta },
-    { rotulo: 'IMPORTE DE AYER', valor: eur0(tot.importe), color: C.tinta },
-    { rotulo: 'COMISIÓN DE AYER', valor: eur2(tot.comision), color: C.ok },
+    { rotulo: `OPS. ${dia.DEL}`, valor: String(tot.ops), color: C.tinta },
+    { rotulo: `IMPORTE ${dia.DEL}`, valor: eur0(tot.importe), color: C.tinta },
+    { rotulo: `COMISIÓN ${dia.DEL}`, valor: eur2(tot.comision), color: C.ok },
     { rotulo: 'COMISIÓN DEL MES', valor: eur2(tot.comisionMes), color: C.oro },
   ]
   const anchoCifra = (DENTRO - 3 * 14) / 4
@@ -164,8 +180,8 @@ export async function GET(request: Request) {
           </div>
           <div style={{ display: 'flex', color: '#DBE7FF', fontSize: 22, marginTop: 6 }}>
             {sinVentas === 0
-              ? `Ayer vendió todo el equipo: ${conVentas} de ${filas.length}.`
-              : `Ayer vendieron ${conVentas} de ${filas.length}; ${sinVentas === 1 ? 'uno se quedó' : `${sinVentas} se quedaron`} a cero.`}
+              ? `Vendió todo el equipo: ${conVentas} de ${filas.length}.`
+              : `Vendieron ${conVentas} de ${filas.length}; ${sinVentas === 1 ? 'uno se quedó' : `${sinVentas} se quedaron`} a cero.`}
           </div>
         </div>
 
@@ -200,7 +216,7 @@ export async function GET(request: Request) {
               display: 'flex', width: COL.ops + COL.importe + COL.comision,
               justifyContent: 'flex-end', color: C.suave, fontSize: 15,
               fontWeight: 700, letterSpacing: 2,
-            }}>AYER</div>
+            }}>{dia.EL}</div>
             <div style={{
               display: 'flex', width: COL.opsMes + COL.importeMes + COL.comisionMes,
               justifyContent: 'flex-end', color: C.suave, fontSize: 15,

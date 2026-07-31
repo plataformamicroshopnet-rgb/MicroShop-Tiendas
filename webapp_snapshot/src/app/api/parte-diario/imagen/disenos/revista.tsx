@@ -1,10 +1,11 @@
 import type { DatosParte, Diseno } from '@/lib/partes/tipos'
+import { dineroPorCubrir } from '@/lib/parteDiario'
 import type { ParteDiarioPalanca } from '@/lib/parteDiario'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DISEÑO 9 · REVISTA
 //
-// Portada naranja a sangre con el importe de ayer en tamaño de titular, franja
+// Portada naranja a sangre con el importe del día en tamaño de titular, franja
 // negra con las cuatro cifras, mosaico de palancas por colores y una página
 // entera en negro para el reto del mes. Es el diseño más «marca»: se lee de un
 // vistazo en el móvil y aguanta pegado en el corcho de la trastienda.
@@ -35,12 +36,18 @@ const dentro = (d: DatosParte) => d.ancho - PAD_LAT * 2
 type Trozo = { t: string; b?: boolean }
 const plano = (ps: (Trozo | null)[]) => ps.filter(Boolean).map(p => (p as Trozo).t).join('')
 
-/** € que se lleva si cubre lo que falta. Misma fórmula que `dineroPorCubrir`. */
-const dineroDe = (p: ParteDiarioPalanca) =>
-  p.falta <= 0 ? 0 : (p.esImporte ? p.falta * (p.tarifaActual / 100) : p.falta * p.tarifaActual)
+/**
+ * € que se lleva si cubre lo que falta.
+ *
+ * Llama a `dineroPorCubrir` de la librería y NO rehace la cuenta: este mismo
+ * fichero se usa en Tiendas y en FFVV, y en FFVV el objetivo no paga «lo que
+ * falta» sino que enciende TODA la comisión del grupo. Copiar la fórmula de
+ * Tiendas aquí pintaba un importe falso en los partes de la fuerza de ventas.
+ */
+const dineroDe = (p: ParteDiarioPalanca) => dineroPorCubrir(p, p.falta)
 
 const titularPortada = (d: DatosParte): Trozo[] => [
-  { t: `Hola ${d.c.nombre}: ayer fue ` },
+  { t: `Hola ${d.c.nombre}: ${d.a.dia.el} fue ` },
   { t: d.veredicto.calificacion, b: true },
   { t: '. ' },
   { t: `${d.c.ayer.ops} ${d.c.ayer.ops === 1 ? 'operación' : 'operaciones'}`, b: true },
@@ -79,15 +86,15 @@ const frasesAyer = (d: DatosParte, p: ParteDiarioPalanca): Trozo[] => {
   const { c, a } = d
   const delDia = c.ayer.porPalanca.find(x => x.palanca === p.nombre)
   return [
-    // En las palancas que se miden en euros lo que importa es el importe: «Ayer
-    // sumaste 14 140 €» no se entiende.
+    // En las palancas que se miden en euros lo que importa es el importe: «El
+    // lunes sumaste 14 140 €» no se entiende.
     ...(delDia && delDia.uds > 0
       ? [
-          { t: 'Ayer sumaste ' },
+          { t: `${a.dia.El} sumaste ` },
           { t: p.esImporte ? a.eur0(delDia.importe) : `${delDia.uds} ${a.unidad(p.nombre, delDia.uds)}`, b: true },
           { t: '. ' },
         ]
-      : [{ t: 'Ayer, ' }, { t: 'ninguna', b: true }, { t: '. ' }]),
+      : [{ t: `${a.dia.El}, ` }, { t: 'ninguna', b: true }, { t: '. ' }]),
     { t: 'Llevas ' },
     { t: p.esImporte ? a.eur2(p.llevamos) : a.num(p.llevamos), b: true },
     ...(p.objetivo > 0 ? [{ t: ' de ' }, { t: p.esImporte ? a.eur0(p.objetivo) : a.num(p.objetivo) }] : []),
@@ -324,8 +331,8 @@ const diseno: Diseno = {
           backgroundColor: C.tinta, padding: `26px ${PAD_LAT}px`,
         }}>
           {[
-            { k: `${c.ayer.ops}`, t: 'OPS AYER' },
-            { k: a.eur2(c.ayer.comision), t: 'COMISIÓN AYER' },
+            { k: `${c.ayer.ops}`, t: `OPS ${a.dia.DEL}` },
+            { k: a.eur2(c.ayer.comision), t: `COMISIÓN ${a.dia.DEL}` },
             { k: `${c.mes.ops}`, t: 'VENTAS DEL MES' },
             { k: a.eur2(c.mes.comisionTotal), t: 'COMISIÓN DEL MES' },
           ].map(m => (
@@ -333,7 +340,10 @@ const diseno: Diseno = {
               <div style={{ display: 'flex', fontSize: 44, fontWeight: 700, color: C.papel, letterSpacing: -1, lineHeight: 1 }}>
                 {m.k}
               </div>
-              <div style={{ display: 'flex', fontSize: 16, fontWeight: 700, color: C.salmon, letterSpacing: 2, marginTop: 8 }}>
+              {/* letterSpacing 1 y no 2: con 2, «COMISIÓN DEL MIÉRCOLES» se
+                  salía de su cuarto de franja y partía a dos líneas, y la altura
+                  de la franja está contada para UNA. */}
+              <div style={{ display: 'flex', fontSize: 16, fontWeight: 700, color: C.salmon, letterSpacing: 1, marginTop: 8 }}>
                 {m.t}
               </div>
             </div>

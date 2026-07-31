@@ -75,7 +75,7 @@ const marcador = (d: DatosParte, p: ParteDiarioPalanca) => {
   return 'cubierto'
 }
 
-/** Entradilla: lo de ayer, el puesto, la media y la frase de cierre. */
+/** Entradilla: lo del día, el puesto, la media y la frase de cierre. */
 const partesLede = (d: DatosParte): Trozo[] => {
   const ops = d.c.ayer.ops
   const partes: Trozo[] = [{ t: `${ops} ${ops === 1 ? 'operación' : 'operaciones'}`, b: true }]
@@ -98,16 +98,16 @@ const partesLede = (d: DatosParte): Trozo[] => {
   return partes
 }
 
-/** «Ayer sumaste 4 fibras. Llevas 11 de 17.», con los números en tiza amarilla. */
+/** «El lunes sumaste 4 fibras. Llevas 11 de 17.», con los números en tiza amarilla. */
 const partesAyer = (d: DatosParte, p: ParteDiarioPalanca): Trozo[] => {
   const del = d.c.ayer.porPalanca.find(x => x.palanca === p.nombre)
   const cabeza: Trozo[] = del && del.uds > 0
     ? [
-        { t: 'Ayer sumaste ' },
+        { t: `${d.a.dia.El} sumaste ` },
         { t: p.esImporte ? d.a.eur0(del.importe) : `${del.uds} ${d.a.unidad(p.nombre, del.uds)}`, b: true },
         { t: '. ' },
       ]
-    : [{ t: 'Ayer, ' }, { t: 'ninguna', b: true }, { t: '. ' }]
+    : [{ t: `${d.a.dia.El}, ` }, { t: 'ninguna', b: true }, { t: '. ' }]
   const cuerpo: Trozo[] = [
     { t: 'Llevas ' },
     { t: p.esImporte ? d.a.eur2(p.llevamos) : d.a.num(p.llevamos), b: true },
@@ -119,7 +119,7 @@ const partesAyer = (d: DatosParte, p: ParteDiarioPalanca): Trozo[] => {
   return [...cabeza, ...cuerpo]
 }
 
-/** Línea de tiza bajo «Lo de ayer»: qué hizo el equipo entero. */
+/** Línea de tiza bajo «Lo del lunes»: qué hizo el equipo entero. */
 const extraAyer = (d: DatosParte) =>
   `El equipo cerró ${d.data.equipo.ops} ${d.data.equipo.ops === 1 ? 'operación' : 'operaciones'}`
   + ` por ${d.a.eur0(d.data.equipo.importe)}`
@@ -257,7 +257,7 @@ const diseno: Diseno = {
     let h = 2 * MADERA + PAD_TOP + PAD_BOT
     h += 24                                                                  // fecha
     h += 8 + d.a.lineas(`Hola ${d.c.nombre},`, A, TAM_H1) * LH_H1
-    h += d.a.lineas(`ayer fue ${d.veredicto.calificacion}`, A, TAM_H1) * LH_H1 + 8 + 5
+    h += d.a.lineas(`${d.a.dia.el} fue ${d.veredicto.calificacion}`, A, TAM_H1) * LH_H1 + 8 + 5
     h += 16 + d.a.lineas(lede, 900, TAM_LEDE) * LH_LEDE
     h += 22 + altoMarcoCifras(d, extraAyer(d), A)
     h += 18 + altoMarcoCifras(d, extraMes(d), A)
@@ -323,7 +323,7 @@ const diseno: Diseno = {
         }}>
           {/* Cabecera escrita a mano */}
           <div style={{ display: 'flex', height: 24, fontSize: 18, lineHeight: 1.2, letterSpacing: 3, color: P.gris }}>
-            {`${d.a.fechaLarga(d.data.fecha).toUpperCase()} · TU PARTE DE AYER`}
+            {`${d.a.fechaLarga(d.data.fecha).toUpperCase()} · TU PARTE DEL DÍA`}
           </div>
           <div style={{ display: 'flex', fontSize: TAM_H1, lineHeight: LH_H1 / TAM_H1, color: P.blanco, marginTop: 8 }}>
             {`Hola ${d.c.nombre},`}
@@ -332,7 +332,7 @@ const diseno: Diseno = {
             display: 'flex', alignSelf: 'flex-start', fontSize: TAM_H1, lineHeight: LH_H1 / TAM_H1,
             color: P.blanco, paddingBottom: 8, borderBottom: `5px solid ${P.amarillo}`,
           }}>
-            {`ayer fue ${d.veredicto.calificacion}`}
+            {`${d.a.dia.el} fue ${d.veredicto.calificacion}`}
           </div>
           <div style={{ display: 'flex', marginTop: 16 }}>
             <Frase
@@ -342,9 +342,9 @@ const diseno: Diseno = {
             />
           </div>
 
-          {/* Lo de ayer */}
+          {/* Lo del día */}
           <Marco ancho={A} mt={22}>
-            <Rotulo texto="Lo de ayer" />
+            <Rotulo texto={`Lo ${d.a.dia.del}`} />
             <div style={{ display: 'flex', justifyContent: 'space-between', height: ALTO_CIFRA }}>
               <Cifra ancho={dentroDe(A) / 3} v={`${d.c.ayer.ops}`} k={d.c.ayer.ops === 1 ? 'operación' : 'operaciones'} />
               <Cifra ancho={dentroDe(A) / 3} v={d.a.eur0(d.c.ayer.importe)} k="facturado" />

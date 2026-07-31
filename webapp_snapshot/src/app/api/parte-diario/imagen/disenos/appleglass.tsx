@@ -127,7 +127,7 @@ const partesLede = (d: DatosParte): Trozo[] => {
 }
 
 const partesTitular = (d: DatosParte): Trozo[] => [
-  { t: 'ayer fue ' },
+  { t: `${d.a.dia.el} fue ` },
   { t: d.veredicto.calificacion, b: true },
 ]
 
@@ -135,10 +135,10 @@ const partesAyerPalanca = (d: DatosParte, p: ParteDiarioPalanca): Trozo[] => {
   const del = d.c.ayer.porPalanca.find(x => x.palanca === p.nombre)
   return [
     ...(del && del.uds > 0
-      ? [{ t: 'Ayer sumaste ' },
+      ? [{ t: `${d.a.dia.El} sumaste ` },
          { t: p.esImporte ? d.a.eur0(del.importe) : `${del.uds} ${d.a.unidad(p.nombre, del.uds)}`, b: true },
          { t: '. ' }]
-      : [{ t: 'Ayer, ' }, { t: 'ninguna', b: true }, { t: '. ' }]),
+      : [{ t: `${d.a.dia.El}, ` }, { t: 'ninguna', b: true }, { t: '. ' }]),
     { t: 'Llevas ' },
     { t: p.esImporte ? d.a.eur2(p.llevamos) : d.a.num(p.llevamos), b: true },
     ...(p.objetivo > 0
@@ -388,9 +388,9 @@ const diseno: Diseno = {
           />
         </div>
 
-        {/* Ayer */}
+        {/* El día del que habla el parte */}
         <Cristal ancho={inner} hijos={[
-          <Etiqueta key="e" texto="Ayer" />,
+          <Etiqueta key="e" texto={d.a.dia.El} />,
           <div key="t" style={{ display: 'flex', marginTop: 16 }}>
             <Cifra ancho={anchoTercio} valor={String(c.ayer.ops)} clave="Operaciones" />
             <Cifra ancho={anchoTercio} valor={d.a.eur0(c.ayer.importe)} clave="Facturado" />

@@ -86,6 +86,28 @@ const fechaLarga = (iso: string) => {
   return t.charAt(0).toUpperCase() + t.slice(1)
 }
 
+/**
+ * El día del parte, escrito de las cinco maneras que hacen falta.
+ *
+ * Aquí NO se dice «ayer». El parte se manda a primera hora (o de noche) y se
+ * lee cuando se lee: el del viernes lo abren el lunes. Con el día de la semana
+ * el texto es verdad lo abran cuando lo abran.
+ */
+const diaDelParte = (iso: string) => {
+  const [y, m, d] = iso.split('-').map(Number)
+  const nombre = (y && m && d)
+    ? new Date(y, m - 1, d).toLocaleDateString('es-ES', { weekday: 'long' })
+    : 'día'
+  const el = `el ${nombre}`
+  return {
+    el,
+    El: el.charAt(0).toUpperCase() + el.slice(1),
+    EL: el.toUpperCase(),
+    del: `del ${nombre}`,
+    DEL: `DEL ${nombre.toUpperCase()}`,
+  }
+}
+
 const ICONOS: { clave: string; icono: string }[] = [
   { clave: 'dispositivo', icono: '📱' }, { clave: 'convergente', icono: '🔗' },
   { clave: 'baf', icono: '🌐' }, { clave: 'arpu', icono: '📈' },
@@ -138,6 +160,7 @@ export async function GET(request: Request) {
     readFile(path.join(process.cwd(), 'public', 'fonts', 'LiberationSans-Bold.ttf')),
   ])
 
+  const dia = diaDelParte(data.fecha)
   const veredicto = veredictoDelDia(c.nombre, data.fecha, c.ayer.ops, c.ayer.importe, data.equipo.media)
   const pctMedia = data.equipo.media > 0 ? (c.ayer.importe / data.equipo.media - 1) * 100 : 0
   const principal = c.ritmo.palanca ? c.palancas.find(p => p.nombre === c.ritmo.palanca) : undefined
@@ -163,8 +186,8 @@ export async function GET(request: Request) {
   const textoAyer = (p: any) => {
     const d = c.ayer.porPalanca.find((x: any) => x.palanca === p.nombre)
     const ini = d && d.uds > 0
-      ? (p.esImporte ? `Ayer sumaste ${eur0(d.importe)}. ` : `Ayer sumaste ${d.uds} ${unidadDePalanca(p.nombre, d.uds)}. `)
-      : 'Ayer, ninguna. '
+      ? (p.esImporte ? `${dia.El} sumaste ${eur0(d.importe)}. ` : `${dia.El} sumaste ${d.uds} ${unidadDePalanca(p.nombre, d.uds)}. `)
+      : `${dia.El}, ninguna. `
     return ini + `Llevas ${p.esImporte ? eur2(p.llevamos) : num(p.llevamos)}${p.objetivo > 0 ? ` de ${p.esImporte ? eur0(p.objetivo) : num(p.objetivo)}` : ''}.`
   }
 
@@ -186,7 +209,7 @@ export async function GET(request: Request) {
       altoTarjeta(resto[i], anchoMitad),
       resto[i + 1] ? altoTarjeta(resto[i + 1], anchoMitad) : 0)
   }
-  const textoVeredicto = `Ayer fue ${veredicto.calificacion}: cerraste ${c.ayer.ops} operaciones`
+  const textoVeredicto = `${dia.El} fue ${veredicto.calificacion}: cerraste ${c.ayer.ops} operaciones`
     + (c.ayer.importe > 0 ? ` por ${eur0(c.ayer.importe)}` : '') + `. ${veredicto.cierre}`
   const altoHero = 26 + 62 + 14 + lineas(textoVeredicto, ANCHO - 108, 25) * 33 + 16 + 46 + 26
   const alto = Math.round(
@@ -202,7 +225,7 @@ export async function GET(request: Request) {
     const d: DatosParte = {
       c, data, veredicto, palancas, destacada, resto, pctMedia, ancho: ANCHO,
       a: {
-        eur0, eur2, num, fechaLarga, iconoDe, lineas,
+        eur0, eur2, num, fechaLarga, iconoDe, lineas, dia,
         textoAyer,
         textoFalta: (p: any) => traducirFalta(p, c.ritmo.diasLaborablesRestantes),
         textoAnimo: (p: any) => fraseAnimo(estadoDePalanca(p), c.nombre, data.fecha, p.nombre),
@@ -317,16 +340,16 @@ export async function GET(request: Request) {
           </div>
         </div>
         {/* En las palancas que se miden en euros lo que importa es el importe,
-            no el número de líneas: «Ayer sumaste 14 140 €» no se entiende. */}
+            no el número de líneas: «El lunes sumaste 14 140 €» no se entiende. */}
         <div style={{ display: 'flex', marginTop: 10 }}>
           <Frase
             ancho={ancho - 44} tam={19} color={C.suave} colorFuerte={C.tinta}
             partes={[
               ...(delDia && delDia.uds > 0
-                ? [{ t: 'Ayer sumaste ' },
+                ? [{ t: `${dia.El} sumaste ` },
                    { t: p.esImporte ? eur0(delDia.importe) : `${delDia.uds} ${unidadDePalanca(p.nombre, delDia.uds)}`, b: true },
                    { t: '. ' }]
-                : [{ t: 'Ayer, ' }, { t: 'ninguna', b: true }, { t: '. ' }]),
+                : [{ t: `${dia.El}, ` }, { t: 'ninguna', b: true }, { t: '. ' }]),
               { t: 'Llevas ' },
               { t: p.esImporte ? eur2(p.llevamos) : num(p.llevamos), b: true },
               ...(p.objetivo > 0
@@ -376,7 +399,7 @@ export async function GET(request: Request) {
             }}>👋</div>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <div style={{ fontSize: 19, fontWeight: 700, color: 'rgba(255,255,255,0.78)', letterSpacing: 2 }}>
-                {`${fechaLarga(data.fecha).toUpperCase()} · TU PARTE DE AYER`}
+                {`${fechaLarga(data.fecha).toUpperCase()} · TU PARTE DEL DÍA`}
               </div>
               <div style={{ fontSize: 44, fontWeight: 700, color: '#fff' }}>{`Hola ${c.nombre}`}</div>
             </div>
@@ -385,7 +408,7 @@ export async function GET(request: Request) {
             <Frase
               ancho={ANCHO - 108} tam={25} color="rgba(255,255,255,0.92)" colorFuerte="#fff"
               partes={[
-                { t: 'Ayer fue ' },
+                { t: `${dia.El} fue ` },
                 { t: veredicto.calificacion, b: true },
                 { t: ': cerraste ' },
                 { t: `${c.ayer.ops} ${c.ayer.ops === 1 ? 'operación' : 'operaciones'}`, b: true },
@@ -397,7 +420,7 @@ export async function GET(request: Request) {
           </div>
           <div style={{ display: 'flex', marginTop: 16 }}>
             {c.ayer.ops > 0 && c.posicionDia > 0 && (
-              <Chip texto={`${c.posicionDia === 1 ? '🥇' : c.posicionDia === 2 ? '🥈' : c.posicionDia === 3 ? '🥉' : '📊'} ${c.posicionDia}.º del equipo ayer`} />
+              <Chip texto={`${c.posicionDia === 1 ? '🥇' : c.posicionDia === 2 ? '🥈' : c.posicionDia === 3 ? '🥉' : '📊'} ${c.posicionDia}.º del equipo ${dia.el}`} />
             )}
             {data.equipo.media > 0 && c.ayer.ops > 0 && (
               <Chip texto={`📈 Un ${num(Math.abs(pctMedia))} % ${pctMedia >= 0 ? 'por encima' : 'por debajo'} de la media`} />
@@ -409,11 +432,11 @@ export async function GET(request: Request) {
           </div>
         </div>
 
-        {/* Tres cifras de ayer */}
+        {/* Las tres cifras del día del parte */}
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 20 }}>
-          <Mini et="AYER VENDISTE" valor={`${c.ayer.ops}`} sub={`El equipo hizo ${data.equipo.ops}`} />
-          <Mini et="VALOR DE AYER" valor={eur0(c.ayer.importe)} sub={`Media del equipo: ${eur0(data.equipo.media)}`} />
-          <Mini et="COMISIÓN GANADA AYER" valor={eur2(c.ayer.comision)} sub={`Llevas ${eur2(c.mes.comisionTotal)} este mes`} color={C.ok} />
+          <Mini et={`${dia.EL} VENDISTE`} valor={`${c.ayer.ops}`} sub={`El equipo hizo ${data.equipo.ops}`} />
+          <Mini et={`VALOR ${dia.DEL}`} valor={eur0(c.ayer.importe)} sub={`Media del equipo: ${eur0(data.equipo.media)}`} />
+          <Mini et={`COMISIÓN ${dia.DEL}`} valor={eur2(c.ayer.comision)} sub={`Llevas ${eur2(c.mes.comisionTotal)} este mes`} color={C.ok} />
         </div>
 
         <div style={{ display: 'flex', fontSize: 20, fontWeight: 700, color: C.tenue, letterSpacing: 2, margin: '22px 0 14px 0' }}>

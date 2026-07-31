@@ -27,6 +27,26 @@ import type { ParteDiarioComercial, ParteDiarioPalanca, ParteDiarioResponse } fr
 /** Ancho fijo de la imagen. Se lee en el portátil, así que va holgado. */
 export const ANCHO = 1180
 
+/**
+ * El día del que habla el parte, escrito de las cinco maneras que hacen falta.
+ *
+ * No se dice «ayer»: el parte se manda por la noche o a primera hora y se lee
+ * cuando se lee —el del viernes lo abren el lunes—, así que «ayer» sería
+ * mentira la mitad de las veces. Con el día de la semana siempre es verdad.
+ */
+export interface DiaDelParte {
+  /** «el lunes» — dentro de una frase. */
+  el: string
+  /** «El lunes» — al empezar una frase. */
+  El: string
+  /** «EL LUNES» — en un rótulo. */
+  EL: string
+  /** «del lunes» — «lo del lunes», «los euros del lunes». */
+  del: string
+  /** «DEL LUNES» — en un rótulo. */
+  DEL: string
+}
+
 export interface AyudasParte {
   /** 1234.5 → «1.235 €» */
   eur0: (v: number) => string
@@ -38,7 +58,9 @@ export interface AyudasParte {
   fechaLarga: (iso: string) => string
   /** Emoji decorativo de una palanca por su nombre. */
   iconoDe: (nombre: string) => string
-  /** «Ayer sumaste 4 fibras. Llevas 11 de 17.» */
+  /** El día del que habla el parte: «el lunes», «El lunes», «DEL LUNES»… */
+  dia: DiaDelParte
+  /** «El lunes sumaste 4 fibras. Llevas 11 de 17.» */
   textoAyer: (p: ParteDiarioPalanca) => string
   /** «Faltan 6 fibras — 2 por semana y está hecho. Son 120 € para ti.» */
   textoFalta: (p: ParteDiarioPalanca) => string
