@@ -24,6 +24,7 @@ export default function TerritorialPdvPage() {
   const [catalogs, setCatalogs] = useState<Record<string, any[]>>({})
   const [modImporte, setModImporte] = useState<number>(0)
   const [manualImportePrevYear, setManualImportePrevYear] = useState<string>('')
+  const [estadoManual, setEstadoManual] = useState<string>('')
 
   // Nombres de los meses en español para las etiquetas de año anterior y mes actual
   const monthNames = useMemo(() => [
@@ -41,19 +42,80 @@ export default function TerritorialPdvPage() {
   const prevYearLabel = `${monthName} ${year - 1}`;
   const currYearLabel = `${monthName} ${year}`;
 
+  // ── El importe del año anterior, tecleado a mano ───────────────────────────
+  // ANTES vivía en localStorage, que es la libretita privada del navegador: no
+  // llegaba al servidor, así que desde otro ordenador, otro navegador o con otro
+  // usuario el hueco salía vacío, y cualquier limpieza de datos del navegador se
+  // lo llevaba. Ahora se guarda en AppSetting como todo lo demás: se teclea una
+  // vez y queda para todos. Mismo arreglo que ya se hizo en la pantalla MOD.
+  //
+  // La clave es el MES QUE DESCRIBE (julio de 2025), no el mes que se esté
+  // mirando, para que se entienda a qué fila pertenece.
+  const prevYearKeyManual = useMemo(() => {
+    if (!activePeriodKey) return ''
+    const [y, m] = String(activePeriodKey).split('_')
+    return (y && m) ? `${Number(y) - 1}_${m}` : ''
+  }, [activePeriodKey])
+  const claveManual = prevYearKeyManual ? `territorial_pdv_manual_prev_${prevYearKeyManual}` : ''
+
+  const temporizadorManual = React.useRef<any>(null)
+
+  const guardarManual = (valor: string, inmediato = false) => {
+    if (!claveManual) return
+    if (temporizadorManual.current) clearTimeout(temporizadorManual.current)
+    setEstadoManual('Guardando…')
+    const hacer = async () => {
+      try {
+        const r = await fetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: claveManual, value: valor }),
+        })
+        const j = await r.json().catch(() => ({}))
+        setEstadoManual(r.ok && j?.success ? 'Guardado' : (j?.error || 'No se ha podido guardar.'))
+      } catch {
+        setEstadoManual('No se ha podido guardar.')
+      }
+    }
+    // Al teclear se espera un momento para no mandar una petición por letra.
+    if (inmediato) hacer(); else temporizadorManual.current = setTimeout(hacer, 700)
+  }
+
   useEffect(() => {
-    if (!activePeriodKey) return;
-    const saved = localStorage.getItem(`territorial_pdv_manual_prev_year_importe_${activePeriodKey}`);
-    setManualImportePrevYear(saved || '');
-  }, [activePeriodKey]);
+    if (!claveManual) return
+    let vivo = true
+    ;(async () => {
+      try {
+        const r = await fetch(`/api/settings?key=${encodeURIComponent(claveManual)}`)
+        const j = await r.json().catch(() => ({}))
+        let val: string = typeof j?.value === 'string' ? j.value : ''
+
+        // Rescate: si en ESTE navegador quedaba algo de la época de
+        // localStorage, se sube al servidor para no perderlo.
+        //
+        // Solo cuando el servidor NO tiene NADA guardado (value === null). Si
+        // mirásemos «está vacío», borrar el importe a propósito y recargar lo
+        // resucitaría del navegador, y no habría forma de dejarlo en blanco.
+        if (j?.value === null || j?.value === undefined) {
+          const viejo = localStorage.getItem(
+            `territorial_pdv_manual_prev_year_importe_${activePeriodKey}`) || ''
+          if (viejo) {
+            val = viejo
+            guardarManual(viejo, true)
+          }
+        }
+        if (!vivo) return
+        setManualImportePrevYear(val)
+      } catch {
+        // Sin conexión con el servidor el hueco se queda como estaba.
+      }
+    })()
+    return () => { vivo = false }
+  }, [claveManual])
 
   const handleManualImportePrevYearChange = (val: string) => {
     setManualImportePrevYear(val);
-    if (val.trim() === '') {
-      localStorage.removeItem(`territorial_pdv_manual_prev_year_importe_${activePeriodKey}`);
-    } else {
-      localStorage.setItem(`territorial_pdv_manual_prev_year_importe_${activePeriodKey}`, val);
-    }
+    guardarManual(val);
   };
 
   useEffect(() => {
@@ -465,7 +527,17 @@ export default function TerritorialPdvPage() {
               </div>
               <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
                 Valor de referencia editable manualmente para el mismo mes del año anterior.
+                Se guarda en el servidor: se teclea una vez y lo ve todo el mundo.
               </div>
+              {estadoManual && (
+                <div style={{
+                  fontSize: '10px', marginTop: '3px', fontWeight: 700,
+                  color: estadoManual === 'Guardado' ? 'var(--mercedes-cyan)'
+                    : estadoManual === 'Guardando…' ? 'var(--text-muted)' : '#f87171',
+                }}>
+                  {estadoManual}
+                </div>
+              )}
             </div>
             
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
