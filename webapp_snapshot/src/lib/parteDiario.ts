@@ -75,6 +75,8 @@ export interface ParteDiarioComercial {
   }
   /** Puesto del día dentro del equipo (1 = el que más vendió). */
   posicionDia: number
+  /** Días laborables seguidos vendiendo, contando hacia atrás desde el parte. */
+  rachaDias: number
   totalComerciales: number
 }
 
@@ -136,8 +138,16 @@ export function unidadDePalanca(nombre: string, cantidad: number): string {
   return cantidad === 1 ? found.singular : found.plural
 }
 
-const eur = (v: number) => v.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' €'
-const eur2 = (v: number) => v.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
+// Formato español a mano. Con toLocaleString y decimales fijados, el servidor
+// devolvía los importes SIN separador de miles («7303 €» junto a «7.443 €» en
+// la misma frase). Así sale igual en el navegador y en la imagen del correo.
+const _miles = (entero: string) => entero.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+const eur = (v: number) => _miles(String(Math.round(Number(v) || 0))) + ' €'
+const eur2 = (v: number) => {
+  const n = Number(v) || 0
+  const [ent, dec] = Math.abs(n).toFixed(2).split('.')
+  return `${n < 0 ? '-' : ''}${_miles(ent)},${dec} €`
+}
 
 /** € que se lleva el comercial si cubre `falta` en esta palanca (tarifa del tramo vigente). */
 export function dineroPorCubrir(p: Pick<ParteDiarioPalanca, 'esImporte' | 'tarifaActual'>, falta: number): number {

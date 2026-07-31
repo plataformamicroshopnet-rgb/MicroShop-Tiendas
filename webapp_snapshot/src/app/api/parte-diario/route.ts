@@ -121,6 +121,36 @@ export async function GET(request: Request) {
     const diasLaborablesRestantes = getDiasLaborablesRestantes(periodKey)
     const diasLaborablesTranscurridos = getDiasLaborablesHasta(periodKey, fechaDate)
 
+    /**
+     * Días LABORABLES seguidos vendiendo, contando hacia atrás desde el día del
+     * parte. Los sábados y domingos se saltan sin cortar la racha: si vendió el
+     * viernes y el lunes, la racha sigue viva — cerrar el fin de semana no es
+     * dejar de vender.
+     */
+    const rachaDe = (ventas: any[]) => {
+      const conVenta = new Set(
+        ventas.filter((s: any) => !esAnulada(s))
+          .map((s: any) => {
+            const p = String(s.fecha || '').split('/')
+            return p.length === 3
+              ? `${p[2]}-${String(Number(p[1])).padStart(2, '0')}-${String(Number(p[0])).padStart(2, '0')}`
+              : ''
+          }).filter(Boolean))
+      let racha = 0
+      const cursor = new Date(anio, mes - 1, dia)
+      // Tope de 60 días: sin él, un histórico raro podría dejarlo dando vueltas.
+      for (let i = 0; i < 60; i++) {
+        const wd = cursor.getDay()
+        if (wd !== 0 && wd !== 6) {
+          const iso = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}-${String(cursor.getDate()).padStart(2, '0')}`
+          if (!conVenta.has(iso)) break
+          racha++
+        }
+        cursor.setDate(cursor.getDate() - 1)
+      }
+      return racha
+    }
+
     // ── Cifras del DÍA por comercial (para el equipo y para cada parte) ──────
     const ventasDelDiaPorComercial = new Map<string, any[]>()
     for (const st of result.sellerStats) {
@@ -298,6 +328,7 @@ export async function GET(request: Request) {
             pctProyeccion: principal && principal.objetivo > 0 ? r2((proyeccionMes / principal.objetivo) * 100) : 0,
           },
           posicionDia: posicionDe(st.name),
+          rachaDias: rachaDe(st.rawSales || []),
           totalComerciales: ranking.length,
         }
       })

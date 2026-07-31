@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og'
 import { readFile } from 'fs/promises'
 import path from 'path'
+import { GET as parteDiarioJSON } from '../route'
 import { estadoDePalanca, fraseAnimo, traducirFalta, unidadDePalanca, veredictoDelDia } from '@/lib/parteDiario'
 import type { ParteDiarioComercial, ParteDiarioResponse } from '@/lib/parteDiario'
 
@@ -43,9 +44,23 @@ const C = {
   cero: '#94A3B8', ceroBg: '#1B2A3F',
 }
 
-const eur0 = (v: number) => Math.round(v).toLocaleString('es-ES') + ' €'
-const eur2 = (v: number) => v.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
-const num = (v: number) => v.toLocaleString('es-ES', { maximumFractionDigits: 1 })
+// Formato español a mano. No se usa toLocaleString con decimales porque en el
+// servidor salía SIN separador de miles («1830,30 €» en vez de «1.830,30 €»),
+// y quedaba incoherente con los importes redondos, que sí lo llevaban.
+const _miles = (entero: string) => entero.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+const eur0 = (v: number) => _miles(String(Math.round(Number(v) || 0))) + ' €'
+const eur2 = (v: number) => {
+  const n = Number(v) || 0
+  const signo = n < 0 ? '-' : ''
+  const [ent, dec] = Math.abs(n).toFixed(2).split('.')
+  return `${signo}${_miles(ent)},${dec} €`
+}
+const num = (v: number) => {
+  const n = Number(v) || 0
+  const r = Math.round(n * 10) / 10
+  const [ent, dec] = String(Math.abs(r)).split('.')
+  return (n < 0 ? '-' : '') + _miles(ent) + (dec ? ',' + dec : '')
+}
 
 const fechaLarga = (iso: string) => {
   const [y, m, d] = iso.split('-').map(Number)
@@ -80,13 +95,20 @@ export async function GET(request: Request) {
   if (periodKey) qs.set('periodKey', periodKey)
   if (seller) qs.set('seller', seller)
 
+  // Se llama a la MISMA función que atiende /api/parte-diario, aquí dentro, sin
+  // salir a la red.
+  //
+  // Antes esto era un fetch a la propia dirección pública. En local iba, pero
+  // en producción el contenedor no puede llamarse a sí mismo por su dominio y
+  // el fetch reventaba: la imagen respondía 500 y no había forma de verlo hasta
+  // desplegar. Llamando a la función se acabó el problema, y además sigue
+  // habiendo UNA sola implementación de las cifras.
   const secreto = request.headers.get('x-prv-secret')
-  const res = await fetch(`${origin}/api/parte-diario?${qs.toString()}`, {
-    headers: secreto
-      ? { 'x-prv-secret': secreto }
-      : { cookie: request.headers.get('cookie') || '' },
-    cache: 'no-store',
-  })
+  const cabeceras: Record<string, string> = secreto
+    ? { 'x-prv-secret': secreto }
+    : { cookie: request.headers.get('cookie') || '' }
+  const res = await parteDiarioJSON(
+    new Request(`${origin}/api/parte-diario?${qs.toString()}`, { headers: cabeceras }))
   if (!res.ok) {
     return new Response('No autorizado o sin datos', { status: res.status })
   }
@@ -154,9 +176,60 @@ export async function GET(request: Request) {
     24 + altoHero + 20 + 152 + 22 + 32 + 14
     + (destacada ? altoTarjeta(destacada, anchoDest) : 0) + altoResto + 24)
 
-  // OJO Satori: un recuadro con MÁS DE UN hijo revienta si no declara
-  // «display: flex». Por eso cada texto se monta entero en JavaScript y entra
-  // como un único hijo, en vez de mezclar trozos dentro del recuadro.
+  /**
+   * Frase con partes en NEGRITA.
+   *
+   * Es lo que hace que la vista salte sola a los números («cerraste **8
+   * operaciones** por **2.418 €**»). Se le pasan trozos: los `strong` van en
+   * negrita y en color fuerte, el resto normal.
+   *
+   * OJO Satori: un recuadro con más de un hijo TIENE que declarar
+   * «display: flex», y como cada trozo es un hijo, hace falta `flexWrap` para
+   * que la frase pueda partir en varias líneas.
+   */
+  type Trozo = { t: string; b?: boolean }
+
+  /**
+   * Los trozos normales se parten POR PALABRAS antes de dibujarlos.
+   *
+   * Cada trozo es una pieza suelta y se coloca entera o salta de línea: un
+   * trozo largo se iba abajo completo y dejaba el punto huérfano al principio
+   * de la línea siguiente («… por 240 €» / «. Sigue así…»). Partido en
+   * palabras, la frase fluye como texto normal. Las negritas se dejan enteras
+   * porque son cortas y no interesa que se rompa un importe por la mitad.
+   */
+  const porPalabras = (partes: Trozo[]): Trozo[] => {
+    const fuera: Trozo[] = []
+    for (const p of partes.filter(Boolean) as Trozo[]) {
+      if (!p.t) continue
+      if (p.b) { fuera.push(p); continue }
+      for (const trozo of (String(p.t).match(/\S+\s*|\s+/g) || [])) {
+        fuera.push({ t: trozo })
+      }
+    }
+    return fuera
+  }
+
+  const Frase = ({ partes, tam, color, colorFuerte, ancho }: any) => (
+    <div style={{
+      display: 'flex', flexWrap: 'wrap', alignItems: 'baseline',
+      width: ancho, fontSize: tam, color, lineHeight: 1.35,
+    }}>
+      {porPalabras(partes).map((p: Trozo, i: number) => (
+        <div key={i} style={{
+          display: 'flex',
+          fontSize: tam,
+          fontWeight: p.b ? 700 : 400,
+          color: p.b ? (colorFuerte || color) : color,
+          // «pre-wrap» y no «pre»: hay que conservar los espacios de los
+          // extremos, pero SIN impedir que el trozo parta. Con «pre», un trozo
+          // largo saltaba entero a la línea siguiente y dejaba el punto
+          // huérfano: «… por 240 €» / «. Sigue así y te sale un buen mes.»
+          whiteSpace: 'pre-wrap',
+        }}>{p.t}</div>
+      ))}
+    </div>
+  )
   const Chip = ({ texto }: { texto: string }) => (
     <div style={{
       display: 'flex', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.16)',
@@ -198,15 +271,25 @@ export async function GET(request: Request) {
             {est === 'cubierto' ? '¡Objetivo cubierto!' : est === 'cero' ? 'Sin estrenar' : `${Math.round(p.pct)} % del objetivo`}
           </div>
         </div>
-        <div style={{ display: 'flex', fontSize: 19, color: C.tinta, marginTop: 10 }}>
-          {/* En las palancas que se miden en euros lo que importa es el importe,
-              no el número de líneas: «Ayer sumaste 14 140 €» no se entiende. */}
-          {(delDia && delDia.uds > 0
-            ? (p.esImporte
-                ? `Ayer sumaste ${eur0(delDia.importe)}. `
-                : `Ayer sumaste ${delDia.uds} ${unidadDePalanca(p.nombre, delDia.uds)}. `)
-            : 'Ayer, ninguna. ')
-            + `Llevas ${p.esImporte ? eur2(p.llevamos) : num(p.llevamos)}${p.objetivo > 0 ? ` de ${p.esImporte ? eur0(p.objetivo) : num(p.objetivo)}` : ''}.`}
+        {/* En las palancas que se miden en euros lo que importa es el importe,
+            no el número de líneas: «Ayer sumaste 14 140 €» no se entiende. */}
+        <div style={{ display: 'flex', marginTop: 10 }}>
+          <Frase
+            ancho={ancho - 44} tam={19} color={C.suave} colorFuerte={C.tinta}
+            partes={[
+              ...(delDia && delDia.uds > 0
+                ? [{ t: 'Ayer sumaste ' },
+                   { t: p.esImporte ? eur0(delDia.importe) : `${delDia.uds} ${unidadDePalanca(p.nombre, delDia.uds)}`, b: true },
+                   { t: '. ' }]
+                : [{ t: 'Ayer, ' }, { t: 'ninguna', b: true }, { t: '. ' }]),
+              { t: 'Llevas ' },
+              { t: p.esImporte ? eur2(p.llevamos) : num(p.llevamos), b: true },
+              ...(p.objetivo > 0
+                ? [{ t: ' de ' }, { t: p.esImporte ? eur0(p.objetivo) : num(p.objetivo) }]
+                : []),
+              { t: '.' },
+            ]}
+          />
         </div>
         <div style={{ display: 'flex', height: 9, backgroundColor: C.ceroBg, borderRadius: 5, marginTop: 12 }}>
           <div style={{
@@ -253,9 +336,19 @@ export async function GET(request: Request) {
               <div style={{ fontSize: 44, fontWeight: 700, color: '#fff' }}>{`Hola ${c.nombre}`}</div>
             </div>
           </div>
-          <div style={{ display: 'flex', fontSize: 25, color: '#fff', marginTop: 14 }}>
-            {`Ayer fue ${veredicto.calificacion}: cerraste ${c.ayer.ops} ${c.ayer.ops === 1 ? 'operación' : 'operaciones'}`
-              + (c.ayer.importe > 0 ? ` por ${eur0(c.ayer.importe)}` : '') + `. ${veredicto.cierre}`}
+          <div style={{ display: 'flex', marginTop: 14 }}>
+            <Frase
+              ancho={ANCHO - 108} tam={25} color="rgba(255,255,255,0.92)" colorFuerte="#fff"
+              partes={[
+                { t: 'Ayer fue ' },
+                { t: veredicto.calificacion, b: true },
+                { t: ': cerraste ' },
+                { t: `${c.ayer.ops} ${c.ayer.ops === 1 ? 'operación' : 'operaciones'}`, b: true },
+                c.ayer.importe > 0 ? { t: ' por ' } : null,
+                c.ayer.importe > 0 ? { t: eur0(c.ayer.importe), b: true } : null,
+                { t: `. ${veredicto.cierre}` },
+              ].filter(Boolean)}
+            />
           </div>
           <div style={{ display: 'flex', marginTop: 16 }}>
             {c.ayer.ops > 0 && c.posicionDia > 0 && (
@@ -265,6 +358,9 @@ export async function GET(request: Request) {
               <Chip texto={`📈 Un ${num(Math.abs(pctMedia))} % ${pctMedia >= 0 ? 'por encima' : 'por debajo'} de la media`} />
             )}
             <Chip texto={`💶 ${eur2(c.mes.comisionTotal)} este mes`} />
+            {(c.rachaDias || 0) >= 2 && (
+              <Chip texto={`🔥 ${c.rachaDias} días seguidos vendiendo`} />
+            )}
           </div>
         </div>
 
