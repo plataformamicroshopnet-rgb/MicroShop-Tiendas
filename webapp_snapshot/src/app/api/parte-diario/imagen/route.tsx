@@ -2,6 +2,23 @@ import { ImageResponse } from 'next/og'
 import { readFile } from 'fs/promises'
 import path from 'path'
 import { GET as parteDiarioJSON } from '../route'
+import type { DatosParte, Diseno } from '@/lib/partes/tipos'
+import appleglass from './disenos/appleglass'
+import marcador from './disenos/marcador'
+import misiones from './disenos/misiones'
+import revista from './disenos/revista'
+import pizarra from './disenos/pizarra'
+
+/** Los diseños que se pueden pedir con ?diseno=. El original va aparte, abajo. */
+const DISENOS: Record<string, Diseno> = {
+  appleglass, marcador, misiones, revista, pizarra,
+}
+
+/** Para el selector del ERP: qué diseños hay y cómo se llaman. */
+export const CATALOGO = [
+  { clave: 'original', nombre: '★ El original' },
+  ...Object.values(DISENOS).map(x => ({ clave: x.clave, nombre: x.nombre })),
+]
 import { estadoDePalanca, fraseAnimo, traducirFalta, unidadDePalanca, veredictoDelDia } from '@/lib/parteDiario'
 import type { ParteDiarioComercial, ParteDiarioResponse } from '@/lib/parteDiario'
 
@@ -175,6 +192,34 @@ export async function GET(request: Request) {
   const alto = Math.round(
     24 + altoHero + 20 + 152 + 22 + 32 + 14
     + (destacada ? altoTarjeta(destacada, anchoDest) : 0) + altoResto + 24)
+
+  // ── ¿Otro diseño? ────────────────────────────────────────────────────────
+  // El original se dibuja aquí abajo tal cual; los demás viven cada uno en su
+  // fichero de ./disenos y reciben las cifras ya masticadas, para que ninguno
+  // pueda inventarse un número por su cuenta.
+  const otro = DISENOS[String(searchParams.get('diseno') || '').toLowerCase()]
+  if (otro) {
+    const d: DatosParte = {
+      c, data, veredicto, palancas, destacada, resto, pctMedia, ancho: ANCHO,
+      a: {
+        eur0, eur2, num, fechaLarga, iconoDe, lineas,
+        textoAyer,
+        textoFalta: (p: any) => traducirFalta(p, c.ritmo.diasLaborablesRestantes),
+        textoAnimo: (p: any) => fraseAnimo(estadoDePalanca(p), c.nombre, data.fecha, p.nombre),
+        estado: (p: any) => estadoDePalanca(p),
+        unidad: unidadDePalanca,
+      },
+    }
+    return new ImageResponse(otro.render(d), {
+      width: ANCHO,
+      height: Math.round(otro.alto(d)),
+      emoji: 'twemoji',
+      fonts: [
+        { name: 'Liberation Sans', data: regular, weight: 400, style: 'normal' },
+        { name: 'Liberation Sans', data: bold, weight: 700, style: 'normal' },
+      ],
+    })
+  }
 
   /**
    * Frase con partes en NEGRITA.
