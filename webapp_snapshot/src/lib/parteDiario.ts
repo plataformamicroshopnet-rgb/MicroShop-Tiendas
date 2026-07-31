@@ -197,7 +197,9 @@ export function traducirFalta(p: ParteDiarioPalanca, diasLaborablesRestantes: nu
       ritmo = ` — ${Math.ceil(porSemana)} por semana y está hecho.`
     }
   }
-  return `Faltan ${uds} ${cosa}${ritmo}${colaDinero}`
+  // Si no hay frase de ritmo hay que cerrar con punto: si no, quedaba
+  // «Faltan 13 fibras Son 19,50 € para ti.», todo pegado.
+  return `Faltan ${uds} ${cosa}${ritmo || '.'}${colaDinero}`
 }
 
 // ── FRASES QUE ROTAN ─────────────────────────────────────────────────────────
