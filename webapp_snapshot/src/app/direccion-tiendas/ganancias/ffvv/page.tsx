@@ -4,51 +4,38 @@ import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useGuard } from '@/hooks/useGuard'
 import { PageHeader } from '@/components/PageHeader'
-import { Users, ArrowLeft, Info } from 'lucide-react'
+import { Users, ArrowLeft, Info, AlertTriangle } from 'lucide-react'
 import { GANANCIAS_DATA } from '../data'
+import { cargarIngresosFfvv, mediaConDato, type MesFfvv } from '@/lib/gananciasFfvv'
 
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 
-// € con 2 decimales (formato del ejemplo: "5.368,32 €")
+// € con 2 decimales; «—» cuando NO HAY DATO, que no es lo mismo que 0,00 €.
 const eur2 = (n: number | null | undefined) =>
     (n === null || n === undefined || !isFinite(n)) ? '—'
         : n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
 
-// media de los valores no vacíos
-const media = (vals: (number | null)[]): number | null => {
-    const ok = vals.filter((v): v is number => v != null && isFinite(v))
-    return ok.length ? ok.reduce((a, b) => a + b, 0) / ok.length : null
-}
-
-// Clave del navegador de la época anterior. Se sigue leyendo UNA vez para
-// rescatar lo que hubiera y subirlo al servidor; ya no se escribe en ella.
+// Clave del navegador de la época anterior. Se lee UNA vez para rescatarla.
 const LS_KEY = 'ffvv_reparto_v2'
-// La misma clave, ahora en AppSetting (servidor): se teclea una vez y lo ve
-// todo el mundo, no solo el navegador donde se escribió.
+// La misma clave en el servidor: se teclea una vez y lo ve todo el mundo.
 const CLAVE = 'ffvv_reparto_v2'
-const DEF: Record<'ffvv' | 'banquillo', number> = { ffvv: 6, banquillo: 7 }
+/** Comerciales de la fuerza de ventas. El dueño confirmó 6 para 2026. */
+const POR_DEFECTO = 6
 
-type RowKey = 'ffvv' | 'banquillo'
-type NMap = Record<string, Partial<Record<RowKey, string>>>   // año -> { ffvv:"6", banquillo:"7" }
-
-// Importe mensual que se reparte = fila «Total Ingresos FFVV» de ese año (32.209,94 €
-// en enero-2025 → ÷6 = 5.368,32 €, que cuadra con el ejemplo).
-function importeFFVVMonths(year: string): (number | null)[] | null {
-    const rows = GANANCIAS_DATA[year]
-    if (!rows) return null
-    const r = rows.find(row => /^Total Ingresos FFVV/i.test(row.label))
-    return r ? r.months : null
-}
+// año -> { ffvv: "6" }. Se conserva el nombre del campo para no perder lo ya
+// guardado; el antiguo «banquillo» se ignora (ver la nota de la cabecera).
+type NMap = Record<string, Partial<Record<'ffvv' | 'banquillo', string>>>
 
 export default function FFVVGananciasPage() {
     const { authorized } = useGuard('MODULE_DIRECCION')
     const [nmap, setNmap] = useState<NMap>({})
     const [estado, setEstado] = useState<string>('')
+    const [datos, setDatos] = useState<Record<string, MesFfvv[]>>({})
+    const [cargando, setCargando] = useState(true)
 
     // ── El Nº de comerciales de cada año ───────────────────────────────────────
-    // ANTES vivía en localStorage, la libretita privada del navegador: no llegaba
-    // al servidor, así que desde otro ordenador la tabla volvía a dividir por los
-    // valores de fábrica y nadie se enteraba. Ahora va a AppSetting, como el resto.
+    // Vive en el servidor (AppSetting), no en el navegador: antes se tecleaba en
+    // un ordenador y desde otro la tabla volvía a dividir por el valor de fábrica.
     const temporizador = React.useRef<any>(null)
 
     const guardar = (mapa: NMap, inmediato = false) => {
@@ -80,9 +67,8 @@ export default function FFVVGananciasPage() {
                 if (typeof j?.value === 'string' && j.value) {
                     try { mapa = JSON.parse(j.value) } catch { mapa = {} }
                 }
-                // Rescate: lo que quedara en ESTE navegador se sube al servidor.
-                // Solo si el servidor no tiene NADA, para que borrarlo a propósito
-                // no lo resucite en el siguiente refresco.
+                // Rescate del navegador, solo si el servidor no tiene NADA: si
+                // mirásemos «está vacío», borrarlo a propósito lo resucitaría.
                 if (j?.value === null || j?.value === undefined) {
                     try {
                         const raw = localStorage.getItem(LS_KEY)
@@ -90,94 +76,143 @@ export default function FFVVGananciasPage() {
                     } catch { /* noop */ }
                 }
                 if (vivo) setNmap(mapa)
-            } catch {
-                // Sin servidor, la tabla se queda con los valores de fábrica.
-            }
+            } catch { /* sin servidor, valores de fábrica */ }
         })()
         return () => { vivo = false }
     }, [])
 
-    const setN = (year: string, key: RowKey, val: string) => {
-        const next = { ...nmap, [year]: { ...(nmap[year] || {}), [key]: val } }
+    const setN = (year: string, val: string) => {
+        const next = { ...nmap, [year]: { ...(nmap[year] || {}), ffvv: val } }
         setNmap(next)
         guardar(next)
     }
     /** true si el número lo ha puesto una persona; false si es el de fábrica. */
-    const esPuesto = (year: string, key: RowKey): boolean => {
-        const s = nmap[year]?.[key]
+    const esPuesto = (year: string): boolean => {
+        const s = nmap[year]?.ffvv
         if (s === undefined || s === '') return false
         const v = parseFloat(String(s).replace(',', '.'))
         return isFinite(v) && v > 0
     }
-    const nFor = (year: string, key: RowKey): number => {
-        const s = nmap[year]?.[key]
-        if (s !== undefined && s !== '') { const v = parseFloat(s.replace(',', '.')); if (isFinite(v) && v > 0) return v }
-        return DEF[key]
+    const nDe = (year: string): number => {
+        const s = nmap[year]?.ffvv
+        if (s !== undefined && s !== '') {
+            const v = parseFloat(String(s).replace(',', '.'))
+            if (isFinite(v) && v > 0) return v
+        }
+        return POR_DEFECTO
     }
 
     const years = useMemo(() => Object.keys(GANANCIAS_DATA)
-        .filter(y => { const p = importeFFVVMonths(y); return p && p.some(v => v != null) })
         .sort((a, b) => b.localeCompare(a)), [])
+
+    // Los ingresos de cada año se piden UNA vez, a la fuente común que usa
+    // también el cuadro grande de Ganancias.
+    useEffect(() => {
+        let vivo = true
+        ;(async () => {
+            const fuera: Record<string, MesFfvv[]> = {}
+            for (const y of years) fuera[y] = await cargarIngresosFfvv(y)
+            if (vivo) { setDatos(fuera); setCargando(false) }
+        })()
+        return () => { vivo = false }
+    }, [years])
 
     if (!authorized) return null
 
     const thBlue: React.CSSProperties = { padding: '8px 6px', textAlign: 'center', fontWeight: 700, borderLeft: '1px solid rgba(255,255,255,0.2)', whiteSpace: 'nowrap', fontSize: 12 }
-    const nInput: React.CSSProperties = { width: 40, padding: '2px 3px', textAlign: 'center', border: '1px solid #93c5fd', borderRadius: 5, fontSize: 11, background: 'var(--bg-input)', color: 'var(--text-main)', outline: 'none', fontWeight: 700 }
+    const nInput: React.CSSProperties = { width: 46, padding: '2px 3px', textAlign: 'center', border: '1px solid #93c5fd', borderRadius: 5, fontSize: 11, background: 'var(--bg-input)', color: 'var(--text-main)', outline: 'none', fontWeight: 700 }
 
     const renderYear = (year: string) => {
-        const prv = importeFFVVMonths(year) || []
-        const ROWS: { key: RowKey; label: string }[] = [
-            { key: 'ffvv', label: 'PRV FFVV' },
-            { key: 'banquillo', label: 'PRV FFVV + Banquillo' },
+        const meses = datos[year] || []
+        if (!meses.some(m => m.total !== null)) return null
+        const n = nDe(year)
+
+        // Las tres lecturas: lo que entra, lo que cuesta, y lo que queda.
+        const FILAS: { clave: 'ingreso' | 'coste' | 'diferencia'; label: string; ayuda: string }[] = [
+            { clave: 'ingreso', label: 'Ingresos por comercial', ayuda: 'Caja FFVV + Producción + PRV, dividido entre los comerciales' },
+            { clave: 'coste', label: 'Coste por comercial', ayuda: 'Gastos FFVV del mes, dividido entre los comerciales' },
+            { clave: 'diferencia', label: 'Diferencia', ayuda: 'Lo que queda por comercial después de los gastos' },
         ]
+        const valorDe = (m: MesFfvv, clave: string): number | null => {
+            if (n <= 0) return null
+            if (clave === 'ingreso') return m.total === null ? null : m.total / n
+            if (clave === 'coste') return m.gastos === null ? null : m.gastos / n
+            return m.ganancia === null ? null : m.ganancia / n
+        }
+
+        // Meses con dato a los que les falta algún concepto: el total es corto.
+        const incompletos = meses.filter(m => m.total !== null && m.faltan.length)
+
         return (
             <div key={year} style={{ background: 'var(--bg-card)', borderRadius: 14, border: '1px solid var(--border-light)', overflow: 'hidden', boxShadow: '0 2px 8px rgba(15,23,42,0.05)', marginBottom: 18 }}>
                 <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, whiteSpace: 'nowrap' }}>
                         <thead>
                             <tr style={{ background: 'linear-gradient(90deg, #0ea5e9, #0284c7)', color: '#fff' }}>
-                                <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 800, minWidth: 190 }}>Ingresos y Gastos {year}</th>
+                                <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 800, minWidth: 190 }}>Por comercial · {year}</th>
                                 <th style={{ ...thBlue, borderLeft: '2px solid rgba(255,255,255,0.3)' }}>Nº Com.</th>
                                 {MESES.map(m => <th key={m} style={thBlue}>{m}</th>)}
-                                <th style={{ ...thBlue, borderLeft: '2px solid rgba(255,255,255,0.3)', fontWeight: 800 }}>Totales</th>
+                                <th style={{ ...thBlue, borderLeft: '2px solid rgba(255,255,255,0.3)', fontWeight: 800 }}>Media</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {ROWS.map((r) => {
-                                const n = nFor(year, r.key)
-                                const vals = prv.map(v => (v != null && n > 0) ? v / n : null)
-                                const isBanq = r.key === 'banquillo'
+                            {FILAS.map((f, idx) => {
+                                const vals = meses.map(m => valorDe(m, f.clave))
+                                const esDif = f.clave === 'diferencia'
+                                const esCoste = f.clave === 'coste'
                                 return (
-                                    <tr key={r.key} style={{ background: isBanq ? 'rgba(2,132,199,0.06)' : 'transparent', borderBottom: '1px solid var(--border-light)' }}>
-                                        <td style={{ padding: '10px 12px', textAlign: 'left', fontWeight: isBanq ? 800 : 700, color: 'var(--text-main)' }}>{r.label}</td>
-                                        <td style={{ padding: '6px 4px', textAlign: 'center', borderLeft: '2px solid var(--border-light)' }}>
-                                            {/* Si el número es el de fábrica se marca en ámbar: si no, la
-                                                tabla enseñaba un € por comercial dividido entre 6 o 7 sin que
-                                                nadie lo hubiera dicho, y parecía un dato bueno. */}
-                                            <input type="number" step="1" min="1"
-                                                title={esPuesto(year, r.key)
-                                                    ? 'Nº de comerciales del año (divide todos los meses de esta fila)'
-                                                    : `Valor de fábrica (${DEF[r.key]}): nadie ha puesto el nº de comerciales de ${year}`}
-                                                value={nmap[year]?.[r.key] ?? String(DEF[r.key])}
-                                                onChange={e => setN(year, r.key, e.target.value)}
-                                                style={{
-                                                    ...nInput, width: 46,
-                                                    borderColor: esPuesto(year, r.key) ? '#93c5fd' : '#f59e0b',
-                                                    color: esPuesto(year, r.key) ? 'var(--text-main)' : '#f59e0b',
-                                                }} />
+                                    <tr key={f.clave} style={{ background: esDif ? 'rgba(2,132,199,0.06)' : 'transparent', borderBottom: '1px solid var(--border-light)' }}>
+                                        <td style={{ padding: '10px 12px', textAlign: 'left', fontWeight: esDif ? 800 : 700, color: 'var(--text-main)' }} title={f.ayuda}>
+                                            {f.label}
                                         </td>
-                                        {MESES.map((_, m) => (
-                                            <td key={m} style={{ padding: '10px 6px', textAlign: 'center', borderLeft: '1px solid var(--border-light)', fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#16a34a', fontSize: 12.5 }}>
-                                                {eur2(vals[m])}
+                                        {/* La casilla del divisor va UNA sola vez, en la primera fila */}
+                                        {idx === 0 ? (
+                                            <td rowSpan={FILAS.length} style={{ padding: '6px 4px', textAlign: 'center', borderLeft: '2px solid var(--border-light)', verticalAlign: 'middle' }}>
+                                                {/* Ámbar = nadie ha dicho cuántos comerciales hubo ese año y
+                                                    se está dividiendo por el valor de fábrica. */}
+                                                <input type="number" step="1" min="1"
+                                                    title={esPuesto(year)
+                                                        ? 'Nº de comerciales del año (divide todos los meses)'
+                                                        : `Valor de fábrica (${POR_DEFECTO}): nadie ha puesto el nº de comerciales de ${year}`}
+                                                    value={nmap[year]?.ffvv ?? String(POR_DEFECTO)}
+                                                    onChange={e => setN(year, e.target.value)}
+                                                    style={{
+                                                        ...nInput,
+                                                        borderColor: esPuesto(year) ? '#93c5fd' : '#f59e0b',
+                                                        color: esPuesto(year) ? 'var(--text-main)' : '#f59e0b',
+                                                    }} />
+                                            </td>
+                                        ) : null}
+                                        {vals.map((v, m) => (
+                                            <td key={m} style={{
+                                                padding: '10px 6px', textAlign: 'center', borderLeft: '1px solid var(--border-light)',
+                                                fontVariantNumeric: 'tabular-nums', fontWeight: 700, fontSize: 12.5,
+                                                color: v === null ? 'var(--text-muted)'
+                                                    : esCoste ? '#dc2626'
+                                                        : (esDif && v < 0) ? '#dc2626' : '#16a34a',
+                                            }}>
+                                                {eur2(v)}
                                             </td>
                                         ))}
-                                        <td style={{ padding: '10px 10px', textAlign: 'right', borderLeft: '2px solid var(--border-light)', fontWeight: 800, color: '#0284c7', fontVariantNumeric: 'tabular-nums' }}>{eur2(media(vals))}</td>
+                                        <td style={{ padding: '10px 10px', textAlign: 'right', borderLeft: '2px solid var(--border-light)', fontWeight: 800, color: '#0284c7', fontVariantNumeric: 'tabular-nums' }}>
+                                            {eur2(mediaConDato(vals))}
+                                        </td>
                                     </tr>
                                 )
                             })}
                         </tbody>
                     </table>
                 </div>
+                {incompletos.length > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 14px', background: 'rgba(245,158,11,0.08)', borderTop: '1px solid rgba(245,158,11,0.35)', fontSize: 12, color: '#b45309' }}>
+                        <AlertTriangle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
+                        <span>
+                            <b>Meses incompletos:</b>{' '}
+                            {incompletos.map(m => `${MESES[m.mes - 1]} (falta ${m.faltan.join(' y ')})`).join(' · ')}.
+                            {' '}Esos meses salen cortos hasta que se rellene lo que falta.
+                        </span>
+                    </div>
+                )}
             </div>
         )
     }
@@ -185,8 +220,8 @@ export default function FFVVGananciasPage() {
     return (
         <div style={{ padding: '20px 24px', backgroundColor: 'var(--bg-app)', minHeight: '100vh' }}>
             <PageHeader
-                title={<span style={{ display: 'flex', alignItems: 'center', gap: 12 }}><Users color="#00adef" size={28} /> FFVV — Reparto por comercial</span>}
-                subtitle="Reparto del PRV FFVV entre los comerciales, por año. Pon el Nº de comerciales del año en cada fila (normal y con banquillo) y el € por comercial de cada mes se recalcula solo. Totales = media de los meses."
+                title={<span style={{ display: 'flex', alignItems: 'center', gap: 12 }}><Users color="#00adef" size={28} /> FFVV — Por comercial</span>}
+                subtitle="Cuánto ingresa la empresa por cada comercial de la fuerza de ventas, cuánto cuesta y qué queda. Pon el Nº de comerciales del año y las tres filas se recalculan solas."
             />
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14, flexWrap: 'wrap' }}>
@@ -194,7 +229,11 @@ export default function FFVVGananciasPage() {
                     <ArrowLeft size={16} /> Volver a Ganancias
                 </Link>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#0369a1', fontWeight: 600 }}>
-                    <Info size={14} /> El importe FFVV mensual (T. Importe FFVV) se coge automático de Ganancias; tú pones el Nº de comerciales del año en cada fila (casilla «Nº Com.», se guarda en el servidor y lo ve todo el mundo) y el € por comercial de cada mes se calcula solo. Totales = media de los meses. Las casillas en <span style={{ color: '#f59e0b' }}>ámbar</span> son valores de fábrica: nadie ha dicho todavía cuántos comerciales hubo ese año.
+                    <Info size={14} /> Los importes salen de la MISMA fuente que el cuadro de Ganancias
+                    (Caja FFVV + Producción + PRV, menos los Gastos), con el dato en vivo del ERP y de FFVV.
+                    La media es de los meses que tienen dato, no de los doce.
+                    Las casillas en <span style={{ color: '#f59e0b' }}>ámbar</span> son valores de fábrica:
+                    nadie ha dicho cuántos comerciales hubo ese año.
                 </span>
                 {estado && (
                     <span style={{
@@ -205,9 +244,11 @@ export default function FFVVGananciasPage() {
                 )}
             </div>
 
-            {years.length === 0
-                ? <div style={{ padding: 24, color: 'var(--text-muted)' }}>No hay datos de PRV FFVV.</div>
-                : years.map(renderYear)}
+            {cargando
+                ? <div style={{ padding: 24, color: 'var(--text-muted)' }}>Cargando…</div>
+                : (years.map(renderYear).filter(Boolean).length === 0
+                    ? <div style={{ padding: 24, color: 'var(--text-muted)' }}>No hay datos de FFVV.</div>
+                    : years.map(renderYear))}
         </div>
     )
 }
