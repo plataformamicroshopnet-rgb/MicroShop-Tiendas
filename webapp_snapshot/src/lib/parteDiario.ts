@@ -209,7 +209,7 @@ export function traducirFalta(p: ParteDiarioPalanca, diasLaborablesRestantes: nu
   }
   // Si no hay frase de ritmo hay que cerrar con punto: si no, quedaba
   // «Faltan 13 fibras Son 19,50 € para ti.», todo pegado.
-  return `Faltan ${uds} ${cosa}${ritmo || '.'}${colaDinero}`
+  return `${uds === 1 ? 'Falta' : 'Faltan'} ${uds} ${cosa}${ritmo || '.'}${colaDinero}`
 }
 
 // ── FRASES QUE ROTAN ─────────────────────────────────────────────────────────
@@ -254,10 +254,12 @@ const VEREDICTO_NORMAL = [
   'un día de sumar',
   'un día tranquilo',
 ]
+// Un día a cero se cuenta tal cual —el número no se maquilla—, pero se cierra
+// siempre animando: el parte llega por la mañana y es lo primero que leen.
 const VEREDICTO_CERO = [
   'un día en blanco',
   'un día sin cerrar nada',
-  'un día para olvidar',
+  'un día de sembrar',
 ]
 
 const CIERRE_BUENO = [
@@ -271,9 +273,9 @@ const CIERRE_NORMAL = [
   'El mes se decide en los días como este.',
 ]
 const CIERRE_CERO = [
-  'Hoy toca darle la vuelta.',
-  'Un día malo lo tiene cualquiera: hoy se arregla.',
-  'Nada que no se arregle con una buena mañana.',
+  'Hoy se le da la vuelta: con una sola venta ya cambia la semana.',
+  'Un día así lo tiene cualquiera. Hoy sales y lo desatascas.',
+  'Nada que no arregle una buena mañana: hoy es el día.',
 ]
 
 /** Hash estable (djb2) para elegir siempre la misma frase con la misma semilla. */
