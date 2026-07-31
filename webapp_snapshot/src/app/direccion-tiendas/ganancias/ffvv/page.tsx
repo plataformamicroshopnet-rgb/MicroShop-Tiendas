@@ -20,7 +20,12 @@ const media = (vals: (number | null)[]): number | null => {
     return ok.length ? ok.reduce((a, b) => a + b, 0) / ok.length : null
 }
 
+// Clave del navegador de la época anterior. Se sigue leyendo UNA vez para
+// rescatar lo que hubiera y subirlo al servidor; ya no se escribe en ella.
 const LS_KEY = 'ffvv_reparto_v2'
+// La misma clave, ahora en AppSetting (servidor): se teclea una vez y lo ve
+// todo el mundo, no solo el navegador donde se escribió.
+const CLAVE = 'ffvv_reparto_v2'
 const DEF: Record<'ffvv' | 'banquillo', number> = { ffvv: 6, banquillo: 7 }
 
 type RowKey = 'ffvv' | 'banquillo'
@@ -38,14 +43,72 @@ function importeFFVVMonths(year: string): (number | null)[] | null {
 export default function FFVVGananciasPage() {
     const { authorized } = useGuard('MODULE_DIRECCION')
     const [nmap, setNmap] = useState<NMap>({})
+    const [estado, setEstado] = useState<string>('')
+
+    // ── El Nº de comerciales de cada año ───────────────────────────────────────
+    // ANTES vivía en localStorage, la libretita privada del navegador: no llegaba
+    // al servidor, así que desde otro ordenador la tabla volvía a dividir por los
+    // valores de fábrica y nadie se enteraba. Ahora va a AppSetting, como el resto.
+    const temporizador = React.useRef<any>(null)
+
+    const guardar = (mapa: NMap, inmediato = false) => {
+        if (temporizador.current) clearTimeout(temporizador.current)
+        setEstado('Guardando…')
+        const hacer = async () => {
+            try {
+                const r = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: CLAVE, value: JSON.stringify(mapa) }),
+                })
+                const j = await r.json().catch(() => ({}))
+                setEstado(r.ok && j?.success ? 'Guardado' : (j?.error || 'No se ha podido guardar.'))
+            } catch {
+                setEstado('No se ha podido guardar.')
+            }
+        }
+        if (inmediato) hacer(); else temporizador.current = setTimeout(hacer, 700)
+    }
 
     useEffect(() => {
-        try { const raw = localStorage.getItem(LS_KEY); if (raw) setNmap(JSON.parse(raw)) } catch { /* noop */ }
+        let vivo = true
+        ;(async () => {
+            try {
+                const r = await fetch(`/api/settings?key=${encodeURIComponent(CLAVE)}`)
+                const j = await r.json().catch(() => ({}))
+                let mapa: NMap = {}
+                if (typeof j?.value === 'string' && j.value) {
+                    try { mapa = JSON.parse(j.value) } catch { mapa = {} }
+                }
+                // Rescate: lo que quedara en ESTE navegador se sube al servidor.
+                // Solo si el servidor no tiene NADA, para que borrarlo a propósito
+                // no lo resucite en el siguiente refresco.
+                if (j?.value === null || j?.value === undefined) {
+                    try {
+                        const raw = localStorage.getItem(LS_KEY)
+                        if (raw) { mapa = JSON.parse(raw); guardar(mapa, true) }
+                    } catch { /* noop */ }
+                }
+                if (vivo) setNmap(mapa)
+            } catch {
+                // Sin servidor, la tabla se queda con los valores de fábrica.
+            }
+        })()
+        return () => { vivo = false }
     }, [])
-    const persist = (next: NMap) => { setNmap(next); try { localStorage.setItem(LS_KEY, JSON.stringify(next)) } catch { /* noop */ } }
 
-    const setN = (year: string, key: RowKey, val: string) =>
-        persist({ ...nmap, [year]: { ...(nmap[year] || {}), [key]: val } })
+    const setN = (year: string, key: RowKey, val: string) => {
+        const next = { ...nmap, [year]: { ...(nmap[year] || {}), [key]: val } }
+        setNmap(next)
+        guardar(next)
+    }
+    /** true si el número lo ha puesto una persona; false si es el de fábrica. */
+    const esPuesto = (year: string, key: RowKey): boolean => {
+        const s = nmap[year]?.[key]
+        if (s === undefined || s === '') return false
+        const v = parseFloat(String(s).replace(',', '.'))
+        return isFinite(v) && v > 0
+    }
     const nFor = (year: string, key: RowKey): number => {
         const s = nmap[year]?.[key]
         if (s !== undefined && s !== '') { const v = parseFloat(s.replace(',', '.')); if (isFinite(v) && v > 0) return v }
@@ -88,9 +151,20 @@ export default function FFVVGananciasPage() {
                                     <tr key={r.key} style={{ background: isBanq ? 'rgba(2,132,199,0.06)' : 'transparent', borderBottom: '1px solid var(--border-light)' }}>
                                         <td style={{ padding: '10px 12px', textAlign: 'left', fontWeight: isBanq ? 800 : 700, color: 'var(--text-main)' }}>{r.label}</td>
                                         <td style={{ padding: '6px 4px', textAlign: 'center', borderLeft: '2px solid var(--border-light)' }}>
-                                            <input type="number" step="1" min="1" title="Nº de comerciales del año (divide todos los meses de esta fila)"
+                                            {/* Si el número es el de fábrica se marca en ámbar: si no, la
+                                                tabla enseñaba un € por comercial dividido entre 6 o 7 sin que
+                                                nadie lo hubiera dicho, y parecía un dato bueno. */}
+                                            <input type="number" step="1" min="1"
+                                                title={esPuesto(year, r.key)
+                                                    ? 'Nº de comerciales del año (divide todos los meses de esta fila)'
+                                                    : `Valor de fábrica (${DEF[r.key]}): nadie ha puesto el nº de comerciales de ${year}`}
                                                 value={nmap[year]?.[r.key] ?? String(DEF[r.key])}
-                                                onChange={e => setN(year, r.key, e.target.value)} style={{ ...nInput, width: 46 }} />
+                                                onChange={e => setN(year, r.key, e.target.value)}
+                                                style={{
+                                                    ...nInput, width: 46,
+                                                    borderColor: esPuesto(year, r.key) ? '#93c5fd' : '#f59e0b',
+                                                    color: esPuesto(year, r.key) ? 'var(--text-main)' : '#f59e0b',
+                                                }} />
                                         </td>
                                         {MESES.map((_, m) => (
                                             <td key={m} style={{ padding: '10px 6px', textAlign: 'center', borderLeft: '1px solid var(--border-light)', fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#16a34a', fontSize: 12.5 }}>
@@ -120,8 +194,15 @@ export default function FFVVGananciasPage() {
                     <ArrowLeft size={16} /> Volver a Ganancias
                 </Link>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#0369a1', fontWeight: 600 }}>
-                    <Info size={14} /> El importe FFVV mensual (T. Importe FFVV) se coge automático de Ganancias; tú pones el Nº de comerciales del año en cada fila (casilla «Nº Com.», se guarda en este navegador) y el € por comercial de cada mes se calcula solo. Totales = media de los meses.
+                    <Info size={14} /> El importe FFVV mensual (T. Importe FFVV) se coge automático de Ganancias; tú pones el Nº de comerciales del año en cada fila (casilla «Nº Com.», se guarda en el servidor y lo ve todo el mundo) y el € por comercial de cada mes se calcula solo. Totales = media de los meses. Las casillas en <span style={{ color: '#f59e0b' }}>ámbar</span> son valores de fábrica: nadie ha dicho todavía cuántos comerciales hubo ese año.
                 </span>
+                {estado && (
+                    <span style={{
+                        fontSize: 12, fontWeight: 700,
+                        color: estado === 'Guardado' ? '#16a34a'
+                            : estado === 'Guardando…' ? 'var(--text-muted)' : '#dc2626',
+                    }}>{estado}</span>
+                )}
             </div>
 
             {years.length === 0
