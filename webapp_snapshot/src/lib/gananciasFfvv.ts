@@ -27,6 +27,8 @@ import { GANANCIAS_DATA } from '@/app/direccion-tiendas/ganancias/data'
 /** Desde cuándo hay dato vivo. Antes de esto manda el Excel. */
 const PRV_DESDE_ANIO = 2026
 const PRODUCCION_DESDE = '2026_04'
+/** La Caja FFVV dejó de existir en 2026: hasta 2025 sí era un ingreso real. */
+const CAJA_HASTA_ANIO = 2026
 
 export interface MesFfvv {
   /** 1..12 */
@@ -57,6 +59,33 @@ const ETIQUETAS = {
 function filaDe(filas: any[], etiqueta: string): (number | null)[] {
   const r = (filas || []).find((x: any) => String(x?.label || '').trim() === etiqueta)
   return r && Array.isArray(r.months) ? r.months : new Array(12).fill(null)
+}
+
+/**
+ * El PRV de FFVV, buscándolo POR DÓNDE ESTÁ y no por cómo se llama.
+ *
+ * ⚠️ ESTO COSTÓ 16.020 € AL MES EN 2025. Esa fila no se llama igual en todos los
+ * años: «PRV» en 2024 y 2025, «PRV 6 FFVV» en 2020 y «PRV FFVV» solo en 2026,
+ * porque al renombrarla para distinguirla de la de Tiendas se renombró únicamente
+ * el año en curso. Buscarla por el nombre nuevo hacía que en los años viejos no
+ * apareciera: los ingresos salían cortos justo el importe de esa fila (2.670 € por
+ * comercial y mes con 6 comerciales) y encima el aviso de «meses incompletos»
+ * cantaba «falta PRV FFVV» los doce meses. El aviso decía la verdad.
+ *
+ * La regla buena: en el cuadro hay DOS filas de PRV, la de Tiendas y la de FFVV,
+ * y la de FFVV es la que cae DESPUÉS de «Caja FFVV», que es donde empieza el
+ * bloque de la fuerza de ventas. Así da igual cómo se llame hoy o mañana.
+ */
+function filaPrvFfvv(filas: any[]): (number | null)[] {
+  const lista = filas || []
+  const inicioBloque = lista.findIndex(
+    (x: any) => String(x?.label || '').trim() === ETIQUETAS.caja)
+  const desde = inicioBloque >= 0 ? inicioBloque : 0
+  const r = lista.slice(desde).find(
+    (x: any) => String(x?.label || '').toUpperCase().includes('PRV'))
+  if (r && Array.isArray(r.months)) return r.months
+  // Sin bloque reconocible: el nombre nuevo, como último recurso.
+  return filaDe(lista, ETIQUETAS.prv)
 }
 
 /** 0 y null son lo mismo aquí: «no hay dato». El Excel usa los dos. */
@@ -94,7 +123,7 @@ export async function cargarIngresosFfvv(anio: string): Promise<MesFfvv[]> {
     caja: filaDe(filas, ETIQUETAS.caja),
     plus: filaDe(filas, ETIQUETAS.plus),
     basico: filaDe(filas, ETIQUETAS.basico),
-    prv: filaDe(filas, ETIQUETAS.prv),
+    prv: filaPrvFfvv(filas),
     gastos: filaDe(filas, ETIQUETAS.gastos),
   }
 
@@ -130,9 +159,15 @@ export async function cargarIngresosFfvv(anio: string): Promise<MesFfvv[]> {
     const hayAlgo = partes.some(x => x !== null)
     const total = hayAlgo ? partes.reduce((a: number, b) => a + (b || 0), 0) : null
 
+    // Qué falta DE VERDAD. El aviso solo sirve si se calla cuando no pasa nada:
+    // llevaba meses cantando «falta Caja FFVV» los doce meses de 2026, cuando la
+    // Caja YA NO EXISTE desde 2026 (lo confirmó el dueño el 01-ago-2026: la
+    // sección FFVV son solo Producción Plus, Producción Básico y PRV). Un aviso
+    // que siempre está encendido acaba sin mirarse, y entonces no avisa del día
+    // que falta algo de verdad.
     const faltan: string[] = []
     if (hayAlgo) {
-      if (caja === null) faltan.push(ETIQUETAS.caja)
+      if (caja === null && anioNum < CAJA_HASTA_ANIO) faltan.push(ETIQUETAS.caja)
       if (plus === null) faltan.push(ETIQUETAS.plus)
       if (basico === null) faltan.push(ETIQUETAS.basico)
       if (prv === null) faltan.push(ETIQUETAS.prv)

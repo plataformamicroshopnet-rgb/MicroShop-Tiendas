@@ -22,6 +22,28 @@ const CLAVE = 'ffvv_reparto_v2'
 /** Comerciales de la fuerza de ventas. El dueño confirmó 6 para 2026. */
 const POR_DEFECTO = 6
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CUÁNTOS COMERCIALES HUBO CADA AÑO (dicho por el dueño, 01-ago-2026).
+//
+// Casi todos los años llevan DOS cifras porque la plantilla se movió, y él quiere
+// ver el mismo mes calculado de las dos maneras para compararlas — no una media
+// inventada entre las dos. Por eso cada año pinta un bloque por cada número.
+//
+// Los años que no están aquí no tienen dato («del resto de años ya no tengo
+// datos de comerciales»): esos siguen con la casilla editable en ámbar.
+// ─────────────────────────────────────────────────────────────────────────────
+const PLANTILLA_POR_ANIO: Record<string, number[]> = {
+    '2026': [6],
+    '2025': [6, 7],
+    '2024': [6, 7],
+    '2022': [6, 7],
+    '2021': [6, 8],
+    '2020': [6, 7],
+    '2019': [7, 9],
+    '2018': [7, 9],
+    '2017': [7, 10],
+}
+
 // año -> { ffvv: "6" }. Se conserva el nombre del campo para no perder lo ya
 // guardado; el antiguo «banquillo» se ignora (ver la nota de la cabecera).
 type NMap = Record<string, Partial<Record<'ffvv' | 'banquillo', string>>>
@@ -122,10 +144,9 @@ export default function FFVVGananciasPage() {
     const thBlue: React.CSSProperties = { padding: '8px 6px', textAlign: 'center', fontWeight: 700, borderLeft: '1px solid rgba(255,255,255,0.2)', whiteSpace: 'nowrap', fontSize: 12 }
     const nInput: React.CSSProperties = { width: 46, padding: '2px 3px', textAlign: 'center', border: '1px solid #93c5fd', borderRadius: 5, fontSize: 11, background: 'var(--bg-input)', color: 'var(--text-main)', outline: 'none', fontWeight: 700 }
 
-    const renderYear = (year: string) => {
+    /** Un bloque = un año calculado con UN número de comerciales. */
+    const renderBloque = (year: string, n: number, fija: boolean, primero: boolean) => {
         const meses = datos[year] || []
-        if (!meses.some(m => m.total !== null)) return null
-        const n = nDe(year)
 
         // Las tres lecturas: lo que entra, lo que cuesta, y lo que queda.
         const FILAS: { clave: 'ingreso' | 'coste' | 'diferencia'; label: string; ayuda: string }[] = [
@@ -144,12 +165,15 @@ export default function FFVVGananciasPage() {
         const incompletos = meses.filter(m => m.total !== null && m.faltan.length)
 
         return (
-            <div key={year} style={{ background: 'var(--bg-card)', borderRadius: 14, border: '1px solid var(--border-light)', overflow: 'hidden', boxShadow: '0 2px 8px rgba(15,23,42,0.05)', marginBottom: 18 }}>
+            <div key={`${year}-${n}`} style={{ background: 'var(--bg-card)', borderRadius: 14, border: '1px solid var(--border-light)', overflow: 'hidden', boxShadow: '0 2px 8px rgba(15,23,42,0.05)', marginBottom: primero && fija ? 8 : 18 }}>
                 <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, whiteSpace: 'nowrap' }}>
                         <thead>
                             <tr style={{ background: 'linear-gradient(90deg, #0ea5e9, #0284c7)', color: '#fff' }}>
-                                <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 800, minWidth: 190 }}>Por comercial · {year}</th>
+                                <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 800, minWidth: 190 }}>
+                                    Por comercial · {year}
+                                    {fija && <span style={{ fontWeight: 600, opacity: 0.85 }}>{'  —  con '}{n} comerciales</span>}
+                                </th>
                                 <th style={{ ...thBlue, borderLeft: '2px solid rgba(255,255,255,0.3)' }}>Nº Com.</th>
                                 {MESES.map(m => <th key={m} style={thBlue}>{m}</th>)}
                                 <th style={{ ...thBlue, borderLeft: '2px solid rgba(255,255,255,0.3)', fontWeight: 800 }}>Media</th>
@@ -168,8 +192,13 @@ export default function FFVVGananciasPage() {
                                         {/* La casilla del divisor va UNA sola vez, en la primera fila */}
                                         {idx === 0 ? (
                                             <td rowSpan={FILAS.length} style={{ padding: '6px 4px', textAlign: 'center', borderLeft: '2px solid var(--border-light)', verticalAlign: 'middle' }}>
-                                                {/* Ámbar = nadie ha dicho cuántos comerciales hubo ese año y
-                                                    se está dividiendo por el valor de fábrica. */}
+                                                {/* Si el dueño ya dijo cuántos hubo ese año, es un DATO y se
+                                                    enseña, no se teclea. La casilla editable (en ámbar) queda
+                                                    solo para los años de los que no hay constancia. */}
+                                                {fija ? (
+                                                    <span style={{ fontWeight: 800, fontSize: 13, color: 'var(--text-main)' }}
+                                                        title={`En ${year} hubo ${n} comerciales`}>{n}</span>
+                                                ) : (
                                                 <input type="number" step="1" min="1"
                                                     title={esPuesto(year)
                                                         ? 'Nº de comerciales del año (divide todos los meses)'
@@ -181,6 +210,7 @@ export default function FFVVGananciasPage() {
                                                         borderColor: esPuesto(year) ? '#93c5fd' : '#f59e0b',
                                                         color: esPuesto(year) ? 'var(--text-main)' : '#f59e0b',
                                                     }} />
+                                                )}
                                             </td>
                                         ) : null}
                                         {vals.map((v, m) => (
@@ -203,7 +233,8 @@ export default function FFVVGananciasPage() {
                         </tbody>
                     </table>
                 </div>
-                {incompletos.length > 0 && (
+                {/* El aviso es del AÑO, no del divisor: se pinta una sola vez. */}
+                {primero && incompletos.length > 0 && (
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 14px', background: 'rgba(245,158,11,0.08)', borderTop: '1px solid rgba(245,158,11,0.35)', fontSize: 12, color: '#b45309' }}>
                         <AlertTriangle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
                         <span>
@@ -213,6 +244,25 @@ export default function FFVVGananciasPage() {
                         </span>
                     </div>
                 )}
+            </div>
+        )
+    }
+
+    /**
+     * Un año = un bloque por cada plantilla conocida (casi todos llevan dos, p.ej.
+     * 2025 con 6 y con 7). Los años sin dato de comerciales siguen con un bloque
+     * y su casilla editable.
+     */
+    const renderYear = (year: string) => {
+        const meses = datos[year] || []
+        if (!meses.some(m => m.total !== null)) return null
+        const plantilla = PLANTILLA_POR_ANIO[year]
+        if (!plantilla || !plantilla.length) {
+            return renderBloque(year, nDe(year), false, true)
+        }
+        return (
+            <div key={year} style={{ marginBottom: 18 }}>
+                {plantilla.map((n, i) => renderBloque(year, n, true, i === 0))}
             </div>
         )
     }
