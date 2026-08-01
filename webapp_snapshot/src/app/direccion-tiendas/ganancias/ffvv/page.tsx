@@ -4,16 +4,20 @@ import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useGuard } from '@/hooks/useGuard'
 import { PageHeader } from '@/components/PageHeader'
-import { Users, ArrowLeft, Info, AlertTriangle } from 'lucide-react'
+import { Users, ArrowLeft, Info } from 'lucide-react'
 import { GANANCIAS_DATA } from '../data'
 import { cargarIngresosFfvv, mediaConDato, type MesFfvv } from '@/lib/gananciasFfvv'
 
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 
-// € con 2 decimales; «—» cuando NO HAY DATO, que no es lo mismo que 0,00 €.
+// «—» cuando NO HAY DATO, que no es lo mismo que 0 €.
+// Euros REDONDOS, sin céntimos. Son 15 columnas por bloque y con decimales la
+// tabla no cabía en pantalla: había que arrastrarla de lado para ver diciembre.
+// Aquí se mira la tendencia de un año, no se cuadra una liquidación: los céntimos
+// costaban más de lo que aportaban. El cálculo sigue siendo exacto por dentro.
 const eur2 = (n: number | null | undefined) =>
     (n === null || n === undefined || !isFinite(n)) ? '—'
-        : n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
+        : Math.round(n).toLocaleString('es-ES') + ' €'
 
 // Clave del navegador de la época anterior. Se lee UNA vez para rescatarla.
 const LS_KEY = 'ffvv_reparto_v2'
@@ -141,7 +145,7 @@ export default function FFVVGananciasPage() {
 
     if (!authorized) return null
 
-    const thBlue: React.CSSProperties = { padding: '8px 6px', textAlign: 'center', fontWeight: 700, borderLeft: '1px solid rgba(255,255,255,0.2)', whiteSpace: 'nowrap', fontSize: 12 }
+    const thBlue: React.CSSProperties = { padding: '7px 4px', textAlign: 'center', fontWeight: 700, borderLeft: '1px solid rgba(255,255,255,0.2)', whiteSpace: 'nowrap', fontSize: 11.5 }
     const nInput: React.CSSProperties = { width: 46, padding: '2px 3px', textAlign: 'center', border: '1px solid #93c5fd', borderRadius: 5, fontSize: 11, background: 'var(--bg-input)', color: 'var(--text-main)', outline: 'none', fontWeight: 700 }
 
     /** Un bloque = un año calculado con UN número de comerciales. */
@@ -161,16 +165,13 @@ export default function FFVVGananciasPage() {
             return m.ganancia === null ? null : m.ganancia / n
         }
 
-        // Meses con dato a los que les falta algún concepto: el total es corto.
-        const incompletos = meses.filter(m => m.total !== null && m.faltan.length)
-
         return (
             <div key={`${year}-${n}`} style={{ background: 'var(--bg-card)', borderRadius: 14, border: '1px solid var(--border-light)', overflow: 'hidden', boxShadow: '0 2px 8px rgba(15,23,42,0.05)', marginBottom: primero && fija ? 8 : 18 }}>
                 <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, whiteSpace: 'nowrap' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, whiteSpace: 'nowrap', tableLayout: 'auto' }}>
                         <thead>
                             <tr style={{ background: 'linear-gradient(90deg, #0ea5e9, #0284c7)', color: '#fff' }}>
-                                <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 800, minWidth: 190 }}>
+                                <th style={{ padding: '7px 10px', textAlign: 'left', fontWeight: 800, minWidth: 150 }}>
                                     Por comercial · {year}
                                     {fija && <span style={{ fontWeight: 600, opacity: 0.85 }}>{'  —  con '}{n} comerciales</span>}
                                 </th>
@@ -186,7 +187,7 @@ export default function FFVVGananciasPage() {
                                 const esCoste = f.clave === 'coste'
                                 return (
                                     <tr key={f.clave} style={{ background: esDif ? 'rgba(2,132,199,0.06)' : 'transparent', borderBottom: '1px solid var(--border-light)' }}>
-                                        <td style={{ padding: '10px 12px', textAlign: 'left', fontWeight: esDif ? 800 : 700, color: 'var(--text-main)' }} title={f.ayuda}>
+                                        <td style={{ padding: '8px 10px', textAlign: 'left', fontWeight: esDif ? 800 : 700, color: 'var(--text-main)' }} title={f.ayuda}>
                                             {f.label}
                                         </td>
                                         {/* La casilla del divisor va UNA sola vez, en la primera fila */}
@@ -215,8 +216,8 @@ export default function FFVVGananciasPage() {
                                         ) : null}
                                         {vals.map((v, m) => (
                                             <td key={m} style={{
-                                                padding: '10px 6px', textAlign: 'center', borderLeft: '1px solid var(--border-light)',
-                                                fontVariantNumeric: 'tabular-nums', fontWeight: 700, fontSize: 12.5,
+                                                padding: '8px 4px', textAlign: 'center', borderLeft: '1px solid var(--border-light)',
+                                                fontVariantNumeric: 'tabular-nums', fontWeight: 700, fontSize: 12,
                                                 color: v === null ? 'var(--text-muted)'
                                                     : esCoste ? '#dc2626'
                                                         : (esDif && v < 0) ? '#dc2626' : '#16a34a',
@@ -224,7 +225,7 @@ export default function FFVVGananciasPage() {
                                                 {eur2(v)}
                                             </td>
                                         ))}
-                                        <td style={{ padding: '10px 10px', textAlign: 'right', borderLeft: '2px solid var(--border-light)', fontWeight: 800, color: '#0284c7', fontVariantNumeric: 'tabular-nums' }}>
+                                        <td style={{ padding: '8px 8px', textAlign: 'right', borderLeft: '2px solid var(--border-light)', fontWeight: 800, color: '#0284c7', fontVariantNumeric: 'tabular-nums' }}>
                                             {eur2(mediaConDato(vals))}
                                         </td>
                                     </tr>
@@ -233,17 +234,12 @@ export default function FFVVGananciasPage() {
                         </tbody>
                     </table>
                 </div>
-                {/* El aviso es del AÑO, no del divisor: se pinta una sola vez. */}
-                {primero && incompletos.length > 0 && (
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 14px', background: 'rgba(245,158,11,0.08)', borderTop: '1px solid rgba(245,158,11,0.35)', fontSize: 12, color: '#b45309' }}>
-                        <AlertTriangle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
-                        <span>
-                            <b>Meses incompletos:</b>{' '}
-                            {incompletos.map(m => `${MESES[m.mes - 1]} (falta ${m.faltan.join(' y ')})`).join(' · ')}.
-                            {' '}Esos meses salen cortos hasta que se rellene lo que falta.
-                        </span>
-                    </div>
-                )}
+                {/* Aquí iba el aviso de «meses incompletos». Fuera por decisión del
+                    dueño (01-ago-2026): cada bloque son la cabecera y tres filas, y
+                    ese cartel metía una cuarta que no aportaba. Los meses a los que
+                    les falta un concepto ya se ven solos, con su raya en vez de un
+                    importe. El aviso sigue existiendo en el cuadro grande de
+                    Ganancias, que es donde se rellenan los datos. */}
             </div>
         )
     }
