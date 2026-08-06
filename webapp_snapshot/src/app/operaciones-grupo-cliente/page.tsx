@@ -761,15 +761,24 @@ function GrupoClienteContent() {
     }
 
     const ruleRows = territorialO2Rules.map((rule: any) => {
+      // La lista «Tipo de Venta» de la regla MANDA — la que el dueño teclea en
+      // Entrada de Datos → PRV Territorial Movistar y O2 → TERRITORIAL O2 MOVILFREE.
+      //
+      // AQUÍ ESTABA LA OTRA MITAD DEL DESCUADRE DE JULIO 2026: esta pestaña tenía su
+      // propio filtro por prefijo («fibra*» o «interna*»), se saltaba la lista y metía
+      // las «Fibra Adicional …» y las «Interna Linea Movil …» que O2 comunicó en julio
+      // que NO cuentan. Ahora usa matchTipoVenta, igual que la Entrada de Datos, la
+      // Hoja de Cobro y el feed del ERP. El desglose de abajo (altas / internas) sigue
+      // partiendo por el nombre, pero SOBRE LAS QUE DE VERDAD CUENTAN.
       const filtered = sales.filter((s: any) => {
-        if (s.anulado === 'Si' || s.anulado === 'S\u00ed' || s.pendiente === 'Anulado') return false
+        if (s.anulado === 'Si' || s.anulado === 'Sí' || s.pendiente === 'Anulado') return false
         const det = String(s.detalle || s.categoria || '').toLowerCase().trim()
         if (det !== 'o2') return false
-        const prod = String(s.producto || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
-        return prod.startsWith('fibra') || prod.startsWith('interna')
+        return matchTipoVenta(s, rule.tipoVenta)
       })
-      const altasFibra    = filtered.filter((s: any) => String(s.producto || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().startsWith('fibra')).length
-      const internasFibra = filtered.filter((s: any) => String(s.producto || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().startsWith('interna')).length
+      const nom = (s: any) => String(s.producto || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim()
+      const altasFibra    = filtered.filter((s: any) => nom(s).startsWith('fibra')).length
+      const internasFibra = filtered.filter((s: any) => nom(s).startsWith('interna')).length
       const totalSales = filtered.length
       let activeMesKey = ''
       for (const t of [...TRAMOS_MES].reverse()) { if (totalSales >= t.min) { activeMesKey = t.key; break } }

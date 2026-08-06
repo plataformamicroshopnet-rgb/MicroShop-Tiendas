@@ -268,15 +268,22 @@ export default function ModResumenPage() {
       let filtered: any[];
 
       if (storeName === 'O2') {
-        // Contar TODAS las ventas de cualquier comercial donde:
-        // detalle/categoria = 'o2' Y producto empieza por 'Fibra' o 'Interna'
-        // IMPORTANTE: usar 'sales' raw (sin sanitizeSale) para respetar el campo 'detalle' original
+        // La lista «Tipo de Venta» de la regla MANDA — la que el dueño teclea en
+        // Entrada de Datos → PRV Territorial Movistar y O2 → TERRITORIAL O2 MOVILFREE.
+        //
+        // AQUÍ ESTABA EL DESCUADRE DE 1.100 € DE JULIO 2026: esta pantalla tenía su
+        // propio filtro por prefijo («fibra*» o «interna*») que se saltaba esa lista y
+        // arrastraba las «Fibra Adicional …» y las «Interna Linea Movil …», que O2
+        // comunicó en julio que NO cuentan para los bonos. Contaba 44 altas donde la
+        // Entrada de Datos, la Hoja de Cobro y el feed del ERP contaban 20, y de ahí
+        // salían 3.255 € frente a 2.155 €. Ahora usa el MISMO criterio que todos:
+        // matchTipoVenta (el token «O2» de la lista = comodín SOLO fibras).
+        // IMPORTANTE: usar 'sales' raw (sin sanitizeSale) para respetar el 'detalle' original
         filtered = sales.filter(s => {
           if (s.anulado === 'Si' || s.anulado === 'Sí' || s.pendiente === 'Anulado') return false;
           const det = String(s.detalle || s.categoria || '').toLowerCase().trim();
           if (det !== 'o2') return false;
-          const prod = String(s.producto || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-          return prod.startsWith('fibra') || prod.startsWith('interna');
+          return matchTipoVenta(s, tipoVenta);
         });
       } else {
         const isProductMatch = (sale: any) => matchTipoVenta(sale, tipoVenta);
