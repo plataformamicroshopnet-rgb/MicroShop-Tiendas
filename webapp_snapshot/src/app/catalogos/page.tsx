@@ -82,7 +82,17 @@ type ProductItem = {
   importStatus?: 'new' | 'updated' | 'missing' | 'unchanged'
 }
 
-const CATEGORIES = ['Ti', 'Rent', 'Seguro', 'O2', 'miMovistar', 'Suscripciones TV', 'Varios', 'Repos', 'Resto BAF', 'Accesorios']
+// Pestaña «Repos» (ago-2026). La clave interna NO puede ser 'Repos': esa ya la
+// ocupa la pestaña que se ve como «Arpu (Repos)», donde viven los repos de
+// incremento de ARPU de BAF/miMovistar, que NO se tocan. Se estrena con clave
+// propia y se comporta EXACTAMENTE como «Suscripciones TV» (comisión ×
+// multiplicador), que es la forma de la hoja del dueño.
+export const CAT_REPOS = 'Repos UP'
+
+const CATEGORIES = ['Ti', 'Rent', 'Seguro', 'O2', 'miMovistar', 'Suscripciones TV', 'Varios', 'Repos', CAT_REPOS, 'Resto BAF', 'Accesorios']
+
+// Las dos pestañas que se rellenan igual: Comisión × Multiplicador = Comisión X.
+const esTipoComisionPorMultiplicador = (c: string) => c === 'Suscripciones TV' || c === CAT_REPOS
 
 const getTabStyle = (cat: string, isActive: boolean) => {
   return {
@@ -109,7 +119,7 @@ export default function CatalogosPage() {
   const previousPeriod = currentIndex > 0 ? sortedPeriods[currentIndex - 1] : null
 
   const [catalogs, setCatalogs] = useState<Record<string, ProductItem[]>>({
-    "Ti": [], "Rent": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": [], "Varios": [], "Repos": [], "Resto BAF": [], "Traslado miMovistar": [], "Accesorios": []
+    "Ti": [], "Rent": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": [], "Varios": [], "Repos": [], [CAT_REPOS]: [], "Resto BAF": [], "Traslado miMovistar": [], "Accesorios": []
   })
   const [activeTab, setActiveTab] = useState('Ti')
   const isProductTab = CATEGORIES.includes(activeTab) && activeTab !== 'Comisiones para Tiendas' && activeTab !== 'Comisiones para Tienda O2 MovilFree' && activeTab !== 'PRV Territorial Movistar y O2'
@@ -183,7 +193,7 @@ export default function CatalogosPage() {
       .then(res => res.json())
       .then(data => {
         if (data.success) {
-          const mapped: Record<string, ProductItem[]> = { "Ti": [], "Rent": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": [], "Varios": [], "Repos": [], "Resto BAF": [], "Traslado miMovistar": [], "Accesorios": [] }
+          const mapped: Record<string, ProductItem[]> = { "Ti": [], "Rent": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": [], "Varios": [], "Repos": [], [CAT_REPOS]: [], "Resto BAF": [], "Traslado miMovistar": [], "Accesorios": [] }
           for (const [cat, items] of Object.entries(data.catalogs as Record<string, any[]>)) {
              if (!mapped[cat]) mapped[cat] = [];
              mapped[cat] = [...mapped[cat], ...items.map((it: any) => ({
@@ -287,7 +297,7 @@ export default function CatalogosPage() {
     // Nombre de pestaña TAL CUAL se ve en pantalla (la clave interna 'Ti' se
     // muestra como «Contratos Móvil», etc.) — para que el aviso sea seguible.
     const nombrePestana = (c: string) =>
-       c === 'Ti' ? 'Contratos Móvil' : c === 'O2' ? 'O2 MovilFree' : c === 'Repos' ? 'Arpu (Repos)' : c
+       c === 'Ti' ? 'Contratos Móvil' : c === 'O2' ? 'O2 MovilFree' : c === 'Repos' ? 'Arpu (Repos)' : c === CAT_REPOS ? 'Repos' : c
     for (const [cat, items] of Object.entries(exportCatalogs)) {
        // Categorías heredadas SIN pestaña (p.ej. 'Fija y Móvil' de datos
        // antiguos): el usuario no puede verlas ni corregirlas, así que una
@@ -595,7 +605,7 @@ export default function CatalogosPage() {
         newItem.gama = ''
         newItem.comision = 0
         newItem.comisionConCoste = 1
-      } else if (cat === 'Suscripciones TV') {
+      } else if (esTipoComisionPorMultiplicador(cat)) {
         newItem.comision = ''
         newItem.comisionConCoste = '1.00'
       } else if (cat === 'Prepago') {
@@ -854,7 +864,7 @@ export default function CatalogosPage() {
               hasta: parts.length > 7 ? parts[7] : '',
             })
           }
-        } else if (activeTab === 'Suscripciones TV') {
+        } else if (esTipoComisionPorMultiplicador(activeTab)) {
           if (parts.length >= 6) {
             excelData.push({
               categoria: parts[0] || '',
@@ -966,7 +976,7 @@ export default function CatalogosPage() {
             if (item.comision !== row.comision) { item.comision = row.comision; changed = true; }
             if (item.comisionConCoste !== row.comisionConCoste) { item.comisionConCoste = row.comisionConCoste; changed = true; }
             if (item.producto !== row.producto) { item.producto = row.producto; changed = true; }
-          } else if (activeTab === 'Suscripciones TV') {
+          } else if (esTipoComisionPorMultiplicador(activeTab)) {
             if (item.comision !== row.comision) { item.comision = row.comision; changed = true; }
             const currentMult = item.comisionConCoste || '1.00';
             const rowMult = row.comisionConCoste || '1.00';
@@ -1080,7 +1090,7 @@ export default function CatalogosPage() {
             newItem.gama = row.gama
             newItem.comision = row.comision
             newItem.comisionConCoste = row.comisionConCoste
-          } else if (activeTab === 'Suscripciones TV') {
+          } else if (esTipoComisionPorMultiplicador(activeTab)) {
             newItem.comision = row.comision
             newItem.comisionConCoste = row.comisionConCoste || '1.00'
           } else if (activeTab === 'Prepago') {
@@ -1174,7 +1184,8 @@ export default function CatalogosPage() {
           { cat: 'miMovistar', tip: 'Catálogo de paquetes miMovistar. Configura categorías, tipos, productos multilínea y su estructura de comisiones por multiplicador.' },
           { cat: 'Suscripciones TV', tip: 'Catálogo de suscripciones de televisión. Introduce la categoría, nombre, comisión y fechas.' },
           { cat: 'Varios', tip: 'Catálogo de productos varios (alarmas, migraciones, etc). Introduce categoría, nombre, cuota total y comisión.' },
-          { cat: 'Repos', tip: 'Catálogo de Reposiciones. Introduce categoría, nombre, cuota total, comisión y multiplicador.' },
+          { cat: 'Repos', tip: 'Catálogo VIEJO de Reposiciones (incremento de ARPU de BAF/miMovistar). Se conserva por el histórico; lo nuevo va en la pestaña Repos.' },
+          { cat: CAT_REPOS, tip: 'Catálogo de Repos. Se rellena igual que Suscripciones TV: comisión × multiplicador = comisión X. Aquí van las suscripciones y los repos de fútbol con su precio de verdad.' },
           { cat: 'Resto BAF', tip: 'Catálogo para Resto BAF. Estructura idéntica a miMovistar.' },
           { cat: 'Accesorios', tip: 'Catálogo de accesorios (fundas, protectores, cargadores, etc). Introduce categoría, nombre, cuota total y comisión.' },
 
@@ -1196,7 +1207,7 @@ export default function CatalogosPage() {
                 transition: 'all 0.2s ease'
               }}
             >
-              {cat === 'Ti' ? 'Contratos Móvil' : cat === 'Repos' ? 'Arpu (Repos)' : cat}
+              {cat === 'Ti' ? 'Contratos Móvil' : cat === 'Repos' ? 'Arpu (Repos)' : cat === CAT_REPOS ? 'Repos' : cat}
             </button>
           </TooltipBox>
         ))}
@@ -1294,7 +1305,7 @@ export default function CatalogosPage() {
               activeTab === 'Rent' ? 'Fabricante [TAB] Categoría [TAB] Producto [TAB] Gama [TAB] Cuota Total [TAB] Comisión [TAB] Comisión Coste [TAB] Desde [TAB] Hasta' : 
               activeTab === 'Seguro' ? 'Categoría [TAB] Nombre de Producto [TAB] Cuota Total (€) [TAB] Comision [TAB] Desde [TAB] Hasta' :
               activeTab === 'Accesorios' ? 'Categoría [TAB] Nombre de Producto [TAB] Cuota Total (€) [TAB] Comision [TAB] Desde [TAB] Hasta' :
-              activeTab === 'Suscripciones TV' ? 'Categoría [TAB] Nombre de Producto [TAB] Comisión (€) [TAB] Multiplicador [TAB] Comisión X (€) [TAB] Desde [TAB] Hasta' :
+              esTipoComisionPorMultiplicador(activeTab) ? 'Categoría [TAB] Nombre de Producto [TAB] Comisión (€) [TAB] Multiplicador [TAB] Comisión X (€) [TAB] Desde [TAB] Hasta' :
               'Nombre Producto [TAB] Precio [TAB] Desde [TAB] Hasta'
             }</code>. (Las fechas son opcionales).
           </p>
@@ -1307,6 +1318,7 @@ export default function CatalogosPage() {
               activeTab === 'O2' ? "Ejemplo:\nFibra y movil\tFibra 600 Mb linea movil 60 Gb\t80,00\t01/05/2026\t31/05/2026" : 
               activeTab === 'Seguro' ? "Ejemplo:\nSeguro\tSmartphone\t200,00\t18,00\t01/05/2026\t31/05/2026" :
               activeTab === 'Accesorios' ? "Ejemplo:\nAccesorios\tFunda iPhone 15\t25,00\t25,00\t01/07/2026\t31/07/2026" :
+              activeTab === CAT_REPOS ? "Ejemplo:\nRepos\tFutbol Total PROMO Repo Up Destino Fútbol\t39,00\t2,00\t78,00\t01/07/2026" :
               activeTab === 'Suscripciones TV' ? "Ejemplo:\nSuscripciones TV\tDisney + sin anuncios\t6,99\t1,50\t10,49\t01/05/2026" :
               "Ejemplo:\nPorta AV Ilimitada\t20\nAlta MV\t15"
             }
@@ -1359,7 +1371,7 @@ export default function CatalogosPage() {
                     <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 90 }}>Mult.</th>
                     <th style={{ padding: '16px 8px', textAlign: 'left', color: 'var(--medium-gray)', width: 100 }}>Comisión X (€)</th>
                   </>
-                ) : activeTab === 'Suscripciones TV' ? (
+                ) : esTipoComisionPorMultiplicador(activeTab) ? (
                   <>
                     <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '20%' }}>Categoría</th>
                     <th style={{ padding: '16px 20px', textAlign: 'left', color: 'var(--medium-gray)', width: '25%' }}>Nombre de Producto</th>
@@ -1560,7 +1572,7 @@ export default function CatalogosPage() {
                             </div>
                           </td>
                         </>
-                      ) : activeTab === 'Suscripciones TV' ? (
+                      ) : esTipoComisionPorMultiplicador(activeTab) ? (
                         <>
                           <td style={{ padding: '12px 20px' }}>
                             <input 
