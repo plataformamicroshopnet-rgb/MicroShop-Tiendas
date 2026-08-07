@@ -32,6 +32,33 @@ export function isSaleActive(sale: any): boolean {
 }
 
 /**
+ * Nombre de la palanca nueva de Repos (ago-2026). Vive aquí, en el módulo hoja,
+ * para que la use todo el mundo igual: el catálogo, el motor de comisiones y el
+ * cálculo de lo que factura la empresa. La clave NO es 'Repos': esa ya la ocupa
+ * la pestaña vieja «Arpu (Repos)».
+ */
+export const PALANCA_REPOS = 'Repos UP'
+
+/**
+ * FUENTE ÚNICA de "esta venta ya no cuenta para el COBRO porque tiene una
+ * corrección" (ago-2026). Los precios de los Repos estaban mal; en vez de
+ * reescribir un mes ya pagado, a la venta vieja se le cuelga una HIJA con el
+ * importe bueno. La madre queda marcada:
+ *   · sigue pagando LA MISMA comisión que se pactó (eso no se toca), pero
+ *   · deja de sumar en lo que factura la empresa, o se cobraría dos veces.
+ * OJO: esto NO es lo mismo que anulada. Una venta sustituida no está anulada:
+ * existió, se pagó su comisión y se cobró — con el importe de su hija.
+ */
+export function esVentaSustituida(sale: any): boolean {
+    return sale?.sustituida === true || String(sale?.sustituida).toLowerCase() === 'true'
+}
+
+/** true si la venta ES una corrección contable (la hija de otra). */
+export function esCorreccionDeOtra(sale: any): boolean {
+    return !!String(sale?.sustituyeA || '').trim()
+}
+
+/**
  * "Señalización Solar 360": ni la cobra la empresa ni se paga al comercial. Se elimina de
  * comisiones Y de los listados de operaciones. Fuente única para detectarla (por producto;
  * en los datos llega como detalle='Varios' + producto 'Solar360 (...)').

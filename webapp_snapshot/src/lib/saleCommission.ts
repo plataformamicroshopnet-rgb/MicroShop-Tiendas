@@ -1,4 +1,4 @@
-import { calculateDynamicCommission, findCatalogVigente, isSaleCancelled } from './salesUtils'
+import { calculateDynamicCommission, findCatalogVigente, isSaleCancelled, esVentaSustituida, PALANCA_REPOS } from './salesUtils'
 
 // ─────────────────────────────────────────────────────────────────────────
 // FUENTE ÚNICA DE LA COMISIÓN POR VENTA (empresa / Telefónica)
@@ -76,7 +76,11 @@ export function getSaleCommissionBase(sale: any, ctx: SaleCommissionCtx): number
 
   // Palancas que guardan la comisión directamente en importe/cuota.
   const isTV = det === 'suscripciones tv' || det === 'suscripcion tv'
-  if (det === 'o2' || det === 'seguro' || det === 'mimovistar' || det === 'repos' || det === 'varios' || det === 'accesorios' || isTV || det === 'prepago' || det === 'resto baf' || det === 'traslado mimovistar') {
+  // La palanca «Repos» nueva guarda el importe en la cuota, igual que TV y que
+  // los Repos viejos. Sin esto, sus ventas caían al cálculo por tramos del
+  // dashboard y salían a 0 €: la empresa no cobraría nada por ellas.
+  const isReposNuevo = det === PALANCA_REPOS.toLowerCase()
+  if (det === 'o2' || det === 'seguro' || det === 'mimovistar' || det === 'repos' || det === 'varios' || det === 'accesorios' || isTV || isReposNuevo || det === 'prepago' || det === 'resto baf' || det === 'traslado mimovistar') {
     if (det === 'seguro') {
       // Vigencias: con dos precios del mismo seguro gana el que cubre la fecha de la venta.
       const foundSeguro = findCatalogVigente(catalogs['Seguro'] || [], sale.producto, sale.fecha)
@@ -152,5 +156,10 @@ export function getSwapBonus(sale: any): number {
 export function getSaleCommission(sale: any, ctx: SaleCommissionCtx): number {
   // Una anulada no comisiona NADA, tampoco el +15 € del Swap (antes se colaba).
   if (isSaleCancelled(sale)) return 0
+  // Una venta CORREGIDA (ago-2026) tampoco: su importe bueno lo aporta la venta
+  // hija que la sustituye. Si contaran las dos, la empresa se cobraría el doble.
+  // La comisión que se le pagó al comercial NO se toca: eso lo decide el motor
+  // del Panel, que ignora esta marca a propósito.
+  if (esVentaSustituida(sale)) return 0
   return getSaleCommissionBase(sale, ctx) + getSwapBonus(sale)
 }

@@ -33,6 +33,10 @@ export async function GET(request: Request) {
       orderBy: { fecha: 'desc' },
       select: {
         id: true, fecha: true, detalle: true, codigo: true, producto: true, nif: true,
+        // Correcciones contables: sin estos dos campos, getSaleCommission no
+        // podía saber que una venta está sustituida y la empresa se cobraba
+        // dos veces la misma operación.
+        sustituida: true, sustituyeA: true,
         nombreCliente: true, telf: true, telefonoMovil: true, imei: true,
         numeroPedido: true, vendedor: true, cuota: true, anulado: true, pendiente: true,
         rentConCoste: true, seguro: true, seguroImporte: true, isSwap: true,

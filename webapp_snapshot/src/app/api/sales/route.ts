@@ -318,6 +318,36 @@ export async function PATCH(request: Request) {
       data: updateData
     })
 
+    // ── ANULADO EN CADENA (ago-2026) ─────────────────────────────────────
+    // Las correcciones contables de los Repos van pegadas a su venta original:
+    // la hija lleva el importe bueno y la madre queda marcada como sustituida.
+    // Quien tramita ve UNA operación y anula UNA; el programa se lleva a la
+    // familia entera, en las dos direcciones. Sin esto, anular la que se ve
+    // dejaría viva a la otra y el mes quedaría cobrando de más.
+    if (updates.anulado !== undefined || updates.pendiente !== undefined) {
+      try {
+        const familia = new Set<string>()
+        // Si se ha tocado la HIJA, la madre también cae.
+        if (existingSale.sustituyeA) familia.add(existingSale.sustituyeA)
+        // Y todas las hijas de esta venta (y de su madre, si es una hija).
+        const raices = [id, ...(existingSale.sustituyeA ? [existingSale.sustituyeA] : [])]
+        const hijas = await prisma.sale.findMany({
+          where: { sustituyeA: { in: raices } }, select: { id: true }
+        })
+        hijas.forEach(h => familia.add(h.id))
+        familia.delete(id)
+        if (familia.size > 0) {
+          const eco: any = {}
+          if (updates.anulado !== undefined) eco.anulado = updates.anulado
+          if (updates.pendiente !== undefined) eco.pendiente = updates.pendiente
+          await prisma.sale.updateMany({ where: { id: { in: [...familia] } }, data: eco })
+          console.log(`[Sustitución] ${familia.size} operación(es) hermanas actualizadas con ${id}`)
+        }
+      } catch (e) {
+        console.error('[Sustitución] no se pudo propagar el estado:', e)
+      }
+    }
+
     // ── Swap como venta real: al ANULAR una venta con ¿Swap? (≥ julio 2026),
     // anular también su línea hermana "Swap" (Varios, mismo NIF/fecha/origen) ──
     const _seAnula = (updates.anulado !== undefined && String(updates.anulado).toLowerCase().startsWith('s'))

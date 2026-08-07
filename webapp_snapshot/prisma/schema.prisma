@@ -104,7 +104,20 @@ model Sale {
   isLibre       Boolean?
   isSwap        Boolean?
   origenStock   String? // Rent: TIENDA (descuenta stock) o LOGISTICO (no descuenta)
+  // ── CORRECCIONES CONTABLES (ago-2026) ────────────────────────────────────
+  // Los precios de los Repos estaban mal. En vez de reescribir las ventas de un
+  // mes ya pagado (movería nóminas acordadas), se les cuelga una venta HIJA con
+  // el producto y el importe buenos:
+  //   · la hija lleva `sustituyeA` = id de la madre y vive en la palanca Repos,
+  //     que no paga comisión en meses anteriores a agosto (esCorreccionContableRepos);
+  //   · la madre queda con `sustituida` = true: sigue pagando la comisión que se
+  //     pactó, pero YA NO CUENTA para el cobro (si no, se cobraría dos veces).
+  // Van pegadas: anular cualquiera de las dos se lleva a la familia entera.
+  sustituyeA    String? // id de la venta que esta corrección sustituye
+  sustituida    Boolean? // true = tiene una corrección viva; no cuenta para el cobro
   period        WorkPeriod? @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  @@index([sustituyeA])
 }
 
 model Objective {
