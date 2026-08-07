@@ -182,7 +182,30 @@ export const isExtraRepoUpFutbol = (s: any) => {
     return text.includes("extra repo") && text.includes("futbol");
 };
 
+// ── LA PALANCA «Repos» SE ESTRENA EN AGOSTO DE 2026 ──────────────────────────
+// Las ventas de esa palanca con fecha ANTERIOR son CORRECCIONES CONTABLES de
+// meses ya liquidados: existen para que el cobro y las pantallas de operaciones
+// enseñen el precio de verdad, pero NO pueden pagar comisión a nadie — moverían
+// una nómina ya acordada. Sin este candado, corregir julio le habría subido a
+// Elena 222 € y a Carlos 108 € por la regla «Repo Fútbol», que casa por la
+// palabra «fútbol» del nombre del producto sin mirar la palanca.
+// Mismo patrón que SWAP_LINE_FROM en api/sales/unified.
+export const REPOS_PALANCA = 'Repos UP'
+const REPOS_CUENTA_DESDE = new Date(2026, 7, 1)   // 1 de agosto de 2026
+
+export const esCorreccionContableRepos = (s: any): boolean => {
+    const cat = String(s?.categoria || s?.detalle || s?.sheet || '').trim().toLowerCase()
+    if (cat !== REPOS_PALANCA.toLowerCase()) return false
+    const f = String(s?.fecha || '').trim()          // dd/mm/aaaa
+    if (f.length < 10 || f[2] !== '/' || f[5] !== '/') return false
+    const d = new Date(Number(f.slice(6, 10)), Number(f.slice(3, 5)) - 1, Number(f.slice(0, 2)))
+    return d < REPOS_CUENTA_DESDE
+}
+
 export const matchesRule = (s: any, ruleName: string, ruleProductosCuentan: string) => {
+    // Correcciones contables de meses anteriores: no cuentan para ninguna regla.
+    if (esCorreccionContableRepos(s)) return false
+
     // Si la venta es de Marta (O2), aplicamos la regla simplificada según instrucción del usuario
     const isMartaSale = String(s.vendedor || '').toLowerCase().includes('marta') || String(s.detalle || '').toLowerCase() === 'o2';
     
