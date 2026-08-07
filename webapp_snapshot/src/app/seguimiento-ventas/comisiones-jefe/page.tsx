@@ -6,7 +6,25 @@ import { useComisionesData } from '@/hooks/useComisionesData'
 import { useGuard } from '@/hooks/useGuard'
 import { useRouter } from 'next/navigation'
 import { AuditableCell } from '@/components/AuditableCell'
-import { computeComisionJefeTiendas } from '@/lib/comisionJefeTiendas'
+import {
+    computeComisionJefeTiendas,
+    JEFE_PCT_SETTING_KEYS,
+    jefePctKeyMes,
+    jefePctKeysTodas,
+    normalizarMesJefe,
+    resolverJefePcts,
+    type JefePctOrigen,
+    type JefePcts,
+} from '@/lib/comisionJefeTiendas'
+
+const MESES_ES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+const mesLargo = (mes: string) => {
+    const m = normalizarMesJefe(mes)
+    if (!m) return ''
+    const [a, n] = m.split('_')
+    return `${MESES_ES[Number(n) - 1] || n} de ${a}`
+}
 
 export default function ComisionesJefeTiendasPage() {
     const router = useRouter()
@@ -29,49 +47,96 @@ export default function ComisionesJefeTiendasPage() {
     // Reglas de TERRITORIAL TIENDAS (objetivos 87/101, 50/58 + base de comisiones).
     const [territorialTiendasRules, setTerritorialTiendasRules] = useState<any[]>([])
 
+    // Los porcentajes son DE CADA MES (ago-2026). De dónde ha salido cada uno:
+    // 'mes' = ya tiene el suyo, 'global'/'defecto' = todavía heredado.
+    const mesPct = normalizarMesJefe(String(activePeriodKey || ''))
+    const [pctOrigen, setPctOrigen] = useState<Record<keyof JefePcts, JefePctOrigen> | null>(null)
+    // 'cargando' | 'ok' | 'error'. Sin 'ok' NO se puede editar: si la carga falla,
+    // los useState valen los defectos del código y guardarlos sería grabar un
+    // porcentaje inventado en la clave del mes, que es la que paga.
+    const [pctEstado, setPctEstado] = useState<'cargando' | 'ok' | 'error'>('cargando')
+    const pctCargados = pctEstado === 'ok'
+    const [avisoGuardado, setAvisoGuardado] = useState<string | null>(null)
+
     useEffect(() => {
-        Promise.all([
-            fetch('/api/settings?key=COMISION_JEFE_DISP_PCT1').then(res => res.json()),
-            fetch('/api/settings?key=COMISION_JEFE_DISP_PCT2').then(res => res.json()),
-            fetch('/api/settings?key=COMISION_JEFE_ARPU_PCT1').then(res => res.json()),
-            fetch('/api/settings?key=COMISION_JEFE_ARPU_PCT2').then(res => res.json()),
-            fetch('/api/settings?key=COMISION_JEFE_DISP_PCT3').then(res => res.json()),
-            fetch('/api/settings?key=COMISION_JEFE_BAF_PCT1').then(res => res.json()).catch(() => ({ value: null })),
-            fetch('/api/settings?key=COMISION_JEFE_BAF_PCT2').then(res => res.json()).catch(() => ({ value: null })),
-            fetch('/api/settings?key=COMISION_JEFE_CONV_PCT1').then(res => res.json()).catch(() => ({ value: null })),
-            fetch('/api/settings?key=COMISION_JEFE_CONV_PCT2').then(res => res.json()).catch(() => ({ value: null }))
-        ]).then(([disp1, disp2, arpu1, arpu2, disp3, baf1, baf2, conv1, conv2]) => {
-            if (disp1.success && disp1.value !== null) setDispPct1(Number(disp1.value))
-            if (disp2.success && disp2.value !== null) setDispPct2(Number(disp2.value))
-            if (arpu1.success && arpu1.value !== null) setArpuPct1(Number(arpu1.value))
-            if (arpu2.success && arpu2.value !== null) setArpuPct2(Number(arpu2.value))
-            if (disp3 && disp3.success && disp3.value !== null) setDispPct3(Number(disp3.value))
-            if (baf1 && baf1.success && baf1.value !== null) setBafPct1(Number(baf1.value))
-            if (baf2 && baf2.success && baf2.value !== null) setBafPct2(Number(baf2.value))
-            if (conv1 && conv1.success && conv1.value !== null) setConvPct1(Number(conv1.value))
-            if (conv2 && conv2.success && conv2.value !== null) setConvPct2(Number(conv2.value))
-        }).catch(err => console.error("Error loading settings", err))
-    }, [])
+        if (!mesPct) { setPctEstado('error'); return }
+        let cancelado = false
+        setPctEstado('cargando')
+        fetch(`/api/settings?keys=${encodeURIComponent(jefePctKeysTodas(mesPct).join(','))}`)
+            .then(res => res.json())
+            .then(d => {
+                if (cancelado) return
+                // Si el API no dice que ha ido bien, NO se toca nada: mejor pantalla
+                // bloqueada con un aviso que nueve defectos disfrazados de configuración.
+                if (!d || d.success !== true || !d.values) { setPctEstado('error'); return }
+                const mapa = new Map<string, string | null>(Object.entries(d.values))
+                // Se asignan SIEMPRE los 9, incluso los que caen al defecto: si no,
+                // al cambiar de mes se quedarían los del mes anterior en pantalla.
+                const { pcts, origen } = resolverJefePcts(mapa, mesPct)
+                setDispPct1(pcts.dispPct1); setDispPct2(pcts.dispPct2); setDispPct3(pcts.dispPct3)
+                setArpuPct1(pcts.arpuPct1); setArpuPct2(pcts.arpuPct2)
+                setBafPct1(pcts.bafPct1); setBafPct2(pcts.bafPct2)
+                setConvPct1(pcts.convPct1); setConvPct2(pcts.convPct2)
+                setPctOrigen(origen)
+                setPctEstado('ok')
+            })
+            .catch(err => { if (!cancelado) { console.error("Error loading settings", err); setPctEstado('error') } })
+        return () => { cancelado = true }
+    }, [mesPct])
 
     // Reglas del territorial (objetivos + base de comisiones) del periodo activo.
+    // Con guarda de cancelación: fijan los objetivos en uds de BAF y Convergente, o
+    // sea qué tramo se da por alcanzado, y una respuesta tardía de otro mes pintaría
+    // el tramo equivocado.
     useEffect(() => {
         if (!activePeriodKey) return
+        let cancelado = false
         fetch(`/api/territorial?periodKey=${activePeriodKey}`).then(r => r.json())
-            .then(d => { if (d && d.success) setTerritorialTiendasRules(d.tiendas || []) })
+            .then(d => { if (!cancelado && d && d.success) setTerritorialTiendasRules(d.tiendas || []) })
             .catch(err => console.error("Error loading territorial", err))
+        return () => { cancelado = true }
     }, [activePeriodKey])
 
-    const handleSavePct = async (key: string, value: number) => {
-        try {
-            await fetch('/api/settings', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ key, value: String(value) })
-            })
-        } catch (e) {
-            console.error("Error saving setting", e)
-        }
+    // Guarda el % en la clave DE ESTE MES, nunca en la global: cambiar agosto ya
+    // no le toca julio ni ningún otro mes ya pagado. Con espera (debounce): el
+    // onChange de un <input type=number> dispara en cada tecla y los estados
+    // intermedios valen 0 — sin esta espera se podía grabar un 0 en el mes.
+    const guardadoPendiente = React.useRef<Record<string, any>>({})
+    const handleSavePct = (claveGlobal: string, value: number) => {
+        if (!pctCargados || !mesPct) return
+        const clave = jefePctKeyMes(claveGlobal, mesPct)
+        if (!clave) return
+        const campo = (Object.keys(JEFE_PCT_SETTING_KEYS) as (keyof JefePcts)[])
+            .find(k => JEFE_PCT_SETTING_KEYS[k] === claveGlobal)
+        if (guardadoPendiente.current[clave]) clearTimeout(guardadoPendiente.current[clave])
+        guardadoPendiente.current[clave] = setTimeout(async () => {
+            try {
+                const res = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: clave, value: String(value) })
+                })
+                if (!res.ok) throw new Error(String(res.status))
+                // Solo AHORA es propio del mes. Marcarlo antes sería mentir en el aviso.
+                if (campo) setPctOrigen(prev => (prev ? { ...prev, [campo]: 'mes' as JefePctOrigen } : prev))
+                setAvisoGuardado('ok')
+                setTimeout(() => setAvisoGuardado(null), 2000)
+            } catch (e) {
+                console.error("Error saving setting", e)
+                setAvisoGuardado('error')
+            }
+        }, 600)
     }
+
+    // Qué casillas siguen colgando del ajuste general (no son propias del mes).
+    const ETIQUETA_PCT: Record<keyof JefePcts, string> = {
+        dispPct1: 'Disp+Seg 1', dispPct2: 'Disp+Seg 2', dispPct3: 'Disp+Seg 3',
+        arpuPct1: 'Arpu 1', arpuPct2: 'Arpu 2',
+        bafPct1: 'BAF 1', bafPct2: 'BAF 2', convPct1: 'Converg. 1', convPct2: 'Converg. 2',
+    }
+    const heredados = pctOrigen
+        ? (Object.keys(ETIQUETA_PCT) as (keyof JefePcts)[]).filter(k => pctOrigen[k] !== 'mes').map(k => ETIQUETA_PCT[k])
+        : []
 
     // ── FUENTE ÚNICA: el mismo helper que usa /api/comisiones-liquidacion ──
     // (src/lib/comisionJefeTiendas). Aquí solo se pinta lo que devuelve.
@@ -209,6 +274,44 @@ export default function ComisionesJefeTiendasPage() {
                     .excel-table.main-table th, .excel-table.main-table td { padding-top: 8.5px; padding-bottom: 8.5px; }
                 `}} />
 
+                {/* Aviso: los % son de ESTE mes y solo de este mes (ago-2026) */}
+                {isSuperAdmin && (
+                    <div style={{
+                        display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 14,
+                        padding: '9px 14px', borderRadius: 8, fontSize: 13,
+                        background: pctEstado === 'error' ? '#fef2f2' : '#eff6ff',
+                        border: `1px solid ${pctEstado === 'error' ? '#fecaca' : '#bfdbfe'}`,
+                        color: pctEstado === 'error' ? '#991b1b' : '#1e40af'
+                    }}>
+                        <span style={{ fontSize: 16 }}>{pctEstado === 'error' ? '⚠️' : '🗓️'}</span>
+                        {pctEstado === 'error' ? (
+                            <span>
+                                <b>No se han podido leer los porcentajes de este mes.</b> Los números que
+                                ves NO son los que se pagan y las casillas están bloqueadas a propósito.
+                                Recarga la pantalla; si sigue igual, avísame.
+                            </span>
+                        ) : (
+                            <span>
+                                Estos porcentajes son los de <b>{mesLargo(mesPct) || 'este mes'}</b>. Lo que
+                                cambies aquí <b>solo afecta a este mes</b>: los meses anteriores se quedan
+                                como estén.
+                                {pctCargados && heredados.length > 0 && (
+                                    <span style={{ color: '#b45309' }}>
+                                        {' '}Todavía {heredados.length === 1 ? 'hay 1 casilla que sigue heredada' :
+                                            `hay ${heredados.length} casillas que siguen heredadas`} de la
+                                        configuración general ({heredados.join(', ')}): en cuanto las toques
+                                        pasan a ser de este mes.
+                                    </span>
+                                )}
+                                {avisoGuardado === 'ok' && <b style={{ color: '#047857' }}> · Guardado ✓</b>}
+                                {avisoGuardado === 'error' && (
+                                    <b style={{ color: '#b91c1c' }}> · NO se ha podido guardar; vuelve a intentarlo.</b>
+                                )}
+                            </span>
+                        )}
+                    </div>
+                )}
+
                 {/* TARJETAS SUPERIORES (Estilo Excel) */}
                 <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap', alignItems: 'flex-start' }}>
 
@@ -239,7 +342,7 @@ export default function ComisionesJefeTiendasPage() {
                                         className="input-pct"
                                         type="number" step="0.01" 
                                         value={dispPct1}
-                                        disabled={!isSuperAdmin}
+                                        disabled={!isSuperAdmin || !pctCargados}
                                         onChange={e => {
                                             const v = Number(e.target.value);
                                             setDispPct1(v);
@@ -253,7 +356,7 @@ export default function ComisionesJefeTiendasPage() {
                                         className="input-pct"
                                         type="number" step="0.01" 
                                         value={dispPct2}
-                                        disabled={!isSuperAdmin}
+                                        disabled={!isSuperAdmin || !pctCargados}
                                         onChange={e => {
                                             const v = Number(e.target.value);
                                             setDispPct2(v);
@@ -267,7 +370,7 @@ export default function ComisionesJefeTiendasPage() {
                                         className="input-pct"
                                         type="number" step="0.01"
                                         value={dispPct3}
-                                        disabled={!isSuperAdmin}
+                                        disabled={!isSuperAdmin || !pctCargados}
                                         onChange={e => {
                                             const v = Number(e.target.value);
                                             setDispPct3(v);
@@ -302,7 +405,7 @@ export default function ComisionesJefeTiendasPage() {
                                         className="input-pct"
                                         type="number" step="0.01" 
                                         value={arpuPct1}
-                                        disabled={!isSuperAdmin}
+                                        disabled={!isSuperAdmin || !pctCargados}
                                         onChange={e => {
                                             const v = Number(e.target.value);
                                             setArpuPct1(v);
@@ -316,7 +419,7 @@ export default function ComisionesJefeTiendasPage() {
                                         className="input-pct"
                                         type="number" step="0.01" 
                                         value={arpuPct2}
-                                        disabled={!isSuperAdmin}
+                                        disabled={!isSuperAdmin || !pctCargados}
                                         onChange={e => {
                                             const v = Number(e.target.value);
                                             setArpuPct2(v);
@@ -351,7 +454,7 @@ export default function ComisionesJefeTiendasPage() {
                                         className="input-pct"
                                         type="number" step="0.01"
                                         value={bafPct1}
-                                        disabled={!isSuperAdmin}
+                                        disabled={!isSuperAdmin || !pctCargados}
                                         onChange={e => { const v = Number(e.target.value); setBafPct1(v); handleSavePct('COMISION_JEFE_BAF_PCT1', v); }}
                                         style={{ opacity: isSuperAdmin ? 1 : 0.7 }}
                                     /> %
@@ -361,7 +464,7 @@ export default function ComisionesJefeTiendasPage() {
                                         className="input-pct"
                                         type="number" step="0.01"
                                         value={bafPct2}
-                                        disabled={!isSuperAdmin}
+                                        disabled={!isSuperAdmin || !pctCargados}
                                         onChange={e => { const v = Number(e.target.value); setBafPct2(v); handleSavePct('COMISION_JEFE_BAF_PCT2', v); }}
                                         style={{ opacity: isSuperAdmin ? 1 : 0.7 }}
                                     /> %
@@ -397,7 +500,7 @@ export default function ComisionesJefeTiendasPage() {
                                         className="input-pct"
                                         type="number" step="0.01"
                                         value={convPct1}
-                                        disabled={!isSuperAdmin}
+                                        disabled={!isSuperAdmin || !pctCargados}
                                         onChange={e => { const v = Number(e.target.value); setConvPct1(v); handleSavePct('COMISION_JEFE_CONV_PCT1', v); }}
                                         style={{ opacity: isSuperAdmin ? 1 : 0.7 }}
                                     /> %
@@ -407,7 +510,7 @@ export default function ComisionesJefeTiendasPage() {
                                         className="input-pct"
                                         type="number" step="0.01"
                                         value={convPct2}
-                                        disabled={!isSuperAdmin}
+                                        disabled={!isSuperAdmin || !pctCargados}
                                         onChange={e => { const v = Number(e.target.value); setConvPct2(v); handleSavePct('COMISION_JEFE_CONV_PCT2', v); }}
                                         style={{ opacity: isSuperAdmin ? 1 : 0.7 }}
                                     /> %
@@ -436,7 +539,9 @@ export default function ComisionesJefeTiendasPage() {
                         <tbody>
                             <tr>
                                 <td className="cell-green" style={{ fontSize: 28, height: 70 }}>
-                                    {totalCondicionado.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                                    {pctCargados
+                                        ? `${totalCondicionado.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`
+                                        : <span style={{ fontSize: 15, color: '#94a3b8' }}>calculando…</span>}
                                 </td>
                             </tr>
                         </tbody>
@@ -452,7 +557,13 @@ export default function ComisionesJefeTiendasPage() {
                         <tbody>
                             <tr>
                                 <td className="cell-green" style={{ fontSize: 20, height: 70 }}>
-                                    {comisionFinal > 0 ? `${comisionFinal.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : '- €'}
+                                    {/* Sin los % del mes cargados, esta cifra saldría con los del mes
+                                        anterior (o con los defectos del código): mejor no enseñarla. */}
+                                    {!pctCargados
+                                        ? <span style={{ fontSize: 15, color: '#94a3b8' }}>calculando…</span>
+                                        : comisionFinal > 0
+                                            ? `${comisionFinal.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`
+                                            : '- €'}
                                 </td>
                             </tr>
                         </tbody>

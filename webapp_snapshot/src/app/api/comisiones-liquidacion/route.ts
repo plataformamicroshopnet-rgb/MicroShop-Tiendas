@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client'
 import { computePanelComisionesTiendas } from '@/lib/panelComisionesTiendas'
 import { loadPanelInputs } from '@/lib/panelComisionesTiendasServer'
 import { tiendaDeComercial, norm } from '@/lib/comercialRoster'
-import { computeComisionJefeTiendas, JEFE_PCT_DEFAULTS, JEFE_PCT_SETTING_KEYS, JefePcts } from '@/lib/comisionJefeTiendas'
+import { computeComisionJefeTiendas, jefePctKeysTodas, resolverJefePcts } from '@/lib/comisionJefeTiendas'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMISIÓN POR OPERACIÓN de cada comercial para un mes (liquidación) — TIENDAS.
@@ -139,21 +139,14 @@ export async function POST(request: Request) {
     let jefe: any = null
     if (porComercial.length > 0) {
       const [pctSettings, territorialTiendasSetting, jefeUser] = await Promise.all([
-        prisma.appSetting.findMany({ where: { key: { in: Object.values(JEFE_PCT_SETTING_KEYS) } } }),
+        prisma.appSetting.findMany({ where: { key: { in: jefePctKeysTodas(mes) } } }),
         prisma.appSetting.findUnique({ where: { key: `territorial_tiendas_${mes}` } }),
         prisma.user.findFirst({ where: { role: 'JEFE DE VENTAS' } }),
       ])
-      // Los 9 % del Jefe: AppSettings GLOBALES con los defaults del código (los
-      // mismos con los que arranca la pantalla).
+      // Los 9 % del Jefe, DE ESTE MES: clave del mes → clave global de respaldo →
+      // defecto del código. La misma cascada que pinta la pantalla.
       const settingByKey = new Map(pctSettings.map(s => [s.key, s.value]))
-      const pcts: JefePcts = { ...JEFE_PCT_DEFAULTS }
-      for (const k of Object.keys(JEFE_PCT_SETTING_KEYS) as (keyof JefePcts)[]) {
-        const raw = settingByKey.get(JEFE_PCT_SETTING_KEYS[k])
-        if (raw !== undefined && raw !== null) {
-          const n = Number(raw)
-          if (Number.isFinite(n)) pcts[k] = n
-        }
-      }
+      const { pcts } = resolverJefePcts(settingByKey, mes)
       let territorialTiendasRules: any[] = []
       if (territorialTiendasSetting?.value) {
         try { territorialTiendasRules = JSON.parse(territorialTiendasSetting.value) || [] } catch {}

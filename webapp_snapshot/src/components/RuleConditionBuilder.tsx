@@ -115,7 +115,7 @@ export default function RuleConditionBuilder({ value, onChange, disabled, availa
                   >
                     <option value="REQUIRE_GROUP_QTY">Requiere cantidad de:</option>
                     <option value="REQUIRE_GROUP_PCT">Requiere % objetivo de:</option>
-                    <option value="REQUIRE_GROUP_PCT_TRAMO2">El Tramo 2 exige % objetivo de:</option>
+                    <option value="REQUIRE_GROUP_PCT_TRAMO2">Del Tramo 2 en adelante exige % objetivo de:</option>
                     <option value="REQUIRE_TEAM_OBJ2">El Tramo 2 es Colectivo (del Equipo)</option>
                     <option value="REQUIRE_TEAM_OBJ3">El Tramo 3 es Colectivo (del Equipo)</option>
                     <option value="REQUIRE_TEAM_OBJ23">El Tramo 2 y 3 son Colectivos (del Equipo)</option>

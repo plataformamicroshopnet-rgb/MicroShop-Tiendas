@@ -26,8 +26,16 @@ import { getSaleCommission } from './saleCommission'
 import { matchTipoVenta } from './ventaMatching'
 import { isSolar360 } from './salesUtils'
 
-// Los 9 porcentajes del Jefe (AppSettings GLOBALES, no por mes) y sus defaults —
-// los mismos que arrancan los useState de la pantalla.
+// Los 9 porcentajes del Jefe y sus defaults — los mismos que arrancan los
+// useState de la pantalla.
+//
+// POR MES (ago-2026). Antes vivían en 9 AppSettings GLOBALES, así que tocar el %
+// de un mes se lo cambiaba a TODOS, incluidos los meses ya cerrados y pagados.
+// Ahora cada mes tiene sus propias claves — COMISION_JEFE_DISP_PCT1_2026_08 — y
+// la clave global se queda de RESPALDO para los meses que nadie ha tocado:
+//     clave del mes  →  si no existe, clave global  →  si no existe, el defecto.
+// Así ningún mes se mueve al desplegar (todos caen al respaldo, que es lo que
+// usaban), y a partir de ahora editar un mes NO toca ningún otro.
 export interface JefePcts {
     dispPct1: number
     dispPct2: number
@@ -62,6 +70,69 @@ export const JEFE_PCT_SETTING_KEYS: Record<keyof JefePcts, string> = {
     bafPct2: 'COMISION_JEFE_BAF_PCT2',
     convPct1: 'COMISION_JEFE_CONV_PCT1',
     convPct2: 'COMISION_JEFE_CONV_PCT2',
+}
+
+// Las 9 claves base, para quien necesite componerlas por mes (el clonado de
+// periodos las arrastra igual que el territorial y las reglas de O2).
+export const JEFE_PCT_KEYS_BASE: string[] = Object.values(JEFE_PCT_SETTING_KEYS)
+
+// '2026-08' / '202608' / '2026_08' → '2026_08' (el mismo formato que ya usan
+// territorial_tiendas_{mes} y el parámetro `mes` de la liquidación).
+// Devuelve '' si no es un mes de verdad (mes fuera de 01-12 incluido).
+export function normalizarMesJefe(mes: string): string {
+    const d = String(mes || '').replace(/\D/g, '')
+    if (d.length < 6) return ''
+    const anio = d.slice(0, 4)
+    const m = Number(d.slice(4, 6))
+    if (!(m >= 1 && m <= 12)) return ''
+    return `${anio}_${String(m).padStart(2, '0')}`
+}
+
+// Clave del mes para uno de los 9 porcentajes: COMISION_JEFE_DISP_PCT1_2026_08.
+// Con un mes que no es un mes devuelve '' — NUNCA la clave global: esa es
+// justamente la que este cambio deja de tocar, y escribir ahí por accidente
+// volvería a mover todos los meses a la vez.
+export function jefePctKeyMes(claveGlobal: string, mes: string): string {
+    const m = normalizarMesJefe(mes)
+    return m ? `${claveGlobal}_${m}` : ''
+}
+
+// Las 18 claves que hay que leer para pintar un mes: las 9 suyas y las 9 de
+// respaldo. Se piden juntas para no encadenar 18 peticiones.
+export function jefePctKeysTodas(mes: string): string[] {
+    const globales = Object.values(JEFE_PCT_SETTING_KEYS)
+    const m = normalizarMesJefe(mes)
+    return m ? [...globales, ...globales.map(k => `${k}_${m}`)] : globales
+}
+
+export type JefePctOrigen = 'mes' | 'global' | 'defecto'
+
+/**
+ * Resuelve los 9 porcentajes de un mes con la cascada mes → global → defecto,
+ * y dice de dónde ha salido cada uno (para que la pantalla pueda avisar de que
+ * un valor todavía es heredado y no propio del mes).
+ */
+export function resolverJefePcts(
+    valorPorClave: Map<string, string | null | undefined>,
+    mes: string
+): { pcts: JefePcts; origen: Record<keyof JefePcts, JefePctOrigen> } {
+    const pcts: JefePcts = { ...JEFE_PCT_DEFAULTS }
+    const origen = {} as Record<keyof JefePcts, JefePctOrigen>
+    const num = (v: string | null | undefined): number | null => {
+        if (v === undefined || v === null || String(v).trim() === '') return null
+        const n = Number(v)
+        return Number.isFinite(n) ? n : null
+    }
+    for (const k of Object.keys(JEFE_PCT_SETTING_KEYS) as (keyof JefePcts)[]) {
+        const global = JEFE_PCT_SETTING_KEYS[k]
+        const claveMes = jefePctKeyMes(global, mes)
+        const delMes = claveMes ? num(valorPorClave.get(claveMes)) : null
+        if (delMes !== null) { pcts[k] = delMes; origen[k] = 'mes'; continue }
+        const deRespaldo = num(valorPorClave.get(global))
+        if (deRespaldo !== null) { pcts[k] = deRespaldo; origen[k] = 'global'; continue }
+        origen[k] = 'defecto'
+    }
+    return { pcts, origen }
 }
 
 export interface JefePalancaTramo {

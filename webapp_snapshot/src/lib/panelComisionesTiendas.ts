@@ -146,6 +146,11 @@ export interface ObjetivoResumenTienda {
     esEquipoObj2: boolean;
     esEquipoObj3: boolean;
     tarifaAplicada: string | null; // 'Tramo N' aplicado
+    // Candado de tramo: la palanca se ha pagado al tramo 1 aunque el objetivo 2/3
+    // estuviera cumplido, porque otra palanca no llegó a su %. Sin esto, la pantalla
+    // enseñaría «objetivo 2 ✓» y una comisión de tramo 1 sin explicar por qué.
+    topeAplicado?: boolean;
+    topeMotivo?: string | null;
 }
 
 export interface PanelComisionesTiendasInput {
@@ -555,6 +560,11 @@ export function computePanelComisionesTiendas(input: PanelComisionesTiendasInput
             let isTeamObj2 = false;
             let isTeamObj3 = false;
             let tramoAplicado = 0;
+            // El candado de tramo ha mordido: la palanca se paga al tramo 1 aunque el
+            // objetivo 2 (o el 3) esten cumplidos. Viaja al resumen para que la pantalla
+            // y el abonare del ERP puedan explicar POR QUE se ha pagado menos.
+            let topeAplicado = false;
+            let topeMotivo: string | null = null;
 
             if (qttyTotal > 0) {
                 let activeImp = imp1;
@@ -565,6 +575,7 @@ export function computePanelComisionesTiendas(input: PanelComisionesTiendasInput
                 // Candado de tramo: palancas AJENAS que tienen que llegar a su % de
                 // objetivo para que esta regla pueda pasar del tramo 1.
                 const topeTramo1: any[] = [];
+                let fixedSoloBase = false;  // bono fijo sin las unidades extra
 
                 // Evaluar reglas dinámicas del Constructor Visual
                 if (rule.condicionantes && rule.condicionantes.startsWith('[')) {
@@ -631,35 +642,55 @@ export function computePanelComisionesTiendas(input: PanelComisionesTiendasInput
                 }
 
                 // ── CANDADO DE TRAMO (REQUIRE_GROUP_PCT_TRAMO2) ──────────────────
-                // Pedido por el dueno (ago-2026): el segundo tramo de una regla puede
-                // quedar condicionado a que OTRA palanca llegue a un % de su objetivo.
-                // Ejemplo real: el tramo 2 de ARPU solo se paga si Dispositivos + Seguros
-                // llega al 100 %. Si no llega, la regla se queda en el tramo 1 — NO se
-                // deja de cobrar, que para eso ya esta REQUIRE_GROUP_PCT.
-                // El % se mide igual que en REQUIRE_GROUP_PCT: sobre el PRIMER objetivo
-                // de la palanca ajena, para que las dos condiciones cuenten lo mismo.
+                // Pedido por el dueno (ago-2026): del segundo tramo en adelante, una
+                // regla puede quedar condicionada a que OTRA palanca llegue a un % de
+                // su objetivo. Ejemplo real: el tramo 2 de ARPU solo se paga si
+                // Dispositivos + Seguros llega al 100 %. Si no llega, la regla se queda
+                // en el tramo 1 — NO se deja de cobrar, que para eso ya esta
+                // REQUIRE_GROUP_PCT.
+                // El % se mide sobre el PRIMER objetivo de la palanca ajena, igual que
+                // REQUIRE_GROUP_PCT, para que las dos condiciones cuenten lo mismo.
+                // El candado SOLO puede BAJAR el pago: si alguna vez deja de cumplirse
+                // esa regla, es un fallo.
                 if (topeTramo1.length > 0) {
-                    const bloqueado = topeTramo1.some((cond: any) => {
-                        const targetQtty = (groupCounts[cond.targetGroup] || 0) + (groupPending[cond.targetGroup] || 0);
+                    const culpables: string[] = [];
+                    topeTramo1.forEach((cond: any) => {
+                        // Sin palanca elegida no hay condicion que cumplir.
+                        if (!cond.targetGroup || !cond.value || cond.value <= 0) return;
                         const targetObj = groupObj1[cond.targetGroup] || 0;
-                        if (targetObj > 0) return ((targetQtty / targetObj) * 100) < cond.value;
-                        return cond.value > 0 && targetQtty === 0;
+                        // Objetivo 0 (o palanca que no existe en este juego de reglas, p.ej.
+                        // O2, o renombrada en Catalogos) = no se puede fallar un objetivo
+                        // que no existe: NO bloquea. Preferimos no cobrar de menos por una
+                        // casilla mal escrita, que es un error mudo e imposible de ver.
+                        if (targetObj <= 0) return;
+                        const targetQtty = (groupCounts[cond.targetGroup] || 0) + (groupPending[cond.targetGroup] || 0);
+                        const logro = (targetQtty / targetObj) * 100;
+                        if (logro < cond.value) {
+                            culpables.push(`${cond.targetGroup} al ${logro.toFixed(0)} % (exige ${cond.value} %)`);
+                        }
                     });
-                    if (bloqueado) {
+                    if (culpables.length > 0) {
+                        topeAplicado = true;
+                        topeMotivo = `Tramo 1 forzado: ${culpables.join('; ')}`;
                         activeImp = imp1;
                         tramoAplicado = 1;
-                        // Los modos acumulativos usan imp2 directamente al calcular el
-                        // importe, saltandose el tramo: se desactivan tambien, porque
-                        // «no puede pasar del primer tramo» tiene que valer para todos.
+                        // ACCUMULATIVE_TRAMOS calcula baseQty*imp1 + extraQty*imp2, o sea
+                        // que se salta el tramo: apagarlo deja qttyTotal*imp1, que es
+                        // justo «todo al primer tramo». Correcto.
                         isAccumulative = false;
-                        isAccumulativeFixed = false;
+                        // ACCUMULATIVE_FIXED_BASE es OTRA cosa: ahi imp1 no es una tarifa
+                        // por unidad sino un BONO FIJO (imp1 + extra*imp2). Apagarlo
+                        // dejaria qttyTotal * imp1 = el bono cobrado UNA VEZ POR VENTA, es
+                        // decir pagar MUCHISIMO MAS. Se queda encendido y lo unico que se
+                        // hace es quitar las unidades extra: solo el bono base.
+                        fixedSoloBase = true;
                     }
                 }
 
                 if (isPercentage) {
                     if (isAccumulativeFixed) {
                         if (qttyTotal >= obj1 && obj1 > 0) {
-                            const extraQty = Math.max(0, qttyTotal - (obj2 > 0 ? obj2 - 1 : obj1));
+                            const extraQty = fixedSoloBase ? 0 : Math.max(0, qttyTotal - (obj2 > 0 ? obj2 - 1 : obj1));
                             comTotal = imp1 + (extraQty * (imp2 / 100));
                         } else {
                             comTotal = 0;
@@ -674,7 +705,7 @@ export function computePanelComisionesTiendas(input: PanelComisionesTiendasInput
                 } else {
                     if (isAccumulativeFixed) {
                         if (qttyTotal >= obj1 && obj1 > 0) {
-                            const extraQty = Math.max(0, qttyTotal - (obj2 > 0 ? obj2 - 1 : obj1));
+                            const extraQty = fixedSoloBase ? 0 : Math.max(0, qttyTotal - (obj2 > 0 ? obj2 - 1 : obj1));
                             comTotal = imp1 + (extraQty * imp2);
                         } else {
                             comTotal = 0;
@@ -745,6 +776,8 @@ export function computePanelComisionesTiendas(input: PanelComisionesTiendasInput
                 esEquipoObj2: isTeamObj2,
                 esEquipoObj3: isTeamObj3,
                 tarifaAplicada: tramoAplicado > 0 ? `Tramo ${tramoAplicado}` : null,
+                topeAplicado,
+                topeMotivo,
             });
         });
 

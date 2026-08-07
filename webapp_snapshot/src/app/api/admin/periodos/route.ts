@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import { NextResponse } from 'next/server'
+import { JEFE_PCT_KEYS_BASE } from '@/lib/comisionJefeTiendas'
 
 const prisma = new PrismaClient()
 
@@ -77,7 +78,10 @@ export async function POST(req: Request) {
         await prisma.tiendaStoreObjective.deleteMany({ where: { periodKey } })
         await prisma.tiendaComercialHour.deleteMany({ where: { periodKey } })
         await prisma.appSetting.deleteMany({ where: { key: { in: [
-          `territorial_tiendas_${periodKey}`, `territorial_o2_${periodKey}`, `o2_rules_v2_${periodKey}`
+          `territorial_tiendas_${periodKey}`, `territorial_o2_${periodKey}`, `o2_rules_v2_${periodKey}`,
+          // Los 9 % del Jefe de Tiendas de ESE mes: si no se borran, un borrador
+          // re-clonado se queda con los porcentajes de la tanda anterior.
+          ...JEFE_PCT_KEYS_BASE.map(k => `${k}_${periodKey}`)
         ] } } })
         // Borra el periodo (cascade: catálogos, ventas, objetivos, importes, reglas extra y asignaciones)
         await prisma.workPeriod.delete({ where: { id: existingTarget.id } })
@@ -209,7 +213,11 @@ export async function POST(req: Request) {
       const keysToCopy = [
         `territorial_tiendas_${source.period_key}`,
         `territorial_o2_${source.period_key}`,
-        `o2_rules_v2_${source.period_key}`
+        `o2_rules_v2_${source.period_key}`,
+        // Los 9 % del Jefe de Tiendas del mes de origen. Desde que son POR MES
+        // (ago-2026) hay que arrastrarlos como todo lo demás: si no, el mes nuevo
+        // cae al respaldo general y el jefe cobraría con unos % de hace meses.
+        ...JEFE_PCT_KEYS_BASE.map(k => `${k}_${source.period_key}`)
       ];
       
       for (const oldKey of keysToCopy) {
