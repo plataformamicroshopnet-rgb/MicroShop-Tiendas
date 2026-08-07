@@ -144,6 +144,10 @@ export default function NuevaVentaPage() {
     } else if (cat === 'Suscripciones TV') {
       ll.push({ campo: 'telf', etiqueta: 'Teléfono Fijo', ok: telOk(prod.telf) })
       ll.push({ campo: 'numeroPedido', etiqueta: 'Nº Pedido Telefónica/Movistar', ok: pedidoOk(prod.numeroPedido) })
+    } else if (cat === 'Repos UP') {
+      // Palanca nueva de los Repos: mismas llaves que las dos que sustituye.
+      ll.push({ campo: 'telf', etiqueta: 'Teléfono Fijo', ok: telOk(prod.telf) })
+      ll.push({ campo: 'numeroPedido', etiqueta: 'Nº Pedido Telefónica/Movistar', ok: pedidoOk(prod.numeroPedido) })
     }
     return ll
   }
@@ -337,7 +341,9 @@ export default function NuevaVentaPage() {
         }
       }
 
-      if (field === 'categoria' && value === 'Repos') {
+      // El aviso de penalización de los repos vivía solo en la palanca vieja;
+      // al retirarla del desplegable se habría quedado sin poder salir nunca.
+      if (field === 'categoria' && (value === 'Repos' || value === 'Repos UP')) {
          const confirmRepos = window.confirm(
            'ADVERTENCIA puede tener penalización si:\n' +
            '- No aplica si hay pérdida de valor en los 20 días anteriores o posteriores (cualquier canal).\n' +
@@ -438,9 +444,14 @@ export default function NuevaVentaPage() {
             // para otra cosa (el modo Fact. Anterior / Fact. Nueva del ARPU), y si
             // la nueva entrara por ahí el producto de 78 € se autorrellenaría a 0 €.
             if (cat === 'Repos UP') {
-              const baseCom = parseSafeNum(selectedItem.comision);
-              const mult = parseSafeNum(selectedItem.comisionConCoste || '1.00');
-              newProducts[index].importe = String(baseCom * (mult === 0 ? 1 : mult));
+              // Suscripcion añadida sobre un traslado miMovistar: no se abona.
+              if (newProducts[index].isSuscTraslado) {
+                newProducts[index].importe = '0';
+              } else {
+                const baseCom = parseSafeNum(selectedItem.comision);
+                const mult = parseSafeNum(selectedItem.comisionConCoste || '1.00');
+                newProducts[index].importe = String(baseCom * (mult === 0 ? 1 : mult));
+              }
             } else if (cat === 'Suscripciones TV') {
               if (newProducts[index].isSuscTraslado) {
                 newProducts[index].importe = '0';
@@ -565,6 +576,34 @@ export default function NuevaVentaPage() {
     }))
   }
 
+  // ── QUÉ TIPOS DE VENTA SE PUEDEN ELEGIR ──────────────────────────────────────
+  // Rediseño de los Repos (ago-2026): «Repos» (la vieja, que se veía «Arpu (Repos)»)
+  // y «Suscripciones TV» se unifican en la palanca nueva «Repos (Arpu)» y dejan de
+  // poder elegirse. Siguen VISIBLES si la línea que se está editando ya las tiene:
+  // si no, al abrir una venta antigua el desplegable saldría en blanco y al guardar
+  // se perdería su tipo.
+  // ⚠️ «Repos» (la vieja «Arpu (Repos)») NO se retira todavía: sus cuatro productos
+  // «Repos destino BAF miMovistar/Fusión incremento de ARPU …» se siguen vendiendo
+  // (hay ventas de Carlos, Cristina y Nuria en la primera semana de agosto) y NO
+  // existen en el catálogo de la palanca nueva. Quitarla dejaría a tres comerciales
+  // sin poder apuntar lo que venden. Lo que sí se retira de esa palanca es el
+  // producto del fútbol, que ahora se teclea en «Repos (Arpu)» (ver PRODUCTOS_RETIRADOS).
+  const CATS_RETIRADAS = ['Suscripciones TV']
+  // Productos que ya no se eligen aunque su palanca siga viva.
+  const PRODUCTOS_RETIRADOS: Record<string, string[]> = { 'Repos': ['Extra Repos up destino Fútbol'] }
+  const CATS_NUNCA = ['Fija', 'Móvil', 'Micro', 'Fija y Móvil', 'Prepago']
+  const catsElegibles = (actual: string) => Object.keys(catalogs)
+    .filter(cat => !CATS_NUNCA.includes(cat))
+    .filter(cat => !CATS_RETIRADAS.includes(cat) || cat === actual)
+  const etiquetaCat = (cat: string) => cat === 'Ti' ? 'Contratos Móvil'
+    : cat === 'O2' ? 'O2 MovilFree'
+    : cat === 'Repos' ? 'Arpu (Repos) — histórico'
+    : cat === 'Repos UP' ? 'Repos (Arpu)'
+    : cat === 'Suscripciones TV' ? 'Suscripciones TV — histórico'
+    : cat
+  const opcionesCat = (actual: string) => catsElegibles(actual)
+    .map(cat => <option key={cat} value={cat}>{etiquetaCat(cat)}</option>)
+
   const handleAddSuscripcion = (index: number) => {
     if (formData.productos.length >= 50) return
     const currentProd = formData.productos[index]
@@ -592,7 +631,9 @@ export default function NuevaVentaPage() {
         productos: [
           ...prev.productos,
           {
-            categoria: 'Suscripciones TV',
+            // Las suscripciones de TV viven desde ago-2026 en la palanca nueva
+            // «Repos (Arpu)»: el boton sigue llamandose igual para quien teclea.
+            categoria: 'Repos UP',
             producto: '',
             telf: currentProd.telf || '',
             noCliente: currentProd.noCliente || '',
@@ -806,6 +847,24 @@ export default function NuevaVentaPage() {
                   </div>
                 </div>
               )}
+              {/* Una venta de las palancas nuevas con fecha ANTERIOR a agosto de
+                  2026 es una corrección contable: se guarda con su importe pero
+                  NO paga comisión a nadie (el candado de fecha del motor). Sin
+                  este aviso se enseñaban 78 € en pantalla y se pagaban 0 € en
+                  silencio, y no se veía hasta el cuadre del mes. */}
+              {formData.fechaVenta < '2026-08-01' &&
+               formData.productos.some((p: any) => p.categoria === 'Repos UP' || p.categoria === 'Repo Fútbol') && (
+                <div style={{ backgroundColor: '#FEF2F2', border: '1px solid #FECACA', borderLeft: '4px solid #DC2626', borderRadius: 8, padding: '8px 12px' }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#991B1B' }}>
+                    ⛔ Repos (Arpu) con fecha anterior a agosto
+                  </div>
+                  <div style={{ fontSize: 11.5, color: '#7F1D1D', lineHeight: 1.45 }}>
+                    Esta palanca no existía antes del 1 de agosto de 2026: la venta se guardará
+                    y se cobrará, pero <b>no pagará comisión a ningún comercial</b>. Si es una
+                    venta de verdad de un mes anterior, avisa antes de guardarla.
+                  </div>
+                </div>
+              )}
               <div className="form-group" style={{ marginBottom: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <label className="form-label" style={{ color: '#555' }}>Anotaciones Generales</label>
                 <textarea className="form-textarea" value={formData.anotaciones} onChange={e => handleInputChange('anotaciones', e.target.value)} style={{ flex: 1, minHeight: '40px', backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A', resize: 'none' }}></textarea>
@@ -836,7 +895,7 @@ export default function NuevaVentaPage() {
                         <label style={{ fontSize: 13, color: '#1B3D6A', display: 'block', marginBottom: 4 }}>Tipo de Venta</label>
                         <select className="form-select" value={prod.categoria} onChange={e => handleProductChange(index, 'categoria', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
                           <option value="">Selecciona...</option>
-                          {Object.keys(catalogs).filter(cat => cat !== 'Fija' && cat !== 'Móvil' && cat !== 'Micro' && cat !== 'Fija y Móvil' && cat !== 'Prepago').map(cat => <option key={cat} value={cat}>{cat === 'Ti' ? 'Contratos Móvil' : cat === 'O2' ? 'O2 MovilFree' : cat === 'Repos' ? 'Arpu (Repos) — histórico' : cat === 'Repos UP' ? 'Repos (Arpu)' : cat}</option>)}
+                          {opcionesCat(prod.categoria)}
                           <option value="Accesorios Venta y Stock">Accesorios Venta y Stock</option>
                         </select>
                       </div>
@@ -1045,7 +1104,7 @@ export default function NuevaVentaPage() {
                         <label style={{ fontSize: 13, color: '#1B3D6A', display: 'block', marginBottom: 4 }}>Tipo de Venta</label>
                         <select className="form-select" value={prod.categoria} onChange={e => handleProductChange(index, 'categoria', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
                           <option value="">Selecciona...</option>
-                          {Object.keys(catalogs).filter(cat => cat !== 'Fija' && cat !== 'Móvil' && cat !== 'Micro' && cat !== 'Fija y Móvil' && cat !== 'Prepago').map(cat => <option key={cat} value={cat}>{cat === 'Ti' ? 'Contratos Móvil' : cat === 'O2' ? 'O2 MovilFree' : cat === 'Repos' ? 'Arpu (Repos) — histórico' : cat === 'Repos UP' ? 'Repos (Arpu)' : cat}</option>)}
+                          {opcionesCat(prod.categoria)}
                           <option value="Accesorios Venta y Stock">Accesorios Venta y Stock</option>
                         </select>
                       </div>
@@ -1179,7 +1238,7 @@ export default function NuevaVentaPage() {
                     <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                       <select className="form-select" value={prod.categoria} onChange={e => handleProductChange(index, 'categoria', e.target.value)} required style={{ backgroundColor: '#FFFFFF', border: '1px solid #90CAF9', color: '#1B3D6A', width: '200px', margin: 0 }}>
                         <option value="">Selecciona...</option>
-                        {Object.keys(catalogs).filter(cat => cat !== 'Fija' && cat !== 'Móvil' && cat !== 'Micro' && cat !== 'Fija y Móvil' && cat !== 'Prepago').map(cat => <option key={cat} value={cat}>{cat === 'Ti' ? 'Contratos Móvil' : cat === 'O2' ? 'O2 MovilFree' : cat === 'Repos' ? 'Arpu (Repos) — histórico' : cat === 'Repos UP' ? 'Repos (Arpu)' : cat}</option>)}
+                        {opcionesCat(prod.categoria)}
                         <option value="Accesorios Venta y Stock">Accesorios Venta y Stock</option>
                       </select>
                       <Link href="/microshop-accesorios">
@@ -1198,9 +1257,7 @@ export default function NuevaVentaPage() {
                         <label className="form-label" style={{ color: '#1B3D6A' }}><strong style={{ color: '#1050A4', marginRight: 4 }}>{index + 1}</strong> Tipo de Venta</label>
                         <select className="form-select" value={prod.categoria} onChange={e => handleProductChange(index, 'categoria', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
                           <option value="">Selecciona...</option>
-                          {Object.keys(catalogs)
-                            .filter(cat => cat !== 'Fija' && cat !== 'Móvil' && cat !== 'Micro' && cat !== 'Fija y Móvil' && cat !== 'Prepago')
-                            .map(cat => <option key={cat} value={cat}>{cat === 'Ti' ? 'Contratos Móvil' : cat === 'O2' ? 'O2 MovilFree' : cat === 'Repos' ? 'Arpu (Repos) — histórico' : cat === 'Repos UP' ? 'Repos (Arpu)' : cat}</option>)}
+                          {opcionesCat(prod.categoria)}
                           <option value="Accesorios Venta y Stock">Accesorios Venta y Stock</option>
                         </select>
                       </div>
@@ -1227,13 +1284,18 @@ export default function NuevaVentaPage() {
                             {prod.categoria && catalogs[prod.categoria === 'Traslado miMovistar' ? 'miMovistar' : prod.categoria]
                               ?.filter((p: any) => prod.categoria !== 'O2' || !prod.subcategoria || p.subcategoria === prod.subcategoria)
                               ?.filter((p: any, i: number, self: any[]) => self.findIndex(t => t.producto === p.producto) === i)
+                              // El repo de fútbol ya no se teclea aquí: va en «Repos (Arpu)»,
+                              // donde vale 78 € y el programa le añade solo su extra de 10 €.
+                              // Si se dejara, se seguiría apuntando a 10 € como hasta ahora.
+                              ?.filter((p: any) => !(PRODUCTOS_RETIRADOS[prod.categoria] || []).includes(String(p.producto || '').trim())
+                                                  || String(p.producto || '').trim() === prod.producto)
                               .map((p: any, i: number) => <option key={p.id || i} value={p.producto}>{p.producto}</option>)}
                           </select>
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: prod.categoria === 'O2' ? '1fr' : '1fr 1fr', gap: '6px' }}>
                           <div className="form-group" style={{ marginBottom: 0 }}>
-                            <label className="form-label" style={{ color: (prod.categoria === 'Repos' || prod.categoria === 'Suscripciones TV') ? '#D32F2F' : '#555', fontWeight: (prod.categoria === 'Repos' || prod.categoria === 'Suscripciones TV') ? 'bold' : 'normal' }}>
-                              {(prod.categoria === 'Repos' || prod.categoria === 'Suscripciones TV') ? 'Teléfono Fijo Obligatorio' : 'Teléfono'}{esLlave(prod, 'telf') ? ' 🔑' : ''}
+                            <label className="form-label" style={{ color: (prod.categoria === 'Repos' || prod.categoria === 'Suscripciones TV' || prod.categoria === 'Repos UP') ? '#D32F2F' : '#555', fontWeight: (prod.categoria === 'Repos' || prod.categoria === 'Suscripciones TV' || prod.categoria === 'Repos UP') ? 'bold' : 'normal' }}>
+                              {(prod.categoria === 'Repos' || prod.categoria === 'Suscripciones TV' || prod.categoria === 'Repos UP') ? 'Teléfono Fijo Obligatorio' : 'Teléfono'}{esLlave(prod, 'telf') ? ' 🔑' : ''}
                             </label>
                             <input
                               type="text"
@@ -1303,7 +1365,7 @@ export default function NuevaVentaPage() {
                       })()}
                       <div style={{ display: 'grid', gridTemplateColumns: (isAdmin && prod.categoria === 'Seguro') ? '1fr 1fr 1fr' : ((isAdmin || prod.categoria === 'Seguro') ? '1fr 1fr' : '1fr'), gap: '6px' }}>
                         <div className="form-group" style={{ marginBottom: 0, display: isAdmin ? 'block' : 'none' }}>
-                          <label className="form-label" style={{ color: '#555' }}>{(prod.categoria === 'O2' || prod.categoria === 'Suscripciones TV' || prod.categoria === 'Prepago' || prod.categoria === 'Varios' || prod.categoria === 'Accesorios' || prod.categoria === 'Repos' || prod.categoria === 'Seguro') ? 'Comisión' : 'Importe'}</label>
+                          <label className="form-label" style={{ color: '#555' }}>{(prod.categoria === 'O2' || prod.categoria === 'Suscripciones TV' || prod.categoria === 'Prepago' || prod.categoria === 'Varios' || prod.categoria === 'Accesorios' || prod.categoria === 'Repos' || prod.categoria === 'Repos UP' || prod.categoria === 'Seguro') ? 'Comisión' : 'Importe'}</label>
                           <div style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
                             <input 
                               type="number" 

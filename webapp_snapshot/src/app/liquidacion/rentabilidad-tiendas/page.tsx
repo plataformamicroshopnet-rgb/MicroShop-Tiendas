@@ -19,9 +19,13 @@ type GroupedSale = {
   estado: string
 }
 
+// Rediseño de los Repos (ago-2026): «Repos (Arpu)» y «Repo Fútbol» son las palancas nuevas por
+// las que pasa todo el volumen desde el 1 de agosto. Sin columna propia, sus 78 € y sus 10 € se
+// sumaban a «Resto BAF» (el valor con el que arranca la cascada) y falseaban esa columna en todas
+// las tiendas. «Repos» y «Suscripciones TV» se quedan por las ventas históricas.
 const TIPOS_VENTA = [
   'Contratos Móvil', 'Rent', 'O2 MovilFree', 'Seguro', 'miMovistar',
-  'Suscripciones TV', 'Varios', 'Repos', 'Resto BAF', 'Accesorios'
+  'Suscripciones TV', 'Varios', 'Repos', 'Repos (Arpu)', 'Repo Fútbol', 'Resto BAF', 'Accesorios'
 ]
 
 export default function RentabilidadTiendasPage() {
@@ -195,6 +199,10 @@ export default function RentabilidadTiendasPage() {
       else if (det === 'varios') tipo = 'Varios'
       else if (det === 'accesorios') tipo = 'Accesorios'
       else if (det === 'repos') tipo = 'Repos'
+      // Las dos palancas nuevas van justo detrás de la vieja: sin estas ramas se quedaban con el
+      // 'Resto BAF' del arranque y engordaban esa columna con dinero que no es suyo.
+      else if (det === 'repos up') tipo = 'Repos (Arpu)'
+      else if (det === 'repo fútbol' || det === 'repo futbol') tipo = 'Repo Fútbol'
 
       // O2 de un vendedor que NO es el comercial de la tienda O2 (Marta) -> se consolidan
       // TODOS en una única fila "Ventas de Otras Tiendas" (Carmen y cualquier otra tienda).

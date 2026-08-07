@@ -38,6 +38,11 @@ export function getSaleCommissionBase(sale: any, ctx: SaleCommissionCtx): number
 
   // Anuladas no comisionan (fuente única isSaleCancelled: cubre Si/Sí/SI y pendiente=Anulado).
   if (isSaleCancelled(sale)) return 0
+  // Una venta CORREGIDA tampoco: su importe bueno lo aporta la hija que la
+  // sustituye. El candado vive AQUI, en la funcion base, y no solo en
+  // getSaleCommission: la Hoja de Cobro y el Resumen MOD llaman a esta, y sin
+  // esto sumaban madre + hija (la misma operacion cobrada dos veces).
+  if (esVentaSustituida(sale)) return 0
 
   const codigoLower = String(sale.codigo || '').trim().toLowerCase()
   const isPlus = PLUS_CODES_EXACT.some(c => codigoLower.includes(c))

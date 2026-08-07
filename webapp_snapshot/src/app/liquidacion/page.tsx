@@ -1158,7 +1158,17 @@ export default function LiquidacionesPage() {
         const GRUPOS = [
             { id: 'ti', label: 'Contratos Móvil' }, { id: 'rent', label: 'Rent (Dispositivos)' },
             { id: 'seguro', label: 'Seguro' }, { id: 'mimovistar', label: 'miMovistar' },
-            { id: 'tv', label: 'Suscripciones TV' }, { id: 'repos', label: 'Repos (Arpu)' },
+            // El «— histórico» es el mismo texto que ya usan Nueva Venta, Catálogos y Operaciones
+            // por Grupo Cliente: sin él esta fila y la nueva «Repos (Arpu)» quedan una encima de
+            // otra distinguiéndose solo por el orden de las palabras, y en agosto salen las dos
+            // a la vez (aún se teclean repos viejos), así que se leía el dinero de la fila que no era.
+            { id: 'tv', label: 'Suscripciones TV' }, { id: 'repos', label: 'Arpu (Repos) — histórico' },
+            // Rediseño de los Repos (ago-2026). Las dos palancas nuevas no tenían fila aquí y todo
+            // su dinero acababa en «Otros (sin clasificar)». Además la vieja lucía el nombre de la
+            // nueva: se le devuelve su «Arpu (Repos)» de siempre. «Repos (Arpu)» es la que sustituye
+            // a Arpu (Repos) y a Suscripciones TV; «Repo Fútbol» es el extra de 10 € que el programa
+            // crea solo junto al repo. Las dos viejas se quedan tal cual por el histórico.
+            { id: 'repos_up', label: 'Repos (Arpu)' }, { id: 'repo_futbol', label: 'Repo Fútbol' },
             { id: 'resto_baf', label: 'Resto BAF' }, { id: 'traslado', label: 'Traslado miMovistar' },
             { id: 'varios', label: 'Varios' }, { id: 'accesorios', label: 'Accesorios' }, { id: 'prepago', label: 'Prepago' }, { id: 'otros', label: 'Otros (sin clasificar)' },
         ]
@@ -1170,6 +1180,10 @@ export default function LiquidacionesPage() {
             if (d === 'mimovistar' || d === 'mimovi') return 'mimovistar'
             if (d === 'suscripciones tv' || d === 'suscripcion tv' || d === 'tv') return 'tv'
             if (d === 'repos') return 'repos'
+            // Las dos palancas nuevas de agosto: sin estas ramas caían en el return 'otros' del
+            // final y la hoja de cobro las enseñaba como «Otros (sin clasificar)».
+            if (d === 'repos up') return 'repos_up'
+            if (d === 'repo fútbol' || d === 'repo futbol') return 'repo_futbol'
             if (d === 'resto baf') return 'resto_baf'
             if (d === 'traslado mimovistar' || d === 'traslado') return 'traslado'
             if (d === 'varios') return 'varios'

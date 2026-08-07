@@ -8,7 +8,7 @@ import { usePeriod } from '@/components/PeriodProvider'
 import { PeriodSelector } from '@/components/PeriodSelector'
 import { ArrowLeft, BarChart2 } from 'lucide-react'
 import { matchTipoVenta, matchesRule, getValueForRule } from '@/hooks/useComisionesData'
-import { renderDashboardData, calculateDynamicCommission, sanitizeSale, normalizeString, isVentaWithinDates } from '@/lib/salesUtils'
+import { renderDashboardData, calculateDynamicCommission, sanitizeSale, normalizeString, isVentaWithinDates, esCorreccionRepos, esVentaSustituida } from '@/lib/salesUtils'
 import { getSaleCommissionBase, getSwapBonus } from '@/lib/saleCommission'
 import { computeTerritorialTotal } from '@/lib/territorialConsolidado'
 import { getSellersForStore } from '@/lib/comercialRoster'
@@ -291,6 +291,9 @@ export default function ModResumenPage() {
 
         filtered = sales.filter(s => {
           if (s.anulado === 'Si' || s.anulado === 'Sí' || s.pendiente === 'Anulado') return false;
+          // Correccion de los Repos: la madre y sus dos hijas llevan las tres la
+          // palabra «Futbol» en el producto y se contaban como tres altas.
+          if (esCorreccionRepos(s) || esVentaSustituida(s)) return false;
           if (!storeSellers.some(seller => (s.vendedor || '').toLowerCase() === seller.toLowerCase())) return false;
           return isProductMatch(s);
         });

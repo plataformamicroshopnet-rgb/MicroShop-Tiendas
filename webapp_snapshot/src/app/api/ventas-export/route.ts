@@ -90,6 +90,11 @@ export async function GET(request: Request) {
         cuota: s.cuota,
         comision: r2(comision),
         pendiente: s.pendiente,
+        // Correccion de los Repos: la madre viaja con comision 0 pero seguia
+        // contando como una operacion mas en el ERP (informe diario, Radar y
+        // Reclamaciones reclamaban la misma venta dos y tres veces).
+        sustituida: (s as any).sustituida === true,
+        sustituyeA: (s as any).sustituyeA || '',
       })
       if (legacySwap) {
         ventas.push({

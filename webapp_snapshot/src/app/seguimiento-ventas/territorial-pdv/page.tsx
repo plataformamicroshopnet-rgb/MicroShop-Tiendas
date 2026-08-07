@@ -7,7 +7,7 @@ import { usePeriod } from '@/components/PeriodProvider'
 import { PageHeader } from '@/components/PageHeader'
 import { PeriodSelector } from '@/components/PeriodSelector'
 import { Globe, ArrowLeft, Info, Percent, AlertCircle } from 'lucide-react'
-import { renderDashboardData, calculateDynamicCommission, sanitizeSale, normalizeString, isSaleCancelled, findCatalogVigente } from '@/lib/salesUtils'
+import { renderDashboardData, calculateDynamicCommission, sanitizeSale, normalizeString, isSaleCancelled, findCatalogVigente, PALANCA_REPOS, PALANCA_REPO_FUTBOL } from '@/lib/salesUtils'
 import { computeTerritorialRows } from '@/lib/territorialConsolidado'
 
 // STATIC_PALANCAS + el cálculo de las filas viven en lib/territorialConsolidado (fuente única).
@@ -211,8 +211,16 @@ export default function TerritorialPdvPage() {
           
           const det = (sale.detalle || '').toLowerCase();
           const isTV = det === 'suscripciones tv' || det === 'suscripcion tv';
-          
-          if (det === 'o2' || det === 'seguro' || det === 'mimovistar' || det === 'repos' || det === 'varios' || det === 'accesorios' || isTV || det === 'prepago' || det === 'resto baf' || det === 'traslado mimovistar') {
+          // Las dos palancas nuevas de los Repos (ago-2026) guardan su comisión en
+          // el importe/cuota, igual que TV y que los Repos viejos. Esta lista está
+          // copiada a mano y no las conocía, así que un Repo (Arpu) de 78 € caía al
+          // cálculo dinámico por tramos del dashboard y salía 0 €, mientras
+          // Operaciones por Grupo Cliente enseñaba los 78 €.
+          const isReposNuevo = det === PALANCA_REPOS.toLowerCase()
+                            || det === PALANCA_REPO_FUTBOL.toLowerCase()
+                            || det === 'repo futbol';   // sin tilde, por si acaso
+
+          if (det === 'o2' || det === 'seguro' || det === 'mimovistar' || det === 'repos' || det === 'varios' || det === 'accesorios' || isTV || isReposNuevo || det === 'prepago' || det === 'resto baf' || det === 'traslado mimovistar') {
               if (det === 'seguro') {
                   // Vigencias: con dos precios del mismo seguro gana el que cubre la fecha de la venta.
                   const found = findCatalogVigente(catalogs['Seguro'] || [], sale.producto, sale.fecha);

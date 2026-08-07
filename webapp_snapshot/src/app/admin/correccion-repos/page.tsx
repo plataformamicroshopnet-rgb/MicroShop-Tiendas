@@ -75,14 +75,26 @@ export default function CorreccionReposPage() {
 
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 18 }}>
         <label style={{ fontSize: 14 }}>Mes:</label>
-        <input value={mes} onChange={e => setMes(e.target.value.trim())}
-               className="form-input" style={{ width: 130 }} placeholder="2026_07" />
+        <select value={mes} onChange={e => setMes(e.target.value)}
+                className="form-input" style={{ width: 190 }}>
+          {(datos?.meses || [{ mes, estado: '' }]).map((m: any) => (
+            <option key={m.mes} value={m.mes}>{m.mes}{m.estado ? ` · ${m.estado === 'HISTORIC' ? 'cerrado' : m.estado}` : ''}</option>
+          ))}
+        </select>
         <button onClick={() => cargar(mes)} disabled={cargando}
                 style={{ padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
                          background: 'var(--mercedes-cyan)', color: '#fff', fontWeight: 600 }}>
           {cargando ? 'Mirando…' : 'Ver qué se corregiría'}
         </button>
       </div>
+
+      {d && d.saltadasPorFecha > 0 && (
+        <div style={{ background: '#FEF9C3', border: '1px solid #FDE68A', borderRadius: 8, padding: '8px 12px', marginBottom: 14, fontSize: 13 }}>
+          {d.saltadasPorFecha} venta(s) de este mes llevan fecha de agosto de 2026 o posterior y
+          <b> no se tocan</b>: ahí la palanca nueva ya paga comisión y corregirlas pagaría la
+          misma operación dos veces.
+        </div>
+      )}
 
       {datos && !datos.success && (
         <div style={{ color: '#DC2626', marginBottom: 16 }}>⚠️ {datos.error}</div>

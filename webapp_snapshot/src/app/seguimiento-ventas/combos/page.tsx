@@ -5,6 +5,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { usePeriod } from '@/components/PeriodProvider'
 import { useGuard } from '@/hooks/useGuard'
 import { getGroupVisual } from '@/lib/comisiones'
+import { PALANCA_REPOS, PALANCA_REPO_FUTBOL, esCorreccionRepos } from '@/lib/salesUtils'
 
 const COMERCIAL_CODES: { name: string; code: string }[] = [
           { name: 'Cristina', code: 'PINDI0023997' },
@@ -65,15 +66,42 @@ export default function CombosPage() {
     
     const isSuscripcionesTV = textNorm.includes("suscripciones tv") || textNorm.includes("suscripcion tv");
     const isExtraRepoUpFutbol = textNorm.includes("extra repo") && textNorm.includes("futbol");
-    
-    return (cat === 'repos' && !p.includes('fútbol') && !p.includes('futbol')) || isSuscripcionesTV || isExtraRepoUpFutbol;
+
+    // Desde el 1 de agosto los repos se teclean en la palanca nueva «Repos UP»
+    // (en pantalla «Repos (Arpu)»). Sus productos («Futbol Total PROMO Repo Up
+    // Destino Fútbol», «Netflix con anuncios»…) no llevan «extra repo» en el
+    // nombre, así que ninguna de las condiciones de arriba los reconocía y esta
+    // columna salía a 0 € con repos vendidos.
+    // El extra de 10 € vive en la palanca «Repo Fútbol» y NO se suma aquí a
+    // propósito: engordaría la base sobre la que se calcula el % de Repos.
+    const isReposUp = cat === PALANCA_REPOS.toLowerCase();
+
+    return (cat === 'repos' && !p.includes('fútbol') && !p.includes('futbol')) || isReposUp || isSuscripcionesTV || isExtraRepoUpFutbol;
   }
-  const isRepoFutbol = (s: any) => prod(s).includes('futbol') || prod(s).includes('fútbol') || prod(s).includes('repo f')
+  const isRepoFutbol = (s: any) => {
+    const cat = String(s.detalle || s.sheet || s.categoria || '').trim().toLowerCase();
+    // Desde agosto un cliente de fútbol deja DOS líneas —el repo de 78 € en
+    // «Repos (Arpu)» y el extra de 10 € en «Repo Fútbol»— y las dos llevan
+    // «Fútbol» en el nombre del producto. Contando por el nombre, esta columna
+    // enseñaba 2 altas por el mismo cliente. La unidad la marca la línea del
+    // extra, igual que el token «Repo Fútbol» de matchTipoVenta (lib/ventaMatching),
+    // que es quien paga esta palanca.
+    if (cat === PALANCA_REPOS.toLowerCase()) return false;
+    if (cat === PALANCA_REPO_FUTBOL.toLowerCase() || cat === 'repo futbol') return true;
+    // Palanca vieja: el criterio de siempre, intacto para el histórico.
+    return prod(s).includes('futbol') || prod(s).includes('fútbol') || prod(s).includes('repo f')
+  }
 
   const norm = (str: string) => String(str || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()
 
   const rows = useMemo(() => COMERCIAL_CODES.map(({ name, code }) => {
-    const mine = allSales.filter((s: any) => norm(s.vendedor) === norm(name))
+    // Las líneas de la corrección contable de los Repos (las hijas con fecha
+    // anterior al 1 de agosto) no son ventas nuevas: son el precio bueno de una
+    // venta de un mes ya pagado. Esta pantalla no tiene el candado de la venta
+    // madre, así que sin este filtro la madre y su hija se sumaban las DOS y
+    // meses cerrados como junio cambiaban de cifra. Mismo criterio que usan el
+    // Resumen MOD y el territorial (esCorreccionRepos, lib/salesUtils).
+    const mine = allSales.filter((s: any) => norm(s.vendedor) === norm(name) && !esCorreccionRepos(s))
     const clients = (list: any[]) => [...new Set(
       list.map((s: any) => `${(s.nif||'').toUpperCase()} – ${s.nombreCliente||''}`.trim())
     )]

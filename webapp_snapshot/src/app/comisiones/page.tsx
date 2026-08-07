@@ -793,7 +793,7 @@ export default function ComisionesDashboardPage() {
                                                                     metricKey={gName === 'ARPU' ? 'ARPU_VENTAS' : 'DISP_SEG_VENTAS'}
                                                                     data={{ sales: s.groupSales[gName] || [] }}
                                                                 >
-                                                                    <span>{gName === 'ARPU' ? 'Arpu (Repos)' : gName}</span>
+                                                                    <span>{gName === 'ARPU' ? 'Repos (Arpu)' : gName}</span>
                                                                 </AuditableCell>
                                                                 {/* Candado de tramo: el objetivo 2 puede estar en verde y aun asi
                                                                     pagarse al tramo 1 porque otra palanca (o una tienda) no llego.

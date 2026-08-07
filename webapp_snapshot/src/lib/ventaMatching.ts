@@ -98,7 +98,36 @@ export const matchTipoVenta = (sale: any, tipoVentaRaw: string) => {
                     matched = prod.includes('solar360') || prod.includes('solar 360') || prod.includes('solar');
                     break;
                 case 'arpu':
-                    matched = cat === 'repos' && !prod.includes('fútbol') && !prod.includes('futbol');
+                    // DESDE AGOSTO 2026 la palanca de los repos es «Repos (Arpu)»
+                    // (categoría 'Repos UP') y el dueño paga el % sobre TODOS sus
+                    // repos, el de fútbol incluido: por eso aquí no va la exclusión
+                    // del fútbol que sí tiene el histórico (allí el fútbol venía por
+                    // otro cable). Sin esta rama, una regla que siga diciendo «ARPU»
+                    // en su casilla dejaría de casar con las ventas nuevas y la
+                    // palanca pagaría 0 € sin que nadie lo viera.
+                    matched = esDesdeAgosto2026(sale)
+                        ? (cat === 'repos up' || cat === 'repos')
+                        : (cat === 'repos' && !prod.includes('fútbol') && !prod.includes('futbol'));
+                    break;
+                case 'extra repos up destino fútbol':
+                case 'extra repos up destino futbol':
+                    // Nombre VIEJO del producto, que muchas reglas tienen escrito en su
+                    // casilla «Tipo de Venta». Desde agosto el extra es una palanca con
+                    // nombre propio: se trata igual que el token «Repo Fútbol» para que
+                    // las reglas ya configuradas sigan funcionando sin tocarlas.
+                    if (esDesdeAgosto2026(sale)) {
+                        // Conviven las dos formas: la nueva (palanca «Repo Fútbol») y la
+                        // vieja que se sigue tecleando en «Repos» con el producto de
+                        // siempre. Una unidad cada una; nunca las dos por el mismo cliente.
+                        matched = cat === 'repo futbol' || cat === 'repo fútbol'
+                            || (cat === 'repos' && prod.includes('extra repo')
+                                && (prod.includes('fútbol') || prod.includes('futbol')));
+                    } else {
+                        // Antes de agosto, EXACTAMENTE lo que hacía la rama por
+                        // defecto con este mismo texto: ni un céntimo se mueve.
+                        const s0 = `${prod} ${String(sale.detalle || '').toLowerCase()} ${String(sale.grupo || '').toLowerCase()}`;
+                        matched = tipoVenta.toLowerCase().trim() === cat || matchProductFormula(s0, tipoVenta);
+                    }
                     break;
                 case 'repo fútbol':
                 case 'repo futbol':
@@ -108,7 +137,9 @@ export const matchTipoVenta = (sale: any, tipoVentaRaw: string) => {
                     // por PALANCA: solo la del extra es la que cuenta como alta.
                     // Antes de agosto, el criterio de siempre (histórico intacto).
                     matched = esDesdeAgosto2026(sale)
-                        ? (cat === 'repo futbol' || cat === 'repo fútbol')
+                        ? (cat === 'repo futbol' || cat === 'repo fútbol'
+                           || (cat === 'repos' && prod.includes('extra repo')
+                               && (prod.includes('fútbol') || prod.includes('futbol'))))
                         : (prod.includes('fútbol') || prod.includes('futbol') || prod.includes('repo f'));
                     break;
                 default:

@@ -64,6 +64,9 @@ export async function GET(request: Request) {
             fecha: true, detalle: true, codigo: true, producto: true, cuota: true,
             anulado: true, pendiente: true, seguro: true, seguroImporte: true,
             rentConCoste: true, isSwap: true, nif: true,
+            // Correccion de los Repos: sin estas dos, la madre sustituida
+            // seguia sumando en el territorial.
+            sustituida: true, sustituyeA: true,
             vendedor: true, sheet: true, grupo: true,
           },
         }),

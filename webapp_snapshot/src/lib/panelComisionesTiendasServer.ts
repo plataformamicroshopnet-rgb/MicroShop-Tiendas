@@ -116,6 +116,11 @@ export async function loadPanelInputs(prisma: PrismaClient, mes: string): Promis
       imei: sale.imei || '',
       numeroPedido: (sale as any).numeroPedido || '',
       origenStock: (sale as any).origenStock || '',
+      // Marcas de la correccion de los Repos. Sin ellas el navegador no puede
+      // saber que una venta ya esta sustituida por otra y la operacion se
+      // cuenta DOS VECES en todo lo que suma dinero.
+      sustituida: (sale as any).sustituida === true,
+      sustituyeA: (sale as any).sustituyeA || '',
       isSwap: (sale as any).isSwap === true,
       isLibre: (sale as any).isLibre === true,
       motivoModificacion: ''

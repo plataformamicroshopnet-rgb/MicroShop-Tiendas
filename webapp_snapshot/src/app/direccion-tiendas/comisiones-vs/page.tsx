@@ -37,6 +37,15 @@ const getSaleGroupId = (sale: any): string => {
   if (det === 'prepago') return 'prepago'
   if (det === 'varios') return 'varios'
   if (det === 'repos') return 'repos'
+  // Rediseño de los Repos (ago-2026). Las dos palancas nuevas van al MISMO cajón
+  // que la vieja a propósito: la columna del comercial (más abajo) suma en
+  // `comercial.repos` todas las reglas con repos/arpu/fútbol en el nombre, así que
+  // si aquí cayeran en 'varios' —que es donde acababan, por el return del final—
+  // esta pantalla inventaba un descuadre en DOS filas a la vez: Repos con dinero
+  // solo en la columna del comercial y Varios con dinero solo en la de la empresa.
+  if (det === 'repos up' || cat === 'repos up') return 'repos'
+  // La tilde de «Fútbol» no siempre llega, por eso se miran las dos formas.
+  if (det === 'repo fútbol' || det === 'repo futbol' || cat === 'repo fútbol' || cat === 'repo futbol') return 'repos'
   if (det === 'resto baf') return 'resto_baf'
   if (det === 'accesorios') return 'accesorios'
   if (det === 'traslado mimovistar') return 'traslado_mimovistar'

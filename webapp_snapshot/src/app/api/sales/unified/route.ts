@@ -3,6 +3,7 @@ import { getSession } from '@/lib/auth'
 import { canEdit } from '@/lib/permissions'
 import { PrismaClient } from '@prisma/client'
 import { runExtrasEngine } from '@/lib/extrasEngine'
+import { randomUUID } from 'crypto'
 
 const prisma = new PrismaClient()
 
@@ -102,7 +103,11 @@ export async function POST(request: Request) {
     }
 
     // --- REGLA ANTI-FRAUDE TRASLADOS MISTAR + SUSCRIPCIONES TV ---
-    const hasSuscripcionTV = data.productos.some((p: any) => p.categoria === 'Suscripciones TV' && p.producto !== '');
+    // Antifraude de traslados: desde ago-2026 las suscripciones de TV se teclean
+    // en la palanca nueva «Repos (Arpu)», así que mirar solo 'Suscripciones TV'
+    // dejaba pasar la suscripción de un NIF con traslado reciente.
+    const esPalancaTV = (c: any) => c === 'Suscripciones TV' || c === 'Repos UP'
+    const hasSuscripcionTV = data.productos.some((p: any) => esPalancaTV(p.categoria) && p.producto !== '');
     
     if (hasSuscripcionTV && data.nif) {
        const hasTrasladoInPayload = data.productos.some((p: any) => 
@@ -122,7 +127,7 @@ export async function POST(request: Request) {
 
        if (hasTrasladoInPayload || recentTraslado) {
          const hasInvalidSuscripcion = data.productos.some((p: any) => {
-            if (p.categoria !== 'Suscripciones TV' || p.producto === '') return false;
+            if (!esPalancaTV(p.categoria) || p.producto === '') return false;
             const imp = parseFloat(String(p.importe || '0').replace(',','.'));
             return !isNaN(imp) && imp > 0;
          });
@@ -270,7 +275,13 @@ export async function POST(request: Request) {
           : `Motivo Sin Stock: ${prod.motivoSinStock}`
       }
 
+      // Id propio (en vez de dejar que lo ponga la base de datos) para que la
+      // linea hermana del repo de futbol pueda apuntar a esta venta: se insertan
+      // las dos de golpe con createMany y ahi no hay ids de vuelta.
+      const idMadre = randomUUID()
+
       salesToInsert.push({
+        id: idMadre,
         sheet: sheetCategory,
         vendedor: data.vendedor,
         fecha: fechaStr,
@@ -361,6 +372,10 @@ export async function POST(request: Request) {
           pendiente: prod.pendiente || 'No',
           anulado: 'No',
           anotaciones: 'Extra del repo de fútbol (lo crea el programa)',
+          // Enlazada a su repo de 78 €: un cliente es UNA operacion, asi que
+          // anular cualquiera de las dos se lleva la otra (cascada del PATCH de
+          // /api/sales). Sin esto, al caerse el repo el extra seguia cobrandose.
+          sustituyeA: idMadre,
           telefonoFijo: data.telefonoFijo || '',
           telefonoMovil: data.telefonoMovil || '',
           boletin: '',

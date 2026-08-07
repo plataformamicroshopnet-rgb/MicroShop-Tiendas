@@ -62,6 +62,26 @@ export function esVentaSustituida(sale: any): boolean {
 }
 
 /** true si la venta ES una corrección contable (la hija de otra). */
+/**
+ * Linea de CORRECCION de los Repos que no debe contar como venta nueva.
+ * Es toda hija (sustituyeA) o toda venta de las palancas nuevas con fecha
+ * anterior al 01/08/2026: son apuntes contables de meses ya pagados. Vive aqui
+ * para que la usen tambien el territorial y el Resumen MOD, que contaban tres
+ * unidades por cada cliente de futbol corregido (y el territorial paga por
+ * unidades: 300 €/500 € por tienda).
+ */
+export function esCorreccionRepos(sale: any): boolean {
+  const f = String(sale?.fecha || '').trim()
+  if (f.length < 10 || f[2] !== '/' || f[5] !== '/') return false
+  const d = new Date(Number(f.slice(6, 10)), Number(f.slice(3, 5)) - 1, Number(f.slice(0, 2)))
+  if (d >= new Date(2026, 7, 1)) return false
+  if (String(sale?.sustituyeA || '').trim()) return true
+  const cat = String(sale?.categoria || sale?.detalle || sale?.sheet || '').trim().toLowerCase()
+  return cat === PALANCA_REPOS.toLowerCase()
+      || cat === PALANCA_REPO_FUTBOL.toLowerCase()
+      || cat === 'repo futbol'
+}
+
 export function esCorreccionDeOtra(sale: any): boolean {
     return !!String(sale?.sustituyeA || '').trim()
 }

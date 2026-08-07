@@ -68,7 +68,15 @@ const TABS = [
   { id: 'traslado',        label: 'Traslado miMovistar', emoji: '🚚', color: '#7C3AED', grupo: 'TRASLADO' },
   { id: 'tv',              label: 'Suscripciones TV',emoji: '📺', color: '#D97706', grupo: 'TV' },
   { id: 'varios',          label: 'Varios',          emoji: '📦', color: '#8B5CF6', grupo: 'VARIOS' },
-  { id: 'repos',           label: 'Arpu (Repos)',    emoji: '🔁', color: '#0891B2', grupo: 'REPOS' },
+  // El «— histórico» es el mismo texto que ya usan Nueva Venta y Catálogos: sin
+  // él esta pestaña y la nueva «Repos (Arpu)» solo se distinguían por el orden de
+  // las palabras y se confundían al buscar una venta.
+  // labelErp: el nombre de la palanca que viaja a los Excel NO puede llevar ese
+  // añadido. El ERP lo resuelve por igualdad exacta (palancas.resolver_tab), y
+  // «Arpu (Repos) — histórico» no está en su lista: las ventas antiguas de repos
+  // se caían del cotejo con Telefónica al re-exportarlas. Lo que se ve cambia;
+  // lo que se manda, no.
+  { id: 'repos',           label: 'Arpu (Repos) — histórico', labelErp: 'Arpu (Repos)', emoji: '🔁', color: '#0891B2', grupo: 'REPOS' },
   // Rediseño de los Repos (ago-2026). «Repos (Arpu)» sustituye a la de arriba y a
   // Suscripciones TV; «Repo Fútbol» es el extra de 10 € que el programa crea solo
   // por cada repo de fútbol. Las viejas se quedan por el histórico.
@@ -79,6 +87,11 @@ const TABS = [
   { id: 'extras',          label: 'PRV Territorial Tiendas', emoji: '⚡', color: '#10b981', grupo: 'EXTRAS' },
   { id: 'bonos_o2',        label: 'Bonos O2',        emoji: '🏆', color: '#005D82', grupo: 'BONOS_O2' },
 ]
+
+// Nombre con el que la palanca viaja a los Excel (nombre de hoja y columna
+// «Grupo»), que es lo que luego lee el ERP. Por defecto es el mismo que se ve
+// en pantalla; solo se separa donde la etiqueta se ha retocado para el usuario.
+const nombreErp = (t: any) => t.labelErp || t.label
 
 const PLUS_CODES = ['plus 1ks', 'plus 1sk', 'plus nfg', 'plus n7d', 'plus k2z', 'plus zf7']
 const isPlus   = (c: string) => PLUS_CODES.some(x => (c || '').toLowerCase().includes(x))
@@ -130,6 +143,13 @@ const LLAVES_TAB: Record<string, string[]> = {
   resto:           ['pedido'],
   repos:           ['telf', 'pedido'],
   tv:              ['telf', 'pedido'],
+  // Rediseño de los Repos (ago-2026). Sin estas dos entradas el semáforo se
+  // apagaba justo por donde pasa ya todo el volumen: las columnas salían en
+  // gris y no se veía a qué operación le faltaba el teléfono o el pedido para
+  // poder cruzarla con la liquidación. Mismas llaves que la palanca vieja; el
+  // extra de 10 € hereda teléfono y nº de pedido de su repo de 78 €.
+  repos_up:        ['telf', 'pedido'],
+  repo_futbol:     ['telf', 'pedido'],
 }
 const tdLlave = (filled: boolean): any => filled
   ? { background: '#E8F5E9', color: '#1B5E20', fontWeight: 700 }
@@ -681,7 +701,7 @@ function GrupoClienteContent() {
       const rows = sales
         .filter((s: any) => filterByTab(s, t.id))
         .filter((s: any) => !s.anulado || s.anulado === 'No')
-      const sheet = wb.addWorksheet(sheetName(t.label))
+      const sheet = wb.addWorksheet(sheetName(nombreErp(t)))
       sheet.columns = [
         { header: 'Fecha', key: 'fecha', width: 12 },
         { header: 'Comercial', key: 'comercial', width: 16 },
@@ -1243,7 +1263,7 @@ function GrupoClienteContent() {
       if (flatMode) {
         group.sales.forEach((s: any) => {
           exportRows.push({
-            Grupo: `${tab.emoji} ${tab.label}`,
+            Grupo: `${tab.emoji} ${nombreErp(tab)}`,
             NIF: group.nif || '—',
             Empresa: group.nombre || '—',
             'Fecha Tram.': s.fecha || '—',
@@ -1281,7 +1301,7 @@ function GrupoClienteContent() {
           const comisionSum = pg.sales.reduce((acc, s) => acc + getSaleComisionLocal(s), 0)
 
           exportRows.push({
-            Grupo: `${tab.emoji} ${tab.label}`,
+            Grupo: `${tab.emoji} ${nombreErp(tab)}`,
             NIF: group.nif || '—',
             Empresa: group.nombre || '—',
             'Fecha Tram.': fechas.length > 0 ? fechas.join(', ') : '—',
@@ -1571,7 +1591,7 @@ function GrupoClienteContent() {
     
     TABS.filter(t => t.id !== 'extras').forEach(t => {
       const rows = getTabExportRows(t, plusRows, basicoRows)
-      addStyledSalesSheet(wb, safeSheet(t.label), rows, t.label)
+      addStyledSalesSheet(wb, safeSheet(nombreErp(t)), rows, nombreErp(t))
     })
     
     // Pestaña de extras
@@ -1696,7 +1716,7 @@ function GrupoClienteContent() {
       totalComisiones += comisionSum
 
       sheet.addRow({
-        grupo: `${t.emoji} ${t.label}`,
+        grupo: `${t.emoji} ${nombreErp(t)}`,
         ventas: tabSls.length,
         cuota: cuotaSum,
         comision: comisionSum

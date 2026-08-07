@@ -54,6 +54,14 @@ const TARIFA: Record<string, [string, number]> = {
   'Futbol Total PROMO': ['Futbol Total PROMO Repo Up Destino Fútbol', 78.00],
 }
 
+const clave = (t: string) => String(t || '').toLowerCase().normalize('NFD')
+  .replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim()
+// Indice de TARIFA por clave normalizada: un espacio de mas o una tilde distinta
+// dejaba el producto sin corregir y solo se veia en un aviso de la vista previa.
+const TARIFA_NORM: Record<string, [string, number]> = Object.fromEntries(
+  Object.entries(TARIFA).map(([k, v]) => [clave(k), v])
+)
+
 const REPO_FUTBOL = 'Futbol Total PROMO Repo Up Destino Fútbol'
 const EXTRA_FUTBOL = 'Repo Up Destino Fútbol'
 const IMPORTE_EXTRA_FUTBOL = 10.00
@@ -86,12 +94,33 @@ function hijasDe(s: any): Array<{ producto: string; cuota: number; concepto: str
     ]
   }
   if (esTV(s.detalle || '')) {
-    const t = TARIFA[String(s.producto || '').trim()]
+    const t = TARIFA_NORM[clave(s.producto)]
     if (!t) return []
+    // El mismo cliente de futbol se puede haber tecleado en «Suscripciones TV»
+    // con el producto «Futbol Total PROMO». Vale igual: 78 € + su extra de 10 €.
+    // Sin esto valia 88 € si se tecleo en Repos y 78 € si se tecleo en TV.
+    if (t[0] === REPO_FUTBOL) {
+      return [
+        { producto: REPO_FUTBOL, cuota: t[1], palanca: PALANCA_REPOS,
+          concepto: 'Repo de fútbol (el precio que faltaba)' },
+        { producto: EXTRA_FUTBOL, cuota: IMPORTE_EXTRA_FUTBOL, palanca: PALANCA_REPO_FUTBOL,
+          concepto: 'El extra de siempre' },
+      ]
+    }
     return [{ producto: t[0], cuota: t[1], palanca: PALANCA_REPOS,
               concepto: 'Suscripción con el precio bueno' }]
   }
   return []
+}
+
+/** Ventas de agosto de 2026 en adelante: NO se corrigen. Sus hijas naceran con
+ *  fecha de agosto, el candado de fecha ya no las protege y PAGARIAN comision
+ *  ademas de la madre: la misma operacion cobrada y pagada dos veces. */
+const esDeAgostoEnAdelante = (fecha: any): boolean => {
+  const f = String(fecha || '').trim()
+  if (f.length < 10 || f[2] !== '/' || f[5] !== '/') return false
+  const d = new Date(Number(f.slice(6, 10)), Number(f.slice(3, 5)) - 1, Number(f.slice(0, 2)))
+  return d >= new Date(2026, 7, 1)
 }
 
 async function analizar(periodKey: string) {
@@ -99,17 +128,28 @@ async function analizar(periodKey: string) {
   if (!wp) return { error: `El mes ${periodKey} no existe.` }
 
   const ventas = await prisma.sale.findMany({ where: { periodId: wp.id } })
-  const yaCorregidas = new Set(
-    ventas.filter(v => v.sustituyeA).map(v => String(v.sustituyeA))
-  )
+  // Hijas VIVAS por madre (las anuladas no cuentan): «ya hecha» tiene que
+  // significar «tiene las hijas que le tocan», no «tiene alguna». Si no, una
+  // familia a medias (p. ej. el repo creado y el extra no) se daba por buena
+  // para siempre y nadie volvia a mirarla.
+  const hijasVivas: Record<string, Set<string>> = {}
+  for (const v of ventas) {
+    if (!v.sustituyeA) continue
+    if (anulada(v)) continue
+    const k = String(v.sustituyeA)
+    if (!hijasVivas[k]) hijasVivas[k] = new Set()
+    hijasVivas[k].add(`${String(v.detalle || '')}|${String(v.producto || '')}`)
+  }
 
   const filas: any[] = []
   const sinTarifa: Record<string, number> = {}
   let cobroAntes = 0
   let cobroDespues = 0
 
+  let saltadasPorFecha = 0
   for (const s of ventas) {
     if (anulada(s)) continue
+    if (esDeAgostoEnAdelante(s.fecha)) { saltadasPorFecha++; continue }
     // ya es una corrección (de cualquiera de las dos palancas nuevas)
     if (String(s.detalle || '') === PALANCA_REPOS) continue
     if (String(s.detalle || '') === PALANCA_REPO_FUTBOL) continue
@@ -136,7 +176,7 @@ async function analizar(periodKey: string) {
       importeActual: antes,
       hijas,
       importeNuevo: despues,
-      yaHecha: yaCorregidas.has(s.id),
+      yaHecha: hijas.every(h => (hijasVivas[s.id] || new Set()).has(`${h.palanca}|${h.producto}`)),
     })
   }
 
@@ -148,6 +188,7 @@ async function analizar(periodKey: string) {
     estadoMes: wp.status,
     filas,
     sinTarifa,
+    saltadasPorFecha,
     pendientes: filas.filter(f => !f.yaHecha).length,
     yaHechas: filas.filter(f => f.yaHecha).length,
     lineasACrear: filas.filter(f => !f.yaHecha).reduce((a, f) => a + f.hijas.length, 0),
@@ -171,9 +212,16 @@ export async function GET(request: Request) {
   }
   const mes = new URL(request.url).searchParams.get('mes') || '2026_07'
   try {
+    // Meses que se pueden corregir: los anteriores a agosto de 2026 (de agosto en
+    // adelante manda ya la palanca nueva). Van a un desplegable: antes el mes era
+    // un campo de texto libre y bastaba escribirlo mal para tocar otro.
+    const periodos = await prisma.workPeriod.findMany({ orderBy: { period_key: 'desc' } })
+    const meses = periodos
+      .map(p => ({ mes: p.period_key, estado: p.status }))
+      .filter(m => m.mes < '2026_08')
     const r = await analizar(mes)
-    if ((r as any).error) return NextResponse.json({ success: false, ...r }, { status: 400 })
-    return NextResponse.json({ success: true, ...r })
+    if ((r as any).error) return NextResponse.json({ success: false, meses, ...r }, { status: 400 })
+    return NextResponse.json({ success: true, meses, ...r })
   } catch (e: any) {
     console.error('[Corrección Repos] preview:', e)
     return NextResponse.json({ success: false, error: String(e?.message || e) }, { status: 500 })
@@ -187,7 +235,20 @@ export async function POST(request: Request) {
   }
   try {
     const body = await request.json().catch(() => ({}))
-    const mes = String(body.mes || '2026_07')
+    // Sin valor por defecto: un POST sin mes corregia julio por su cuenta.
+    const mes = String(body.mes || '').trim()
+    if (!/^\d{4}_\d{2}$/.test(mes)) {
+      return NextResponse.json({ success: false, error: 'Falta el mes (formato AAAA_MM).' }, { status: 400 })
+    }
+    // Agosto de 2026 en adelante NO se corrige: ahi la palanca nueva SI paga
+    // comision, asi que la hija cobraria ademas de la madre.
+    if (mes >= '2026_08') {
+      return NextResponse.json({
+        success: false,
+        error: 'Este mes ya usa la palanca nueva: corregirlo pagaría la misma operación dos veces. ' +
+               'La corrección es solo para los meses anteriores a agosto de 2026.'
+      }, { status: 400 })
+    }
     // Doble llave: hay que escribir el mes a mano para ejecutar.
     if (String(body.confirmar || '') !== mes) {
       return NextResponse.json({
@@ -214,28 +275,34 @@ export async function POST(request: Request) {
     for (const f of aCrear) {
       const m: any = porId.get(f.id)
       if (!m) continue
-      for (const h of f.hijas) {
-        const { id: _drop, createdAt: _c, updatedAt: _u, ...resto } = m
-        await prisma.sale.create({
-          data: {
-            ...resto,
-            sheet: h.palanca,
-            detalle: h.palanca,
-            producto: h.producto,
-            cuota: h.cuota,
-            sustituyeA: m.id,
-            sustituida: null,
-            anotaciones: [m.anotaciones, `Corrección de precio (${mes})`]
-              .filter(Boolean).join(' | '),
-          }
-        })
-        creadas++
-      }
-      await prisma.sale.update({ where: { id: m.id }, data: { sustituida: true } })
+      // Una familia entera o ninguna: si se cae a medias, la madre quedaba
+      // marcada como corregida con solo una de sus dos hijas (o al reves, con
+      // hijas y sin marcar, y entonces se cobraba dos veces).
+      await prisma.$transaction(async (tx) => {
+        for (const h of f.hijas) {
+          const { id: _drop, createdAt: _c, updatedAt: _u, ...resto } = m
+          await tx.sale.create({
+            data: {
+              ...resto,
+              sheet: h.palanca,
+              detalle: h.palanca,
+              producto: h.producto,
+              cuota: h.cuota,
+              sustituyeA: m.id,
+              sustituida: null,
+              anotaciones: [m.anotaciones, `Corrección de precio (${mes})`]
+                .filter(Boolean).join(' | '),
+            }
+          })
+          creadas++
+        }
+        await tx.sale.update({ where: { id: m.id }, data: { sustituida: true } })
+      })
     }
 
     return NextResponse.json({
       success: true, creadas, marcadas: aCrear.length,
+      sinTarifa: r.sinTarifa,
       message: `${aCrear.length} operación(es) corregidas con ${creadas} línea(s) nuevas. ` +
                `Las comisiones del mes no cambian.`
     })

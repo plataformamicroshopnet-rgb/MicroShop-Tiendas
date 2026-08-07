@@ -46,6 +46,16 @@ const LLAVES_DETALLE: Record<string, string[]> = {
   'repos': ['telf', 'pedido'],
   'suscripciones tv': ['telf', 'pedido'],
   'tv': ['telf', 'pedido'],
+  // Rediseño de los Repos (ago-2026). Esta tabla tampoco conocía las palancas
+  // nuevas, así que desde el 1 de agosto el semáforo se apagaba justo por donde
+  // pasa ya todo el volumen: NIF, teléfono y nº de pedido salían en gris y nadie
+  // veía qué repo se quedaba sin la llave para cruzarlo con la liquidación.
+  // Mismas llaves que la palanca vieja, igual que en Op. por Grupo Cliente; el
+  // extra de 10 € hereda teléfono y pedido de su repo de 78 €. La tilde de
+  // «Fútbol» no siempre llega, por eso van las dos formas.
+  'repos up': ['telf', 'pedido'],
+  'repo fútbol': ['telf', 'pedido'],
+  'repo futbol': ['telf', 'pedido'],
 }
 const llavesDeVenta = (sale: any): string[] => {
   let ll = LLAVES_DETALLE[String(sale.detalle || '').toLowerCase().trim()] || []
@@ -171,6 +181,10 @@ function CommercialDashboard({ data, activeExtras = [], isComercial, isAdmin, ca
   const pendientes = data.filter((d: any) => d.pendiente === 'Si' && d.anulado !== 'Si' && d.pendiente !== 'Anulado').length + activeExtras.filter((ex: any) => ex.status === 'PENDING').length;
   const anuladas = data.filter((d: any) => d.anulado === 'Si' || d.pendiente === 'Anulado').length + activeExtras.filter((ex: any) => ex.status === 'CANCELLED').length;
 
+  // OJO: esta función es GEMELA de la que usa el export a Excel (más abajo, hacia
+  // la línea 990). Están copiadas letra por letra a propósito, así que toda rama
+  // que se toque aquí hay que tocarla allí: si solo se arregla una, la pantalla y
+  // el Excel del mismo mes dan cifras distintas y no hay forma de saber cuál miente.
   const getSaleGroupId = (sale: any) => {
     const det = String(sale.detalle || '').toLowerCase().trim();
     const cat = String(sale.categoria || sale.sheet || '').toLowerCase().trim();
@@ -184,6 +198,14 @@ function CommercialDashboard({ data, activeExtras = [], isComercial, isAdmin, ca
     if (det === 'prepago') return 'prepago';
     if (det === 'varios') return 'varios';
     if (det === 'repos') return 'repos';
+    // Rediseño de los Repos (ago-2026). Desde el 1 de agosto TODO el volumen de
+    // repos entra por estas dos palancas, y aquí no existían: caían al
+    // `return 'varios'` del final, así que su dinero se contaba en el cajón de
+    // Varios y las filas de Repos salían a cero con el mes ya en marcha.
+    if (det === 'repos up' || cat === 'repos up') return 'repos_up';
+    // La tilde de «Fútbol» no siempre llega (hay ventas antiguas y ficheros que la
+    // pierden), por eso se miran las dos formas.
+    if (det === 'repo fútbol' || det === 'repo futbol' || cat === 'repo fútbol' || cat === 'repo futbol') return 'repo_futbol';
     if (det === 'resto baf') return 'resto_baf';
     if (det === 'accesorios') return 'accesorios';
     if (det === 'traslado mimovistar') return 'traslado_mimovistar';
@@ -200,7 +222,15 @@ function CommercialDashboard({ data, activeExtras = [], isComercial, isAdmin, ca
     { id: 'tv', label: 'Suscripciones TV', icon: '📺' },
     { id: 'prepago', label: 'Prepago', icon: '💳' },
     { id: 'varios', label: 'Varios', icon: '📦' },
-    { id: 'repos', label: 'Repos', icon: '🔁' },
+    // La palanca vieja pasa a llamarse en pantalla «Arpu (Repos)», como en
+    // Operaciones por Grupo Cliente: si se quedaba como «Repos» a secas nadie
+    // distinguiría a simple vista esta fila (histórico) de la nueva «Repos (Arpu)».
+    { id: 'repos', label: 'Arpu (Repos)', icon: '🔁' },
+    // Palancas nuevas (ago-2026): el repo de 78 € y el extra de 10 € que el
+    // programa crea solo junto a él. Van pegadas a la vieja para poder comparar
+    // de un vistazo el mes del cambio.
+    { id: 'repos_up', label: 'Repos (Arpu)', icon: '🔂' },
+    { id: 'repo_futbol', label: 'Repo Fútbol', icon: '⚽' },
     { id: 'resto_baf', label: 'Resto BAF', icon: '📡' },
     { id: 'accesorios', label: 'Accesorios', icon: '🎧' },
     { id: 'traslado_mimovistar', label: 'Traslado miMovistar', icon: '🚚' },
@@ -978,6 +1008,11 @@ function OperationsContent() {
         };
       });
 
+      // OJO: esta función es GEMELA de la que pinta el «Resumen por Grupo» en
+      // pantalla (arriba, hacia la línea 180). Están copiadas letra por letra a
+      // propósito, así que toda rama que se toque aquí hay que tocarla allí: si
+      // solo se arregla una, el Excel y la pantalla del mismo mes dan cifras
+      // distintas y no hay forma de saber cuál miente.
       const getSaleGroupId = (sale: any) => {
         const det = String(sale.detalle || '').toLowerCase().trim();
         const cat = String(sale.categoria || sale.sheet || '').toLowerCase().trim();
@@ -991,6 +1026,14 @@ function OperationsContent() {
         if (det === 'prepago') return 'prepago';
         if (det === 'varios') return 'varios';
         if (det === 'repos') return 'repos';
+        // Rediseño de los Repos (ago-2026). Desde el 1 de agosto TODO el volumen de
+        // repos entra por estas dos palancas, y aquí no existían: caían al
+        // `return 'varios'` del final, así que su dinero se contaba en el cajón de
+        // Varios y las filas de Repos salían a cero con el mes ya en marcha.
+        if (det === 'repos up' || cat === 'repos up') return 'repos_up';
+        // La tilde de «Fútbol» no siempre llega (hay ventas antiguas y ficheros que
+        // la pierden), por eso se miran las dos formas.
+        if (det === 'repo fútbol' || det === 'repo futbol' || cat === 'repo fútbol' || cat === 'repo futbol') return 'repo_futbol';
         if (det === 'resto baf') return 'resto_baf';
         if (det === 'accesorios') return 'accesorios';
         if (det === 'traslado mimovistar') return 'traslado_mimovistar';
@@ -1007,7 +1050,15 @@ function OperationsContent() {
         { id: 'tv', label: 'Suscripciones TV', icon: '📺' },
         { id: 'prepago', label: 'Prepago', icon: '💳' },
         { id: 'varios', label: 'Varios', icon: '📦' },
-        { id: 'repos', label: 'Repos', icon: '🔁' },
+        // La palanca vieja pasa a llamarse en pantalla «Arpu (Repos)», como en
+        // Operaciones por Grupo Cliente: si se quedaba como «Repos» a secas nadie
+        // distinguiría a simple vista esta fila (histórico) de la nueva «Repos (Arpu)».
+        { id: 'repos', label: 'Arpu (Repos)', icon: '🔁' },
+        // Palancas nuevas (ago-2026): el repo de 78 € y el extra de 10 € que el
+        // programa crea solo junto a él. Van pegadas a la vieja para poder comparar
+        // de un vistazo el mes del cambio.
+        { id: 'repos_up', label: 'Repos (Arpu)', icon: '🔂' },
+        { id: 'repo_futbol', label: 'Repo Fútbol', icon: '⚽' },
         { id: 'resto_baf', label: 'Resto BAF', icon: '📡' },
         { id: 'accesorios', label: 'Accesorios', icon: '🎧' },
         { id: 'traslado_mimovistar', label: 'Traslado miMovistar', icon: '🚚' },

@@ -9,7 +9,7 @@ import { matchTipoVenta } from '@/lib/ventaMatching'
 import { TIENDAS_COMERCIALES } from '@/lib/constants'
 import { getEffectiveTiendaComerciales } from '@/lib/comercialRoster'
 import { getSaleCommission } from '@/lib/saleCommission'
-import { isSaleCancelled } from '@/lib/salesUtils'
+import { isSaleCancelled, esCorreccionRepos, esVentaSustituida } from '@/lib/salesUtils'
 
 export const TIENDAS_FISICAS = ['Auxiliadora 45', 'Correhuela', 'Villamayor', 'Béjar']
 
@@ -101,6 +101,10 @@ export function getSalesDataForStoreAndType(sales: any[], storeName: string, tip
     if (key) storeSellers = (tiendaMap as any)[key]
     filtered = sales.filter(s => {
       if (isSaleCancelled(s)) return false
+      // Un cliente de futbol corregido deja TRES filas con la palabra «Futbol»
+      // en el producto (la madre y sus dos hijas). Sin este filtro contaba 3
+      // unidades en la regla territorial, que paga 300 €/500 € POR TIENDA.
+      if (esCorreccionRepos(s) || esVentaSustituida(s)) return false
       if (!storeSellers.some(seller => (s.vendedor || '').toLowerCase() === seller.toLowerCase())) return false
       return isProductMatch(s)
     })

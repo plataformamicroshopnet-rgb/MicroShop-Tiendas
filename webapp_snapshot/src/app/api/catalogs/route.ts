@@ -60,7 +60,14 @@ export async function GET(request: Request) {
     }
   }
 
-    const catalogs: Record<string, any[]> = { "Ti": [], "Rent": [], "O2": [], "Seguro": [], "miMovistar": [], "Traslado miMovistar": [], "Suscripciones TV": [], "Varios": [], "Repos": [], "Resto BAF": [] }
+    // Los desplegables de Nueva Venta se construyen con Object.keys(catalogs), así
+    // que lo que no esté aquí no existe para quien teclea. «Repos UP» faltaba: en un
+    // mes recién creado (catálogo aún vacío) desaparecía la palanca por la que pasa
+    // hoy todo el volumen y no se podía teclear ni un repo, mientras las dos viejas
+    // seguían apareciendo. Estas se quedan porque sus ventas se siguen consultando.
+    // «Repo Fútbol» NO va aquí a propósito: esa línea la crea el programa sola con su
+    // precio, no se elige de catálogo, y sembrarla añadiría una opción vacía.
+    const catalogs: Record<string, any[]> = { "Ti": [], "Rent": [], "O2": [], "Seguro": [], "miMovistar": [], "Traslado miMovistar": [], "Suscripciones TV": [], "Varios": [], "Repos": [], "Repos UP": [], "Resto BAF": [] }
     for (const r of records) {
     if (!catalogs[r.categoria]) {
       catalogs[r.categoria] = []
