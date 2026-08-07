@@ -10,6 +10,12 @@ interface Props {
   placeholder?: string
 }
 
+// Tipos de Venta «de cabecera»: los grupos que entiende matchTipoVenta sin mirar
+// el catálogo. Se exportan porque el constructor de condicionantes también los
+// ofrece (el mínimo por tienda se pide sobre un Tipo de Venta, no sobre una regla:
+// «Dispositivos» existe aquí y no como regla, que es «Dispositivos + Seguros»).
+export const TIPOS_DE_VENTA = ["Alta BAF Total", "Alta BAF Convergente", "Dispositivos", "Seguro", "Swap", "MPA", "FTTR", "ARPU", "Repo Fútbol"]
+
 export default function ProductTreeSelector({ value, onChange, disabled, placeholder = "Seleccionar..." }: Props) {
   const [isOpen, setIsOpen] = useState(false)
   const [catalogs, setCatalogs] = useState<Record<string, any[]>>({})
@@ -55,7 +61,7 @@ export default function ProductTreeSelector({ value, onChange, disabled, placeho
     setExpandedCats(prev => ({ ...prev, [cat]: !prev[cat] }))
   }
 
-  const predefined = ["Alta BAF Total", "Alta BAF Convergente", "Dispositivos", "Seguro", "Swap", "MPA", "FTTR", "ARPU", "Repo Fútbol"];
+  const predefined = TIPOS_DE_VENTA;
   
   // Palancas RETIRADAS (ago-2026): \u00abRepos\u00bb (la vieja de incremento de ARPU, que en
   // pantalla se ve\u00eda como \u00abArpu (Repos)\u00bb) y \u00abSuscripciones TV\u00bb. Todo eso pasa a la

@@ -61,6 +61,29 @@ export function getSellersForStore(storeName: string, hours?: HourRow[] | null):
   return key ? map[key] : []
 }
 
+// Tiendas FÍSICAS con actividad en un periodo -> [comerciales].
+// Fuera O2 (tiene su propio panel) y fuera 'Sin Tienda': una fila de horarios sin
+// tienda escrita no puede inventarse una quinta tienda. Ese mismo fallo ya mordió
+// en el aviso de los 30 dispositivos del ERP (una venta suelta creaba una tienda
+// fantasma que nunca llegaba al mínimo, así que el aviso no se callaba nunca).
+// Solo cuentan las tiendas con alguien de plantilla con horas: una tienda cerrada
+// el mes que sea no puede bloquear el tramo de nadie.
+export function getTiendasConPlantilla(hours?: HourRow[] | null): Record<string, string[]> {
+  const map = getEffectiveTiendaComerciales(hours)
+  const rows = (hours || []).filter(h => h && String(h.comercial || '').trim())
+  const conHoras = new Set(
+    rows.filter(h => Number(h.horario) > 0).map(h => norm(h.comercial))
+  )
+  const out: Record<string, string[]> = {}
+  for (const [tienda, nombres] of Object.entries(map)) {
+    if (tienda === 'O2' || tienda === 'Sin Tienda') continue
+    // Sin datos de horas (meses antiguos) no se descarta a nadie.
+    const activos = conHoras.size === 0 ? nombres : nombres.filter(n => conHoras.has(norm(n)))
+    if (activos.length > 0) out[tienda] = activos
+  }
+  return out
+}
+
 // Lista plana de comerciales activos del periodo (para sellerStats / rankings).
 // tiendaHours = panel físico; o2Hours = panel O2. Fallback a lista fija si vacío.
 export function getEffectiveSellers(tiendaHours?: HourRow[] | null, o2Hours?: HourRow[] | null): string[] {

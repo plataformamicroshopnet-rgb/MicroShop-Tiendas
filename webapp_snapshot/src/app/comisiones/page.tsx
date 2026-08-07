@@ -795,6 +795,18 @@ export default function ComisionesDashboardPage() {
                                                                 >
                                                                     <span>{gName === 'ARPU' ? 'Arpu (Repos)' : gName}</span>
                                                                 </AuditableCell>
+                                                                {/* Candado de tramo: el objetivo 2 puede estar en verde y aun asi
+                                                                    pagarse al tramo 1 porque otra palanca (o una tienda) no llego.
+                                                                    Se dice aqui mismo, que si no parece un error del programa. */}
+                                                                {s.groupTopeMotivo?.[gName] && (
+                                                                  <span
+                                                                    title={s.groupTopeMotivo[gName]}
+                                                                    style={{ marginLeft: 6, padding: '1px 6px', borderRadius: 10, fontSize: 10, fontWeight: 700,
+                                                                             backgroundColor: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d', whiteSpace: 'nowrap', cursor: 'help' }}
+                                                                  >
+                                                                    Tramo 1 por condición
+                                                                  </span>
+                                                                )}
                                                                 {normalizeRole(user?.role) === 'ADMIN' && activeRulesForSeller === tiendaRules && (
                                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                                                         <button 

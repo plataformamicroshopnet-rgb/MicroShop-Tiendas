@@ -2,14 +2,21 @@
 
 import React, { useState } from 'react'
 import { Plus, Trash2, Settings } from 'lucide-react'
+import { TIPOS_DE_VENTA } from './ProductTreeSelector'
 
-export type ConditionType = 'REQUIRE_GROUP_QTY' | 'REQUIRE_GROUP_PCT' | 'REQUIRE_GROUP_PCT_TRAMO2' | 'REQUIRE_TEAM_OBJ2' | 'REQUIRE_TEAM_OBJ3' | 'REQUIRE_TEAM_OBJ23' | 'ACCUMULATIVE_TRAMOS' | 'ACCUMULATIVE_FIXED_BASE'
+export type ConditionType = 'REQUIRE_GROUP_QTY' | 'REQUIRE_GROUP_PCT' | 'REQUIRE_GROUP_PCT_TRAMO2' | 'REQUIRE_STORE_QTY_TRAMO2' | 'REQUIRE_TEAM_OBJ2' | 'REQUIRE_TEAM_OBJ3' | 'REQUIRE_TEAM_OBJ23' | 'ACCUMULATIVE_TRAMOS' | 'ACCUMULATIVE_FIXED_BASE'
 
 export interface RuleCondition {
   type: ConditionType
+  // En casi todas es el nombre de otra REGLA. En REQUIRE_STORE_QTY_TRAMO2 es un
+  // TIPO DE VENTA (p. ej. «Dispositivos»), porque el mínimo se cuenta sobre las
+  // ventas de esa clase, no sobre una regla de comisión.
   targetGroup: string
   value: number
 }
+
+// Condicionantes que se piden sobre un Tipo de Venta en vez de sobre otra regla.
+const USA_TIPO_DE_VENTA = (t: ConditionType) => t === 'REQUIRE_STORE_QTY_TRAMO2'
 
 interface Props {
   value: string
@@ -38,6 +45,15 @@ export default function RuleConditionBuilder({ value, onChange, disabled, availa
   const handleUpdate = (index: number, field: keyof RuleCondition, val: any) => {
     const newConds = [...conditions]
     newConds[index] = { ...newConds[index], [field]: val }
+    // Al cambiar de tipo cambia la lista de la que se elige (reglas o Tipos de
+    // Venta). Si lo que había guardado no está en la lista nueva, el desplegable
+    // se quedaría en blanco y la condición no haría nada sin decirlo: se pone un
+    // valor válido de esa lista.
+    if (field === 'type') {
+      const actual = String(newConds[index].targetGroup || '')
+      const lista = USA_TIPO_DE_VENTA(val) ? TIPOS_DE_VENTA : availableGroups
+      if (!lista.includes(actual)) newConds[index].targetGroup = lista[0] || ''
+    }
     onChange(JSON.stringify(newConds))
   }
 
@@ -116,6 +132,7 @@ export default function RuleConditionBuilder({ value, onChange, disabled, availa
                     <option value="REQUIRE_GROUP_QTY">Requiere cantidad de:</option>
                     <option value="REQUIRE_GROUP_PCT">Requiere % objetivo de:</option>
                     <option value="REQUIRE_GROUP_PCT_TRAMO2">Del Tramo 2 en adelante exige % objetivo de:</option>
+                    <option value="REQUIRE_STORE_QTY_TRAMO2">Del Tramo 2 en adelante exige un mínimo EN CADA TIENDA de:</option>
                     <option value="REQUIRE_TEAM_OBJ2">El Tramo 2 es Colectivo (del Equipo)</option>
                     <option value="REQUIRE_TEAM_OBJ3">El Tramo 3 es Colectivo (del Equipo)</option>
                     <option value="REQUIRE_TEAM_OBJ23">El Tramo 2 y 3 son Colectivos (del Equipo)</option>
@@ -135,8 +152,8 @@ export default function RuleConditionBuilder({ value, onChange, disabled, availa
                       onChange={e => handleUpdate(idx, 'targetGroup', e.target.value)}
                       style={{ flex: 2, padding: 4, fontSize: 11, backgroundColor: '#1e293b', color: '#f8fafc', border: '1px solid #334155', borderRadius: 4 }}
                     >
-                      <option value="">Selecciona grupo...</option>
-                      {availableGroups.map(g => <option key={g} value={g}>{g}</option>)}
+                      <option value="">{USA_TIPO_DE_VENTA(cond.type) ? 'Selecciona tipo de venta...' : 'Selecciona grupo...'}</option>
+                      {(USA_TIPO_DE_VENTA(cond.type) ? TIPOS_DE_VENTA : availableGroups).map(g => <option key={g} value={g}>{g}</option>)}
                     </select>
 
                     <span style={{ color: '#94a3b8', fontSize: 11 }}>{cond.type === 'REQUIRE_GROUP_PCT' ? '>=' : '>='}</span>
@@ -148,6 +165,14 @@ export default function RuleConditionBuilder({ value, onChange, disabled, availa
                       style={{ flex: 1, padding: 4, fontSize: 11, backgroundColor: '#1e293b', color: '#f8fafc', border: '1px solid #334155', borderRadius: 4 }}
                     />
                     <span style={{ color: '#94a3b8', fontSize: 11 }}>{(cond.type === 'REQUIRE_GROUP_PCT' || cond.type === 'REQUIRE_GROUP_PCT_TRAMO2') ? '%' : 'uds'}</span>
+                  </div>
+                )}
+
+                {USA_TIPO_DE_VENTA(cond.type) && (
+                  <div style={{ fontSize: 10, color: '#94a3b8', lineHeight: 1.4 }}>
+                    Se mira tienda por tienda. Si <b>una sola</b> se queda por debajo,
+                    esta palanca se paga al Tramo 1 para todo el equipo. Cuenta ventas
+                    (no euros) y la tienda es la del comercial en «Horarios de Comerciales».
                   </div>
                 )}
               </div>

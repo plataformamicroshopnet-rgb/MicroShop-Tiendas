@@ -33,7 +33,7 @@
 //   Siempre: totalLineas + totalExtras == totalComision del Panel.
 // ─────────────────────────────────────────────────────────────────────────────
 import { getProfile, getGroupVisual, ALL_GROUPS } from './comisiones';
-import { getEffectiveSellers } from './comercialRoster';
+import { getEffectiveSellers, getTiendasConPlantilla, norm as normNombre } from './comercialRoster';
 import { isSolar360, findCatalogVigente } from './salesUtils';
 import { matchTipoVenta } from './ventaMatching';
 
@@ -273,6 +273,37 @@ export function computePanelComisionesTiendas(input: PanelComisionesTiendasInput
         }
         return rule;
     });
+
+    // ── MÍNIMOS POR TIENDA (condicionante REQUIRE_STORE_QTY_TRAMO2) ─────────────
+    // Cuenta VENTAS (no euros) de un Tipo de Venta en cada tienda física del mes.
+    // La tienda de una venta es la de SU COMERCIAL según la plantilla del mes
+    // (panel «Horarios de Comerciales»), no el código que lleve escrito la venta:
+    // así una venta con la tienda en blanco no se convierte en una tienda nueva.
+    const tiendasConPlantilla = getTiendasConPlantilla(tiendaHours);
+    const _tiendaDeVendedor: Record<string, string> = {};
+    Object.entries(tiendasConPlantilla).forEach(([tienda, nombres]) => {
+        nombres.forEach(n => { _tiendaDeVendedor[normNombre(n)] = tienda; });
+    });
+    const _cacheUdsTienda: Record<string, Record<string, number>> = {};
+    const unidadesPorTienda = (tipoVenta: string): Record<string, number> => {
+        const key = normNombre(tipoVenta);
+        if (_cacheUdsTienda[key]) return _cacheUdsTienda[key];
+        const out: Record<string, number> = {};
+        Object.keys(tiendasConPlantilla).forEach(t => { out[t] = 0; });
+        monthSales.forEach(s => {
+            const _an = String(s.anulado || '').toLowerCase().trim();
+            const _pe = String(s.pendiente || '').toLowerCase().trim();
+            if (_an === 'si' || _an === 'sí' || _pe === 'anulado') return;
+            // Las líneas de corrección de los Repos son contabilidad de meses ya
+            // pagados: no cuentan para ningún objetivo (ver esCorreccionContableRepos).
+            if (esCorreccionContableRepos(s)) return;
+            const t = _tiendaDeVendedor[normNombre(s.vendedor)];
+            if (!t) return;
+            if (matchTipoVenta(s, tipoVenta)) out[t] += 1;
+        });
+        _cacheUdsTienda[key] = out;
+        return out;
+    };
 
     const teamGroupCounts: Record<string, number> = {};
     const teamGroupPending: Record<string, number> = {};
@@ -574,6 +605,10 @@ export function computePanelComisionesTiendas(input: PanelComisionesTiendasInput
         let internalTotalPendiente = 0;
 
         const groupIsConsolidado: Record<string, boolean> = {};
+        // Por que una palanca se ha quedado en el tramo 1 teniendo el objetivo 2
+        // cumplido (candado de tramo). La pantalla lo pinta al lado de la barra:
+        // sin esto el comercial ve el objetivo en verde y cobra menos, sin motivo.
+        const groupTopeMotivo: Record<string, string | null> = {};
 
         // ── ADICIONES (liquidación): detalle por línea y resumen de objetivos ──
         const lineasDetalle: LineaComisionTienda[] = [];
@@ -651,7 +686,8 @@ export function computePanelComisionesTiendas(input: PanelComisionesTiendasInput
                                     if (targetQtty < cond.value) {
                                         isConsolidado = false;
                                     }
-                                } else if (cond.type === 'REQUIRE_GROUP_PCT_TRAMO2') {
+                                } else if (cond.type === 'REQUIRE_GROUP_PCT_TRAMO2' ||
+                                           cond.type === 'REQUIRE_STORE_QTY_TRAMO2') {
                                     // No bloquea la regla entera: solo impide subir de tramo.
                                     topeTramo1.push(cond);
                                 } else if (cond.type === 'REQUIRE_GROUP_PCT') {
@@ -709,6 +745,27 @@ export function computePanelComisionesTiendas(input: PanelComisionesTiendasInput
                     topeTramo1.forEach((cond: any) => {
                         // Sin palanca elegida no hay condicion que cumplir.
                         if (!cond.targetGroup || !cond.value || cond.value <= 0) return;
+
+                        // MÍNIMO POR TIENDA: TODAS las tiendas del mes tienen que llegar
+                        // a N ventas de ese Tipo de Venta. Es la traduccion literal de
+                        // «30 dispositivos por tienda»: si una sola tienda se queda
+                        // corta, la palanca entera se paga al primer tramo.
+                        if (cond.type === 'REQUIRE_STORE_QTY_TRAMO2') {
+                            const uds = unidadesPorTienda(cond.targetGroup);
+                            const tiendas = Object.keys(uds);
+                            // Sin plantilla no se sabe que tiendas hay: no se bloquea
+                            // (mismo criterio que el objetivo 0 de aqui abajo).
+                            if (tiendas.length === 0) return;
+                            const flojas = tiendas.filter(t => uds[t] < cond.value).sort();
+                            if (flojas.length > 0) {
+                                culpables.push(
+                                    `${cond.targetGroup}: exige ${cond.value} por tienda y ` +
+                                    `faltan en ${flojas.map(t => `${t} (${uds[t]})`).join(', ')}`
+                                );
+                            }
+                            return;
+                        }
+
                         const targetObj = groupObj1[cond.targetGroup] || 0;
                         // Objetivo 0 (o palanca que no existe en este juego de reglas, p.ej.
                         // O2, o renombrada en Catalogos) = no se puede fallar un objetivo
@@ -785,6 +842,7 @@ export function computePanelComisionesTiendas(input: PanelComisionesTiendasInput
 
             groupComisions[ruleName] = comTotal;
             groupConsolidada[ruleName] = comConsolidada;
+            groupTopeMotivo[ruleName] = topeAplicado ? topeMotivo : null;
             internalTotalComision += comTotal;
             internalTotalConsolidada += comConsolidada;
             internalTotalPendiente += comPendiente;
@@ -1315,6 +1373,7 @@ export function computePanelComisionesTiendas(input: PanelComisionesTiendasInput
             virtualKpiExtras, // Exporting to emit later
             extraGroups,
             groupIsConsolidado,
+            groupTopeMotivo,
             activeTeamGroupCounts,
             activeTeamGroupPending,
             o2Otras: { confirmed: o2OtrasConfirmed, pending: o2OtrasPending, comision: o2OtrasComision, sales: o2OtrasSales },
