@@ -69,6 +69,11 @@ const TABS = [
   { id: 'tv',              label: 'Suscripciones TV',emoji: '📺', color: '#D97706', grupo: 'TV' },
   { id: 'varios',          label: 'Varios',          emoji: '📦', color: '#8B5CF6', grupo: 'VARIOS' },
   { id: 'repos',           label: 'Arpu (Repos)',    emoji: '🔁', color: '#0891B2', grupo: 'REPOS' },
+  // Rediseño de los Repos (ago-2026). «Repos (Arpu)» sustituye a la de arriba y a
+  // Suscripciones TV; «Repo Fútbol» es el extra de 10 € que el programa crea solo
+  // por cada repo de fútbol. Las viejas se quedan por el histórico.
+  { id: 'repos_up',        label: 'Repos (Arpu)',    emoji: '🔂', color: '#0E7490', grupo: 'REPOS_UP' },
+  { id: 'repo_futbol',     label: 'Repo Fútbol',     emoji: '⚽', color: '#15803D', grupo: 'REPO_FUTBOL' },
   { id: 'resto',           label: 'Resto BAF',       emoji: '📡', color: '#3B82F6', grupo: 'RESTO_BAF' },
   { id: 'accesorios',      label: 'Accesorios',      emoji: '🎧', color: '#EA580C', grupo: 'ACCESORIOS' },
   { id: 'extras',          label: 'PRV Territorial Tiendas', emoji: '⚡', color: '#10b981', grupo: 'EXTRAS' },
@@ -103,6 +108,8 @@ const filterByTab = (sale: any, tabId: string): boolean => {
     // línea REAL de Varios (producto "Swap") y entra por val === 'varios' sin espejo.
     case 'varios':          return val === 'varios' || isLegacySwap(sale)
     case 'repos':           return val === 'repos'
+    case 'repos_up':        return val === 'repos up'
+    case 'repo_futbol':     return val === 'repo fútbol' || val === 'repo futbol'
     case 'resto':           return val === 'resto baf'
     case 'accesorios':      return val === 'accesorios'
     case 'traslado':        return val === 'traslado mimovistar'
