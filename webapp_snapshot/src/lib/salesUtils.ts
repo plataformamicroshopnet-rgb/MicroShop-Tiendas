@@ -40,6 +40,14 @@ export function isSaleActive(sale: any): boolean {
 export const PALANCA_REPOS = 'Repos UP'
 
 /**
+ * Palanca del EXTRA de fútbol. Cada cliente de fútbol genera dos operaciones: el
+ * repo de verdad (78 €, palanca Repos) y este extra (10 €). Viven en palancas
+ * DISTINTAS a propósito: así los 10 € no engordan la base del % de Repos, y esta
+ * línea es la que cuenta como UNA unidad en la regla «Repo Fútbol».
+ */
+export const PALANCA_REPO_FUTBOL = 'Repo Fútbol'
+
+/**
  * FUENTE ÚNICA de "esta venta ya no cuenta para el COBRO porque tiene una
  * corrección" (ago-2026). Los precios de los Repos estaban mal; en vez de
  * reescribir un mes ya pagado, a la venta vieja se le cuelga una HIJA con el

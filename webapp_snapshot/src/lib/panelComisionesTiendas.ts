@@ -65,15 +65,23 @@ export const isExtraRepoUpFutbol = (s: any) => {
 // palabra «fútbol» del nombre del producto sin mirar la palanca.
 // Mismo patrón que SWAP_LINE_FROM en api/sales/unified.
 export const REPOS_PALANCA = 'Repos UP'
+export const REPOS_PALANCA_FUTBOL = 'Repo Fútbol'
 const REPOS_CUENTA_DESDE = new Date(2026, 7, 1)   // 1 de agosto de 2026
 
 export const esCorreccionContableRepos = (s: any): boolean => {
-    const cat = String(s?.categoria || s?.detalle || s?.sheet || '').trim().toLowerCase()
-    if (cat !== REPOS_PALANCA.toLowerCase()) return false
     const f = String(s?.fecha || '').trim()          // dd/mm/aaaa
     if (f.length < 10 || f[2] !== '/' || f[5] !== '/') return false
     const d = new Date(Number(f.slice(6, 10)), Number(f.slice(3, 5)) - 1, Number(f.slice(0, 2)))
-    return d < REPOS_CUENTA_DESDE
+    if (d >= REPOS_CUENTA_DESDE) return false
+    // Una venta que SUSTITUYE a otra es siempre una corrección, sea cual sea su
+    // palanca: es el criterio más seguro y cubre las que todavía no existen.
+    if (String(s?.sustituyeA || '').trim()) return true
+    // Y por si alguna se crea sin el enlace, también por palanca: las dos que
+    // estrena el rediseño de los Repos (el repo de 78 € y el extra de 10 €).
+    const cat = String(s?.categoria || s?.detalle || s?.sheet || '').trim().toLowerCase()
+    return cat === REPOS_PALANCA.toLowerCase()
+        || cat === REPOS_PALANCA_FUTBOL.toLowerCase()
+        || cat === 'repo futbol'
 }
 
 export const matchesRule = (s: any, ruleName: string, ruleProductosCuentan: string) => {

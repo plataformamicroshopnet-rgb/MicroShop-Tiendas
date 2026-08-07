@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 import { getSession } from '@/lib/auth'
-import { PALANCA_REPOS } from '@/lib/salesUtils'
+import { PALANCA_REPOS, PALANCA_REPO_FUTBOL } from '@/lib/salesUtils'
 
 const prisma = new PrismaClient()
 export const dynamic = 'force-dynamic'
@@ -72,18 +72,24 @@ const anulada = (s: any) => {
 }
 
 /** Qué hijas le tocan a una venta. [] = no hay que corregirla. */
-function hijasDe(s: any): Array<{ producto: string; cuota: number; concepto: string }> {
+function hijasDe(s: any): Array<{ producto: string; cuota: number; concepto: string; palanca: string }> {
   if (esFutbol(s.producto || '')) {
-    // El cliente de fútbol pasa a valer 88 €: el repo (78) + el extra (10).
+    // El cliente de fútbol pasa a valer 88 €, en DOS palancas distintas:
+    //   · el repo de verdad (78 €) en «Repos (Arpu)» → entra en el % de Repos;
+    //   · el extra (10 €) en «Repo Fútbol» → cuenta como UNA unidad de esa regla
+    //     y NO engorda la base del %.
     return [
-      { producto: REPO_FUTBOL, cuota: 78.00, concepto: 'Repo de fútbol (el precio que faltaba)' },
-      { producto: EXTRA_FUTBOL, cuota: IMPORTE_EXTRA_FUTBOL, concepto: 'El extra de siempre' },
+      { producto: REPO_FUTBOL, cuota: 78.00, palanca: PALANCA_REPOS,
+        concepto: 'Repo de fútbol (el precio que faltaba)' },
+      { producto: EXTRA_FUTBOL, cuota: IMPORTE_EXTRA_FUTBOL, palanca: PALANCA_REPO_FUTBOL,
+        concepto: 'El extra de siempre' },
     ]
   }
   if (esTV(s.detalle || '')) {
     const t = TARIFA[String(s.producto || '').trim()]
     if (!t) return []
-    return [{ producto: t[0], cuota: t[1], concepto: 'Suscripción con el precio bueno' }]
+    return [{ producto: t[0], cuota: t[1], palanca: PALANCA_REPOS,
+              concepto: 'Suscripción con el precio bueno' }]
   }
   return []
 }
@@ -104,7 +110,9 @@ async function analizar(periodKey: string) {
 
   for (const s of ventas) {
     if (anulada(s)) continue
-    if (String(s.detalle || '') === PALANCA_REPOS) continue   // ya es una corrección
+    // ya es una corrección (de cualquiera de las dos palancas nuevas)
+    if (String(s.detalle || '') === PALANCA_REPOS) continue
+    if (String(s.detalle || '') === PALANCA_REPO_FUTBOL) continue
     const hijas = hijasDe(s)
     if (esTV(s.detalle || '') && hijas.length === 0) {
       const k = String(s.producto || '(sin producto)')
@@ -211,8 +219,8 @@ export async function POST(request: Request) {
         await prisma.sale.create({
           data: {
             ...resto,
-            sheet: PALANCA_REPOS,
-            detalle: PALANCA_REPOS,
+            sheet: h.palanca,
+            detalle: h.palanca,
             producto: h.producto,
             cuota: h.cuota,
             sustituyeA: m.id,

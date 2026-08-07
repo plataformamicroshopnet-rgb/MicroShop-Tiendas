@@ -57,8 +57,19 @@ export default function ProductTreeSelector({ value, onChange, disabled, placeho
 
   const predefined = ["Alta BAF Total", "Alta BAF Convergente", "Dispositivos", "Seguro", "Swap", "MPA", "FTTR", "ARPU", "Repo Fútbol"];
   
+  // Palancas RETIRADAS (ago-2026): \u00abRepos\u00bb (la vieja de incremento de ARPU, que en
+  // pantalla se ve\u00eda como \u00abArpu (Repos)\u00bb) y \u00abSuscripciones TV\u00bb. Todo eso pasa a la
+  // palanca nueva \u00abRepos (Arpu)\u00bb, as\u00ed que ya no se pueden elegir al montar una regla.
+  // Las reglas viejas que las tengan puestas siguen funcionando igual, y si una regla
+  // ya la tiene marcada se sigue viendo (si no, el due\u00f1o no podr\u00eda ni quitarla).
+  const RETIRADAS = ['Repos', 'Suscripciones TV']
+  const ETIQUETA_CAT: Record<string, string> = { 'O2': 'O2 MovilFree', 'Repos UP': 'Repos (Arpu)' }
+
   // Extraemos categorias excluyendo algunas si hace falta, pero mostramos todas las que vienen del server
-  const categories = Object.keys(catalogs).filter(cat => cat !== 'Fija' && cat !== 'M\u00f3vil' && cat !== 'Mvil' && cat !== 'Micro').sort()
+  const categories = Object.keys(catalogs)
+    .filter(cat => cat !== 'Fija' && cat !== 'M\u00f3vil' && cat !== 'Mvil' && cat !== 'Micro')
+    .filter(cat => !RETIRADAS.includes(cat) || selectedValues.includes(cat))
+    .sort()
 
   const isLegacy = value && !selectedValues.some(v => predefined.includes(v) || categories.includes(v) || Object.values(catalogs).flat().some(p => p.producto === v)) && !selectedValues.includes('FORMULA_LIBRE')
 
@@ -182,7 +193,7 @@ export default function ProductTreeSelector({ value, onChange, disabled, placeho
               
               return (
                 <div key={cat} style={{ display: 'flex', flexDirection: 'column' }}>
-                  {renderCheckbox(cat === 'O2' ? 'O2 MovilFree' : cat, cat, true, () => toggleCat(cat), isExpanded)}
+                  {renderCheckbox(ETIQUETA_CAT[cat] || cat, cat, true, () => toggleCat(cat), isExpanded)}
                   
                   {isExpanded && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingLeft: 24, marginTop: 2 }}>

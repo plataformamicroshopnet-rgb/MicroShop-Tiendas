@@ -297,7 +297,7 @@ export default function CatalogosPage() {
     // Nombre de pestaña TAL CUAL se ve en pantalla (la clave interna 'Ti' se
     // muestra como «Contratos Móvil», etc.) — para que el aviso sea seguible.
     const nombrePestana = (c: string) =>
-       c === 'Ti' ? 'Contratos Móvil' : c === 'O2' ? 'O2 MovilFree' : c === 'Repos' ? 'Arpu (Repos)' : c === CAT_REPOS ? 'Repos' : c
+       c === 'Ti' ? 'Contratos Móvil' : c === 'O2' ? 'O2 MovilFree' : c === 'Repos' ? 'Arpu (Repos) — histórico' : c === CAT_REPOS ? 'Repos (Arpu)' : c
     for (const [cat, items] of Object.entries(exportCatalogs)) {
        // Categorías heredadas SIN pestaña (p.ej. 'Fija y Móvil' de datos
        // antiguos): el usuario no puede verlas ni corregirlas, así que una
@@ -1185,7 +1185,7 @@ export default function CatalogosPage() {
           { cat: 'Suscripciones TV', tip: 'Catálogo de suscripciones de televisión. Introduce la categoría, nombre, comisión y fechas.' },
           { cat: 'Varios', tip: 'Catálogo de productos varios (alarmas, migraciones, etc). Introduce categoría, nombre, cuota total y comisión.' },
           { cat: 'Repos', tip: 'Catálogo VIEJO de Reposiciones (incremento de ARPU de BAF/miMovistar). Se conserva por el histórico; lo nuevo va en la pestaña Repos.' },
-          { cat: CAT_REPOS, tip: 'Catálogo de Repos. Se rellena igual que Suscripciones TV: comisión × multiplicador = comisión X. Aquí van las suscripciones y los repos de fútbol con su precio de verdad.' },
+          { cat: CAT_REPOS, tip: 'Catálogo de Repos (Arpu). Se rellena igual que Suscripciones TV: comisión × multiplicador = comisión X. Aquí van las suscripciones y los repos de fútbol con su precio de verdad.' },
           { cat: 'Resto BAF', tip: 'Catálogo para Resto BAF. Estructura idéntica a miMovistar.' },
           { cat: 'Accesorios', tip: 'Catálogo de accesorios (fundas, protectores, cargadores, etc). Introduce categoría, nombre, cuota total y comisión.' },
 
@@ -1207,7 +1207,7 @@ export default function CatalogosPage() {
                 transition: 'all 0.2s ease'
               }}
             >
-              {cat === 'Ti' ? 'Contratos Móvil' : cat === 'Repos' ? 'Arpu (Repos)' : cat === CAT_REPOS ? 'Repos' : cat}
+              {cat === 'Ti' ? 'Contratos Móvil' : cat === 'Repos' ? 'Arpu (Repos) — histórico' : cat === CAT_REPOS ? 'Repos (Arpu)' : cat}
             </button>
           </TooltipBox>
         ))}

@@ -828,7 +828,7 @@ export default function NuevaVentaPage() {
                         <label style={{ fontSize: 13, color: '#1B3D6A', display: 'block', marginBottom: 4 }}>Tipo de Venta</label>
                         <select className="form-select" value={prod.categoria} onChange={e => handleProductChange(index, 'categoria', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
                           <option value="">Selecciona...</option>
-                          {Object.keys(catalogs).filter(cat => cat !== 'Fija' && cat !== 'Móvil' && cat !== 'Micro' && cat !== 'Fija y Móvil' && cat !== 'Prepago').map(cat => <option key={cat} value={cat}>{cat === 'Ti' ? 'Contratos Móvil' : cat === 'O2' ? 'O2 MovilFree' : cat === 'Repos' ? 'Arpu (Repos)' : cat}</option>)}
+                          {Object.keys(catalogs).filter(cat => cat !== 'Fija' && cat !== 'Móvil' && cat !== 'Micro' && cat !== 'Fija y Móvil' && cat !== 'Prepago').map(cat => <option key={cat} value={cat}>{cat === 'Ti' ? 'Contratos Móvil' : cat === 'O2' ? 'O2 MovilFree' : cat === 'Repos' ? 'Arpu (Repos) — histórico' : cat === 'Repos UP' ? 'Repos (Arpu)' : cat}</option>)}
                           <option value="Accesorios Venta y Stock">Accesorios Venta y Stock</option>
                         </select>
                       </div>
@@ -1037,7 +1037,7 @@ export default function NuevaVentaPage() {
                         <label style={{ fontSize: 13, color: '#1B3D6A', display: 'block', marginBottom: 4 }}>Tipo de Venta</label>
                         <select className="form-select" value={prod.categoria} onChange={e => handleProductChange(index, 'categoria', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }}>
                           <option value="">Selecciona...</option>
-                          {Object.keys(catalogs).filter(cat => cat !== 'Fija' && cat !== 'Móvil' && cat !== 'Micro' && cat !== 'Fija y Móvil' && cat !== 'Prepago').map(cat => <option key={cat} value={cat}>{cat === 'Ti' ? 'Contratos Móvil' : cat === 'O2' ? 'O2 MovilFree' : cat === 'Repos' ? 'Arpu (Repos)' : cat}</option>)}
+                          {Object.keys(catalogs).filter(cat => cat !== 'Fija' && cat !== 'Móvil' && cat !== 'Micro' && cat !== 'Fija y Móvil' && cat !== 'Prepago').map(cat => <option key={cat} value={cat}>{cat === 'Ti' ? 'Contratos Móvil' : cat === 'O2' ? 'O2 MovilFree' : cat === 'Repos' ? 'Arpu (Repos) — histórico' : cat === 'Repos UP' ? 'Repos (Arpu)' : cat}</option>)}
                           <option value="Accesorios Venta y Stock">Accesorios Venta y Stock</option>
                         </select>
                       </div>
@@ -1171,7 +1171,7 @@ export default function NuevaVentaPage() {
                     <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                       <select className="form-select" value={prod.categoria} onChange={e => handleProductChange(index, 'categoria', e.target.value)} required style={{ backgroundColor: '#FFFFFF', border: '1px solid #90CAF9', color: '#1B3D6A', width: '200px', margin: 0 }}>
                         <option value="">Selecciona...</option>
-                        {Object.keys(catalogs).filter(cat => cat !== 'Fija' && cat !== 'Móvil' && cat !== 'Micro' && cat !== 'Fija y Móvil' && cat !== 'Prepago').map(cat => <option key={cat} value={cat}>{cat === 'Ti' ? 'Contratos Móvil' : cat === 'O2' ? 'O2 MovilFree' : cat === 'Repos' ? 'Arpu (Repos)' : cat}</option>)}
+                        {Object.keys(catalogs).filter(cat => cat !== 'Fija' && cat !== 'Móvil' && cat !== 'Micro' && cat !== 'Fija y Móvil' && cat !== 'Prepago').map(cat => <option key={cat} value={cat}>{cat === 'Ti' ? 'Contratos Móvil' : cat === 'O2' ? 'O2 MovilFree' : cat === 'Repos' ? 'Arpu (Repos) — histórico' : cat === 'Repos UP' ? 'Repos (Arpu)' : cat}</option>)}
                         <option value="Accesorios Venta y Stock">Accesorios Venta y Stock</option>
                       </select>
                       <Link href="/microshop-accesorios">
@@ -1192,7 +1192,7 @@ export default function NuevaVentaPage() {
                           <option value="">Selecciona...</option>
                           {Object.keys(catalogs)
                             .filter(cat => cat !== 'Fija' && cat !== 'Móvil' && cat !== 'Micro' && cat !== 'Fija y Móvil' && cat !== 'Prepago')
-                            .map(cat => <option key={cat} value={cat}>{cat === 'Ti' ? 'Contratos Móvil' : cat === 'O2' ? 'O2 MovilFree' : cat === 'Repos' ? 'Arpu (Repos)' : cat}</option>)}
+                            .map(cat => <option key={cat} value={cat}>{cat === 'Ti' ? 'Contratos Móvil' : cat === 'O2' ? 'O2 MovilFree' : cat === 'Repos' ? 'Arpu (Repos) — histórico' : cat === 'Repos UP' ? 'Repos (Arpu)' : cat}</option>)}
                           <option value="Accesorios Venta y Stock">Accesorios Venta y Stock</option>
                         </select>
                       </div>

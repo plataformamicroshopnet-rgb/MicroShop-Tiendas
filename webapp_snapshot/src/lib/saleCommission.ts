@@ -1,4 +1,4 @@
-import { calculateDynamicCommission, findCatalogVigente, isSaleCancelled, esVentaSustituida, PALANCA_REPOS } from './salesUtils'
+import { calculateDynamicCommission, findCatalogVigente, isSaleCancelled, esVentaSustituida, PALANCA_REPOS, PALANCA_REPO_FUTBOL } from './salesUtils'
 
 // ─────────────────────────────────────────────────────────────────────────
 // FUENTE ÚNICA DE LA COMISIÓN POR VENTA (empresa / Telefónica)
@@ -80,6 +80,8 @@ export function getSaleCommissionBase(sale: any, ctx: SaleCommissionCtx): number
   // los Repos viejos. Sin esto, sus ventas caían al cálculo por tramos del
   // dashboard y salían a 0 €: la empresa no cobraría nada por ellas.
   const isReposNuevo = det === PALANCA_REPOS.toLowerCase()
+                    || det === PALANCA_REPO_FUTBOL.toLowerCase()
+                    || det === 'repo futbol'   // sin tilde, por si acaso
   if (det === 'o2' || det === 'seguro' || det === 'mimovistar' || det === 'repos' || det === 'varios' || det === 'accesorios' || isTV || isReposNuevo || det === 'prepago' || det === 'resto baf' || det === 'traslado mimovistar') {
     if (det === 'seguro') {
       // Vigencias: con dos precios del mismo seguro gana el que cubre la fecha de la venta.
