@@ -212,6 +212,30 @@ export async function POST(request: Request) {
     // con el +15 € antiguo (isLegacySwap en lib/saleCommission) — histórico intacto.
     const SWAP_LINE_FROM = new Date(2026, 6, 1)
     let swapPrice = 15
+
+    // ── EXTRA DEL REPO DE FÚTBOL ───────────────────────────────────────
+    // El precio NO va en la hoja del catálogo a propósito: si estuviera en la
+    // lista, un tramitador podría elegirlo suelto y quedarían líneas de 10 €
+    // huérfanas, sin su repo de 78 €. Vive aquí, como los 15 € del Swap, y si
+    // algún día hay que cambiarlo basta con crear la fila en el catálogo.
+    const REPOS_PALANCA = 'Repos UP'
+    const EXTRA_FUTBOL_PALANCA = 'Repo Fútbol'
+    const EXTRA_FUTBOL_PRODUCTO = 'Repo Up Destino Fútbol'
+    const esRepoFutbol = (nombre: any) => {
+      const t = String(nombre || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+      return t.includes('repo up destino futbol') && t.includes('futbol total')
+    }
+    let precioExtraFutbol = 10
+    try {
+      const exCat = await prisma.productCatalog.findFirst({
+        where: { categoria: EXTRA_FUTBOL_PALANCA, producto: EXTRA_FUTBOL_PRODUCTO },
+        orderBy: { createdAt: 'desc' }
+      })
+      if (exCat?.comision) {
+        const v = parseFloat(String(exCat.comision).replace(',', '.'))
+        if (!isNaN(v) && v > 0) precioExtraFutbol = v
+      }
+    } catch (e) { /* sin fila en catálogo: 10 € */ }
     try {
       const swCat = await prisma.productCatalog.findFirst({
         where: { categoria: 'Varios', producto: 'Swap' },
@@ -306,6 +330,45 @@ export async function POST(request: Request) {
           detalle: 'Varios',
           imei: prod.imei || null,
           numeroPedido: null,
+          origenStock: null,
+          rentConCoste: null,
+          seguro: null,
+          seguroImporte: null,
+          isLibre: false,
+          isSwap: false,
+          periodId: anchorWp?.id || null
+        })
+      }
+
+      // ── EL EXTRA DEL REPO DE FÚTBOL (ago-2026) ─────────────────────────
+      // Telefónica paga DOS conceptos por el mismo cliente: el repo
+      // («Futbol Total PROMO Repo Up Destino Fútbol», 78 €) y un extra de 10 €.
+      // El comercial teclea SOLO el repo; el extra lo crea el programa, igual
+      // que la línea hermana del Swap. Va en la palanca «Repo Fútbol» y no en
+      // «Repos (Arpu)» a propósito: así los 10 € no engordan la base del % de
+      // Repos y esta línea es la que cuenta como UNA unidad de esa regla.
+      if (String(prod.categoria || '') === REPOS_PALANCA && esRepoFutbol(prod.producto)) {
+        salesToInsert.push({
+          sheet: EXTRA_FUTBOL_PALANCA,
+          vendedor: data.vendedor,
+          fecha: fechaStr,
+          codigo: data.codigo || '',
+          producto: EXTRA_FUTBOL_PRODUCTO,
+          nombreCliente: data.nombreCliente,
+          nif: data.nif.toUpperCase(),
+          potencial: prod.noCliente || '',
+          telf: prod.telf || '',
+          pendiente: prod.pendiente || 'No',
+          anulado: 'No',
+          anotaciones: 'Extra del repo de fútbol (lo crea el programa)',
+          telefonoFijo: data.telefonoFijo || '',
+          telefonoMovil: data.telefonoMovil || '',
+          boletin: '',
+          grupo: '-',
+          cuota: precioExtraFutbol,
+          detalle: EXTRA_FUTBOL_PALANCA,
+          imei: prod.imei || null,
+          numeroPedido: prod.numeroPedido || null,
           origenStock: null,
           rentConCoste: null,
           seguro: null,

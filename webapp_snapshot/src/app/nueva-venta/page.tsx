@@ -433,7 +433,15 @@ export default function NuevaVentaPage() {
                return Number(String(val).replace(',', '.')) || 0;
              };
              const cat = newProducts[index].categoria
-            if (cat === 'Suscripciones TV') {
+            // «Repos (Arpu)» se rellena como Suscripciones TV: comisión ×
+            // multiplicador. OJO, la pestaña VIEJA («Repos») usa el multiplicador
+            // para otra cosa (el modo Fact. Anterior / Fact. Nueva del ARPU), y si
+            // la nueva entrara por ahí el producto de 78 € se autorrellenaría a 0 €.
+            if (cat === 'Repos UP') {
+              const baseCom = parseSafeNum(selectedItem.comision);
+              const mult = parseSafeNum(selectedItem.comisionConCoste || '1.00');
+              newProducts[index].importe = String(baseCom * (mult === 0 ? 1 : mult));
+            } else if (cat === 'Suscripciones TV') {
               if (newProducts[index].isSuscTraslado) {
                 newProducts[index].importe = '0';
               } else {
