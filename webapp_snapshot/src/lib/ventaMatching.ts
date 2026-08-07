@@ -29,6 +29,14 @@ export const matchProductFormula = (productName: string, formula: string) => {
     return false;
 };
 
+/** true si la venta es de agosto de 2026 en adelante (corte del rediseño de los Repos). */
+export const esDesdeAgosto2026 = (s: any): boolean => {
+    const f = String(s?.fecha || '').trim()          // dd/mm/aaaa
+    if (f.length < 10 || f[2] !== '/' || f[5] !== '/') return false
+    const d = new Date(Number(f.slice(6, 10)), Number(f.slice(3, 5)) - 1, Number(f.slice(0, 2)))
+    return d >= new Date(2026, 7, 1)
+}
+
 export const matchTipoVenta = (sale: any, tipoVentaRaw: string) => {
     if (!tipoVentaRaw) return false;
 
@@ -94,7 +102,14 @@ export const matchTipoVenta = (sale: any, tipoVentaRaw: string) => {
                     break;
                 case 'repo fútbol':
                 case 'repo futbol':
-                    matched = prod.includes('fútbol') || prod.includes('futbol') || prod.includes('repo f');
+                    // DESDE AGOSTO 2026: un cliente de fútbol genera DOS líneas —el repo
+                    // de 78 € y el extra de 10 €— y las dos llevan «Fútbol» en el nombre.
+                    // Si se casara por el nombre, un cliente contaría DOS altas. Se casa
+                    // por PALANCA: solo la del extra es la que cuenta como alta.
+                    // Antes de agosto, el criterio de siempre (histórico intacto).
+                    matched = esDesdeAgosto2026(sale)
+                        ? (cat === 'repo futbol' || cat === 'repo fútbol')
+                        : (prod.includes('fútbol') || prod.includes('futbol') || prod.includes('repo f'));
                     break;
                 default:
                     if (tipoVenta.toLowerCase().trim() === cat) {

@@ -68,6 +68,14 @@ export const REPOS_PALANCA = 'Repos UP'
 export const REPOS_PALANCA_FUTBOL = 'Repo Fútbol'
 const REPOS_CUENTA_DESDE = new Date(2026, 7, 1)   // 1 de agosto de 2026
 
+/** true si la venta es de agosto de 2026 en adelante (el corte del rediseño de los Repos). */
+export const esDesdeAgosto2026 = (s: any): boolean => {
+    const f = String(s?.fecha || '').trim()          // dd/mm/aaaa
+    if (f.length < 10 || f[2] !== '/' || f[5] !== '/') return false
+    const d = new Date(Number(f.slice(6, 10)), Number(f.slice(3, 5)) - 1, Number(f.slice(0, 2)))
+    return d >= new Date(2026, 7, 1)
+}
+
 export const esCorreccionContableRepos = (s: any): boolean => {
     const f = String(s?.fecha || '').trim()          // dd/mm/aaaa
     if (f.length < 10 || f[2] !== '/' || f[5] !== '/') return false
@@ -117,11 +125,24 @@ export const matchesRule = (s: any, ruleName: string, ruleProductosCuentan: stri
     }
 
     const normRule = String(ruleName || '').toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
-    if (normRule === 'arpu') {
-        return matchTipoVenta(s, 'ARPU') || isSuscripcionesTV(s) || isExtraRepoUpFutbol(s);
-    }
-    if (normRule === 'repo futbol') {
-        return matchTipoVenta(s, 'Repo Fútbol') || isExtraRepoUpFutbol(s);
+
+    // ── EL CABLE VIEJO, SOLO HASTA JULIO DE 2026 ─────────────────────────
+    // Hasta julio, las reglas «ARPU» y «Repo Fútbol» tenían escrito a mano qué
+    // contaban, SALTÁNDOSE su casilla «Tipo de Venta»: el ARPU se tragaba las
+    // Suscripciones TV y los Extra Repos Fútbol (de los 252,66 € que pagó en
+    // julio, solo 21,92 € eran repos de ARPU de verdad), y el fútbol casaba por
+    // la palabra «fútbol» del nombre del producto sin mirar la palanca.
+    // DESDE AGOSTO manda la casilla y punto — que es lo que hay que hacer para
+    // que un cliente de fútbol cuente UNA vez y no dos, ahora que genera dos
+    // líneas. El histórico se queda exactamente como estaba: los meses cerrados
+    // no se pueden mover.
+    if (!esDesdeAgosto2026(s)) {
+        if (normRule === 'arpu') {
+            return matchTipoVenta(s, 'ARPU') || isSuscripcionesTV(s) || isExtraRepoUpFutbol(s);
+        }
+        if (normRule === 'repo futbol') {
+            return matchTipoVenta(s, 'Repo Fútbol') || isExtraRepoUpFutbol(s);
+        }
     }
     return matchTipoVenta(s, ruleProductosCuentan);
 };

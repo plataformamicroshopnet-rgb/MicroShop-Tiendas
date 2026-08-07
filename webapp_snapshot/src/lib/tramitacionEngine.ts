@@ -147,7 +147,14 @@ export const matchTipoVenta = (sale: any, tipoVentaRaw: string) => {
                     break;
                 case 'repo fútbol':
                 case 'repo futbol':
-                    matched = prod.includes('fútbol') || prod.includes('futbol') || prod.includes('repo f');
+                    // DESDE AGOSTO 2026: un cliente de fútbol genera DOS líneas —el repo
+                    // de 78 € y el extra de 10 €— y las dos llevan «Fútbol» en el nombre.
+                    // Si se casara por el nombre, un cliente contaría DOS altas. Se casa
+                    // por PALANCA: solo la del extra es la que cuenta como alta.
+                    // Antes de agosto, el criterio de siempre (histórico intacto).
+                    matched = esDesdeAgosto2026(sale)
+                        ? (cat === 'repo futbol' || cat === 'repo fútbol')
+                        : (prod.includes('fútbol') || prod.includes('futbol') || prod.includes('repo f'));
                     break;
                 default:
                     if (tipoVenta.toLowerCase().trim() === cat) {
@@ -194,6 +201,14 @@ export const REPOS_PALANCA = 'Repos UP'
 export const REPOS_PALANCA_FUTBOL = 'Repo Fútbol'
 const REPOS_CUENTA_DESDE = new Date(2026, 7, 1)   // 1 de agosto de 2026
 
+/** true si la venta es de agosto de 2026 en adelante (el corte del rediseño de los Repos). */
+export const esDesdeAgosto2026 = (s: any): boolean => {
+    const f = String(s?.fecha || '').trim()          // dd/mm/aaaa
+    if (f.length < 10 || f[2] !== '/' || f[5] !== '/') return false
+    const d = new Date(Number(f.slice(6, 10)), Number(f.slice(3, 5)) - 1, Number(f.slice(0, 2)))
+    return d >= new Date(2026, 7, 1)
+}
+
 export const esCorreccionContableRepos = (s: any): boolean => {
     const f = String(s?.fecha || '').trim()          // dd/mm/aaaa
     if (f.length < 10 || f[2] !== '/' || f[5] !== '/') return false
@@ -238,11 +253,19 @@ export const matchesRule = (s: any, ruleName: string, ruleProductosCuentan: stri
     }
 
     const normRule = String(ruleName || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-    if (normRule === 'arpu') {
-        return matchTipoVenta(s, 'ARPU') || isSuscripcionesTV(s) || isExtraRepoUpFutbol(s);
-    }
-    if (normRule === 'repo futbol') {
-        return matchTipoVenta(s, 'Repo Fútbol') || isExtraRepoUpFutbol(s);
+    // ── EL CABLE VIEJO, SOLO HASTA JULIO DE 2026 ─────────────────────────
+    // Hasta julio, «ARPU» y «Repo Fútbol» tenían escrito a mano qué contaban,
+    // saltándose su casilla «Tipo de Venta». Desde agosto manda la casilla, que
+    // es lo que hace que un cliente de fútbol cuente UNA vez y no dos ahora que
+    // genera dos líneas. Copia gemela de panelComisionesTiendas: si se toca una
+    // y no la otra, cada pantalla da una cifra distinta del mismo mes.
+    if (!esDesdeAgosto2026(s)) {
+        if (normRule === 'arpu') {
+            return matchTipoVenta(s, 'ARPU') || isSuscripcionesTV(s) || isExtraRepoUpFutbol(s);
+        }
+        if (normRule === 'repo futbol') {
+            return matchTipoVenta(s, 'Repo Fútbol') || isExtraRepoUpFutbol(s);
+        }
     }
     return matchTipoVenta(s, ruleProductosCuentan);
 };
