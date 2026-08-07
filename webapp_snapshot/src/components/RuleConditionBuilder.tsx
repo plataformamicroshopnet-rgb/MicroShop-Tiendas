@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { Plus, Trash2, Settings } from 'lucide-react'
 
-export type ConditionType = 'REQUIRE_GROUP_QTY' | 'REQUIRE_GROUP_PCT' | 'REQUIRE_TEAM_OBJ2' | 'REQUIRE_TEAM_OBJ3' | 'REQUIRE_TEAM_OBJ23' | 'ACCUMULATIVE_TRAMOS' | 'ACCUMULATIVE_FIXED_BASE'
+export type ConditionType = 'REQUIRE_GROUP_QTY' | 'REQUIRE_GROUP_PCT' | 'REQUIRE_GROUP_PCT_TRAMO2' | 'REQUIRE_TEAM_OBJ2' | 'REQUIRE_TEAM_OBJ3' | 'REQUIRE_TEAM_OBJ23' | 'ACCUMULATIVE_TRAMOS' | 'ACCUMULATIVE_FIXED_BASE'
 
 export interface RuleCondition {
   type: ConditionType
@@ -115,6 +115,7 @@ export default function RuleConditionBuilder({ value, onChange, disabled, availa
                   >
                     <option value="REQUIRE_GROUP_QTY">Requiere cantidad de:</option>
                     <option value="REQUIRE_GROUP_PCT">Requiere % objetivo de:</option>
+                    <option value="REQUIRE_GROUP_PCT_TRAMO2">El Tramo 2 exige % objetivo de:</option>
                     <option value="REQUIRE_TEAM_OBJ2">El Tramo 2 es Colectivo (del Equipo)</option>
                     <option value="REQUIRE_TEAM_OBJ3">El Tramo 3 es Colectivo (del Equipo)</option>
                     <option value="REQUIRE_TEAM_OBJ23">El Tramo 2 y 3 son Colectivos (del Equipo)</option>
@@ -146,7 +147,7 @@ export default function RuleConditionBuilder({ value, onChange, disabled, availa
                       onChange={e => handleUpdate(idx, 'value', Number(e.target.value))}
                       style={{ flex: 1, padding: 4, fontSize: 11, backgroundColor: '#1e293b', color: '#f8fafc', border: '1px solid #334155', borderRadius: 4 }}
                     />
-                    <span style={{ color: '#94a3b8', fontSize: 11 }}>{cond.type === 'REQUIRE_GROUP_PCT' ? '%' : 'uds'}</span>
+                    <span style={{ color: '#94a3b8', fontSize: 11 }}>{(cond.type === 'REQUIRE_GROUP_PCT' || cond.type === 'REQUIRE_GROUP_PCT_TRAMO2') ? '%' : 'uds'}</span>
                   </div>
                 )}
               </div>

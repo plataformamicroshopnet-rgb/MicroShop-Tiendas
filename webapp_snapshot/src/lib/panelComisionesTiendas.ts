@@ -562,6 +562,9 @@ export function computePanelComisionesTiendas(input: PanelComisionesTiendasInput
                 let isConsolidado = (obj1 === 0 && obj2 === 0) || (qttyTotal >= obj1 && obj1 > 0);
                 let isAccumulative = false;
                 let isAccumulativeFixed = false;
+                // Candado de tramo: palancas AJENAS que tienen que llegar a su % de
+                // objetivo para que esta regla pueda pasar del tramo 1.
+                const topeTramo1: any[] = [];
 
                 // Evaluar reglas dinámicas del Constructor Visual
                 if (rule.condicionantes && rule.condicionantes.startsWith('[')) {
@@ -585,6 +588,9 @@ export function computePanelComisionesTiendas(input: PanelComisionesTiendasInput
                                     if (targetQtty < cond.value) {
                                         isConsolidado = false;
                                     }
+                                } else if (cond.type === 'REQUIRE_GROUP_PCT_TRAMO2') {
+                                    // No bloquea la regla entera: solo impide subir de tramo.
+                                    topeTramo1.push(cond);
                                 } else if (cond.type === 'REQUIRE_GROUP_PCT') {
                                     const targetQtty = (groupCounts[cond.targetGroup] || 0) + (groupPending[cond.targetGroup] || 0);
                                     const targetObj = groupObj1[cond.targetGroup] || 0;
@@ -622,6 +628,32 @@ export function computePanelComisionesTiendas(input: PanelComisionesTiendasInput
                     else if (qttyTotal >= obj2 && obj2 > 0) { activeImp = imp2; tramoAplicado = 2; }
                     else if (qttyTotal >= obj1 && obj1 > 0) { activeImp = imp1; tramoAplicado = 1; }
                     else { activeImp = imp1; tramoAplicado = 1; } // Valorar siempre al Tramo 1 aunque no llegue al objetivo
+                }
+
+                // ── CANDADO DE TRAMO (REQUIRE_GROUP_PCT_TRAMO2) ──────────────────
+                // Pedido por el dueno (ago-2026): el segundo tramo de una regla puede
+                // quedar condicionado a que OTRA palanca llegue a un % de su objetivo.
+                // Ejemplo real: el tramo 2 de ARPU solo se paga si Dispositivos + Seguros
+                // llega al 100 %. Si no llega, la regla se queda en el tramo 1 — NO se
+                // deja de cobrar, que para eso ya esta REQUIRE_GROUP_PCT.
+                // El % se mide igual que en REQUIRE_GROUP_PCT: sobre el PRIMER objetivo
+                // de la palanca ajena, para que las dos condiciones cuenten lo mismo.
+                if (topeTramo1.length > 0) {
+                    const bloqueado = topeTramo1.some((cond: any) => {
+                        const targetQtty = (groupCounts[cond.targetGroup] || 0) + (groupPending[cond.targetGroup] || 0);
+                        const targetObj = groupObj1[cond.targetGroup] || 0;
+                        if (targetObj > 0) return ((targetQtty / targetObj) * 100) < cond.value;
+                        return cond.value > 0 && targetQtty === 0;
+                    });
+                    if (bloqueado) {
+                        activeImp = imp1;
+                        tramoAplicado = 1;
+                        // Los modos acumulativos usan imp2 directamente al calcular el
+                        // importe, saltandose el tramo: se desactivan tambien, porque
+                        // «no puede pasar del primer tramo» tiene que valer para todos.
+                        isAccumulative = false;
+                        isAccumulativeFixed = false;
+                    }
                 }
 
                 if (isPercentage) {
