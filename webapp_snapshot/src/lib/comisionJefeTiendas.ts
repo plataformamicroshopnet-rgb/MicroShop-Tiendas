@@ -46,6 +46,9 @@ export interface JefePcts {
     bafPct2: number
     convPct1: number
     convPct2: number
+    // Altas Repos UP (la regla «Repo Fútbol»). Esta NO es un %: es lo que se le
+    // paga al jefe POR CADA ALTA, en euros. Un solo tramo.
+    reposEur1: number
 }
 
 export const JEFE_PCT_DEFAULTS: JefePcts = {
@@ -58,6 +61,9 @@ export const JEFE_PCT_DEFAULTS: JefePcts = {
     bafPct2: 0,
     convPct1: 0,
     convPct2: 0,
+    // A cero a propósito: así ningún mes empieza a pagar esta palanca solo, y
+    // ninguno de los meses cerrados se mueve. Se pone a mano en el mes que toque.
+    reposEur1: 0,
 }
 
 export const JEFE_PCT_SETTING_KEYS: Record<keyof JefePcts, string> = {
@@ -70,6 +76,7 @@ export const JEFE_PCT_SETTING_KEYS: Record<keyof JefePcts, string> = {
     bafPct2: 'COMISION_JEFE_BAF_PCT2',
     convPct1: 'COMISION_JEFE_CONV_PCT1',
     convPct2: 'COMISION_JEFE_CONV_PCT2',
+    reposEur1: 'COMISION_JEFE_REPOSUP_EUR1',
 }
 
 // Las 9 claves base, para quien necesite componerlas por mes (el clonado de
@@ -155,6 +162,9 @@ export interface JefePalanca {
     // Tramos con su avance/reached, en el MISMO orden y condición con que los
     // pinta la pantalla (el 3º de Disp+Seg solo si obj3 > 0).
     tramos: JefePalancaTramo[]
+    // true = el importe no es un % sobre una base en €, sino EUROS POR UNIDAD
+    // (Altas Repos UP). En esas, `base` y `uds` son las mismas unidades.
+    porUnidad?: boolean
 }
 
 export interface JefeComercialRow {
@@ -163,6 +173,7 @@ export interface JefeComercialRow {
     arpuEur: number
     bafEur: number
     convEur: number
+    reposUds: number   // Altas Repos UP: son UNIDADES, no euros
 }
 
 export interface ComisionJefeTiendasResult {
@@ -198,7 +209,7 @@ export function computeComisionJefeTiendas(input: ComisionJefeTiendasInput): Com
     const monthSales = (input.monthSales || []).filter((s: any) => !isSolar360(s))
     const catalogs = input.catalogs || {}
     const viewingPeriod = input.viewingPeriod || ''
-    const { dispPct1, dispPct2, dispPct3, arpuPct1, arpuPct2, bafPct1, bafPct2, convPct1, convPct2 } = input.pcts
+    const { dispPct1, dispPct2, dispPct3, arpuPct1, arpuPct2, bafPct1, bafPct2, convPct1, convPct2, reposEur1 } = input.pcts
 
     // ── Bases Disp+Seg / ARPU + desglose por comercial (primer useMemo de la página) ──
     let tableData: JefeComercialRow[] = []
@@ -209,16 +220,27 @@ export function computeComisionJefeTiendas(input: ComisionJefeTiendasInput): Com
     let globalDispObj3 = 0
     let globalArpuObj1 = 0
     let globalArpuObj2 = 0
+    let totalReposUds = 0
+    let globalReposObj1 = 0
 
     if (sellerStats.length > 0) {
         const dispRule = adjustedTiendaRules.find((r: any) => r.nombre?.toLowerCase().includes('dispositivo') && r.nombre?.toLowerCase().includes('seguro'))
         const arpuRule = adjustedTiendaRules.find((r: any) => r.nombre?.toLowerCase().includes('arpu'))
+        // «Altas Repos UP» es la regla que el programa llama «Repo Fútbol»
+        // (productos: Extra Repos up destino Fútbol).
+        const reposRule = adjustedTiendaRules.find((r: any) => {
+            const n = String(r.nombre || '').toLowerCase()
+            return n.includes('repo') && !n.includes('arpu')
+        })
 
         globalDispObj1 = dispRule ? Number(dispRule.objPrimerTramo || 0) : 0
         globalDispObj2 = dispRule ? Number(dispRule.objSegundoTramo || 0) : 0
         globalDispObj3 = dispRule ? Number(dispRule.objTercerTramo || 0) : 0
         globalArpuObj1 = arpuRule ? Number(arpuRule.objPrimerTramo || 0) : 0
         globalArpuObj2 = arpuRule ? Number(arpuRule.objSegundoTramo || 0) : 0
+        // Un solo objetivo, el PRIMERO de Reglas Globales y Tramos de Comisiones.
+        globalReposObj1 = reposRule ? Number(reposRule.objPrimerTramo || 0) : 0
+        const reposRuleName = reposRule ? String(reposRule.nombre) : ''
 
         // tipoVenta de las palancas BAF para el desglose por comercial (mismo filtro que el
         // territorial). Comisión por venta de empresa, O2 excluido (cuadra con la base).
@@ -246,13 +268,16 @@ export function computeComisionJefeTiendas(input: ComisionJefeTiendasInput): Com
 
             const dispEur = dispKey ? (s.groupCounts[dispKey] || 0) : 0
             const arpuEur = arpuKey ? (s.groupCounts[arpuKey] || 0) : 0
+            // Repo Fútbol es una regla POR UNIDADES, así que groupCounts son altas.
+            const reposUds = reposRuleName ? (s.groupCounts[reposRuleName] || 0) : 0
             const bafEur = comisionPalanca(s.rawSales, bafTipo)
             const convEur = comisionPalanca(s.rawSales, convTipo)
 
             totalDispVentas += dispEur
             totalArpuVentas += arpuEur
+            totalReposUds += reposUds
 
-            return { name: s.name, dispEur, arpuEur, bafEur, convEur }
+            return { name: s.name, dispEur, arpuEur, bafEur, convEur, reposUds }
         })
     }
 
@@ -302,8 +327,15 @@ export function computeComisionJefeTiendas(input: ComisionJefeTiendasInput): Com
     const avanceArpu1 = totalArpuVentas * (arpuPct1 / 100)
     const avanceArpu2 = totalArpuVentas * (arpuPct2 / 100)
 
+    // Altas Repos UP: euros POR ALTA, un solo tramo. Se cobra entero en cuanto el
+    // equipo llega al objetivo 1 de la regla; por debajo, nada.
+    const avanceRepos1 = totalReposUds * (reposEur1 || 0)
+    let finalRepos = 0
+    let reposTramo: 0 | 1 | 2 | 3 = 0
+    if (globalReposObj1 > 0 && totalReposUds >= globalReposObj1) { finalRepos = avanceRepos1; reposTramo = 1 }
+
     // Total Condicionado (El máximo posible: el tramo más alto configurado)
-    const totalCondicionado = (globalDispObj3 > 0 ? avanceDisp3 : avanceDisp2) + avanceArpu2 + avanceBaf2 + avanceConv2
+    const totalCondicionado = (globalDispObj3 > 0 ? avanceDisp3 : avanceDisp2) + avanceArpu2 + avanceBaf2 + avanceConv2 + avanceRepos1
 
     // Comisión Final (Real) - el tramo más alto alcanzado manda
     let finalDisp = 0
@@ -317,7 +349,7 @@ export function computeComisionJefeTiendas(input: ComisionJefeTiendasInput): Com
     if (totalArpuVentas >= globalArpuObj2 && globalArpuObj2 > 0) { finalArpu = avanceArpu2; arpuTramo = 2 }
     else if (totalArpuVentas >= globalArpuObj1 && globalArpuObj1 > 0) { finalArpu = avanceArpu1; arpuTramo = 1 }
 
-    const total = finalDisp + finalArpu + finalBaf + finalConv
+    const total = finalDisp + finalArpu + finalBaf + finalConv + finalRepos
 
     const pctDe = (tramo: number, p1: number, p2: number, p3: number) =>
         tramo === 3 ? p3 : tramo === 2 ? p2 : tramo === 1 ? p1 : 0
@@ -382,6 +414,22 @@ export function computeComisionJefeTiendas(input: ComisionJefeTiendasInput): Com
             tramos: [
                 { n: 1, pct: convPct1, amount: avanceConv1, reached: conv.obj1 > 0 && conv.uds >= conv.obj1 },
                 { n: 2, pct: convPct2, amount: avanceConv2, reached: conv.obj2 > 0 && conv.uds >= conv.obj2 }
+            ],
+        },
+        {
+            // La única que se paga por unidad y no por porcentaje.
+            palanca: 'Altas Repos UP',
+            base: totalReposUds,
+            uds: totalReposUds,
+            obj1: globalReposObj1,
+            obj2: 0,
+            obj3: null,
+            tramoAlcanzado: reposTramo,
+            pctAplicado: reposTramo === 1 ? (reposEur1 || 0) : 0,
+            importe: finalRepos,
+            porUnidad: true,
+            tramos: [
+                { n: 1, pct: reposEur1 || 0, amount: avanceRepos1, reached: globalReposObj1 > 0 && totalReposUds >= globalReposObj1 }
             ],
         },
     ]

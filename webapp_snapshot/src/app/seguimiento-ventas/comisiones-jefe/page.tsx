@@ -44,6 +44,8 @@ export default function ComisionesJefeTiendasPage() {
     const [bafPct2, setBafPct2] = useState<number>(0)
     const [convPct1, setConvPct1] = useState<number>(0)
     const [convPct2, setConvPct2] = useState<number>(0)
+    // Altas Repos UP: EUROS POR ALTA (no un %), un solo objetivo.
+    const [reposEur1, setReposEur1] = useState<number>(0)
     // Reglas de TERRITORIAL TIENDAS (objetivos 87/101, 50/58 + base de comisiones).
     const [territorialTiendasRules, setTerritorialTiendasRules] = useState<any[]>([])
 
@@ -77,6 +79,7 @@ export default function ComisionesJefeTiendasPage() {
                 setArpuPct1(pcts.arpuPct1); setArpuPct2(pcts.arpuPct2)
                 setBafPct1(pcts.bafPct1); setBafPct2(pcts.bafPct2)
                 setConvPct1(pcts.convPct1); setConvPct2(pcts.convPct2)
+                setReposEur1(pcts.reposEur1)
                 setPctOrigen(origen)
                 setPctEstado('ok')
             })
@@ -133,6 +136,7 @@ export default function ComisionesJefeTiendasPage() {
         dispPct1: 'Disp+Seg 1', dispPct2: 'Disp+Seg 2', dispPct3: 'Disp+Seg 3',
         arpuPct1: 'Arpu 1', arpuPct2: 'Arpu 2',
         bafPct1: 'BAF 1', bafPct2: 'BAF 2', convPct1: 'Converg. 1', convPct2: 'Converg. 2',
+        reposEur1: 'Repos UP',
     }
     const heredados = pctOrigen
         ? (Object.keys(ETIQUETA_PCT) as (keyof JefePcts)[]).filter(k => pctOrigen[k] !== 'mes').map(k => ETIQUETA_PCT[k])
@@ -147,11 +151,11 @@ export default function ComisionesJefeTiendasPage() {
         monthSales: monthSales || [],
         catalogs: catalogs || {},
         viewingPeriod: activePeriodKey ? String(activePeriodKey).replace(/[_-]/g, '') : '',
-        pcts: { dispPct1, dispPct2, dispPct3, arpuPct1, arpuPct2, bafPct1, bafPct2, convPct1, convPct2 },
+        pcts: { dispPct1, dispPct2, dispPct3, arpuPct1, arpuPct2, bafPct1, bafPct2, convPct1, convPct2, reposEur1 },
     }), [sellerStats, tiendaRules, territorialTiendasRules, monthSales, catalogs, activePeriodKey,
-        dispPct1, dispPct2, dispPct3, arpuPct1, arpuPct2, bafPct1, bafPct2, convPct1, convPct2])
+        dispPct1, dispPct2, dispPct3, arpuPct1, arpuPct2, bafPct1, bafPct2, convPct1, convPct2, reposEur1])
 
-    const [pDisp, pArpu, pBaf, pConv] = cj.palancas
+    const [pDisp, pArpu, pBaf, pConv, pRepos] = cj.palancas
     const tableData = cj.porComercial
     const totalDispVentas = pDisp.base
     const totalArpuVentas = pArpu.base
@@ -208,6 +212,7 @@ export default function ComisionesJefeTiendasPage() {
         arpu: { head: '#1976c4', tint: '#e9f2fb' },
         baf:  { head: '#1f9bb3', tint: '#e8f6fa' },
         conv: { head: '#3aaed6', tint: '#ecf8fc' },
+        repos: { head: '#0f766e', tint: '#e6f5f3' },
     }
 
     if (authorized === null) {
@@ -432,6 +437,36 @@ export default function ComisionesJefeTiendasPage() {
                         </tbody>
                     </table>
 
+                    {/* Altas Repos UP (regla «Repo Fútbol»): UN solo objetivo, el primer
+                        tramo de Reglas Globales y Tramos de Comisiones, y se paga por ALTA. */}
+                    <table className="excel-table compact" style={{ width: 'auto', minWidth: 170 }}>
+                        <thead>
+                            <tr>
+                                <th className="header-blue">Altas Repos UP</th>
+                            </tr>
+                            <tr style={{ color: '#0078d4', fontWeight: 'bold' }}>
+                                <td>Objetivo 1</td>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style={{ color: '#0078d4', fontWeight: 'bold' }}>
+                                <td>{(pRepos?.obj1 || 0).toLocaleString('es-ES')} uds</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <input
+                                        className="input-pct"
+                                        type="number" step="0.01"
+                                        value={reposEur1}
+                                        disabled={!isSuperAdmin || !pctCargados}
+                                        onChange={e => { const v = Number(e.target.value); setReposEur1(v); handleSavePct('COMISION_JEFE_REPOSUP_EUR1', v); }}
+                                        style={{ opacity: isSuperAdmin ? 1 : 0.7 }}
+                                    /> € por alta
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
                     {/* Condiciones Altas Total BAF (objetivos en uds desde TERRITORIAL TIENDAS) */}
                     <table className="excel-table compact" style={{ width: 'auto', minWidth: 200 }}>
                         <thead>
@@ -588,6 +623,9 @@ export default function ComisionesJefeTiendasPage() {
                             <th className="header-lightblue" style={{ background: PAL.conv.head }}>Ventas BAF Convergente</th>
                             <th className="header-lightblue" style={{ background: PAL.conv.head }}>Total Ventas</th>
                             <th className="header-lightblue" style={{ background: PAL.conv.head }}>Avance de Importe</th>
+                            <th className="header-lightblue" style={{ background: PAL.repos.head }}>Altas Repos UP</th>
+                            <th className="header-lightblue" style={{ background: PAL.repos.head }}>Total Altas</th>
+                            <th className="header-lightblue" style={{ background: PAL.repos.head }}>Avance de Importe</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -654,11 +692,26 @@ export default function ComisionesJefeTiendasPage() {
                                         </td>
                                     </>
                                 )}
+
+                                {/* Altas Repos UP — en unidades, no en euros */}
+                                <td className="cell-currency" style={{ background: PAL.repos.tint }}>
+                                    {row.reposUds > 0 ? `${row.reposUds.toLocaleString('es-ES')} uds` : '-'}
+                                </td>
+                                {index === 0 && (
+                                    <>
+                                        <td rowSpan={tableData.length} style={{ fontWeight: 'bold', fontSize: 13, whiteSpace: 'nowrap', verticalAlign: 'middle', background: PAL.repos.tint }}>
+                                            {(pRepos?.uds || 0) > 0 ? `${(pRepos?.uds || 0).toLocaleString('es-ES')} uds` : '-'}
+                                        </td>
+                                        <td rowSpan={tableData.length} style={{ verticalAlign: 'middle', padding: 0 }}>
+                                            {renderAvance(pRepos?.tramos || [])}
+                                        </td>
+                                    </>
+                                )}
                             </tr>
                         ))}
                         {tableData.length === 0 && (
                             <tr>
-                                <td colSpan={13} style={{ padding: 24, color: '#64748b' }}>No hay comerciales disponibles.</td>
+                                <td colSpan={16} style={{ padding: 24, color: '#64748b' }}>No hay comerciales disponibles.</td>
                             </tr>
                         )}
                     </tbody>
