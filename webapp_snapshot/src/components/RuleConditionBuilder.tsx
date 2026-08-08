@@ -104,7 +104,10 @@ export default function RuleConditionBuilder({ value, onChange, disabled, availa
           borderRadius: 8,
           padding: 12,
           zIndex: 50,
-          width: 320,
+          // Ancha pero nunca mas que la pantalla, y contando el padding: asi la
+          // tarjeta no se desborda ni en un movil.
+          width: 'min(94vw, 400px)',
+          boxSizing: 'border-box',
           boxShadow: '0 10px 25px rgba(0,0,0,0.5)'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
@@ -127,17 +130,17 @@ export default function RuleConditionBuilder({ value, onChange, disabled, availa
                   <select
                     value={cond.type}
                     onChange={e => handleUpdate(idx, 'type', e.target.value)}
-                    style={{ flex: 1, padding: 4, fontSize: 11, backgroundColor: '#1e293b', color: '#f8fafc', border: '1px solid #334155', borderRadius: 4 }}
+                    style={{ flex: 1, minWidth: 0, maxWidth: '100%', padding: 4, fontSize: 11, backgroundColor: '#1e293b', color: '#f8fafc', border: '1px solid #334155', borderRadius: 4 }}
                   >
                     <option value="REQUIRE_GROUP_QTY">Requiere cantidad de:</option>
                     <option value="REQUIRE_GROUP_PCT">Requiere % objetivo de:</option>
-                    <option value="REQUIRE_GROUP_PCT_TRAMO2">Del Tramo 2 en adelante exige % objetivo de:</option>
-                    <option value="REQUIRE_STORE_QTY_TRAMO2">Del Tramo 2 en adelante exige un mínimo EN CADA TIENDA de:</option>
+                    <option value="REQUIRE_GROUP_PCT_TRAMO2">Del Tramo 2 en adelante: % objetivo de…</option>
+                    <option value="REQUIRE_STORE_QTY_TRAMO2">Del Tramo 2 en adelante: mínimo EN CADA TIENDA de…</option>
                     <option value="REQUIRE_TEAM_OBJ2">El Tramo 2 es Colectivo (del Equipo)</option>
                     <option value="REQUIRE_TEAM_OBJ3">El Tramo 3 es Colectivo (del Equipo)</option>
                     <option value="REQUIRE_TEAM_OBJ23">El Tramo 2 y 3 son Colectivos (del Equipo)</option>
                     <option value="ACCUMULATIVE_TRAMOS">Tramos Acumulativos (Sumar Ambos x Ud)</option>
-                    <option value="ACCUMULATIVE_FIXED_BASE">Tramos Acumulativos (Bono Fijo + Uds Extra)</option>
+                    <option value="ACCUMULATIVE_FIXED_BASE">Tramos Acumulativos (Bono Fijo + Uds)</option>
                   </select>
                   <button type="button" onClick={() => handleRemove(idx)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 2 }}>
                     <Trash2 size={14} />
@@ -146,11 +149,11 @@ export default function RuleConditionBuilder({ value, onChange, disabled, availa
 
 
                 {cond.type !== 'REQUIRE_TEAM_OBJ2' && cond.type !== 'REQUIRE_TEAM_OBJ3' && cond.type !== 'REQUIRE_TEAM_OBJ23' && cond.type !== 'ACCUMULATIVE_TRAMOS' && cond.type !== 'ACCUMULATIVE_FIXED_BASE' && (
-                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                     <select
                       value={cond.targetGroup}
                       onChange={e => handleUpdate(idx, 'targetGroup', e.target.value)}
-                      style={{ flex: 2, padding: 4, fontSize: 11, backgroundColor: '#1e293b', color: '#f8fafc', border: '1px solid #334155', borderRadius: 4 }}
+                      style={{ flex: 2, minWidth: 0, maxWidth: '100%', padding: 4, fontSize: 11, backgroundColor: '#1e293b', color: '#f8fafc', border: '1px solid #334155', borderRadius: 4 }}
                     >
                       <option value="">{USA_TIPO_DE_VENTA(cond.type) ? 'Selecciona tipo de venta...' : 'Selecciona grupo...'}</option>
                       {(USA_TIPO_DE_VENTA(cond.type) ? TIPOS_DE_VENTA : availableGroups).map(g => <option key={g} value={g}>{g}</option>)}
@@ -162,7 +165,7 @@ export default function RuleConditionBuilder({ value, onChange, disabled, availa
                       type="number"
                       value={cond.value}
                       onChange={e => handleUpdate(idx, 'value', Number(e.target.value))}
-                      style={{ flex: 1, padding: 4, fontSize: 11, backgroundColor: '#1e293b', color: '#f8fafc', border: '1px solid #334155', borderRadius: 4 }}
+                      style={{ flex: 1, minWidth: 0, maxWidth: '100%', padding: 4, fontSize: 11, backgroundColor: '#1e293b', color: '#f8fafc', border: '1px solid #334155', borderRadius: 4 }}
                     />
                     <span style={{ color: '#94a3b8', fontSize: 11 }}>{(cond.type === 'REQUIRE_GROUP_PCT' || cond.type === 'REQUIRE_GROUP_PCT_TRAMO2') ? '%' : 'uds'}</span>
                   </div>
