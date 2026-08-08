@@ -96,9 +96,25 @@ export default function ProductosComisionanTab() {
     const lines = pasteText.split('\n').filter(l => l.trim().length > 0);
     const newRules: any[] = [];
     
+    // LOS CONDICIONANTES NO VIENEN EN EL EXCEL, Y NO SE PUEDEN PERDER.
+    // Son configuración que solo vive en el programa (el 100 % de Dispositivos
+    // de ARPU, el 80 % de BAF y los 30 por tienda del Fútbol). Al pegar la tabla
+    // llegaban vacíos y, como guardar borra y recrea, se llevaban por delante
+    // los candados que había: el segundo tramo se pagaba sin exigir nada y
+    // NADIE lo decía. Si la palanca pegada ya existe con ese nombre, se le
+    // devuelven los suyos; si el pegado trae la columna 9 con algo, esa manda.
+    const condDeAntes = new Map<string, string>();
+    rules.forEach((r: any) => {
+      const c = String(r?.condicionantes || '').trim();
+      if (c) condDeAntes.set(String(r?.nombre || '').trim().toLowerCase(), c);
+    });
+    const conservados: string[] = [];
+
     lines.forEach((line) => {
       const parts = line.split('\t').map(p => p.trim());
       if (parts.length > 0 && parts[0]) {
+        const heredado = condDeAntes.get(String(parts[0]).trim().toLowerCase()) || '';
+        if (!parts[8] && heredado) conservados.push(parts[0]);
         newRules.push({
           id: Date.now().toString() + Math.random().toString(),
           nombre: parts[0] || '',
@@ -109,7 +125,7 @@ export default function ProductosComisionanTab() {
           importeSegundoTramo: parts[5] || '',
           objTercerTramo: parts[6] ? parseFloat(parts[6].replace(',', '.')) || '' : '',
           importeTercerTramo: parts[7] || '',
-          condicionantes: parts[8] || '',
+          condicionantes: parts[8] || heredado,
           totalHoras: parts[9] ? parseFloat(parts[9].replace(',', '.')) || '' : ''
         });
       }

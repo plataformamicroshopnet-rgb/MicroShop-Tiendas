@@ -46,13 +46,19 @@ export default function RuleConditionBuilder({ value, onChange, disabled, availa
     const newConds = [...conditions]
     newConds[index] = { ...newConds[index], [field]: val }
     // Al cambiar de tipo cambia la lista de la que se elige (reglas o Tipos de
-    // Venta). Si lo que había guardado no está en la lista nueva, el desplegable
-    // se quedaría en blanco y la condición no haría nada sin decirlo: se pone un
-    // valor válido de esa lista.
+    // Venta). Si lo que había guardado no está en la lista nueva hay que soltarlo
+    // — pero SE DEJA EN BLANCO, no se pone el primero de la lista.
+    //
+    // Antes se ponía el primero «para que la condición no se quedara sin
+    // valor», y eso resultó peor: el primero de los Tipos de Venta es «Alta BAF
+    // Total», así que al elegir «mínimo EN CADA TIENDA» se quedaba exigiendo 30
+    // altas BAF por tienda en vez de 30 dispositivos, sin que nada lo dijera, y
+    // el motor lo aplicaba. Un valor puesto solo parece elegido; uno en blanco
+    // se ve, y además abajo sale un aviso en rojo.
     if (field === 'type') {
       const actual = String(newConds[index].targetGroup || '')
       const lista = USA_TIPO_DE_VENTA(val) ? TIPOS_DE_VENTA : availableGroups
-      if (!lista.includes(actual)) newConds[index].targetGroup = lista[0] || ''
+      if (!lista.includes(actual)) newConds[index].targetGroup = ''
     }
     onChange(JSON.stringify(newConds))
   }
@@ -168,6 +174,17 @@ export default function RuleConditionBuilder({ value, onChange, disabled, availa
                       style={{ flex: 1, minWidth: 0, maxWidth: '100%', padding: 4, fontSize: 11, backgroundColor: '#1e293b', color: '#f8fafc', border: '1px solid #334155', borderRadius: 4 }}
                     />
                     <span style={{ color: '#94a3b8', fontSize: 11 }}>{(cond.type === 'REQUIRE_GROUP_PCT' || cond.type === 'REQUIRE_GROUP_PCT_TRAMO2') ? '%' : 'uds'}</span>
+                  </div>
+                )}
+
+                {/* Sin elegir sobre qué, la condición NO hace nada. Antes se
+                    quedaba así en silencio (o con el primero de la lista puesto
+                    solo): ahora se ve en rojo. */}
+                {cond.type !== 'REQUIRE_TEAM_OBJ2' && cond.type !== 'REQUIRE_TEAM_OBJ3' && cond.type !== 'REQUIRE_TEAM_OBJ23'
+                  && cond.type !== 'ACCUMULATIVE_TRAMOS' && cond.type !== 'ACCUMULATIVE_FIXED_BASE'
+                  && !String(cond.targetGroup || '').trim() && (
+                  <div style={{ fontSize: 10.5, color: '#fca5a5', fontWeight: 700, lineHeight: 1.4 }}>
+                    ⚠ Falta elegir sobre qué: así esta condición no se aplica.
                   </div>
                 )}
 

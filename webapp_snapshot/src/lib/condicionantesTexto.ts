@@ -29,10 +29,17 @@ const condicionesDe = (rule: any): any[] => {
   try { return JSON.parse(raw) || [] } catch { return [] }
 }
 
-/** ¿Es la palanca de los Repos por ARPU? (el nombre cambia según el mes) */
+/**
+ * ¿Es la palanca de los Repos por ARPU? El nombre ha ido cambiando: en mayo de
+ * 2026 se llamaba «ARPU» a secas, después «Repos UP» y en pantalla «Repos
+ * (Arpu)». Basta con que lleve «arpu» o con que sea un repo que no es el del
+ * fútbol. (La primera versión exigía que llevara «repo» Y «arpu», y con la
+ * palanca llamada «ARPU» no reconocía ninguna: el aviso no salía nunca.)
+ */
 const esReposArpu = (nombre: string) => {
   const n = sinAdornos(nombre)
-  return n.includes('repo') && (n.includes('arpu') || n.includes('up')) && !n.includes('futbol')
+  if (n.includes('futbol')) return false
+  return n.includes('arpu') || (n.includes('repo') && n.includes('up'))
 }
 
 /** ¿Es la del fútbol? (Repo Fútbol, Altas Fútbol, Desarrollo TV…) */
