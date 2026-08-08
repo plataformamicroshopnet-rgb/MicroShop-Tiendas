@@ -20,31 +20,23 @@ export async function GET(request: Request) {
       orderBy: { order: 'asc' }
     })
 
-    const session = await getSession();
-    let isComercial = false;
-    let username = '';
-
-    if (session && session.user && session.user.username) {
-      const dbUser = await prisma.user.findUnique({
-        where: { username: session.user.username },
-        select: { role: true, username: true }
-      });
-      if (dbUser) {
-        isComercial = normalizeRole(dbUser.role) === 'COMERCIAL';
-        username = dbUser.username;
-      }
-    }
-    
+    // ── LOS HORARIOS VAN ENTEROS PARA TODO EL MUNDO ──────────────────────────
+    // Antes, a un COMERCIAL se le devolvia SOLO su propia fila. Parecia un
+    // recorte inofensivo de privacidad, pero esta tabla es la PLANTILLA del mes:
+    // el Panel de Comisiones saca de aqui quienes son los comerciales
+    // (getEffectiveSellers). Con una sola fila, el comercial se veia unicamente a
+    // si mismo: el ranking salia con el y Marta, y el «Total Comisiones» del mes
+    // era su propia comision disfrazada de total del equipo.
+    // El dueño quiere justo lo contrario —que se vean entre ellos, por
+    // transparencia y porque se lo han pedido— asi que la lista va completa.
+    // Lo que NO se abre es el «Registro Operativo» de un compañero: ahi van
+    // nombres de cliente y NIF, y eso no es una comision (comisiones/page.tsx).
     const hours = await prisma.tiendaComercialHour.findMany({
       where: { periodKey },
       orderBy: { comercial: 'asc' }
     })
 
-    const filteredHours = isComercial 
-      ? hours.filter(h => h.comercial.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === username.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()) 
-      : hours;
-
-    return NextResponse.json({ success: true, rules, hours: filteredHours })
+    return NextResponse.json({ success: true, rules, hours })
   } catch (error) {
     console.error('Error GET tiendas comisiones:', error)
     return NextResponse.json({ success: false, error: 'Error al obtener datos' }, { status: 500 })
