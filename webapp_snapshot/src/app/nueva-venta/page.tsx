@@ -443,7 +443,17 @@ export default function NuevaVentaPage() {
             // multiplicador. OJO, la pestaña VIEJA («Repos») usa el multiplicador
             // para otra cosa (el modo Fact. Anterior / Fact. Nueva del ARPU), y si
             // la nueva entrara por ahí el producto de 78 € se autorrellenaría a 0 €.
-            if (cat === 'Repos UP') {
+            if (cat === 'Repos UP' && esRepoIncrementoArpu(newProducts[index].producto)) {
+              // Repo de incremento de ARPU dentro de la palanca nueva: el importe
+              // lo ponen las casillas Fact. Anterior / Fact. Nueva, no la tarifa.
+              if (selectedItem.comisionConCoste && Number(selectedItem.comisionConCoste) > 0) {
+                const ant = Number(newProducts[index].facturacionAnterior || 0)
+                const nue = Number(newProducts[index].facturacionNueva || 0)
+                newProducts[index].importe = String(Math.max(0, nue - ant) * Number(selectedItem.comisionConCoste))
+              } else {
+                newProducts[index].importe = selectedItem.comision || ''
+              }
+            } else if (cat === 'Repos UP') {
               // Suscripcion añadida sobre un traslado miMovistar: no se abona.
               if (newProducts[index].isSuscTraslado) {
                 newProducts[index].importe = '0';
@@ -501,8 +511,8 @@ export default function NuevaVentaPage() {
       }
       
       // Recalcular importe para Repos si cambian los factores numéricos
-      if (newProducts[index].categoria === 'Repos' && (field === 'facturacionAnterior' || field === 'facturacionNueva')) {
-         const catList = catalogs['Repos'] || []
+      if (usaModoArpu(newProducts[index]) && (field === 'facturacionAnterior' || field === 'facturacionNueva')) {
+         const catList = catalogs[newProducts[index].categoria] || []
          const selectedItem = catList.find((p: any) => p.producto === newProducts[index].producto)
          if (selectedItem && selectedItem.comisionConCoste && Number(selectedItem.comisionConCoste) > 0) {
             const ant = Number(newProducts[index].facturacionAnterior || 0)
@@ -588,6 +598,23 @@ export default function NuevaVentaPage() {
   // existen en el catálogo de la palanca nueva. Quitarla dejaría a tres comerciales
   // sin poder apuntar lo que venden. Lo que sí se retira de esa palanca es el
   // producto del fútbol, que ahora se teclea en «Repos (Arpu)» (ver PRODUCTOS_RETIRADOS).
+  // ── REPOS DE «INCREMENTO DE ARPU» ────────────────────────────────────────────
+  // Son los cuatro «Repos destino BAF miMovistar/Fusión incremento de ARPU …».
+  // No se teclean con un precio de tarifa: su importe sale de lo que sube la
+  // factura del cliente (Fact. Nueva − Fact. Anterior) por el % del catálogo.
+  // Ese modo vivía atado a la palanca VIEJA («Repos»), así que esos productos no
+  // se podían mudar a «Repos (Arpu)»: allí el multiplicador significa otra cosa
+  // (comisión × multiplicador) y el importe habría salido mal. Con esto el modo
+  // va con el PRODUCTO y no con la palanca, así que el día que se suban a la hoja
+  // de «Repos (Arpu)» funcionan igual y la palanca vieja se puede retirar.
+  // Mientras no se suban, esto no cambia absolutamente nada.
+  const esRepoIncrementoArpu = (producto: any) =>
+    String(producto || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .includes('incremento de arpu')
+  /** ¿Esta línea se teclea con las casillas Fact. Anterior / Fact. Nueva? */
+  const usaModoArpu = (prod: any) =>
+    prod?.categoria === 'Repos' || (prod?.categoria === 'Repos UP' && esRepoIncrementoArpu(prod?.producto))
+
   const CATS_RETIRADAS = ['Suscripciones TV']
   // Productos que ya no se eligen aunque su palanca siga viva.
   const PRODUCTOS_RETIRADOS: Record<string, string[]> = { 'Repos': ['Extra Repos up destino Fútbol'] }
@@ -1326,8 +1353,8 @@ export default function NuevaVentaPage() {
 
                     {/* COLUMNA 3: FINANZAS / ESTADO */}
                     <div style={{ flex: '1', minWidth: '200px', backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      {prod.categoria === 'Repos' && (() => {
-                        const selRepos = (catalogs['Repos'] || []).find((p: any) => p.producto === prod.producto);
+                      {usaModoArpu(prod) && (() => {
+                        const selRepos = (catalogs[prod.categoria] || []).find((p: any) => p.producto === prod.producto);
                         const isReposMult = selRepos && selRepos.comisionConCoste && Number(selRepos.comisionConCoste) > 0;
                         if (!isReposMult) return null;
                         return (

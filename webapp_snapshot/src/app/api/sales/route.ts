@@ -323,7 +323,13 @@ export async function PATCH(request: Request) {
                return isNaN(n) ? null : n
              }
              const pal = palancaVenta.toLowerCase()
-             const multiplica = pal === 'suscripciones tv' || pal === 'repos up'
+             // Los repos de «incremento de ARPU» no tienen precio de tarifa: su
+             // importe sale de Fact. Nueva − Fact. Anterior por el % del catálogo,
+             // que se teclea en Nueva Venta. Aquí NO se toca, o al corregir una
+             // errata de fecha se les pondría el precio de una suscripción.
+             const esIncrementoArpu = String(effectiveProducto).toLowerCase()
+               .normalize('NFD').replace(/[̀-ͯ]/g, '').includes('incremento de arpu')
+             const multiplica = !esIncrementoArpu && (pal === 'suscripciones tv' || pal === 'repos up')
              const planas = ['o2', 'seguro', 'prepago', 'varios', 'accesorios']
              let nuevoPrecio: number | null = null
              if (targetCatalog.anual) {
