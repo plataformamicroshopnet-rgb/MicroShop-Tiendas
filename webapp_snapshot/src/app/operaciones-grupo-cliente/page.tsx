@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { usePeriod } from '@/components/PeriodProvider'
 import { useGuard } from '@/hooks/useGuard'
 import { ExcelIcon } from '@/components/ActionIcons'
-import { renderDashboardData, calculateDynamicCommission, normalizeString, getCurrentMonthString, isSaleActive, isSolar360, findCatalogVigente } from '@/lib/salesUtils'
+import { renderDashboardData, calculateDynamicCommission, normalizeString, getCurrentMonthString, isSaleActive, isSolar360, findCatalogVigente, esVentaSustituida } from '@/lib/salesUtils'
 import { getSaleCommission, isLegacySwap } from '@/lib/saleCommission'
 import { computeTerritorialRows, computeBonosO2 } from '@/lib/territorialConsolidado'
 import { matchesRule, getValueForRule, matchTipoVenta } from '@/hooks/useComisionesData'
@@ -103,7 +103,8 @@ const isBasico = (c: string) => {
 const fmt = (v: number) =>
   new Intl.NumberFormat('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v) + '€'
 
-const filterByTab = (sale: any, tabId: string): boolean => {
+/** A qué pestaña pertenece una venta por su palanca, sin mirar nada más. */
+const perteneceATab = (sale: any, tabId: string): boolean => {
   if (tabId === 'extras') return false // extras come from extraAssignments, not sales
   const d = (sale.detalle || '').toLowerCase().trim()
   const c = (sale.categoria || '').toLowerCase().trim()
@@ -129,6 +130,21 @@ const filterByTab = (sale: any, tabId: string): boolean => {
     default:                return false
   }
 }
+
+/**
+ * Filtro que usa TODA la pantalla (filas, contadores y los dos Excel).
+ *
+ * Una venta CORREGIDA no sale en ninguna pestaña. Al corregir los precios de los
+ * Repos, la operación de un cliente de fútbol pasaría a verse TRES veces: la
+ * fila vieja de 10 € en «Arpu (Repos) — histórico», el repo de 78 € en «Repos
+ * (Arpu)» y su extra de 10 € en «Repo Fútbol». Y la vieja ya no factura nada.
+ * Quien tramita tiene que seguir viendo UNA operación por operación, así que la
+ * vieja se oculta y la pantalla dice cuántas ha ocultado y dónde están ahora.
+ * Anular sigue funcionando desde cualquiera de las dos filas nuevas: la cadena
+ * del PATCH de /api/sales se lleva a toda la familia.
+ */
+const filterByTab = (sale: any, tabId: string): boolean =>
+  !esVentaSustituida(sale) && perteneceATab(sale, tabId)
 
 // ── Llaves de cruce con Telefónica por palanca (semáforo de columnas) ──
 // Mismo criterio que el formulario de Nueva Venta: estas columnas permiten
@@ -683,9 +699,16 @@ function GrupoClienteContent() {
   // Si el 'detalle' de una venta no casa con ninguna pestaña, la venta no
   // aparece en ningún sitio (ni totales ni exports). Aquí se detectan para
   // avisar de forma visible en vez de morir en silencio.
+  // Las CORREGIDAS no son huérfanas: se ocultan a propósito (ver filterByTab).
   const ventasHuerfanas = useMemo(() => {
-    return sales.filter(s => !TABS.find(t => filterByTab(s, t.id)))
+    return sales.filter(s => !esVentaSustituida(s) && !TABS.find(t => perteneceATab(s, t.id)))
   }, [sales])
+
+  // Operaciones de ESTA pestaña que están ocultas por haberse corregido. Se dice
+  // en pantalla: la fila vieja desaparece, pero nadie tiene que adivinar por qué.
+  const ocultasCorregidas = useMemo(
+    () => sales.filter(s => esVentaSustituida(s) && perteneceATab(s, activeTab)).length,
+    [sales, activeTab])
 
   // ── Export "Revisión ERP": Excel para subir a mi-nuevo-erp tal cual ──
   // Una fila por OPERACIÓN (sin agrupar) con las columnas exactas que el
@@ -1917,12 +1940,31 @@ function GrupoClienteContent() {
       {loading ? (
         <div style={{ textAlign: 'center', padding: 60, color: 'var(--medium-gray)' }}>Cargando operaciones...</div>
       ) : activeTab === 'bonos_o2' ? renderBonosO2Tab() : activeTab === 'extras' ? renderExtrasTab() : tabSales.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 60, background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border-color)', color: 'var(--medium-gray)' }}>
-          <div style={{ fontSize: 36, marginBottom: 12 }}>{tab.emoji}</div>
-          <div style={{ fontSize: 16, fontWeight: 600 }}>No hay operaciones de {tab.label} en el período activo.</div>
+        <>
+      {ocultasCorregidas > 0 && (
+        <div style={{ background: 'rgba(0,173,239,0.08)', border: '1px solid var(--mercedes-cyan)',
+                      borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: 13 }}>
+          ℹ️ <b>{ocultasCorregidas}</b> operación(es) de esta pestaña están <b>corregidas</b> y no se
+          listan aquí: su importe bueno vive ahora en <b>«Repos (Arpu)»</b> (y el extra del fútbol,
+          en <b>«Repo Fútbol»</b>). Se anulan desde allí, y se anula la familia entera.
         </div>
+      )}
+          <div style={{ textAlign: 'center', padding: 60, background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border-color)', color: 'var(--medium-gray)' }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>{tab.emoji}</div>
+            <div style={{ fontSize: 16, fontWeight: 600 }}>No hay operaciones de {tab.label} en el período activo.</div>
+          </div>
+        </>
       ) : (
         <>
+      {ocultasCorregidas > 0 && (
+        <div style={{ background: 'rgba(0,173,239,0.08)', border: '1px solid var(--mercedes-cyan)',
+                      borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: 13 }}>
+          ℹ️ <b>{ocultasCorregidas}</b> operación(es) de esta pestaña están <b>corregidas</b> y no se
+          listan aquí: su importe bueno vive ahora en <b>«Repos (Arpu)»</b> (y el extra del fútbol,
+          en <b>«Repo Fútbol»</b>). Se anulan desde allí, y se anula la familia entera.
+        </div>
+      )}
+
           {/* ── Resumen rápido ── */}
           <div style={{ display: 'flex', gap: 12, marginBottom: 20, alignItems: 'center', flexWrap: 'wrap' }}>
             <div style={{ background: 'var(--bg-card)', border: `1px solid ${tab.color}40`, borderRadius: 10, padding: '10px 18px', display: 'flex', alignItems: 'center', gap: 10 }}>
