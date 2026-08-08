@@ -131,6 +131,9 @@ const perteneceATab = (sale: any, tabId: string): boolean => {
   }
 }
 
+/** Palancas que ya no se venden: su pestaña solo sale si el mes tiene histórico. */
+const TABS_RETIRADAS = ['tv', 'repos']
+
 /**
  * Filtro que usa TODA la pantalla (filas, contadores y los dos Excel).
  *
@@ -1909,6 +1912,14 @@ function GrupoClienteContent() {
         {TABS.map(t => {
           const active = activeTab === t.id
           const count = t.id === 'extras' ? extraAssignments.length : sales.filter(s => filterByTab(s, t.id)).length
+          // Las palancas RETIRADAS («Suscripciones TV» y «Arpu (Repos) — histórico»)
+          // se esconden solas en cuanto el mes que se está mirando no tiene ni una.
+          // Se esconde la PESTAÑA, no las ventas: en los meses con histórico sigue
+          // saliendo, y las operaciones nunca se quedan sin pestaña (si no, caerían
+          // en «ventas huérfanas» y desaparecerían de los dos Excel, incluido el de
+          // Revisión ERP con el que se reclama a Telefónica).
+          // La pestaña abierta nunca se esconde, o no habría forma de salir de ella.
+          if (TABS_RETIRADAS.includes(t.id) && count === 0 && !active) return null
           return (
             <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
               display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10,
