@@ -159,6 +159,9 @@ export async function POST(request: Request) {
         monthSales: ventas,
         catalogs,
         viewingPeriod: mes.replace(/[_-]/g, ''),
+        // La plantilla del mes: sin ella el condicionante de mínimo POR TIENDA no
+        // sabe qué tiendas hay (y, por diseño, entonces no bloquea).
+        tiendaHours: input.tiendaHours || [],
         pcts,
       })
 

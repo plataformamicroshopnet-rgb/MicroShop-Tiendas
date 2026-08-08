@@ -156,6 +156,9 @@ export function useComisionesData(user?: any) {
         maxSalesSeller,
         monthSales,
         extraAssignments,
+        // La plantilla del mes: la necesita el motor del Jefe para el
+        // condicionante de mínimo POR TIENDA.
+        tiendaHours,
         tiendaRules: adjustedTiendaRules,
         setTiendaRules,
         o2Rules,

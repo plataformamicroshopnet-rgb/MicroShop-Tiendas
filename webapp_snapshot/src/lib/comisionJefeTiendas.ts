@@ -24,7 +24,8 @@
 import { computeTerritorialRows } from './territorialConsolidado'
 import { getSaleCommission } from './saleCommission'
 import { matchTipoVenta } from './ventaMatching'
-import { isSolar360 } from './salesUtils'
+import { isSolar360, esCorreccionRepos, esVentaSustituida, isSaleCancelled } from './salesUtils'
+import { getTiendasConPlantilla, norm as normNombre } from './comercialRoster'
 
 // Los 9 porcentajes del Jefe y sus defaults — los mismos que arrancan los
 // useState de la pantalla.
@@ -157,6 +158,9 @@ export interface JefePalanca {
     obj2: number
     obj3: number | null        // solo Dispositivos + Seguros
     tramoAlcanzado: 0 | 1 | 2 | 3
+    // Por qué se ha quedado en el tramo 1 teniendo el objetivo 2 cumplido: el
+    // mismo candado que a los comerciales, leído de la misma regla. null = ninguno.
+    topeMotivo?: string | null
     pctAplicado: number        // % del tramo alcanzado (0 si ninguno)
     importe: number            // lo que cobra el Jefe por esta palanca
     // Tramos con su avance/reached, en el MISMO orden y condición con que los
@@ -197,6 +201,10 @@ export interface ComisionJefeTiendasInput {
     // Periodo visualizado en formato 'YYYYMM' (activePeriodKey sin _ ni -).
     viewingPeriod: string
     pcts: JefePcts
+    // Filas del panel «Horarios de Comerciales» del mes. Hacen falta para el
+    // condicionante de MÍNIMO POR TIENDA: sin ellas no se sabe qué tiendas hay.
+    // Si no llegan, ese condicionante no bloquea (no se castiga por falta de dato).
+    tiendaHours?: any[]
 }
 
 export function computeComisionJefeTiendas(input: ComisionJefeTiendasInput): ComisionJefeTiendasResult {
@@ -303,6 +311,81 @@ export function computeComisionJefeTiendas(input: ComisionJefeTiendasInput): Com
         conv = get('altas_baf_conv')
     }
 
+    // ── EL MISMO CANDADO QUE A LOS COMERCIALES ───────────────────────────────
+    // Pedido por el dueño: si una palanca esta condicionada, al jefe le condiciona
+    // igual. Se leen los MISMOS condicionantes de la MISMA regla, para que nadie
+    // tenga que mantener dos configuraciones que se pueden desincronizar.
+    // Aqui se mide en TOTALES DE EQUIPO, porque los tramos del jefe tambien van
+    // por el total del equipo (a los comerciales se les mide su parte).
+    // Solo puede BAJAR: fuerza el tramo 1. Nunca sube a nadie.
+    const totalDeEquipo = (nombreRegla: string): number => sellerStats.reduce(
+        (acc: number, st: any) => acc + Number(st?.groupCounts?.[nombreRegla] || 0)
+                                      + Number(st?.groupPending?.[nombreRegla] || 0), 0)
+
+    const tiendasPlantilla = getTiendasConPlantilla(input.tiendaHours || [])
+    const tiendaDe: Record<string, string> = {}
+    Object.entries(tiendasPlantilla).forEach(([t, nombres]: any) => {
+        (nombres as string[]).forEach(n => { tiendaDe[normNombre(n)] = t })
+    })
+    const udsPorTienda = (tipoVenta: string): Record<string, number> => {
+        const out: Record<string, number> = {}
+        Object.keys(tiendasPlantilla).forEach(t => { out[t] = 0 })
+        for (const v of monthSales) {
+            if (isSaleCancelled(v)) continue
+            if (esCorreccionRepos(v) || esVentaSustituida(v)) continue
+            const t = tiendaDe[normNombre((v as any).vendedor)]
+            if (!t) continue
+            if (matchTipoVenta(v, tipoVenta)) out[t] += 1
+        }
+        return out
+    }
+
+    /** ¿El candado de esta regla impide pasar del tramo 1? Devuelve el motivo. */
+    const candadoDe = (rule: any): string | null => {
+        const raw = String(rule?.condicionantes || '')
+        if (!raw.startsWith('[')) return null
+        let conds: any[] = []
+        try { conds = JSON.parse(raw) || [] } catch { return null }
+        const culpables: string[] = []
+        for (const c of conds) {
+            const grupo = String(c?.targetGroup || '').trim()
+            const valor = Number(c?.value || 0)
+            if (!grupo || !(valor > 0)) continue
+            if (c.type === 'REQUIRE_GROUP_PCT_TRAMO2') {
+                const reglaObj = adjustedTiendaRules.find((r: any) => String(r.nombre || '') === grupo)
+                const objetivo = Number(reglaObj?.objPrimerTramo || 0)
+                if (!(objetivo > 0)) continue     // objetivo 0 = no se puede fallar
+                const logro = (totalDeEquipo(grupo) / objetivo) * 100
+                if (logro < valor) culpables.push(`${grupo} al ${logro.toFixed(0)} % (exige ${valor} %)`)
+            } else if (c.type === 'REQUIRE_STORE_QTY_TRAMO2') {
+                const uds = udsPorTienda(grupo)
+                const tiendas = Object.keys(uds)
+                if (tiendas.length === 0) continue  // sin plantilla no se bloquea
+                const flojas = tiendas.filter(t => uds[t] < valor).sort()
+                if (flojas.length > 0) {
+                    culpables.push(`${grupo}: exige ${valor} por tienda y faltan en ` +
+                        flojas.map(t => `${t} (${uds[t]})`).join(', '))
+                }
+            }
+        }
+        return culpables.length > 0 ? `Tramo 1 forzado: ${culpables.join('; ')}` : null
+    }
+
+    const dispRuleC = adjustedTiendaRules.find((r: any) => r.nombre?.toLowerCase().includes('dispositivo') && r.nombre?.toLowerCase().includes('seguro'))
+    const arpuRuleC = adjustedTiendaRules.find((r: any) => r.nombre?.toLowerCase().includes('arpu'))
+    const reposRuleC = adjustedTiendaRules.find((r: any) => {
+        const n = String(r.nombre || '').toLowerCase()
+        return n.includes('repo') && (n.includes('futbol') || n.includes('fútbol'))
+    })
+    const bafRuleC = adjustedTiendaRules.find((r: any) => String(r.nombre || '').toLowerCase() === 'alta baf total')
+    const convRuleC = adjustedTiendaRules.find((r: any) => String(r.nombre || '').toLowerCase() === 'alta baf convergente')
+
+    const topeDisp = candadoDe(dispRuleC)
+    const topeArpu = candadoDe(arpuRuleC)
+    const topeRepos = candadoDe(reposRuleC)
+    const topeBaf = candadoDe(bafRuleC)
+    const topeConv = candadoDe(convRuleC)
+
     // ── Avances y comisión final (mismo cálculo inline de la página) ──
     // Avance del Jefe: su % sobre la base de comisiones de la palanca; el tramo
     // (más alto alcanzado) se decide por las UNIDADES vs el objetivo del territorial.
@@ -315,10 +398,12 @@ export function computeComisionJefeTiendas(input: ComisionJefeTiendasInput): Com
     let bafTramo: 0 | 1 | 2 | 3 = 0
     if (baf.obj2 > 0 && baf.uds >= baf.obj2) { finalBaf = avanceBaf2; bafTramo = 2 }
     else if (baf.obj1 > 0 && baf.uds >= baf.obj1) { finalBaf = avanceBaf1; bafTramo = 1 }
+    if (topeBaf && bafTramo > 1) { finalBaf = avanceBaf1; bafTramo = 1 }
     let finalConv = 0
     let convTramo: 0 | 1 | 2 | 3 = 0
     if (conv.obj2 > 0 && conv.uds >= conv.obj2) { finalConv = avanceConv2; convTramo = 2 }
     else if (conv.obj1 > 0 && conv.uds >= conv.obj1) { finalConv = avanceConv1; convTramo = 1 }
+    if (topeConv && convTramo > 1) { finalConv = avanceConv1; convTramo = 1 }
 
     const avanceDisp1 = totalDispVentas * (dispPct1 / 100)
     const avanceDisp2 = totalDispVentas * (dispPct2 / 100)
@@ -343,11 +428,13 @@ export function computeComisionJefeTiendas(input: ComisionJefeTiendasInput): Com
     if (totalDispVentas >= globalDispObj3 && globalDispObj3 > 0) { finalDisp = avanceDisp3; dispTramo = 3 }
     else if (totalDispVentas >= globalDispObj2 && globalDispObj2 > 0) { finalDisp = avanceDisp2; dispTramo = 2 }
     else if (totalDispVentas >= globalDispObj1 && globalDispObj1 > 0) { finalDisp = avanceDisp1; dispTramo = 1 }
+    if (topeDisp && dispTramo > 1) { finalDisp = avanceDisp1; dispTramo = 1 }
 
     let finalArpu = 0
     let arpuTramo: 0 | 1 | 2 | 3 = 0
     if (totalArpuVentas >= globalArpuObj2 && globalArpuObj2 > 0) { finalArpu = avanceArpu2; arpuTramo = 2 }
     else if (totalArpuVentas >= globalArpuObj1 && globalArpuObj1 > 0) { finalArpu = avanceArpu1; arpuTramo = 1 }
+    if (topeArpu && arpuTramo > 1) { finalArpu = avanceArpu1; arpuTramo = 1 }
 
     const total = finalDisp + finalArpu + finalBaf + finalConv + finalRepos
 
@@ -363,6 +450,7 @@ export function computeComisionJefeTiendas(input: ComisionJefeTiendasInput): Com
             obj2: globalDispObj2,
             obj3: globalDispObj3,
             tramoAlcanzado: dispTramo,
+            topeMotivo: topeDisp,
             pctAplicado: pctDe(dispTramo, dispPct1, dispPct2, dispPct3),
             importe: finalDisp,
             tramos: [
@@ -379,6 +467,7 @@ export function computeComisionJefeTiendas(input: ComisionJefeTiendasInput): Com
             obj2: globalArpuObj2,
             obj3: null,
             tramoAlcanzado: arpuTramo,
+            topeMotivo: topeArpu,
             pctAplicado: pctDe(arpuTramo, arpuPct1, arpuPct2, 0),
             importe: finalArpu,
             tramos: [

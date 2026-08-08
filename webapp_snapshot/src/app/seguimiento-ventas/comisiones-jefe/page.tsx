@@ -30,7 +30,7 @@ const mesLargo = (mes: string) => {
 export default function ComisionesJefeTiendasPage() {
     const router = useRouter()
     const { authorized, user } = useGuard('MODULE_JEFE_TIENDAS')
-    const { loading, sellerStats, tiendaRules, monthSales, catalogs, activePeriodKey } = useComisionesData()
+    const { loading, sellerStats, tiendaRules, tiendaHours, monthSales, catalogs, activePeriodKey } = useComisionesData()
     
     // Solo el administrador puede editar los porcentajes
     const isSuperAdmin = user && user.role?.toUpperCase() === 'ADMIN'
@@ -152,6 +152,9 @@ export default function ComisionesJefeTiendasPage() {
         monthSales: monthSales || [],
         catalogs: catalogs || {},
         viewingPeriod: activePeriodKey ? String(activePeriodKey).replace(/[_-]/g, '') : '',
+        // Para el condicionante de mínimo POR TIENDA hace falta saber qué tiendas
+        // hay y quién trabaja en cada una: la plantilla del mes.
+        tiendaHours: tiendaHours || [],
         pcts: { dispPct1, dispPct2, dispPct3, arpuPct1, arpuPct2, bafPct1, bafPct2, convPct1, convPct2, reposEur1 },
     }), [sellerStats, tiendaRules, territorialTiendasRules, monthSales, catalogs, activePeriodKey,
         dispPct1, dispPct2, dispPct3, arpuPct1, arpuPct2, bafPct1, bafPct2, convPct1, convPct2, reposEur1])
