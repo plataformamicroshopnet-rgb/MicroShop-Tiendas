@@ -83,6 +83,31 @@ export default function AdminDashboardPage() {
     },
 
     // --- GRUPO VERDE ---
+    // Las dos pantallas del rediseño de los Repos (ago-2026). Van juntas y en
+    // este orden a proposito: la de arriba es para los meses ya pagados (no
+    // mueve la nomina de nadie) y la de abajo para el mes en curso (SI la mueve).
+    {
+      title: 'Corrección de precios de los Repos',
+      image: '/nx-periodos.png',
+      description: 'Meses cerrados: pone el precio de verdad a los repos de fútbol y a las suscripciones. No cambia lo que cobra nadie.',
+      icon: CalendarDays,
+      action: () => router.push('/admin/correccion-repos'),
+      color: 'rgba(91,197,0,0.1)',
+      textColor: '#5bc500',
+      permission: 'MODULE_ADMIN',
+      colorGroup: 'green'
+    },
+    {
+      title: 'Pasar las ventas del mes a «Repos (Arpu)»',
+      image: '/nx-periodos.png',
+      description: 'Mes en curso: pasa lo tecleado a la manera vieja a la palanca nueva. ⚠️ Esto sí cambia la nómina; lo enseña antes.',
+      icon: CalendarDays,
+      action: () => router.push('/admin/migracion-repos'),
+      color: 'rgba(91,197,0,0.1)',
+      textColor: '#5bc500',
+      permission: 'MODULE_ADMIN',
+      colorGroup: 'green'
+    },
     {
       title: 'Gestión de Periodos Operativos',
       image: '/nx-periodos.png',
