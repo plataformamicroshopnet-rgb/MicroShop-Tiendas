@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { useComisionesData, matchTipoVenta } from '@/hooks/useComisionesData'
 import { ALL_GROUPS } from '@/lib/comisiones'
 import { useGuard } from '@/hooks/useGuard'
+import { textoCondicionantes } from '@/lib/condicionantesTexto'
 import { useRouter } from 'next/navigation'
 import { normalizeRole } from '@/lib/appConfig'
 import { useEffect } from 'react'
@@ -828,6 +829,22 @@ export default function ComisionesDashboardPage() {
                                                                     </div>
                                                                 )}
                                                             </div>
+                                                            {/* EL «OJO» DE LA PALANCA. Se escribe SOLO a partir de lo que la
+                                                                regla tiene configurado (lib/condicionantesTexto), nunca a
+                                                                mano: asi lo que se lee es exactamente lo que se paga. Si un
+                                                                dia se añade o se quita una condicion, el aviso cambia con
+                                                                ella; y si no hay ninguna, no se enseña nada. */}
+                                                            {(() => {
+                                                              const ojo = textoCondicionantes(rule)
+                                                              if (ojo.length === 0) return null
+                                                              return (
+                                                                <div style={{ marginTop: 5, padding: '5px 8px', borderRadius: 6,
+                                                                              background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.35)',
+                                                                              fontSize: 10.5, lineHeight: 1.45, color: '#92400E', fontWeight: 500 }}>
+                                                                  <b>OJO:</b> {ojo.join(' ')}
+                                                                </div>
+                                                              )
+                                                            })()}
                                                         </td>
                                                         <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5, color: '#334155' }}>
                                                             {formatImporteTramo(rule.importePrimerTramo)}

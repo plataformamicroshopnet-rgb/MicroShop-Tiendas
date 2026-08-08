@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { PageHeader } from '@/components/PageHeader'
+import { textoCondicionantes } from '@/lib/condicionantesTexto'
 import { useComisionesData } from '@/hooks/useComisionesData'
 import { useGuard } from '@/hooks/useGuard'
 import { useRouter } from 'next/navigation'
@@ -229,6 +230,32 @@ export default function ComisionesJefeTiendasPage() {
                 title={<span style={{ color: '#0078d4', fontWeight: 800 }}>Comisiones Jefe Tiendas</span>}
                 showBack={true}
             />
+
+            {/* EL «OJO» DE LAS PALANCAS CONDICIONADAS.
+                Se escribe SOLO a partir de lo que cada regla tiene configurado
+                (lib/condicionantesTexto), igual que en el Panel de Comisiones: asi
+                lo que se lee aqui es exactamente lo que se paga, y si un dia se
+                cambia una condicion el aviso cambia con ella. Solo salen las
+                palancas que tienen letra pequeña de verdad. */}
+            {(() => {
+                const conAviso = (tiendaRules || [])
+                    .map((r: any) => ({ nombre: r.nombre, lineas: textoCondicionantes(r) }))
+                    .filter((x: any) => x.lineas.some((l: string) => !l.startsWith('Se sube de tramo')))
+                if (conAviso.length === 0) return null
+                return (
+                    <div style={{ marginTop: 20, padding: '12px 16px', borderRadius: 10,
+                                  background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.4)' }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#92400E', marginBottom: 6 }}>
+                            OJO: palancas con condiciones
+                        </div>
+                        {conAviso.map((x: any) => (
+                            <div key={x.nombre} style={{ fontSize: 12, color: '#92400E', lineHeight: 1.5, marginBottom: 3 }}>
+                                <b>{x.nombre}:</b> {x.lineas.join(' ')}
+                            </div>
+                        ))}
+                    </div>
+                )
+            })()}
 
             <div style={{ marginTop: 24, overflowX: 'auto' }}>
                 <style dangerouslySetInnerHTML={{__html: `
