@@ -70,106 +70,15 @@ const isRepos = (sale: any) => {
 // --- Commission Rule Engine Helper Functions ---
 
 // Parseador de Fórmulas de Productos (Soporta exclusiones con " -")
-export const matchProductFormula = (productName: string, formula: string) => {
-    if (!formula || !productName) return false;
-    const p = String(productName).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-    
-    const orBlocks = formula.split('+').map((b: string) => b.trim());
-    for (const block of orBlocks) {
-        if (!block) continue;
-        const parts = block.split(' -').map(part => part.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim());
-        const mustInclude = parts[0];
-        const mustNotIncludes = parts.slice(1);
-        
-        if (mustInclude && p.includes(mustInclude)) {
-            let isExcluded = false;
-            for (const excl of mustNotIncludes) {
-                if (excl && p.includes(excl)) {
-                    isExcluded = true;
-                    break;
-                }
-            }
-            if (!isExcluded) return true;
-        }
-    }
-    return false;
-};
+// ⚠️ matchTipoVenta y matchProductFormula VIVÍAN AQUÍ COPIADAS, y la copia se
+// quedó vieja: le faltaban el comodín de O2 arreglado en julio (las «Fibra
+// Adicional» y las «Interna Linea Movil» ya NO cuentan), el caso del Swap y el
+// puente de agosto de los Repos. Por eso esta pantalla enseñaba otras cifras que
+// el resto del programa. Ahora se usan las de lib/ventaMatching, que es la única
+// que hay: lo que se arregle allí vale también aquí.
+export { matchProductFormula, matchTipoVenta } from './ventaMatching';
+import { matchProductFormula, matchTipoVenta } from './ventaMatching';
 
-export const matchTipoVenta = (sale: any, tipoVentaRaw: string) => {
-    if (!tipoVentaRaw) return false;
-    
-    const tipos = tipoVentaRaw.split(',').map(s => s.trim()).filter(Boolean);
-    const catRaw = sale.categoria || sale.detalle || sale.sheet || '';
-    const cat = String(catRaw).trim().toLowerCase();
-    const prod = String(sale.producto || '').trim().toLowerCase();
-
-    for (const tipoVenta of tipos) {
-        if (tipoVenta === 'FORMULA_LIBRE') continue;
-        
-        let matched = false;
-        if (cat === 'o2') {
-            const target = String(tipoVenta).trim().toLowerCase();
-            if (target === 'o2') {
-                const prodName = prod.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-                matched = prodName.startsWith('fibra') || prodName.startsWith('interna');
-            } else {
-                matched = (prod === target);
-            }
-        } else {
-            switch(tipoVenta.toLowerCase().trim()) {
-                case 'alta baf total':
-                    matched = cat === 'mimovistar' || cat === 'resto baf' || prod.includes('baf total') || (prod.includes('fibra') && !prod.includes('movil') && !prod.includes('móvil'));
-                    break;
-                case 'alta baf convergente':
-                    matched = cat === 'mimovistar' || prod.includes('baf convergente') || prod.includes('fd total') || prod.includes('fd flex') || (prod.includes('fibra') && (prod.includes('movil') || prod.includes('móvil')));
-                    break;
-                case 'dispositivos + seguro':
-                case 'dispositivos + seguros':
-                    matched = cat === 'rent' || cat === 'seguro';
-                    break;
-                case 'dispositivos':
-                    matched = cat === 'rent';
-                    break;
-                case 'seguro':
-                    matched = cat === 'seguro';
-                    break;
-                case 'mpa':
-                    matched = prod.includes('movistar prosegur alarmas') || prod.includes('mpa') || prod.includes('alarma');
-                    break;
-                case 'fttr':
-                    matched = prod.includes('solución fttr') || prod.includes('solucion fttr') || prod.includes('fttr');
-                    break;
-                case 'señalización solar 360':
-                    matched = prod.includes('solar360') || prod.includes('solar 360') || prod.includes('solar');
-                    break;
-                case 'arpu':
-                    matched = cat === 'repos' && !prod.includes('fútbol') && !prod.includes('futbol');
-                    break;
-                case 'repo fútbol':
-                case 'repo futbol':
-                    // DESDE AGOSTO 2026: un cliente de fútbol genera DOS líneas —el repo
-                    // de 78 € y el extra de 10 €— y las dos llevan «Fútbol» en el nombre.
-                    // Si se casara por el nombre, un cliente contaría DOS altas. Se casa
-                    // por PALANCA: solo la del extra es la que cuenta como alta.
-                    // Antes de agosto, el criterio de siempre (histórico intacto).
-                    matched = esDesdeAgosto2026(sale)
-                        ? (cat === 'repo futbol' || cat === 'repo fútbol')
-                        : (prod.includes('fútbol') || prod.includes('futbol') || prod.includes('repo f'));
-                    break;
-                default:
-                    if (tipoVenta.toLowerCase().trim() === cat) {
-                        matched = true;
-                    } else {
-                        const searchString = `${prod} ${String(sale.detalle || '').toLowerCase()} ${String(sale.grupo || '').toLowerCase()}`;
-                        matched = matchProductFormula(searchString, tipoVenta);
-                    }
-                    break;
-            }
-        }
-        if (matched) return true;
-    }
-    return false;
-};
 
 export const parseSafeFloat = (val: any): number => {
     if (val === null || val === undefined) return 0;
