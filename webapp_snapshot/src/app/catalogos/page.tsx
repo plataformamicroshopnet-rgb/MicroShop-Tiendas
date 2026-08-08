@@ -122,7 +122,7 @@ export default function CatalogosPage() {
     "Ti": [], "Rent": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": [], "Varios": [], "Repos": [], [CAT_REPOS]: [], "Resto BAF": [], "Traslado miMovistar": [], "Accesorios": []
   })
   const [activeTab, setActiveTab] = useState('Ti')
-  const isProductTab = CATEGORIES.includes(activeTab) && activeTab !== 'Comisiones para Tiendas' && activeTab !== 'Comisiones para Tienda O2 MovilFree' && activeTab !== 'PRV Territorial Movistar y O2'
+  const isProductTab = CATEGORIES.includes(activeTab) && activeTab !== 'Comisiones para Tiendas' && activeTab !== 'Comisiones O2 MovilFree' && activeTab !== 'PRV Territorial Movistar y O2'
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [search, setSearch] = useState('')
@@ -1190,7 +1190,7 @@ export default function CatalogosPage() {
           { cat: 'Accesorios', tip: 'Catálogo de accesorios (fundas, protectores, cargadores, etc). Introduce categoría, nombre, cuota total y comisión.' },
 
           { cat: 'Comisiones para Tiendas', tip: 'Configura las reglas globales y objetivos que aplicarán a los comerciales de la tienda en este mes.' },
-          { cat: 'Comisiones para Tienda O2 MovilFree', tip: 'Configuración del motor matemático de comisiones y bonos específicos para O2 y MovilFree.' },
+          { cat: 'Comisiones O2 MovilFree', tip: 'Configuración del motor matemático de comisiones y bonos específicos para O2 y MovilFree.' },
           { cat: 'PRV Territorial Movistar y O2', tip: 'Configuración y cálculo automático de tramos y comisiones territoriales.' },
         ] as const).map(({ cat, tip }) => (
           <TooltipBox key={cat} title={cat} content={tip} position="bottom">
@@ -2045,7 +2045,7 @@ export default function CatalogosPage() {
       )}
 
       {!isProductTab && activeTab === 'Comisiones para Tiendas' && <ProductosComisionanTab />}
-      {!isProductTab && activeTab === 'Comisiones para Tienda O2 MovilFree' && <ComisionesO2Tab />}
+      {!isProductTab && activeTab === 'Comisiones O2 MovilFree' && <ComisionesO2Tab />}
       {!isProductTab && activeTab === 'PRV Territorial Movistar y O2' && <TerritorialTab />}
 
     </div>
