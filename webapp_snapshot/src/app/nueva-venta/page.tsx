@@ -592,22 +592,15 @@ export default function NuevaVentaPage() {
   // poder elegirse. Siguen VISIBLES si la línea que se está editando ya las tiene:
   // si no, al abrir una venta antigua el desplegable saldría en blanco y al guardar
   // se perdería su tipo.
-  // ⚠️ «Repos» (la vieja «Arpu (Repos)») NO se retira todavía: sus cuatro productos
-  // «Repos destino BAF miMovistar/Fusión incremento de ARPU …» se siguen vendiendo
-  // (hay ventas de Carlos, Cristina y Nuria en la primera semana de agosto) y NO
-  // existen en el catálogo de la palanca nueva. Quitarla dejaría a tres comerciales
-  // sin poder apuntar lo que venden. Lo que sí se retira de esa palanca es el
-  // producto del fútbol, que ahora se teclea en «Repos (Arpu)» (ver PRODUCTOS_RETIRADOS).
   // ── REPOS DE «INCREMENTO DE ARPU» ────────────────────────────────────────────
-  // Son los cuatro «Repos destino BAF miMovistar/Fusión incremento de ARPU …».
-  // No se teclean con un precio de tarifa: su importe sale de lo que sube la
-  // factura del cliente (Fact. Nueva − Fact. Anterior) por el % del catálogo.
-  // Ese modo vivía atado a la palanca VIEJA («Repos»), así que esos productos no
-  // se podían mudar a «Repos (Arpu)»: allí el multiplicador significa otra cosa
-  // (comisión × multiplicador) y el importe habría salido mal. Con esto el modo
-  // va con el PRODUCTO y no con la palanca, así que el día que se suban a la hoja
-  // de «Repos (Arpu)» funcionan igual y la palanca vieja se puede retirar.
-  // Mientras no se suban, esto no cambia absolutamente nada.
+  // Los cuatro «Repos destino BAF miMovistar/Fusión incremento de ARPU …» no se
+  // teclean con un precio de tarifa: su importe sale de lo que sube la factura del
+  // cliente (Fact. Nueva − Fact. Anterior) por el factor del catálogo. Ese modo
+  // vivía atado a la palanca «Repos»; ahora va con el PRODUCTO, así que funciona
+  // esté en la palanca que esté.
+  // Telefónica los retiró en agosto de 2026, así que no se venden más — pero las
+  // ventas que YA existen (seis de la primera semana de agosto, y todo el
+  // histórico) se siguen abriendo, editando y anulando con sus dos casillas.
   const esRepoIncrementoArpu = (producto: any) =>
     String(producto || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
       .includes('incremento de arpu')
@@ -615,7 +608,14 @@ export default function NuevaVentaPage() {
   const usaModoArpu = (prod: any) =>
     prod?.categoria === 'Repos' || (prod?.categoria === 'Repos UP' && esRepoIncrementoArpu(prod?.producto))
 
-  const CATS_RETIRADAS = ['Suscripciones TV']
+  // Palancas RETIRADAS: no se pueden elegir al teclear una venta nueva.
+  // · «Suscripciones TV» → sus productos viven ahora en «Repos (Arpu)».
+  // · «Repos» (la vieja «Arpu (Repos)») → Telefónica retiró sus productos de
+  //   «incremento de ARPU», así que la palanca se queda sin nada que vender; y el
+  //   repo de fútbol se teclea desde agosto en «Repos (Arpu)».
+  // Una línea que YA tiene una de las dos la sigue mostrando (ver catsElegibles),
+  // para poder abrir y editar las ventas antiguas sin que se quede en blanco.
+  const CATS_RETIRADAS = ['Suscripciones TV', 'Repos']
   // Productos que ya no se eligen aunque su palanca siga viva.
   const PRODUCTOS_RETIRADOS: Record<string, string[]> = { 'Repos': ['Extra Repos up destino Fútbol'] }
   const CATS_NUNCA = ['Fija', 'Móvil', 'Micro', 'Fija y Móvil', 'Prepago']
