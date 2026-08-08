@@ -243,7 +243,7 @@ export default function ComisionesJefeTiendasPage() {
             {(() => {
                 const conAviso = (tiendaRules || [])
                     .map((r: any) => ({ nombre: r.nombre, lineas: textoCondicionantes(r) }))
-                    .filter((x: any) => x.lineas.some((l: string) => !l.startsWith('Se sube de tramo')))
+                    .filter((x: any) => x.lineas.length > 0)
                 if (conAviso.length === 0) return null
                 return (
                     <div style={{ marginTop: 20, padding: '12px 16px', borderRadius: 10,
