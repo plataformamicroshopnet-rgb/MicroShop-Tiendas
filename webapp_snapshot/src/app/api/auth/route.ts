@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { login } from '@/lib/auth'
+import { verifyPassword, hashPassword } from '@/lib/password'
 import { PrismaClient } from '@prisma/client'
 
 console.log('[API Login] Instanciando PrismaClient...');
@@ -16,9 +17,31 @@ export async function POST(request: Request) {
     console.log('[API Login] Consultando usuarios en la base de datos a través de Prisma...');
     const allUsers = await prisma.user.findMany()
     console.log('[API Login] Consulta exitosa. Usuarios encontrados:', allUsers.length);
-    const user = allUsers.find(
-      (u: any) => u.username.toLowerCase() === (username || '').toLowerCase() && u.password === password
+    // Primero se busca a la PERSONA y despues se comprueba su contraseña contra la
+    // huella guardada. Antes se buscaba por usuario Y contraseña a la vez, que solo
+    // funciona si la contraseña esta escrita en claro en la base.
+    const candidato: any = allUsers.find(
+      (u: any) => u.username.toLowerCase() === (username || '').toLowerCase()
     )
+    const comprobacion = candidato
+      ? verifyPassword(password, candidato.password)
+      : { ok: false, hayQueMigrar: false }
+    const user = comprobacion.ok ? candidato : null
+
+    // Si acerto pero lo guardado seguia siendo texto legible, se convierte AHORA.
+    // Asi, aunque quede algun usuario sin convertir, se arregla solo la primera vez
+    // que esa persona entra, sin que ella note nada.
+    if (user && comprobacion.hayQueMigrar) {
+      try {
+        await prisma.user.update({
+          where: { username: user.username },
+          data: { password: hashPassword(password) }
+        })
+        console.log('[API Login] Contraseña de', user.username, 'guardada ya como huella.');
+      } catch (e) {
+        console.error('[API Login] No se pudo convertir la contraseña:', e);
+      }
+    }
 
     if (user) {
       const { password: _, ...userWithoutPassword } = user

@@ -42,6 +42,11 @@ try {
     // Migración idempotente: Boletín -> Nº Pedido (solo rellena vacíos)
     console.log('[Boot] Migrando Boletín a Nº Pedido donde falte...');
     execSync('node scripts/migrate_boletin_pedido.js', { stdio: 'inherit' });
+
+    // Contraseñas: las que sigan guardadas en texto legible pasan a huella.
+    // Idempotente y silencioso para quien entra: misma contraseña de siempre.
+    console.log('[Boot] Cifrando contraseñas que sigan en claro...');
+    execSync('node scripts/migrate_password_hash.js', { stdio: 'inherit' });
 } catch (e) {
     console.error('[Boot] Error sincronizando bd o limpiando stock:', e.message);
 }

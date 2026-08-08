@@ -143,7 +143,10 @@ export default function AdminUsuariosPage() {
     setIsNewUser(false)
     setUserForm({
         username: u.username,
-        password: u.password,
+        // Vacia a proposito: la contraseña ya no se puede leer, ni aqui ni en la
+        // base. Dejarla en blanco significa «no la cambies»; para cambiarla se
+        // escribe una nueva encima.
+        password: '',
         role: u.role,
         codigoComercial: u.codigoComercial || '',
         retroDiasCrear: u.retroDiasCrear === null || u.retroDiasCrear === undefined ? '' : String(u.retroDiasCrear),
@@ -160,7 +163,8 @@ export default function AdminUsuariosPage() {
   }
 
   const handleSaveUser = async () => {
-    if (!userForm.username || !userForm.password) return alert('Por favor rellena usuario y contraseña')
+    if (!userForm.username) return alert('Por favor rellena el nombre de usuario')
+    if (isNewUser && !userForm.password) return alert('Un usuario nuevo necesita contraseña')
     
     try {
       if (!isNewUser) {
@@ -170,7 +174,8 @@ export default function AdminUsuariosPage() {
           body: JSON.stringify({
             oldUsername: selectedUser.username,
             newUsername: userForm.username,
-            password: userForm.password,
+            // Solo viaja si se ha escrito una nueva; en blanco = se queda la suya.
+            ...(userForm.password ? { password: userForm.password } : {}),
             role: userForm.role,
             codigoComercial: userForm.codigoComercial,
             retroDiasCrear: userForm.retroDiasCrear === '' ? null : Number(userForm.retroDiasCrear),
@@ -381,14 +386,23 @@ export default function AdminUsuariosPage() {
                                         />
 
                                         <label style={{ fontSize: 13, color: '#475569', fontWeight: 600 }}>Contraseña:</label>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                             <KeyRound size={16} color="#94A3B8" />
                                             <input 
                                                 type="text" 
                                                 value={userForm.password}
+                                                placeholder={isNewUser ? 'Contraseña del usuario nuevo' : 'Dejar en blanco para no cambiarla'}
                                                 onChange={e => setUserForm({...userForm, password: e.target.value})}
                                                 style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #CBD5E1', fontSize: 14, flex: 1, outline: 'none' }}
                                             />
+                                          </div>
+                                          {!isNewUser && (
+                                            <span style={{ fontSize: 11.5, color: '#64748B', paddingLeft: 24 }}>
+                                              Las contraseñas se guardan cifradas: ya no se pueden consultar, ni desde aquí
+                                              ni abriendo la base de datos. Si alguien la olvida, escríbele una nueva.
+                                            </span>
+                                          )}
                                         </div>
 
                                         <label style={{ fontSize: 13, color: '#475569', fontWeight: 600 }}>Rol Base:</label>

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
+import { hashPassword, esHuella } from '@/lib/password'
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
@@ -23,7 +24,11 @@ export async function GET() {
     } catch (e) { }
     return {
       username: u.username,
-      password: u.password,
+      // La contraseña NO sale de aqui. Antes se enviaba al navegador de quien
+      // abriera «Gestion de Usuarios»: las doce contraseñas viajaban por la red y
+      // se quedaban en la pantalla. Se manda solo si esta pendiente de convertir,
+      // para poder avisar; nunca su contenido.
+      passwordPendiente: !esHuella(u.password),
       role: u.role,
       codigoComercial: u.codigoComercial || '',
       retroDiasCrear: (u as any).retroDiasCrear ?? null,
@@ -79,7 +84,7 @@ export async function PUT(request: Request) {
     await prisma.user.create({
       data: {
         username,
-        password,
+        password: hashPassword(password),
         role: role || 'COMERCIAL',
         codigoComercial: codigoComercial || '',
         permissions: 'null'
@@ -110,7 +115,8 @@ export async function PATCH(request: Request) {
 
     const updateData: any = {}
     if (newUsername) updateData.username = newUsername
-    if (password) updateData.password = password
+    // Cambiar la contraseña guarda la HUELLA, no lo que se ha tecleado.
+    if (password) updateData.password = hashPassword(password)
     if (role) updateData.role = role
     if (codigoComercial !== undefined) updateData.codigoComercial = codigoComercial
     if (retroDiasCrear !== undefined) updateData.retroDiasCrear = retroDiasCrear === null || retroDiasCrear === '' ? null : Math.max(0, parseInt(retroDiasCrear, 10) || 0)
