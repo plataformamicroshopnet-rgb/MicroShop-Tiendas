@@ -6,7 +6,7 @@ import { FilterX, Search, Save, X, Edit2, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { PageHeader } from '@/components/PageHeader'
 import { can, canEdit as canEditMacro, canView } from '@/lib/permissions'
-import { renderDashboardData, calculateDynamicCommission, sanitizeSale, getCurrentMonthString, normalizeString, isSaleCancelled, findCatalogVigente } from '@/lib/salesUtils'
+import { renderDashboardData, calculateDynamicCommission, sanitizeSale, getCurrentMonthString, normalizeString, isSaleCancelled, findCatalogVigente, esVentaSustituida } from '@/lib/salesUtils'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { useGuard } from '@/hooks/useGuard'
 import { usePeriod } from '@/components/PeriodProvider'
@@ -777,9 +777,16 @@ function OperationsContent() {
   // Apply filter locally
   const normName = (name: any) => String(name || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
+  // Una venta CORREGIDA no se lista: la reemplazan sus dos líneas nuevas (el repo
+  // de 78 € y su extra de 10 €) y ella ya no factura nada. Si se dejara, un solo
+  // cliente de fútbol se vería TRES veces y el recuento de operaciones del mes
+  // saldría inflado. Mismo criterio que Operaciones por Grupo Cliente.
+  const ventasVivas = sales.filter((s: any) => !esVentaSustituida(s));
+  const corregidasOcultas = sales.length - ventasVivas.length;
+
   let displayedSales = activeVendorFilter 
-    ? sales.filter(s => normName(s.vendedor || '') === normName(activeVendorFilter))
-    : sales;
+    ? ventasVivas.filter(s => normName(s.vendedor || '') === normName(activeVendorFilter))
+    : ventasVivas;
 
   if (grupoFilter && LEVER_MAPPING[grupoFilter]) {
     const validProds = LEVER_MAPPING[grupoFilter].map(p => p.toLowerCase());
@@ -1375,6 +1382,15 @@ function OperationsContent() {
         })()}
       </div>
       
+
+      {corregidasOcultas > 0 && (
+        <div style={{ background: 'rgba(0,173,239,0.08)', border: '1px solid var(--mercedes-cyan)',
+                      borderRadius: 10, padding: '10px 14px', margin: '0 0 14px', fontSize: 13 }}>
+          ℹ️ <b>{corregidasOcultas}</b> operación(es) están <b>corregidas</b> y no se listan: su
+          importe bueno vive ahora en «Repos (Arpu)» (y el extra del fútbol, en «Repo Fútbol»).
+          Se anulan desde allí, y se anula la operación entera.
+        </div>
+      )}
 
       {activeVendorFilter ? (
         <CommercialDashboard data={displayedSales} activeExtras={activeExtras} isComercial={isComercial} isAdmin={isAdmin} catalogs={catalogs} />

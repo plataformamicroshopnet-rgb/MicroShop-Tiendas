@@ -295,10 +295,16 @@ export async function PATCH(request: Request) {
        const effectivePeriodId = updateData.periodId !== undefined ? updateData.periodId : existingSale.periodId;
 
        if (effectivePeriodId && effectiveProducto) {
+          // La palanca de la venta ACOTA la búsqueda. Sin esto, un producto que
+          // existe en dos palancas a la vez —«Movistar+», «Champions» y «Disney +
+          // sin anuncios» están en «Suscripciones TV» y en «Repos (Arpu)»— podía
+          // engancharse a la fila equivocada y traer el precio de la otra.
+          const palancaVenta = String(existingSale.detalle || existingSale.sheet || '').trim();
           const matchingCatalogs = await prisma.productCatalog.findMany({
-             where: { 
+             where: {
                  periodId: effectivePeriodId,
-                 producto: { equals: effectiveProducto } // Exact match for base price
+                 producto: { equals: effectiveProducto }, // Exact match for base price
+                 ...(palancaVenta ? { categoria: palancaVenta } : {})
              }
           });
 
@@ -306,10 +312,32 @@ export async function PATCH(request: Request) {
              // Vigencias unificadas: la fila que cubre la fecha efectiva de la venta, o la primera.
              const targetCatalog = findCatalogVigente(matchingCatalogs, effectiveProducto, effectiveFecha) || matchingCatalogs[0];
 
-             // Aplicar los nuevos valores derivados encontrados en la fuente de la verdad
-             const basePrice = targetCatalog.anual ? parseFloat(String(targetCatalog.anual).replace(',', '.')) : null;
-             
-             updateData.cuota = basePrice;
+             // ── DE DÓNDE SALE EL IMPORTE, SEGÚN LA PALANCA ────────────────────
+             // Solo Rent y Seguros guardan la cuota en `anual`. Las demás la
+             // guardan en `comision` (algunas con multiplicador). Aquí se leía
+             // SIEMPRE `anual` y, si venía vacío, se escribía NULL: tocar la fecha
+             // de una LaLiga de 36 € la dejaba a 0 € — y encima machacaba el
+             // importe que la persona acabara de teclear a mano.
+             const num = (v: any) => {
+               const n = parseFloat(String(v ?? '').replace(',', '.'))
+               return isNaN(n) ? null : n
+             }
+             const pal = palancaVenta.toLowerCase()
+             const multiplica = pal === 'suscripciones tv' || pal === 'repos up'
+             const planas = ['o2', 'seguro', 'prepago', 'varios', 'accesorios']
+             let nuevoPrecio: number | null = null
+             if (targetCatalog.anual) {
+               nuevoPrecio = num(targetCatalog.anual)
+             } else if (multiplica) {
+               const base = num(targetCatalog.comision)
+               const mult = num((targetCatalog as any).comisionConCoste)
+               if (base !== null) nuevoPrecio = base * (mult && mult > 0 ? mult : 1)
+             } else if (planas.includes(pal)) {
+               nuevoPrecio = num(targetCatalog.comision)
+             }
+             // Si no se sabe de dónde sacar el precio, se deja el que ya tenía.
+             // Nunca se escribe null: una venta sin importe no se ve venir.
+             if (nuevoPrecio !== null) updateData.cuota = nuevoPrecio;
              // Si targetCatalog informa de una categoría (grupo), reescribimos el grupo también
              if (targetCatalog.categoria) {
                  updateData.grupo = targetCatalog.categoria;
