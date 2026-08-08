@@ -77,11 +77,11 @@ export default function MigracionReposPage() {
   const difJefe = d ? Number(d.jefeDespues) - Number(d.jefeAntes) : 0
 
   const card = (titulo: string, valor: string, tono?: 'verde' | 'rojo') => (
-    <div style={{ background: 'var(--card-bg, #fff)', border: '1px solid var(--border-color, #e2e8f0)',
+    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)',
                   borderRadius: 10, padding: '12px 16px', minWidth: 170 }}>
-      <div style={{ fontSize: 11.5, color: 'var(--medium-gray, #64748b)', marginBottom: 4 }}>{titulo}</div>
+      <div style={{ fontSize: 11.5, color: 'var(--medium-gray)', marginBottom: 4 }}>{titulo}</div>
       <div style={{ fontSize: 20, fontWeight: 700, fontVariantNumeric: 'tabular-nums',
-                    color: tono === 'verde' ? '#15803D' : tono === 'rojo' ? '#DC2626' : 'inherit' }}>{valor}</div>
+                    color: tono === 'verde' ? '#15803D' : tono === 'rojo' ? '#DC2626' : 'var(--light-text)' }}>{valor}</div>
     </div>
   )
 

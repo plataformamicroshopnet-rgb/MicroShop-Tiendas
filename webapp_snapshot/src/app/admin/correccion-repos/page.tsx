@@ -111,10 +111,11 @@ export default function CorreccionReposPage() {
               ['Se cobrará', eu(d.cobroDespues)],
               ['Diferencia', eu(d.diferencia)],
             ].map(([t, v]) => (
-              <div key={t} style={{ background: 'var(--card-bg, #0f172a)', border: '1px solid var(--border-color)',
+              <div key={t} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)',
                                     borderRadius: 10, padding: '12px 16px', minWidth: 150 }}>
                 <div style={{ fontSize: 11, color: 'var(--medium-gray)', textTransform: 'uppercase' }}>{t}</div>
-                <div style={{ fontSize: 20, fontWeight: 700, marginTop: 4 }}>{v}</div>
+                <div style={{ fontSize: 20, fontWeight: 700, marginTop: 4, color: 'var(--light-text)',
+                              fontVariantNumeric: 'tabular-nums' }}>{v}</div>
               </div>
             ))}
           </div>
@@ -137,7 +138,7 @@ export default function CorreccionReposPage() {
           <div style={{ maxHeight: 460, overflowY: 'auto', border: '1px solid var(--border-color)',
                         borderRadius: 10, marginBottom: 18 }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead style={{ position: 'sticky', top: 0, background: 'var(--card-bg, #0f172a)' }}>
+              <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-card)' }}>
                 <tr>
                   {['Fecha', 'Comercial', 'Cliente', 'Producto de hoy', 'Cobra hoy',
                     'Se convierte en', 'Cobrará', ''].map(h => (
