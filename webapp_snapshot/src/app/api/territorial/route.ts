@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { exigeSesion } from '@/lib/apiGuard';
 
 const prisma = new PrismaClient();
 
@@ -32,6 +33,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    // Guarda la config territorial del mes: exige sesión (antes escribía
+    // cualquiera sin identificarse).
+    const no = await exigeSesion(request); if (no) return no
     const { periodKey, tiendas, o2 } = await request.json();
 
     if (!periodKey) {

@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import { NextResponse } from 'next/server'
 import { JEFE_PCT_KEYS_BASE } from '@/lib/comisionJefeTiendas'
+import { exigeAdmin } from '@/lib/apiGuard'
 
 const prisma = new PrismaClient()
 
@@ -18,6 +19,9 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    // Crear / clonar / borrar meses: solo el administrador (antes cualquiera
+    // con la URL podía crear, clonar o BORRAR un mes entero).
+    const no = await exigeAdmin(req); if (no) return no
     const body = await req.json()
     const { action, periodId } = body
 
@@ -79,6 +83,10 @@ export async function POST(req: Request) {
         await prisma.tiendaComercialHour.deleteMany({ where: { periodKey } })
         await prisma.appSetting.deleteMany({ where: { key: { in: [
           `territorial_tiendas_${periodKey}`, `territorial_o2_${periodKey}`, `o2_rules_v2_${periodKey}`,
+          // Config por mes que también se clona: si no se borran al regenerar un
+          // borrador, quedan restos de la tanda anterior justo en las claves
+          // que el clonado vuelve a escribir.
+          `condiciones_plus_data_${periodKey}`, `fttr_discount_${periodKey}`,
           // Los 9 % del Jefe de Tiendas de ESE mes: si no se borran, un borrador
           // re-clonado se queda con los porcentajes de la tanda anterior.
           ...JEFE_PCT_KEYS_BASE.map(k => `${k}_${periodKey}`)
@@ -191,6 +199,11 @@ export async function POST(req: Request) {
             importePrimerTramo: r.importePrimerTramo,
             objSegundoTramo: r.objSegundoTramo,
             importeSegundoTramo: r.importeSegundoTramo,
+            // El 3er tramo y el ORDEN de las palancas se perdían al clonar: el
+            // mes nuevo nacía sin tercer tramo y con las palancas desordenadas.
+            objTercerTramo: r.objTercerTramo,
+            importeTercerTramo: r.importeTercerTramo,
+            order: r.order,
             condicionantes: r.condicionantes,
             totalHoras: r.totalHoras
           }))
@@ -204,7 +217,10 @@ export async function POST(req: Request) {
           data: sourceHours.map(h => ({
             periodKey: periodKey,
             comercial: h.comercial,
-            horario: h.horario
+            horario: h.horario,
+            // La TIENDA del comercial se perdía al clonar → el territorial del
+            // mes nuevo salía a 0 € porque no sabía a qué tienda va cada uno.
+            tienda: h.tienda
           }))
         });
       }
@@ -214,6 +230,11 @@ export async function POST(req: Request) {
         `territorial_tiendas_${source.period_key}`,
         `territorial_o2_${source.period_key}`,
         `o2_rules_v2_${source.period_key}`,
+        // Config por mes que se perdía al clonar: las condiciones plus del mes y
+        // el descuento FTTR. Sin ellas el mes nuevo caía a valores a fuego
+        // (el FTTR a 910 €) y a los candados del 2º tramo les faltaba su base.
+        `condiciones_plus_data_${source.period_key}`,
+        `fttr_discount_${source.period_key}`,
         // Los 9 % del Jefe de Tiendas del mes de origen. Desde que son POR MES
         // (ago-2026) hay que arrastrarlos como todo lo demás: si no, el mes nuevo
         // cae al respaldo general y el jefe cobraría con unos % de hace meses.
@@ -283,8 +304,11 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
   try {
+    // Activar un mes (que degrada el resto a histórico) o cambiar sus límites:
+    // solo el administrador.
+    const no = await exigeAdmin(req); if (no) return no
     const body = await req.json()
-    const { 
+    const {
       id, status, pymeMultiplier, tramo1Limit, tramo2Limit, tramo3Limit,
       visitasM1Contactos, visitasM1Visitas, visitasM2Contactos, 
       visitasM2Visitas, visitasM3Contactos, visitasM3Visitas 

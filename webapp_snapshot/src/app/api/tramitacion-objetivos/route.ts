@@ -50,9 +50,21 @@ export async function POST(request: Request) {
 
     const results = []
 
+    // Las 10 columnas de objetivos por tienda. El UPDATE solo escribe las que
+    // VIENEN en el envío: antes se ponían todas con `|| 0`, así que editar UNA
+    // casilla (la pantalla manda 8 de 10) machacaba a 0 seguros/dispUnidades/
+    // movil, que ni salen en el formulario. Los ausentes se dejan como estaban.
+    const CAMPOS = ['bafConvMS','bafNoTrasl','tvFutbol','alarmas','dispSegEuros','dispUnidades','seguros','movil','repos','fttr'] as const
+    const num = (v: any) => { const n = Number(v); return isFinite(n) ? n : 0 }
+
     for (const obj of objectives) {
       // Required storeName
       if (!obj.storeName) continue;
+
+      const soloLosQueVienen: Record<string, number> = {}
+      for (const c of CAMPOS) {
+        if (obj[c] !== undefined && obj[c] !== null) soloLosQueVienen[c] = num(obj[c])
+      }
 
       const record = await prisma.tiendaStoreObjective.upsert({
         where: {
@@ -61,32 +73,14 @@ export async function POST(request: Request) {
             storeName: obj.storeName
           }
         },
-        update: {
-          bafConvMS: obj.bafConvMS || 0,
-          bafNoTrasl: obj.bafNoTrasl || 0,
-          tvFutbol: obj.tvFutbol || 0,
-          alarmas: obj.alarmas || 0,
-          dispSegEuros: obj.dispSegEuros || 0,
-          dispUnidades: obj.dispUnidades || 0,
-          seguros: obj.seguros || 0,
-          movil: obj.movil || 0,
-          repos: obj.repos || 0,
-          fttr: obj.fttr || 0
-        },
+        // Al crear una fila nueva sí se rellenan todos (los ausentes, a 0);
+        // al actualizar, solo los que llegan (no se pisa lo que no se toca).
+        update: soloLosQueVienen,
         create: {
           periodKey,
           storeName: obj.storeName,
-          bafConvMS: obj.bafConvMS || 0,
-          bafNoTrasl: obj.bafNoTrasl || 0,
-          tvFutbol: obj.tvFutbol || 0,
-          alarmas: obj.alarmas || 0,
-          dispSegEuros: obj.dispSegEuros || 0,
-          dispUnidades: obj.dispUnidades || 0,
-          seguros: obj.seguros || 0,
-          movil: obj.movil || 0,
-          repos: obj.repos || 0,
-          fttr: obj.fttr || 0
-        }
+          ...Object.fromEntries(CAMPOS.map(c => [c, num(obj[c])])),
+        } as any
       })
       results.push(record)
     }

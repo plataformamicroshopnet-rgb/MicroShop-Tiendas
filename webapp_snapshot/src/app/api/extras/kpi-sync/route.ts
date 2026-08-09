@@ -1,20 +1,30 @@
 import { NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
+import { exigeSesion } from '@/lib/apiGuard'
 
 const prisma = new PrismaClient()
 
 export async function POST(request: Request) {
     try {
+        // Este endpoint BORRA y crea bonos KPI. Antes entraba cualquiera sin
+        // sesión, y además el navegador lo disparaba solo al abrir el Panel de
+        // CUALQUIER mes — incluidos los cerrados, que se reescribían al mirarlos.
+        // Dos llaves: (1) hay que estar logueado; (2) solo se toca el mes ACTIVO
+        // o uno futuro — un mes histórico ya no se reescribe por abrirlo.
+        const no = await exigeSesion(request); if (no) return no
         const body = await request.json()
         const { assignments, periodKey } = body
-        
+
         if (!assignments || !Array.isArray(assignments)) {
             return NextResponse.json({ success: false, error: 'Lista de bonos inválida.' }, { status: 400 })
         }
-        
+
         if (periodKey) {
             const period = await prisma.workPeriod.findUnique({ where: { period_key: periodKey } });
             if (period) {
+                if (period.status === 'HISTORIC') {
+                    return NextResponse.json({ success: true, skipped: true, message: 'Mes cerrado: no se reescriben sus bonos.' })
+                }
                 // Find existing KPI automatic assignments for this period
                 const existingKpis = await prisma.extraAssignment.findMany({
                     where: {
