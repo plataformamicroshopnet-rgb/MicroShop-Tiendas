@@ -322,7 +322,7 @@ export default function TramitacionPage() {
                     bafConvMS: field === 'bafConvMS' ? numVal : rowData.bafConvMS_obj,
                     tvFutbol: rowData.tvFutbol_obj,
                     dispSegEuros: rowData.dispSegEuros_obj,
-                    repos: rowData.repos_obj,
+                    repos: field === 'repos' ? numVal : rowData.repos_obj,
                     fttr: rowData.fttr_obj,
                     alarmas: rowData.alarmas_obj
                 };
@@ -555,8 +555,8 @@ export default function TramitacionPage() {
                                 <td style={{ padding: '8px 2px', textAlign: 'center', backgroundColor: '#e5e7eb', color: '#374151' }}>{formatNum(r.dispSegEuros_proj, true)}</td>
                                 <CellProjPct obj={r.dispSegEuros_obj} proj={r.dispSegEuros_proj} />
 
-                                {/* Repos */}
-                                <td style={{ padding: '8px 2px', textAlign: 'center', backgroundColor: '#f3f4f6' }}>{formatNum(r.repos_obj)}</td>
+                                {/* Repos — en unidades desde ago-2026; el objetivo se teclea aquí mismo */}
+                                <EditableObjectiveCell storeName={r.store} field="repos" value={r.repos_obj} periodKey={activePeriodKey} rowData={r} />
                                 <td style={{ padding: '8px 2px', textAlign: 'center', fontWeight: 600 }}>{formatNum(r.repos_vent)}</td>
                                 <td style={{ padding: '8px 2px', textAlign: 'center', backgroundColor: '#e5e7eb', color: '#374151' }}>{formatNum(r.repos_proj)}</td>
                                 <CellProjPct obj={r.repos_obj} proj={r.repos_proj} />

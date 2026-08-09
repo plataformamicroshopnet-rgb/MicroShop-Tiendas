@@ -229,14 +229,18 @@ const isSellerInStore = (sellerName: string, storeSellers: string[]) => {
     });
 };
 
-const countRuleSales = (storeSales: any[], rule: any) => {
+const countRuleSales = (storeSales: any[], rule: any, forzarUnidades = false) => {
     let completed = 0;
     let pending = 0;
     if (!rule) return { completed, pending };
 
     const ruleName = rule.nombre;
     const ruleProductosCuentan = rule.productosCuentan;
-    const isPercentage = String(rule.importePrimerTramo || '').includes('%');
+    // forzarUnidades: aunque la regla sea porcentual (y su base de comisión vaya
+    // en euros), esta carta cuenta CLIENTES. Desde ago-2026 los Repos son
+    // paquetes con precio (7,86–82 €): sumar cuotas aquí daba «Vent 5.476»
+    // contra objetivos de la era ARPU, un porcentaje sin sentido.
+    const isPercentage = String(rule.importePrimerTramo || '').includes('%') && !forzarUnidades;
 
     storeSales.forEach(s => {
         const isPending = String(s.pendiente || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() === 'si';
@@ -381,11 +385,11 @@ export function calculateTramitacion(
                 ? calculateStoreRuleObj(rDispSegEuros, sellers, activeHours)
                 : (exactObj ? (exactObj.dispSegEuros || globalObjs.dispSegEuros * 300 * storeHourRatio) : (globalObjs.dispSegEuros * 300 * storeHourRatio)));
 
-        const repos_obj = store === 'O2'
-            ? (exactObj ? (exactObj.repos || 0) : 0)
-            : (rRepos
-                ? calculateStoreRuleObj(rRepos, sellers, activeHours)
-                : (exactObj ? (exactObj.repos || globalObjs.repos * storeHourRatio) : (globalObjs.repos * storeHourRatio)));
+        // Desde ago-2026 la carta de Repos va en UNIDADES (decisión del dueño):
+        // el objetivo en euros de la regla de comisiones (1.100/1.600 de la era
+        // ARPU) ya no pinta nada aquí. Manda la casilla editable por tienda de
+        // esta misma pantalla (TiendaStoreObjective.repos); sin casilla, 0.
+        const repos_obj = exactObj ? (exactObj.repos || 0) : 0;
 
         // Unused in current layout headers but kept for schema consistency
         const dispUnidades_obj = exactObj ? (exactObj.dispUnidades || globalObjs.dispUnidades * storeHourRatio) : (globalObjs.dispUnidades * storeHourRatio);
@@ -527,9 +531,9 @@ export function calculateTramitacion(
             });
         }
 
-        // 6. repos (ARPU)
+        // 6. repos (ARPU) — en unidades, no en euros (ver forzarUnidades)
         if (rRepos) {
-            const counts = countRuleSales(storeSales, rRepos);
+            const counts = countRuleSales(storeSales, rRepos, true);
             row.repos_vent = counts.completed + counts.pending;
         } else {
             // fallback
