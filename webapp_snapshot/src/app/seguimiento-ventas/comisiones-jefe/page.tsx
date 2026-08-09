@@ -594,8 +594,8 @@ export default function ComisionesJefeTiendasPage() {
                     {/* Resultados (Total condicionado + Comisión Final) fijos arriba a la derecha. */}
                     <div style={{ display: 'flex', gap: 12, flexShrink: 0, alignItems: 'flex-start' }}>
 
-                    {/* Total Condicionado */}
-                    <table className="excel-table" style={{ width: 'auto', minWidth: 200 }}>
+                    {/* Total Condicionado — la pequeña: es el máximo teórico, no lo que cobra */}
+                    <table className="excel-table" style={{ width: 'auto', minWidth: 150 }}>
                         <thead>
                             <tr>
                                 <th className="header-blue" style={{ height: 48 }}>Total (€)<br/>condicionado a cumplir objetivos</th>
@@ -603,7 +603,7 @@ export default function ComisionesJefeTiendasPage() {
                         </thead>
                         <tbody>
                             <tr>
-                                <td className="cell-green" style={{ fontSize: 28, height: 70 }}>
+                                <td className="cell-green" style={{ fontSize: 20, height: 70 }}>
                                     {pctCargados
                                         ? `${totalCondicionado.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`
                                         : <span style={{ fontSize: 15, color: '#94a3b8' }}>calculando…</span>}
@@ -612,8 +612,8 @@ export default function ComisionesJefeTiendasPage() {
                         </tbody>
                     </table>
 
-                    {/* Comisión Final */}
-                    <table className="excel-table" style={{ width: 'auto', minWidth: 150 }}>
+                    {/* Comisión Final — la grande: es la que cobra de verdad (pedido del dueño) */}
+                    <table className="excel-table" style={{ width: 'auto', minWidth: 200 }}>
                         <thead>
                             <tr>
                                 <th className="header-blue" style={{ height: 48 }}>Comisión Final<br/>Jefe Tiendas</th>
@@ -621,7 +621,7 @@ export default function ComisionesJefeTiendasPage() {
                         </thead>
                         <tbody>
                             <tr>
-                                <td className="cell-green" style={{ fontSize: 20, height: 70 }}>
+                                <td className="cell-green" style={{ fontSize: 28, height: 70 }}>
                                     {/* Sin los % del mes cargados, esta cifra saldría con los del mes
                                         anterior (o con los defectos del código): mejor no enseñarla. */}
                                     {!pctCargados
