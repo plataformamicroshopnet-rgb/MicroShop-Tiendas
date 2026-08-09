@@ -269,13 +269,37 @@ export function computeComisionJefeTiendas(input: ComisionJefeTiendasInput): Com
         // Filtrar a Marta
         const validSellers = sellerStats.filter((s: any) => !s.name.toLowerCase().includes('marta'))
 
+        // ── JULIO 2026, EXCEPCIÓN DEL DUEÑO (09-ago-2026) ────────────────────
+        // Los repos de julio se corrigieron con sus precios de verdad en la
+        // palanca «Repos (Arpu)» (hijas de la Corrección + la Clasificación),
+        // pero esas líneas NO comisionan a los comerciales (candado de fecha:
+        // lo pactado de julio no se toca). Para el JEFE el dueño decidió lo
+        // contrario: su % de julio se paga sobre la base RECIÉN CALCULADA.
+        // Base = Σ cuota de las ventas vivas de 'Repos UP' de julio (sin
+        // sustituidas ni anuladas) — exactamente lo que factura la empresa por
+        // la palanca ese mes. Solo julio: agosto en adelante la palanca ya
+        // comisiona y groupCounts la trae bien; junio y antes, ni tocarlos.
+        const esJulio26 = viewingPeriod === '202607'
+        const arpuJulioPorComercial = new Map<string, number>()
+        if (esJulio26) {
+            for (const s of monthSales) {
+                const det = String((s as any).detalle || (s as any).sheet || '').toLowerCase().trim()
+                if (det !== 'repos up') continue
+                if (isSaleCancelled(s) || esVentaSustituida(s)) continue
+                const v = String((s as any).vendedor || '').trim()
+                arpuJulioPorComercial.set(v, (arpuJulioPorComercial.get(v) || 0) + (parseFloat(String((s as any).cuota)) || 0))
+            }
+        }
+
         tableData = validSellers.map((s: any) => {
             // Utilizar groupCounts que ya viene calculado y validado por el motor del Panel
             const dispKey = Object.keys(s.groupCounts || {}).find(k => k.toLowerCase().includes('dispositivo') && k.toLowerCase().includes('seguro'))
             const arpuKey = Object.keys(s.groupCounts || {}).find(k => k.toLowerCase().includes('arpu'))
 
             const dispEur = dispKey ? (s.groupCounts[dispKey] || 0) : 0
-            const arpuEur = arpuKey ? (s.groupCounts[arpuKey] || 0) : 0
+            const arpuEur = esJulio26
+                ? (arpuJulioPorComercial.get(String(s.name || '').trim()) || 0)
+                : (arpuKey ? (s.groupCounts[arpuKey] || 0) : 0)
             // Repo Fútbol es una regla POR UNIDADES, así que groupCounts son altas.
             const reposUds = reposRuleName ? (s.groupCounts[reposRuleName] || 0) : 0
             const bafEur = comisionPalanca(s.rawSales, bafTipo)
