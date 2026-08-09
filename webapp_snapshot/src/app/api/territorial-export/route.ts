@@ -23,15 +23,30 @@ export async function GET(request: Request) {
   const desde = searchParams.get('desde') || '2026-06' // solo junio en adelante (automatizado)
   const debug = searchParams.get('debug') === '1'
   try {
-    // Catálogos por categoría (para getSaleCommission dentro del territorial).
-    // Para las reglas actuales (BAF/Convergente devuelven el importe directo; Dispositivos
-    // no es baseComision) no influyen, pero se pasan por fidelidad con la pantalla.
+    // Catálogos por categoría (para getSaleCommission dentro del territorial),
+    // ELEGIDOS POR PERIODO — mismo arreglo que en ventas-export: mezclar los de
+    // todos los meses hacía que una venta de agosto pudiera cobrar con la fila
+    // vieja de junio (vigencias abiertas). Como este export ya itera por
+    // WorkPeriod, cada mes usa su propio catálogo; si un mes no tiene, cae al
+    // global y, de última, a la mezcla (histórico intacto).
     const catRows = await prisma.productCatalog.findMany({
       select: { categoria: true, producto: true, anual: true, comision: true,
-        comisionConCoste: true, validFrom: true, validTo: true, subcategoria: true, gama: true },
+        comisionConCoste: true, validFrom: true, validTo: true, subcategoria: true, gama: true,
+        periodId: true },
     })
-    const catalogs: Record<string, any[]> = {}
-    for (const c of catRows) { (catalogs[c.categoria] ||= []).push(c) }
+    const catalogsMezclados: Record<string, any[]> = {}
+    const catalogsPorPeriodo = new Map<string, Record<string, any[]>>()
+    for (const c of catRows) {
+      (catalogsMezclados[c.categoria] ||= []).push(c)
+      const clave = c.periodId || '(global)'
+      if (!catalogsPorPeriodo.has(clave)) catalogsPorPeriodo.set(clave, {})
+      const g = catalogsPorPeriodo.get(clave)!
+      ;(g[c.categoria] ||= []).push(c)
+    }
+    const catalogosDelPeriodo = (periodId: string): Record<string, any[]> =>
+      catalogsPorPeriodo.get(periodId)
+      || catalogsPorPeriodo.get('(global)')
+      || catalogsMezclados
 
     // Iteramos por PERIODO (WorkPeriod), igual que la pantalla, para cargar las ventas
     // exactamente como /api/sales?periodKey= (OR periodId / fecha) y aplicar los MISMOS
@@ -89,7 +104,7 @@ export async function GET(request: Request) {
       let rows: any[] = []
       try {
         rows = computeTerritorialRows({
-          sales: ventasMes, territorialRules: tiendasRules, catalogs,
+          sales: ventasMes, territorialRules: tiendasRules, catalogs: catalogosDelPeriodo(wp.id),
           tiendaHours: hoursRows,
           dashRowsPlus: [], dashRowsBasico: [], viewingPeriod: periodKey.replace('_', ''),
         } as any)

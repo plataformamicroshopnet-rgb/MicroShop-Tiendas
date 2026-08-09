@@ -43,17 +43,48 @@ export async function GET(request: Request) {
       },
     })
 
-    // ── Catálogos por categoría (para getSaleCommission) — todos los periodos,
-    // el matching por producto+fechas elige la vigencia correcta de cada venta ──
+    // ── Catálogos por categoría, ELEGIDOS POR EL PERIODO DE CADA VENTA ──────
+    //
+    // Antes se mezclaban los catálogos de TODOS los periodos en una sola lista,
+    // confiando en que las fechas de vigencia eligieran la fila buena. Pero en
+    // Tiendas el catálogo vive POR MES (el clonado copia el del anterior) y las
+    // vigencias de los meses viejos quedan ABIERTAS: para una venta de agosto,
+    // la fila de junio seguía «vigente» y el que ganara dependía del orden de
+    // la consulta. Se vio con dinero de verdad: en agosto la comisión de Rent
+    // «con coste» bajó del doble de la normal a 1,5×, la Hoja de Cobro (que
+    // solo mira el catálogo del mes) pagaba 1,5× y este feed seguía mandando el
+    // 2× viejo al ERP — 27 de 29 ventas infladas, ~159 € de ganancia que no era.
+    //
+    // Ahora cada venta usa el catálogo de SU mes, igual que la pantalla
+    // (/api/catalogs filtra por periodo): mismo dato, misma cifra por
+    // construcción. Si el mes de la venta no tiene periodo o su periodo no
+    // tiene catálogo, se cae al catálogo sin periodo y, como última red, a la
+    // mezcla de siempre — así el histórico anterior a los catálogos por mes no
+    // se pone a cero en silencio.
     const catRows = await prisma.productCatalog.findMany({
       select: {
         categoria: true, producto: true, anual: true, comision: true,
         comisionConCoste: true, validFrom: true, validTo: true, subcategoria: true, gama: true,
+        periodId: true,
       },
     })
-    const catalogs: Record<string, any[]> = {}
+    const catalogsMezclados: Record<string, any[]> = {}
+    const catalogsPorPeriodo = new Map<string, Record<string, any[]>>()
     for (const c of catRows) {
-      (catalogs[c.categoria] ||= []).push(c)
+      (catalogsMezclados[c.categoria] ||= []).push(c)
+      const clave = c.periodId || '(global)'
+      if (!catalogsPorPeriodo.has(clave)) catalogsPorPeriodo.set(clave, {})
+      const g = catalogsPorPeriodo.get(clave)!
+      ;(g[c.categoria] ||= []).push(c)
+    }
+    const periodos = await prisma.workPeriod.findMany({ select: { id: true, period_key: true } })
+    const periodoDeMes = new Map(periodos.map(p => [String(p.period_key || ''), p.id]))
+    const catalogosDelMes = (saleMonth: string): Record<string, any[]> => {
+      // saleMonth viene como 'YYYYMM' → clave de periodo 'YYYY_MM'.
+      const pid = periodoDeMes.get(`${saleMonth.slice(0, 4)}_${saleMonth.slice(4)}`)
+      if (pid && catalogsPorPeriodo.has(pid)) return catalogsPorPeriodo.get(pid)!
+      if (catalogsPorPeriodo.has('(global)')) return catalogsPorPeriodo.get('(global)')!
+      return catalogsMezclados
     }
 
     const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100
@@ -65,7 +96,7 @@ export async function GET(request: Request) {
       if (desde && ymOf(String(s.fecha || '')) < desde) continue
 
       const saleMonth = ymOf(String(s.fecha || '')).replace('-', '') // 'YYYYMM'
-      const ctx = { catalogs, dashRowsPlus: [], dashRowsBasico: [], viewingPeriod: saleMonth }
+      const ctx = { catalogs: catalogosDelMes(saleMonth), dashRowsPlus: [], dashRowsBasico: [], viewingPeriod: saleMonth }
       // Swap ANTIGUO (< jul 2026): físicamente es una línea de otra palanca (Rent…)
       // con la casilla marcada. Op. Grupo Cliente lo refleja en Varios (15 €). Para
       // que el ERP vea las mismas operaciones, la línea madre va SIN el +15 (comisión
