@@ -27,11 +27,18 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const session = await getSession()
-    const user = session?.user
-    
-    if (!user || (!canView(user, 'MODULE_TIENDAS') && !can(user, 'ACTION_ADMIN'))) {
+    // Dos llaves: la sesión de siempre (pantalla y pegado) o el secreto
+    // compartido del feed — el ERP publica aquí los objetivos oficiales del
+    // Excel de Telefónica (objetivos_tiendas_feed) cada vez que se sube el
+    // comunicado del mes. Mismo patrón que cobrado-feed / prv-feed.
+    const secreto = process.env.PRV_FEED_SECRET
+    const conSecreto = !!secreto && request.headers.get('x-prv-secret') === secreto
+    if (!conSecreto) {
+      const session = await getSession()
+      const user = session?.user
+      if (!user || (!canView(user, 'MODULE_TIENDAS') && !can(user, 'ACTION_ADMIN'))) {
         return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
+      }
     }
 
     const body = await request.json()

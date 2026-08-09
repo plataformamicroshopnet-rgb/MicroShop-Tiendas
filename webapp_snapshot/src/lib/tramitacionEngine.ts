@@ -339,15 +339,26 @@ export function calculateTramitacion(
         const rAlarmas = store === 'O2' ? null : findRule(activeRules, "MPA");
 
         // Compute Objectives (Obj)
+        // LA CASILLA OFICIAL MANDA (ago-2026): TiendaStoreObjective es la tabla
+        // que rellena el Excel de objetivos de Telefónica (vía ERP o pegado en
+        // esta misma pantalla). Cuando tiene valor, ese ES el objetivo del mes
+        // por tienda. El prorrateo de la regla por horas queda de RESPALDO para
+        // meses sin tabla — antes era al revés y la pantalla enseñaba un reparto
+        // inventado aunque el objetivo oficial estuviera tecleado.
+        const oficial = (v: any): number | null => {
+            const n = Number(v);
+            return v !== null && v !== undefined && isFinite(n) && n > 0 ? n : null;
+        };
+
         let bafNoTrasl_obj = 0;
         if (store === 'O2') {
             bafNoTrasl_obj = exactObj && exactObj.bafNoTrasl !== null && exactObj.bafNoTrasl !== undefined
                 ? exactObj.bafNoTrasl
                 : (rBafNoTrasl ? calculateStoreRuleObj(rBafNoTrasl, sellers, activeHours) : getGlobalObjective(['o2 fibra']));
         } else {
-            bafNoTrasl_obj = rBafNoTrasl
-                ? calculateStoreRuleObj(rBafNoTrasl, sellers, activeHours)
-                : (exactObj ? ((exactObj.bafConvMS || 0) + (exactObj.bafNoFusionO2 || 0) + (exactObj.restoBaf || 0)) || globalObjs.bafNoTrasl * storeHourRatio : (globalObjs.bafNoTrasl * storeHourRatio));
+            bafNoTrasl_obj = oficial(exactObj?.bafNoTrasl)
+                ?? oficial(exactObj ? (exactObj.bafConvMS || 0) + (exactObj.bafNoFusionO2 || 0) + (exactObj.restoBaf || 0) : null)
+                ?? (rBafNoTrasl ? calculateStoreRuleObj(rBafNoTrasl, sellers, activeHours) : globalObjs.bafNoTrasl * storeHourRatio);
         }
 
         let bafConvMS_obj = 0;
@@ -356,34 +367,29 @@ export function calculateTramitacion(
                 ? exactObj.bafConvMS
                 : (rBafConvMS ? calculateStoreRuleObj(rBafConvMS, sellers, activeHours) : 0);
         } else {
-            bafConvMS_obj = rBafConvMS
-                ? calculateStoreRuleObj(rBafConvMS, sellers, activeHours)
-                : (exactObj ? (exactObj.bafConvMS || globalObjs.bafConvMS * storeHourRatio) : (globalObjs.bafConvMS * storeHourRatio));
+            bafConvMS_obj = oficial(exactObj?.bafConvMS)
+                ?? (rBafConvMS ? calculateStoreRuleObj(rBafConvMS, sellers, activeHours) : globalObjs.bafConvMS * storeHourRatio);
         }
 
         const fttr_obj = store === 'O2'
             ? (exactObj ? (exactObj.fttr || 0) : 0)
-            : (rFttr
-                ? calculateStoreRuleObj(rFttr, sellers, activeHours)
-                : (exactObj ? (exactObj.fttr || 0) : 0));
+            : (oficial(exactObj?.fttr)
+                ?? (rFttr ? calculateStoreRuleObj(rFttr, sellers, activeHours) : 0));
 
         const tvFutbol_obj = store === 'O2'
             ? (exactObj ? (exactObj.tvFutbol || 0) : getGlobalObjective(['o2 tv']))
-            : (rTvFutbol
-                ? calculateStoreRuleObj(rTvFutbol, sellers, activeHours)
-                : (exactObj ? (exactObj.tvFutbol || globalObjs.tvFutbol * storeHourRatio) : (globalObjs.tvFutbol * storeHourRatio)));
+            : (oficial(exactObj?.tvFutbol)
+                ?? (rTvFutbol ? calculateStoreRuleObj(rTvFutbol, sellers, activeHours) : globalObjs.tvFutbol * storeHourRatio));
 
         const alarmas_obj = store === 'O2'
             ? (exactObj ? (exactObj.alarmas || 0) : 0)
-            : (rAlarmas
-                ? calculateStoreRuleObj(rAlarmas, sellers, activeHours)
-                : (exactObj ? (exactObj.alarmas || globalObjs.alarmas * storeHourRatio) : (globalObjs.alarmas * storeHourRatio)));
+            : (oficial(exactObj?.alarmas)
+                ?? (rAlarmas ? calculateStoreRuleObj(rAlarmas, sellers, activeHours) : globalObjs.alarmas * storeHourRatio));
 
         const dispSegEuros_obj = store === 'O2'
             ? (exactObj ? (exactObj.dispSegEuros || 0) : 0)
-            : (rDispSegEuros
-                ? calculateStoreRuleObj(rDispSegEuros, sellers, activeHours)
-                : (exactObj ? (exactObj.dispSegEuros || globalObjs.dispSegEuros * 300 * storeHourRatio) : (globalObjs.dispSegEuros * 300 * storeHourRatio)));
+            : (oficial(exactObj?.dispSegEuros)
+                ?? (rDispSegEuros ? calculateStoreRuleObj(rDispSegEuros, sellers, activeHours) : globalObjs.dispSegEuros * 300 * storeHourRatio));
 
         // Desde ago-2026 la carta de Repos va en UNIDADES (decisión del dueño):
         // el objetivo en euros de la regla de comisiones (1.100/1.600 de la era
