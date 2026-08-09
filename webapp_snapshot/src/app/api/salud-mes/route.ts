@@ -196,18 +196,26 @@ export async function GET(request: Request) {
 
     // ── Paso 6: comisiones del equipo (foto) ────────────────────────────────
     {
-      const porComercial = sellerStats
-        .filter((s: any) => !String(s.name || s.comercial || '').toLowerCase().includes('marta'))
-        .map((s: any) => ({ nombre: s.name || s.comercial, total: r2(Number(s.totalComision || 0) + Number(s.totalExtras || 0)) }))
+      const esMarta = (s: any) => String(s.name || s.comercial || '').toLowerCase().includes('marta')
+      const comisionDe = (s: any) => r2(Number(s.totalComision || 0) + Number(s.totalExtras || 0))
+      // El equipo de TIENDA (sin Marta) y el jefe van juntos: es lo que cobra la
+      // gente de las 4 tiendas físicas y Salva (que no cobra sobre Marta).
+      const porComercial = sellerStats.filter((s: any) => !esMarta(s)).map((s: any) => ({ nombre: s.name || s.comercial, total: comisionDe(s) }))
       const equipo = r2(porComercial.reduce((a: number, x: any) => a + x.total, 0))
+      // Marta (O2 MovilFree) va en SU PROPIA línea: cobra aparte, por sus reglas
+      // O2 + territorial O2. Antes se caía del hub entero y su O2 no salía en
+      // ningún sitio; ahora se ve, sin mezclarla con el equipo de tienda.
+      const marta = sellerStats.find(esMarta)
+      const martaO2 = marta ? comisionDe(marta) : 0
       pasos.push({
         id: 'comisiones',
         titulo: 'Comisiones del equipo (foto de hoy)',
-        resumen: 'Lo que llevan pagado el equipo y el jefe, con el mismo motor que la liquidación del ERP.',
+        resumen: 'Lo que llevan pagado el equipo, el jefe y O2 MovilFree, con el mismo motor que la liquidación del ERP.',
         estado: panelOk ? 'verde' : 'rojo',
         detalles: panelOk
-          ? [`Equipo: ${eur(equipo)} · Jefe (Salva): ${eur(jefeTotal)}.`,
-             `Comerciales con comisión: ${porComercial.filter((x: any) => x.total > 0).length}.`]
+          ? [`Equipo de tienda: ${eur(equipo)} · Jefe (Salva): ${eur(jefeTotal)}.`,
+             `O2 MovilFree (Marta): ${eur(martaO2)}.`,
+             `Comerciales de tienda con comisión: ${porComercial.filter((x: any) => x.total > 0).length}.`]
           : ['No se pudo calcular la foto de comisiones (¿faltan palancas o plantilla?).'],
         accion: { tipo: 'enlace', etiqueta: 'Panel de Comisiones', href: '/tiendas/comisiones' },
       })
