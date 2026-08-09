@@ -42,47 +42,69 @@ export const dynamic = 'force-dynamic'
 // alta; para las localizadas el destino lo decide su producto.
 interface Encargo {
   nif: string; nombre: string; contrato: string; fecha: string; boletin: string
+  /** Qué paquete es, para ponerle el importe que paga Telefónica (tabla PAQUETES). */
+  paquete?: string
   /** Cómo encontrarla si el boletín no está donde debe (las dos con erratas). */
   buscarBoletin?: string
   /** Fecha con la que está tecleada, si no es la buena. */
   fechaTecleada?: string
-  /** Si no aparece tecleada: darla de alta (a 0 €). */
+  /** Si no aparece tecleada: darla de alta con el importe de su paquete. */
   altaSiFalta?: boolean
   /** Al mover, corregir también el boletín (la S.L. llevaba el CIF). */
   corregirBoletin?: boolean
 }
 
+// ── LO QUE PAGA TELEFÓNICA POR CADA PAQUETE ──────────────────────────────────
+// Valores de la columna «Comisión X (€)» del catálogo Repos UP que pasó el
+// dueño el 09-ago-2026 (los mismos productos que usa Nueva Venta).
+// REGLA: si la venta ya tiene un importe tecleado (> 0 €) se respeta lo
+// tecleado; solo las que están a 0 € reciben producto y tarifa de aquí.
+// «Fútbol Total» no está a propósito: su modelo es 78 € + 10 € y lo llevan
+// las otras pantallas; su línea de ARPU se mueve tal cual.
+const PAQUETES: Record<string, [string, number]> = {
+  'netflix': ['Netflix con anuncios', 7.86],
+  'movistar plus': ['Movistar+', 24.00],
+  'deportes': ['Deportes PROMO', 28.00],
+  'motor': ['Motor PROMO', 28.00],
+  'hbo max': ['HBO MAX', 21.98],
+  // «con Netflix» tiene 3 pisos (56/68/82): sin más datos se usa el básico.
+  'ficcion total con netflix': ['Ficción Total Netflix con Anuncios', 56.00],
+  'ficcion total con disney': ['Ficción Total con Disney PROMO', 50.00],
+  // Disney+ también tiene pisos (7,86/12,36/23,98): se usa el básico.
+  'disney+': ['Disney + sin anuncios', 7.86],
+}
+
 const LISTA: Encargo[] = [
-  { nif: '07868715R', nombre: 'Jerónimo Cañada Isidro', contrato: 'Ficción Total con Netflix', fecha: '05/08/2026', boletin: 'CO26087HLZUFVE' },
-  { nif: '70935711P', nombre: 'Oscar', contrato: 'Movistar Plus', fecha: '03/08/2026', boletin: 'CO2608TPE1ENTJ' },
+  { nif: '07868715R', nombre: 'Jerónimo Cañada Isidro', contrato: 'Ficción Total con Netflix', paquete: 'Ficción Total con Netflix', fecha: '05/08/2026', boletin: 'CO26087HLZUFVE' },
+  { nif: '70935711P', nombre: 'Oscar', contrato: 'Movistar Plus', paquete: 'Movistar Plus', fecha: '03/08/2026', boletin: 'CO2608TPE1ENTJ' },
   { nif: '07811149G', nombre: 'Jose Antonio', contrato: 'Fútbol Total', fecha: '01/08/2026', boletin: 'CO2608TLDRM8QV' },
-  { nif: '07797253T', nombre: 'Emilio Isidro Del Collado', contrato: 'Movistar Plus', fecha: '04/08/2026', boletin: 'CO2608IU6NKNZJ' },
-  { nif: '07860437A', nombre: 'Jose Manuel Martin Picado', contrato: 'Netflix', fecha: '13/07/2026', boletin: 'CO2607SEBRBRF9' },
-  { nif: '45085683W', nombre: 'Jesus Maria', contrato: 'Motor', fecha: '31/07/2026', boletin: 'CO2607VIRWJHHC' },
-  { nif: '45085683W', nombre: 'Jesus Maria', contrato: 'Ficción Total con Disney', fecha: '31/07/2026', boletin: 'CO2607T51FWMDI' },
-  { nif: '70868707A', nombre: 'Roberto Angel', contrato: 'Disney+', fecha: '29/07/2026', boletin: 'CO2607ZWA5ZPCK' },
-  { nif: '07698363X', nombre: 'Maria Teresa', contrato: 'Deportes', fecha: '28/07/2026', boletin: 'CO2607V3OED3WF' },
-  { nif: '07698363X', nombre: 'Maria Teresa', contrato: 'Movistar Plus', fecha: '27/07/2026', boletin: 'CO2607THYH6IN9' },
-  { nif: '08103365M', nombre: 'Iluminada', contrato: 'Deportes', fecha: '28/07/2026', boletin: 'CO2607V7S2FKBK' },
-  { nif: '07849546Z', nombre: 'Emilio', contrato: 'Movistar Plus', fecha: '25/07/2026', boletin: 'CO2607XSEDTN29' },
-  { nif: '07730987C', nombre: 'Volusiano', contrato: 'Movistar Plus', fecha: '24/07/2026', boletin: 'CO26073R1QCQS1' },
-  { nif: '07823055L', nombre: 'Emilio', contrato: 'Deportes', fecha: '24/07/2026', boletin: 'CO2607TFE6IOJV' },
-  { nif: '07745250T', nombre: 'Juan Antonio', contrato: 'Deportes', fecha: '23/07/2026', boletin: 'CO26072AD4GCOC' },
-  { nif: '07849277K', nombre: 'Luis Alberto', contrato: 'Netflix', fecha: '22/07/2026', boletin: 'CO2607IQ71I856' },
+  { nif: '07797253T', nombre: 'Emilio Isidro Del Collado', contrato: 'Movistar Plus', paquete: 'Movistar Plus', fecha: '04/08/2026', boletin: 'CO2608IU6NKNZJ' },
+  { nif: '07860437A', nombre: 'Jose Manuel Martin Picado', contrato: 'Netflix', paquete: 'Netflix', fecha: '13/07/2026', boletin: 'CO2607SEBRBRF9' },
+  { nif: '45085683W', nombre: 'Jesus Maria', contrato: 'Motor', paquete: 'Motor', fecha: '31/07/2026', boletin: 'CO2607VIRWJHHC' },
+  { nif: '45085683W', nombre: 'Jesus Maria', contrato: 'Ficción Total con Disney', paquete: 'Ficción Total con Disney', fecha: '31/07/2026', boletin: 'CO2607T51FWMDI' },
+  { nif: '70868707A', nombre: 'Roberto Angel', contrato: 'Disney+', paquete: 'Disney+', fecha: '29/07/2026', boletin: 'CO2607ZWA5ZPCK' },
+  { nif: '07698363X', nombre: 'Maria Teresa', contrato: 'Deportes', paquete: 'Deportes', fecha: '28/07/2026', boletin: 'CO2607V3OED3WF' },
+  { nif: '07698363X', nombre: 'Maria Teresa', contrato: 'Movistar Plus', paquete: 'Movistar Plus', fecha: '27/07/2026', boletin: 'CO2607THYH6IN9' },
+  { nif: '08103365M', nombre: 'Iluminada', contrato: 'Deportes', paquete: 'Deportes', fecha: '28/07/2026', boletin: 'CO2607V7S2FKBK' },
+  { nif: '07849546Z', nombre: 'Emilio', contrato: 'Movistar Plus', paquete: 'Movistar Plus', fecha: '25/07/2026', boletin: 'CO2607XSEDTN29' },
+  { nif: '07730987C', nombre: 'Volusiano', contrato: 'Movistar Plus', paquete: 'Movistar Plus', fecha: '24/07/2026', boletin: 'CO26073R1QCQS1' },
+  { nif: '07823055L', nombre: 'Emilio', contrato: 'Deportes', paquete: 'Deportes', fecha: '24/07/2026', boletin: 'CO2607TFE6IOJV' },
+  { nif: '07745250T', nombre: 'Juan Antonio', contrato: 'Deportes', paquete: 'Deportes', fecha: '23/07/2026', boletin: 'CO26072AD4GCOC' },
+  { nif: '07849277K', nombre: 'Luis Alberto', contrato: 'Netflix', paquete: 'Netflix', fecha: '22/07/2026', boletin: 'CO2607IQ71I856' },
   { nif: '07849277K', nombre: 'Luis Alberto', contrato: 'Fútbol Total', fecha: '21/07/2026', boletin: 'CO2607T9H7HIY1' },
-  { nif: '07959366D', nombre: 'Francisco', contrato: 'HBO MAX', fecha: '22/07/2026', boletin: 'CO260778MNKOYC' },
+  { nif: '07959366D', nombre: 'Francisco', contrato: 'HBO MAX', paquete: 'HBO MAX', fecha: '22/07/2026', boletin: 'CO260778MNKOYC' },
   { nif: '76028735G', nombre: 'Veronica', contrato: 'Fútbol Total', fecha: '27/07/2026', boletin: 'CO2607XSEJ4DFG' },
-  { nif: '06916490E', nombre: 'Felix', contrato: 'Movistar Plus', fecha: '11/07/2026', boletin: 'CO26077HY432F6' },
-  { nif: '12729698A', nombre: 'Ramiro', contrato: 'Movistar Plus', fecha: '06/07/2026', boletin: 'CO2607ZWDZ9OIC' },
-  { nif: '12729698A', nombre: 'Ramiro', contrato: 'Ficción total con Netflix', fecha: '07/07/2026', boletin: 'CO2607T8UHKOAK' },
-  { nif: '07789750H', nombre: 'Sonsoles', contrato: 'Netflix', fecha: '03/07/2026', boletin: 'CO2607T57814SV' },
-  { nif: '07810885Q', nombre: 'Pedro', contrato: 'Ficción total con Netflix', fecha: '02/07/2026', boletin: 'CO26072LR5S28I' },
+  { nif: '06916490E', nombre: 'Felix', contrato: 'Movistar Plus', paquete: 'Movistar Plus', fecha: '11/07/2026', boletin: 'CO26077HY432F6' },
+  { nif: '12729698A', nombre: 'Ramiro', contrato: 'Movistar Plus', paquete: 'Movistar Plus', fecha: '06/07/2026', boletin: 'CO2607ZWDZ9OIC' },
+  { nif: '12729698A', nombre: 'Ramiro', contrato: 'Ficción total con Netflix', paquete: 'Ficción Total con Netflix', fecha: '07/07/2026', boletin: 'CO2607T8UHKOAK' },
+  { nif: '07789750H', nombre: 'Sonsoles', contrato: 'Netflix', paquete: 'Netflix', fecha: '03/07/2026', boletin: 'CO2607T57814SV' },
+  { nif: '07810885Q', nombre: 'Pedro', contrato: 'Ficción total con Netflix', paquete: 'Ficción Total con Netflix', fecha: '02/07/2026', boletin: 'CO26072LR5S28I' },
   // Las dos con erratas de tecleo (aclaradas por el dueño el 09-ago):
-  { nif: '70893967D', nombre: 'Raquel', contrato: 'Netflix (dio de alta el 15/7)', fecha: '15/07/2026', boletin: 'CO26073W9Y1LLJ', buscarBoletin: 'CO26073W9Y1LLJ', fechaTecleada: '16/07/2026' },
-  { nif: 'B37034972', nombre: 'Inmuebles y Edificios Salamanca S.L.', contrato: 'Motor (dio de alta el 5/7)', fecha: '05/07/2026', boletin: '', buscarBoletin: 'B37034972', fechaTecleada: '03/07/2026', corregirBoletin: true },
-  // Las dos que faltan por teclear (alta nueva a 0 € si en producción tampoco están):
-  { nif: '70893967D', nombre: 'Raquel', contrato: 'Deportes', fecha: '25/07/2026', boletin: 'CO2607ZCXGXTMC', altaSiFalta: true },
-  { nif: 'B37034972', nombre: 'Inmuebles y Edificios Salamanca S.L.', contrato: 'Ficción total con Netflix', fecha: '02/07/2026', boletin: 'CO2607XXHM16L1', altaSiFalta: true },
+  { nif: '70893967D', nombre: 'Raquel', contrato: 'Netflix (dio de alta el 15/7)', paquete: 'Netflix', fecha: '15/07/2026', boletin: 'CO26073W9Y1LLJ', buscarBoletin: 'CO26073W9Y1LLJ', fechaTecleada: '16/07/2026' },
+  { nif: 'B37034972', nombre: 'Inmuebles y Edificios Salamanca S.L.', contrato: 'Motor (dio de alta el 5/7)', paquete: 'Motor', fecha: '05/07/2026', boletin: '', buscarBoletin: 'B37034972', fechaTecleada: '03/07/2026', corregirBoletin: true },
+  // Las dos que faltan por teclear (alta nueva con el importe de su paquete):
+  { nif: '70893967D', nombre: 'Raquel', contrato: 'Deportes', paquete: 'Deportes', fecha: '25/07/2026', boletin: 'CO2607ZCXGXTMC', altaSiFalta: true },
+  { nif: 'B37034972', nombre: 'Inmuebles y Edificios Salamanca S.L.', contrato: 'Ficción total con Netflix', paquete: 'Ficción Total con Netflix', fecha: '02/07/2026', boletin: 'CO2607XXHM16L1', altaSiFalta: true },
 ]
 
 const PRODUCTO_ALTA = 'Repos destino BAF miMovistar/Fusión incremento de ARPU >=6€ y <10€'
@@ -144,8 +166,10 @@ async function analizar() {
       || candidatas[0]
 
     if (!v) {
-      if (e.altaSiFalta) altas.push({ ...e })
-      else dudosas.push({ ...e, motivo: 'No aparece tecleada y no estaba prevista como alta: revisar a mano.' })
+      if (e.altaSiFalta) {
+        const p = e.paquete ? PAQUETES[clave(e.paquete)] : undefined
+        altas.push({ ...e, producto: p ? p[0] : PRODUCTO_ALTA, cuota: p ? p[1] : 0 })
+      } else dudosas.push({ ...e, motivo: 'No aparece tecleada y no estaba prevista como alta: revisar a mano.' })
       continue
     }
     usadas.add(v.id)
@@ -168,16 +192,32 @@ async function analizar() {
       continue
     }
 
+    // El importe que paga Telefónica: solo si la venta está a 0 € (lo tecleado
+    // > 0 se respeta). Con el importe viaja también el nombre del paquete, que
+    // es como se teclea hoy en «Repos (Arpu)».
+    const paq = e.paquete ? PAQUETES[clave(e.paquete)] : undefined
+    const reprecia = !!paq && !(Number(v.cuota) > 0)
+
+    // El boletín solo se pisa cuando el que hay es basura: vacío, el propio
+    // NIF en la casilla (la S.L.), o REPETIDO en otra línea del mismo cliente
+    // que no sea su extra de Fútbol (el Motor de Jesús María llevaba el boletín
+    // de su Ficción). Uno tecleado de verdad y único no se toca.
+    const duplicado = !!norm(v.numeroPedido) && ventas.some(x => x.id !== v.id
+      && norm(x.nif) === norm(e.nif) && norm(x.numeroPedido) === norm(v.numeroPedido)
+      && !esExtraFutbol(x.producto))
+    let boletinNuevo: string | null = null
+    if (e.corregirBoletin || norm(v.numeroPedido) === norm(e.nif)) boletinNuevo = e.boletin || ''
+    else if (!norm(v.numeroPedido) && e.boletin) boletinNuevo = e.boletin
+    else if (duplicado && e.boletin && norm(e.boletin) !== norm(v.numeroPedido)) boletinNuevo = e.boletin
+
     mover.push({
       ...base,
       destino: PALANCA_REPOS,
+      productoNuevo: reprecia ? paq![0] : null,
+      cuotaNueva: reprecia ? paq![1] : null,
+      cuotaFinal: reprecia ? paq![1] : Number(v.cuota || 0),
       fechaNueva: e.fechaTecleada && e.fecha !== String(v.fecha) ? e.fecha : null,
-      // El boletín solo se pisa cuando el que hay es basura: vacío o el propio
-      // NIF en la casilla (la S.L.). Uno tecleado de verdad no se toca aunque
-      // no coincida con la lista.
-      boletinNuevo: e.corregirBoletin || norm(v.numeroPedido) === norm(e.nif)
-        ? (e.boletin || '')
-        : (!norm(v.numeroPedido) && e.boletin ? e.boletin : null),
+      boletinNuevo,
     })
   }
 
@@ -207,14 +247,15 @@ async function analizar() {
       for (const s of vMes as any[]) {
         if (delIds.has(s.id)) continue
         const m = movIds.get(s.id)
-        if (m) despuesVentas.push({ ...s, sheet: m.destino, detalle: m.destino, fecha: m.fechaNueva || s.fecha })
+        if (m) despuesVentas.push({ ...s, sheet: m.destino, detalle: m.destino, fecha: m.fechaNueva || s.fecha,
+          producto: m.productoNuevo || s.producto, cuota: m.cuotaNueva ?? s.cuota })
         else despuesVentas.push(s)
       }
       const sufMes = mes === '2026_07' ? '/07/2026' : '/08/2026'
       for (const a of altas) {
         if (!a.fecha.endsWith(sufMes)) continue
         despuesVentas.push({ id: `alta-${a.boletin}`, fecha: a.fecha, nif: a.nif, nombreCliente: a.nombre,
-          sheet: PALANCA_REPOS, detalle: PALANCA_REPOS, producto: PRODUCTO_ALTA, cuota: 0, importe: '0',
+          sheet: PALANCA_REPOS, detalle: PALANCA_REPOS, producto: a.producto, cuota: a.cuota, importe: String(a.cuota),
           vendedor: '', codigo: '', pendiente: 'No', anulado: 'No' })
       }
       const antes: any = computePanelComisionesTiendas(input)
@@ -256,7 +297,8 @@ async function analizar() {
   return {
     total: LISTA.length,
     mover, yaEsta, yaCorregida, altas, dudosas, eliminar, madresRespetadas, extrasFutbolAparte,
-    sumaMovida: r2(mover.reduce((a, x) => a + x.cuota, 0)),
+    sumaTecleada: r2(mover.reduce((a, x) => a + x.cuota, 0)),
+    sumaMovida: r2(mover.reduce((a, x) => a + x.cuotaFinal, 0) + altas.reduce((a, x) => a + Number(x.cuota || 0), 0)),
     sumaEliminada: r2(eliminar.reduce((a, x) => a + x.cuota, 0)),
     nominas,
   }
@@ -295,13 +337,18 @@ export async function POST(request: Request) {
     for (const m of r.mover) {
       const original = await prisma.sale.findUnique({ where: { id: m.id } })
       if (!original) continue
+      const tag = m.productoNuevo
+        ? `Clasificada a ${m.destino} con su tarifa (antes: ${original.producto || 'sin producto'} · ${Number(original.cuota || 0)} €) — lista del dueño, ago-2026`
+        : `Clasificada a ${m.destino} (lista del dueño, ago-2026)`
       await prisma.sale.update({
         where: { id: m.id },
         data: {
           sheet: m.destino, detalle: m.destino,
+          ...(m.productoNuevo ? { producto: m.productoNuevo } : {}),
+          ...(m.cuotaNueva !== null && m.cuotaNueva !== undefined ? { cuota: m.cuotaNueva } : {}),
           ...(m.fechaNueva ? { fecha: m.fechaNueva } : {}),
           ...(m.boletinNuevo !== null && m.boletinNuevo !== undefined ? { numeroPedido: m.boletinNuevo } : {}),
-          anotaciones: [original.anotaciones, `Clasificada a ${m.destino} (lista del dueño, ago-2026)`].filter(Boolean).join(' | '),
+          anotaciones: [original.anotaciones, tag].filter(Boolean).join(' | '),
         },
       })
       movidas++
@@ -315,8 +362,8 @@ export async function POST(request: Request) {
       await prisma.sale.create({
         data: {
           id: randomUUID(), fecha: a.fecha, nif: a.nif, nombreCliente: a.nombre,
-          sheet: PALANCA_REPOS, detalle: PALANCA_REPOS, producto: PRODUCTO_ALTA,
-          cuota: 0, numeroPedido: a.boletin || '',
+          sheet: PALANCA_REPOS, detalle: PALANCA_REPOS, producto: a.producto,
+          cuota: a.cuota, numeroPedido: a.boletin || '',
           periodId: wpPorSufijo.get(a.fecha.slice(2)) || null,
           vendedor: hermana?.vendedor || '', codigo: hermana?.codigo || '',
           pendiente: 'No', anulado: 'No',

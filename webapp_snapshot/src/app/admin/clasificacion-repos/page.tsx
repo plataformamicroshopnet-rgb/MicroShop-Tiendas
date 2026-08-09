@@ -90,21 +90,27 @@ export default function ClasificacionReposPage() {
 
       {d?.success && (
         <>
-          <Caja titulo={`Se mueven a su palanca nueva · ${d.mover.length} operaciones · ${eu(d.sumaMovida)}`} color="#0ea5e9">
+          <Caja titulo={`Se mueven a su palanca nueva · ${d.mover.length} operaciones · tecleado ${eu(d.sumaTecleada)} → se paga ${eu(d.sumaMovida)}`} color="#0ea5e9">
             <Tabla
-              cab={['Fecha', 'Cliente', 'Contrató', 'Producto tecleado', 'Cuota', 'Comercial', 'De', 'A', 'Correcciones']}
+              cab={['Fecha', 'Cliente', 'Contrató', 'Producto que queda', 'Tecleado', 'Se paga', 'Comercial', 'De', 'A', 'Correcciones']}
               filas={d.mover.map((m: any) => [
-                m.fecha, m.cliente, m.contrato, String(m.producto || '').slice(0, 42), eu(m.cuota), m.vendedor || '—',
+                m.fecha, m.cliente, m.contrato,
+                String(m.productoNuevo || m.producto || '').slice(0, 38),
+                eu(m.cuota), eu(m.cuotaFinal), m.vendedor || '—',
                 m.palancaActual, m.destino,
-                [m.fechaNueva ? `fecha → ${m.fechaNueva}` : '', m.boletinNuevo !== null && m.boletinNuevo !== undefined ? `boletín → ${m.boletinNuevo || '(vacío)'}` : ''].filter(Boolean).join(' · ') || '—',
+                [m.productoNuevo ? 'tarifa puesta' : '', m.fechaNueva ? `fecha → ${m.fechaNueva}` : '', m.boletinNuevo !== null && m.boletinNuevo !== undefined ? `boletín → ${m.boletinNuevo || '(vacío)'}` : ''].filter(Boolean).join(' · ') || '—',
               ])}
             />
+            <p style={{ margin: '8px 0 0', fontSize: 11.5, color: 'var(--medium-gray)' }}>
+              Las que estaban a 0 € reciben el producto y el importe de la tarifa de «Repos (Arpu)»;
+              las que ya tenían importe tecleado se respetan tal cual.
+            </p>
           </Caja>
 
           {d.altas.length > 0 && (
-            <Caja titulo={`Se dan de alta (no estaban tecleadas) · ${d.altas.length} · a 0 €`} color="#22c55e">
-              <Tabla cab={['Fecha', 'Cliente', 'Contrató', 'Boletín']}
-                filas={d.altas.map((a: any) => [a.fecha, a.nombre, a.contrato, a.boletin || '—'])} />
+            <Caja titulo={`Se dan de alta (no estaban tecleadas) · ${d.altas.length}`} color="#22c55e">
+              <Tabla cab={['Fecha', 'Cliente', 'Contrató', 'Producto', 'Se paga', 'Boletín']}
+                filas={d.altas.map((a: any) => [a.fecha, a.nombre, a.contrato, String(a.producto || '').slice(0, 38), eu(a.cuota), a.boletin || '—'])} />
             </Caja>
           )}
 
