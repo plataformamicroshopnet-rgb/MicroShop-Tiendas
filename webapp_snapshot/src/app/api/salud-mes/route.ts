@@ -5,6 +5,7 @@ import { loadPanelInputs } from '@/lib/panelComisionesTiendasServer'
 import { computePanelComisionesTiendas } from '@/lib/panelComisionesTiendas'
 import { computeComisionJefeTiendas, jefePctKeysTodas, resolverJefePcts, JEFE_PCT_KEYS_BASE } from '@/lib/comisionJefeTiendas'
 import { PasoSaludMes, SaludMesTiendasResponse, EstadoPaso, mesSiguiente } from '@/lib/saludMesTiendas'
+import { claveSelloRevision, huellaDelPaso, leerSello, cuandoEnCristiano } from '@/lib/revisadoPorMiTiendas'
 
 const prisma = new PrismaClient()
 export const dynamic = 'force-dynamic'
@@ -249,20 +250,43 @@ export async function GET(request: Request) {
       })
     }
 
-    // ── Paso 9: extras y bonos ──────────────────────────────────────────────
+    // ── Paso 9: extras y bonos (con sello «Ya lo he revisado») ──────────────
     {
       const reglasEx = wp ? await prisma.extraRule.count({ where: { isActive: true } }) : 0
       const asig = wp ? await prisma.extraAssignment.count({ where: { periodId: wp.id } }) : 0
+      const sospecha = reglasEx === 0 && asig > 0  // bonos vivos sin regla que los respalde
+
+      let estado: EstadoPaso = sospecha ? 'ambar' : 'verde'
+      const detalles = [`${reglasEx} reglas de extras activas · ${asig} bonos asignados este mes.`]
+      let ayuda: string | undefined
+      let accionSecundaria: any = undefined
+
+      if (sospecha) {
+        // ¿Lo ha dado el dueño por revisado y sigue igual? → verde con constancia.
+        const selloRow = await prisma.appSetting.findUnique({ where: { key: claveSelloRevision('extras', periodKey) } })
+        const huella = await huellaDelPaso(prisma, 'extras', periodKey)
+        const { sello, vigente } = leerSello(selloRow?.value, huella)
+        if (vigente && sello) {
+          estado = 'verde'
+          detalles.push(`Lo diste por revisado el ${cuandoEnCristiano(sello.cuando)} (${sello.quien}) y no ha cambiado desde entonces.`)
+        } else {
+          detalles.push('⚠ Hay bonos pero ninguna regla activa: revisa si deben seguir.')
+          if (sello && !vigente) detalles.push(`Lo diste por revisado el ${cuandoEnCristiano(sello.cuando)}, pero los bonos han cambiado desde entonces.`)
+          ayuda = 'Mira los bonos vivos en el panel de Extras; si deben seguir, pulsa «Ya lo he revisado» y el aviso se apaga (vuelve solo si cambian).'
+          accionSecundaria = { tipo: 'revisado', etiqueta: 'Ya lo he revisado' }
+        }
+      }
+
       pasos.push({
         id: 'extras',
         titulo: 'Extras y bonos KPI',
         resumen: 'Que los bonos del mes cuadran con las reglas activas.',
-        estado: 'verde',
-        detalles: [`${reglasEx} reglas de extras activas · ${asig} bonos asignados este mes.`,
-                   ...(reglasEx === 0 && asig > 0 ? ['⚠ Hay bonos pero ninguna regla activa: revisar si deben seguir.'] : [])],
-        ...(reglasEx === 0 && asig > 0 ? { estado: 'ambar' as EstadoPaso, ayuda: 'Revisa los bonos vivos en el panel de Extras.' } : {}),
+        estado,
+        detalles,
+        ayuda,
         accion: { tipo: 'enlace', etiqueta: 'Panel de Comisiones', href: '/tiendas/comisiones' },
-      })
+        ...(accionSecundaria ? { accionSecundaria } : {}),
+      } as any)
     }
 
     // ── Paso 10: mes siguiente preparado ────────────────────────────────────

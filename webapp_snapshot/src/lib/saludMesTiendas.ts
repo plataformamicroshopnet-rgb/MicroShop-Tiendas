@@ -16,8 +16,10 @@ export interface SubCheck {
 }
 
 export interface AccionPaso {
-  /** 'clonar' = POST /api/admin/periodos (DUPLICATE); 'enlace' = navegar. */
-  tipo: 'clonar' | 'enlace'
+  /** 'clonar' = POST /api/admin/periodos (DUPLICATE); 'enlace' = navegar;
+   *  'revisado' = «Ya lo he revisado»: sella el paso para ESTE mes (quién,
+   *  cuándo y una huella), el aviso vuelve solo si el contenido cambia. */
+  tipo: 'clonar' | 'enlace' | 'revisado'
   etiqueta: string
   href?: string
   /** Solo 'clonar': id del WorkPeriod ORIGEN (el clonado crea el mes siguiente). */
@@ -42,6 +44,9 @@ export interface PasoSaludMes {
   ayuda?: string
   subChecks?: SubCheck[]
   accion?: AccionPaso
+  /** Un segundo botón: además de ir a la pantalla, hacer algo aquí (hoy: «Ya
+   *  lo he revisado» de los pasos con sello). */
+  accionSecundaria?: AccionPaso
   pantalla?: string
   tablas?: TablaPaso[]
 }

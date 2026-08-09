@@ -38,6 +38,19 @@ export default function CambioDeMesTiendasPage() {
   }
   useEffect(() => { if (authorized) cargar() }, [authorized])
 
+  const marcarRevisado = async (paso: string) => {
+    if (!confirm('¿Dar este paso por revisado? Se guarda con tu nombre y la fecha; el aviso vuelve solo si el contenido cambia.')) return
+    try {
+      const r = await fetch('/api/salud-mes/revisado', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ periodKey: datos?.periodKey, paso }),
+      })
+      const j = await r.json()
+      if (!j.success) alert('No se pudo sellar: ' + (j.error || ''))
+      await cargar()
+    } catch { alert('No se pudo sellar.') }
+  }
+
   const clonar = async (sourcePeriodId: string) => {
     if (!confirm('¿Pre-crear el mes siguiente clonando el actual? Nace como BORRADOR; no activa nada.')) return
     setClonando(true)
@@ -117,6 +130,12 @@ export default function CambioDeMesTiendasPage() {
                         <button onClick={() => router.push(p.accion.href)}
                           style={{ fontSize: 12, fontWeight: 700, padding: '6px 14px', borderRadius: 8, border: '1px solid var(--border-color)', background: 'var(--app-bg)', color: 'var(--mercedes-cyan, #0275d8)', cursor: 'pointer' }}>
                           {p.accion.etiqueta} →
+                        </button>
+                      )}
+                      {p.accionSecundaria?.tipo === 'revisado' && (
+                        <button onClick={() => marcarRevisado(p.id)}
+                          style={{ fontSize: 12, fontWeight: 700, padding: '6px 14px', borderRadius: 8, border: '1px solid #16a34a', background: 'rgba(22,163,74,.08)', color: '#16a34a', cursor: 'pointer' }}>
+                          ✔ {p.accionSecundaria.etiqueta}
                         </button>
                       )}
                     </div>
