@@ -586,6 +586,43 @@ export default function NuevaVentaPage() {
     }))
   }
 
+  // ── OTRO REPO (ARPU) PARA EL MISMO CLIENTE ───────────────────────────────────
+  // Hay clientes que contratan varios paquetes a la vez (Ficción Total con
+  // Netflix + Motor, como pasó en julio): este botón añade otra línea de
+  // «Repos (Arpu)» copiando teléfono y nº de cliente. El Nº Pedido NO se copia:
+  // cada paquete llega con su propio boletín de Telefónica y esa es la llave del
+  // cotejo. Cada paquete = su línea = 1 unidad de la palanca, con su tarifa, y
+  // el total de la venta los suma solos.
+  const handleAddOtroRepo = (index: number) => {
+    if (formData.productos.length >= 50) return
+    const currentProd = formData.productos[index]
+    setFormData((prev: any) => ({
+      ...prev,
+      productos: [
+        ...prev.productos,
+        {
+          categoria: 'Repos UP',
+          producto: '',
+          telf: currentProd.telf || '',
+          noCliente: currentProd.noCliente || '',
+          pendiente: 'No',
+          importe: '',
+          imei: '',
+          numeroPedido: '',
+          rentConCoste: '',
+          origenStock: '',
+          seguro: '',
+          seguroImporte: 0,
+          fabricante: '',
+          subcategoria: '',
+          gama: '',
+          isLibre: false,
+          isSwap: false
+        }
+      ]
+    }))
+  }
+
   // ── QUÉ TIPOS DE VENTA SE PUEDEN ELEGIR ──────────────────────────────────────
   // Rediseño de los Repos (ago-2026): «Repos» (la vieja, que se veía «Arpu (Repos)»)
   // y «Suscripciones TV» se unifican en la palanca nueva «Repos (Arpu)» y dejan de
@@ -1435,6 +1472,22 @@ export default function NuevaVentaPage() {
 
                     </div>
 
+                  </div>
+                )}
+                {/* Varios paquetes a la vez (Ficción + Motor…): otra línea de
+                    Repos (Arpu) con un clic, cada una con su boletín y su tarifa */}
+                {prod.categoria === 'Repos UP' && formData.productos.length < 50 && (
+                  <div style={{ marginTop: 10 }}>
+                    <button
+                      type="button"
+                      onClick={() => handleAddOtroRepo(index)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px',
+                               border: 'none', backgroundColor: '#5CB615', color: '#FFFFFF',
+                               borderRadius: 6, cursor: 'pointer', fontWeight: 'bold',
+                               boxShadow: '0 4px 12px rgba(92,182,21,0.3)', transition: 'all 0.2s ease' }}
+                    >
+                      <span style={{ fontSize: 16 }}>➕</span> Añadir otro Repo (Arpu) a este cliente
+                    </button>
                   </div>
                 )}
                 <CartelLlaves prod={prod} />
