@@ -109,6 +109,17 @@ export default function AdminDashboardPage() {
       colorGroup: 'green'
     },
     {
+      title: 'Clasificación de Repos (lista del dueño)',
+      image: '/nx-periodos.png',
+      description: 'Los repos de paquetes de TV de julio y agosto: a su palanca nueva según la lista, y lo que no esté en ella se elimina del histórico. Lo enseña todo antes.',
+      icon: CalendarDays,
+      action: () => router.push('/admin/clasificacion-repos'),
+      color: 'rgba(91,197,0,0.1)',
+      textColor: '#5bc500',
+      permission: 'MODULE_ADMIN',
+      colorGroup: 'green'
+    },
+    {
       title: 'Gestión de Periodos Operativos',
       image: '/nx-periodos.png',
       description: 'Control estructural de meses DRAFT, ACTIVE e HISTORIC.',
