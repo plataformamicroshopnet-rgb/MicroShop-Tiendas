@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
-import { Package, LineChart, Building2, Target, TrendingUp, DollarSign, Wallet, ClipboardPaste, Settings2, X, Save, ArrowUp, ArrowDown, Scale } from 'lucide-react'
+import { Package, LineChart, Building2, Target, TrendingUp, DollarSign, Wallet, ClipboardPaste, Settings2, X, Save, ArrowUp, ArrowDown, Scale, CalendarClock } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useGuard } from '@/hooks/useGuard'
 import { PageHeader } from '@/components/PageHeader'
@@ -32,6 +32,16 @@ export default function DireccionTiendasPage() {
   }, [])
 
   const cards = [
+    {
+      title: 'Cambio de Mes',
+      description: 'Los pasos del mes en un vistazo (verde/ámbar/rojo): clonado, palancas, objetivos, comisiones, mes siguiente. Como el de FFVV.',
+      image: '/nx-periodos.png',
+      icon: CalendarClock,
+      action: () => router.push('/direccion-tiendas/cambio-de-mes'),
+      color: 'rgba(2, 117, 216, 0.1)',
+      textColor: '#0275d8',
+      // Sin permiso propio: lo ve quien entra a Dirección de Tiendas.
+    },
     {
       title: 'MOD (Media Operaciones Diaria)',
       description: 'Comparativa de operaciones, importe medio y rentabilidad diaria.',
