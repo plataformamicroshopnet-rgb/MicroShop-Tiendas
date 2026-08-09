@@ -38,7 +38,11 @@ export default function RuleConditionBuilder({ value, onChange, disabled, availa
   }
 
   const handleAdd = () => {
-    const newConds = [...conditions, { type: 'REQUIRE_GROUP_QTY' as ConditionType, targetGroup: availableGroups[0] || '', value: 1 }]
+    // El «sobre qué» nace EN BLANCO, no con el primero de la lista: un valor
+    // puesto solo parece elegido, y así es como acabó una condición exigiendo
+    // «Alta BAF Total» sin que nadie lo eligiera. En blanco se ve, y el aviso
+    // rojo de abajo lo dice hasta que se elige de verdad.
+    const newConds = [...conditions, { type: 'REQUIRE_GROUP_QTY' as ConditionType, targetGroup: '', value: 1 }]
     onChange(JSON.stringify(newConds))
   }
 

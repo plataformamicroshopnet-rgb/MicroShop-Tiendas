@@ -670,6 +670,18 @@ export function computePanelComisionesTiendas(input: PanelComisionesTiendasInput
                         const conds = JSON.parse(rule.condicionantes);
                         if (Array.isArray(conds)) {
                             for (const cond of conds) {
+                                // Una condición SIN «sobre qué» o sin valor NO es una condición:
+                                // se salta, igual que hace la fórmula del jefe. Antes,
+                                // REQUIRE_GROUP_QTY con targetGroup vacío buscaba el grupo ''
+                                // (0 ventas siempre) y dejaba la palanca ENTERA sin consolidar,
+                                // mientras el panel de edición aseguraba en rojo que «así esta
+                                // condición no se aplica». El aviso tiene que ser verdad.
+                                // (Los tipos colectivos/acumulativos no llevan targetGroup.)
+                                const necesitaObjetivo = ['REQUIRE_GROUP_QTY', 'REQUIRE_GROUP_PCT',
+                                    'REQUIRE_GROUP_PCT_TRAMO2', 'REQUIRE_STORE_QTY_TRAMO2'].includes(cond.type)
+                                if (necesitaObjetivo && (!String(cond.targetGroup || '').trim() || !(Number(cond.value) > 0))) {
+                                    continue;
+                                }
                                 if (cond.type === 'REQUIRE_TEAM_OBJ2') {
                                     isTeamObj2 = true;
                                 } else if (cond.type === 'REQUIRE_TEAM_OBJ3') {

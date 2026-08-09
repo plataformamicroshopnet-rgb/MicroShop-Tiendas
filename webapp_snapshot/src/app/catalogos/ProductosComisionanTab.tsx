@@ -51,7 +51,12 @@ export default function ProductosComisionanTab() {
       })
       const apiRes = await res.json()
       if (apiRes.success) {
-         alert('✅ Reglas de comisiones y horarios guardados correctamente.')
+         // Si el servidor ha rescatado condicionantes que llegaban vacíos, se
+         // DICE: un rescate silencioso vuelve a esconder el problema. Quien
+         // quiera de verdad quitarlos, que los quite desde su desplegable
+         // (eso viaja como '[]' y el servidor lo respeta).
+         alert('✅ Reglas de comisiones y horarios guardados correctamente.'
+           + (apiRes.avisoCondicionantes ? `\n\n⚠️ ${apiRes.avisoCondicionantes}` : ''))
       } else {
          alert('❌ Error: ' + apiRes.error)
       }
@@ -135,6 +140,9 @@ export default function ProductosComisionanTab() {
       setRules([...rules, ...newRules]);
       setPasteText('');
       setShowPasteModal(false);
+      if (conservados.length > 0) {
+        alert(`⚠️ El Excel no trae condicionantes: se conservan los que ya tenían ${Array.from(new Set(conservados)).join(', ')}.`)
+      }
     }
   }
 

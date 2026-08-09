@@ -60,13 +60,15 @@ export function textoCondicionantes(rule: any): string[] {
 
   if (esReposArpu(nombre)) {
     // El % lo pone la condición REQUIRE_GROUP_PCT_TRAMO2 (hoy, 100 % de
-    // «Dispositivos + Seguros»). Si no estuviera puesta, no hay condición que
-    // contar y no se enseña nada: mejor callar que prometer un candado que no
-    // existe.
-    const c = conds.find((x: any) => x?.type === 'REQUIRE_GROUP_PCT_TRAMO2')
+    // «Dispositivos + Seguros»). Si no está puesta —o está a medias, sin el
+    // «sobre qué» o sin valor, que es como la deja el desplegable a medio
+    // configurar y como la SALTA el motor— no se enseña nada: mejor callar que
+    // prometer un candado que el programa no aplica.
+    const c = conds.find((x: any) => x?.type === 'REQUIRE_GROUP_PCT_TRAMO2'
+      && String(x?.targetGroup || '').trim() && num(x?.value) > 0)
     if (!c) return []
     return [
-      `Condicionado el cobro del segundo tramo a llegar al ${ent(c.value)} % en ${String(c.targetGroup || 'Dispositivos + Seguros').trim()} para Cobrar.`,
+      `Condicionado el cobro del segundo tramo a llegar al ${ent(c.value)} % en ${String(c.targetGroup).trim()} para Cobrar.`,
     ]
   }
 
@@ -74,10 +76,13 @@ export function textoCondicionantes(rule: any): string[] {
     // Solo los dos mínimos de empresa. Los objetivos de la propia palanca NO se
     // repiten aquí: ya se ven en su fila de la tabla, y meterlos alargaba el
     // aviso justo de lo que hay que enterarse (decisión del dueño, 8-ago-2026).
-    const pct = conds.find((x: any) => x?.type === 'REQUIRE_GROUP_PCT_TRAMO2' || x?.type === 'REQUIRE_GROUP_PCT')
-    const porTienda = conds.find((x: any) => x?.type === 'REQUIRE_STORE_QTY_TRAMO2')
-    const minimo = pct ? `un mínimo al ${ent(pct.value)} % de ${String(pct.targetGroup || 'BAF convergente').trim()}` : ''
-    const tienda = porTienda ? `${ent(porTienda.value)} ${String(porTienda.targetGroup || 'Dispositivos').trim()} por Tienda` : ''
+    // Solo cuentan las condiciones COMPLETAS (con «sobre qué» y valor): las que
+    // están a medias el motor las salta, y aquí no se promete lo que no se aplica.
+    const completa = (x: any) => String(x?.targetGroup || '').trim() && num(x?.value) > 0
+    const pct = conds.find((x: any) => (x?.type === 'REQUIRE_GROUP_PCT_TRAMO2' || x?.type === 'REQUIRE_GROUP_PCT') && completa(x))
+    const porTienda = conds.find((x: any) => x?.type === 'REQUIRE_STORE_QTY_TRAMO2' && completa(x))
+    const minimo = pct ? `un mínimo al ${ent(pct.value)} % de ${String(pct.targetGroup).trim()}` : ''
+    const tienda = porTienda ? `${ent(porTienda.value)} ${String(porTienda.targetGroup).trim()} por Tienda` : ''
     // Sin ninguna de las dos condiciones no hay candado que contar: mejor callar
     // que prometer uno que el programa no aplica.
     if (!minimo && !tienda) return []
