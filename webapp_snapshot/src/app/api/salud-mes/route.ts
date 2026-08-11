@@ -6,6 +6,7 @@ import { computePanelComisionesTiendas } from '@/lib/panelComisionesTiendas'
 import { computeComisionJefeTiendas, jefePctKeysTodas, resolverJefePcts, JEFE_PCT_KEYS_BASE } from '@/lib/comisionJefeTiendas'
 import { PasoSaludMes, SaludMesTiendasResponse, EstadoPaso, mesSiguiente } from '@/lib/saludMesTiendas'
 import { claveSelloRevision, huellaDelPaso, leerSello, cuandoEnCristiano } from '@/lib/revisadoPorMiTiendas'
+import { computeVersusTiendas, catalogosDelMesTiendas } from '@/lib/versusTiendas'
 
 const prisma = new PrismaClient()
 export const dynamic = 'force-dynamic'
@@ -173,8 +174,10 @@ export async function GET(request: Request) {
     let sellerStats: any[] = []
     let despues: any = null
     let jefeTotal = 0
+    let inputPanel: any = null   // catálogos y demás insumos, para el paso del versus
     try {
       const { input, ventas } = await loadPanelInputs(prisma, periodKey)
+      inputPanel = input
       despues = computePanelComisionesTiendas(input)
       sellerStats = despues.sellerStats || []
       panelOk = true
@@ -218,6 +221,72 @@ export async function GET(request: Request) {
              `Comerciales de tienda con comisión: ${porComercial.filter((x: any) => x.total > 0).length}.`]
           : ['No se pudo calcular la foto de comisiones (¿faltan palancas o plantilla?).'],
         accion: { tipo: 'enlace', etiqueta: 'Panel de Comisiones', href: '/tiendas/comisiones' },
+      })
+    }
+
+    // ── Paso 6b: lo que cobramos vs lo que pagamos ──────────────────────────
+    {
+      let estado: EstadoPaso = 'ambar'
+      let detalles: string[] = ['No se pudo calcular (falta la foto de comisiones del paso anterior).']
+      let ayuda: string | undefined
+      if (panelOk && inputPanel) {
+        try {
+          // El COBRO usa el universo del feed del ERP (TODAS las ventas con fecha
+          // del mes), no el del panel: las líneas-extra de los Repos (los 10 € que
+          // la empresa cobra pero no pagan comisión) viven fuera del universo del
+          // panel y sin ellas el cobro salía corto (~-979 € en julio-2026).
+          const [y, m] = periodKey.split('_')
+          const todas = await prisma.sale.findMany({
+            select: {
+              id: true, fecha: true, detalle: true, codigo: true, producto: true,
+              cuota: true, anulado: true, pendiente: true, rentConCoste: true,
+              isSwap: true, sustituida: true, sustituyeA: true, seguro: true, seguroImporte: true,
+            },
+          })
+          const delMes = todas.filter(v => {
+            const f = String(v.fecha || '')
+            return f.length >= 10 && f[2] === '/' && f[5] === '/' && f.slice(6, 10) === y && f.slice(3, 5) === m
+          })
+          // catálogos montados como los del feed (la referencia cuadrada con la
+          // Hoja de Cobro), no los del motor del Panel (estructura distinta)
+          const catsMes = await catalogosDelMesTiendas(prisma, periodKey)
+          const vs = computeVersusTiendas({
+            ventas: delMes, catalogs: catsMes,
+            periodKey, sellerStats, jefeTotal,
+          })
+          const hoy = new Date()
+          const hoyKey = `${hoy.getFullYear()}_${String(hoy.getMonth() + 1).padStart(2, '0')}`
+          const mesCerrado = periodKey < hoyKey
+          // Los avisos solo ACUSAN (rojo) con el mes cerrado; a mitad de mes las
+          // palancas por tramos aún no han «abierto» y una pérdida puede ser ruido.
+          estado = vs.avisos.length ? (mesCerrado ? 'rojo' : 'ambar') : 'verde'
+          detalles = [
+            `Cobramos ${eur(vs.cobro)} (${vs.ops} operaciones) · pagamos ${eur(vs.pago)} → margen ${eur(vs.margen)}${vs.margenPct !== null ? ` (${vs.margenPct.toLocaleString('es-ES')} %)` : ''}.`,
+            `El pago: equipo ${eur(vs.pagoEquipo)} + jefe ${eur(vs.pagoJefe)} + O2 MovilFree ${eur(vs.pagoO2)}.`,
+          ]
+          if (vs.multi.ventas > 0) {
+            detalles.push(`${vs.multi.ventas} venta(s) cobran por 2+ reglas a la vez: ${eur(vs.multi.importeAdicional)} en segundas/terceras reglas.`)
+            detalles.push(...vs.multi.ejemplos.map(e => `· ${e}`))
+          }
+          detalles.push(...vs.avisos.map(a => `⚠ ${a}`))
+          if (vs.avisos.length) {
+            ayuda = mesCerrado
+              ? 'Con el mes cerrado, una palanca en pérdida es real: revisa su regla en el Panel de Comisiones. No se toca ninguna regla sola: la decisión es tuya.'
+              : 'A mitad de mes es orientativo (los tramos aún se están abriendo); si sigue así al cierre, revisa la regla.'
+          }
+        } catch (e) {
+          console.warn('[salud-mes tiendas] versus:', e)
+          detalles = ['No se pudo calcular el cobro vs pago de este mes.']
+        }
+      }
+      pasos.push({
+        id: 'versus',
+        titulo: 'Lo que cobramos vs lo que pagamos',
+        resumen: 'Cuánto cobra la empresa por las ventas del mes y cuánto paga en comisiones, con las ventas que cobran por varias reglas a la vez.',
+        estado,
+        detalles,
+        ayuda,
+        accion: { tipo: 'enlace', etiqueta: 'Comisiones VS (detalle)', href: '/direccion-tiendas/comisiones-vs' },
       })
     }
 
