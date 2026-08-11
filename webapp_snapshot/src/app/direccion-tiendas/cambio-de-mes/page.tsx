@@ -27,16 +27,27 @@ export default function CambioDeMesTiendasPage() {
   const [datos, setDatos] = useState<any>(null)
   const [cargando, setCargando] = useState(false)
   const [clonando, setClonando] = useState(false)
+  // Tabla abierta a tamaño de lectura (pulsar una miniatura la amplía).
+  const [ampliada, setAmpliada] = useState<any>(null)
 
   const cargar = async () => {
     setCargando(true)
     try {
-      const r = await fetch('/api/salud-mes', { cache: 'no-store' })
+      // tablas=1: el servidor manda además las tablas en miniatura de cada paso.
+      const r = await fetch('/api/salud-mes?tablas=1', { cache: 'no-store' })
       setDatos(await r.json())
     } catch { setDatos({ success: false, error: 'No se pudo consultar.' }) }
     setCargando(false)
   }
   useEffect(() => { if (authorized) cargar() }, [authorized])
+
+  // Esc cierra la tabla ampliada.
+  useEffect(() => {
+    if (!ampliada) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setAmpliada(null) }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [ampliada])
 
   const marcarRevisado = async (paso: string) => {
     if (!confirm('¿Dar este paso por revisado? Se guarda con tu nombre y la fecha; el aviso vuelve solo si el contenido cambia.')) return
@@ -140,12 +151,86 @@ export default function CambioDeMesTiendasPage() {
                       )}
                     </div>
                   )}
+                  {/* Las tablas del paso, en miniatura: pulsar una la amplía. */}
+                  {p.tablas?.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 10 }}>
+                      {p.tablas.map((t: any, j: number) => (
+                        <MiniTabla key={j} t={t} onAmpliar={() => setAmpliada(t)} />
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )
           })}
         </>
       )}
+
+      {/* Tabla ampliada: misma tabla, a tamaño de lectura. */}
+      {ampliada && (
+        <div onClick={() => setAmpliada(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 14, padding: '18px 22px', maxWidth: '92vw', maxHeight: '86vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,.4)' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 4 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--light-text)' }}>{ampliada.titulo}</h3>
+              <button onClick={() => setAmpliada(null)}
+                style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 8, border: '1px solid var(--border-color)', background: 'var(--app-bg)', color: 'var(--light-text)', cursor: 'pointer' }}>
+                ✕ Cerrar (Esc)
+              </button>
+            </div>
+            {ampliada.subtitulo && <div style={{ fontSize: 12, color: 'var(--medium-gray)', marginBottom: 10 }}>{ampliada.subtitulo}</div>}
+            <Rejilla t={ampliada} />
+            {ampliada.nota && <div style={{ fontSize: 12, color: 'var(--medium-gray)', marginTop: 10 }}>{ampliada.nota}</div>}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** La tabla del paso en pequeño; al pulsar se abre a tamaño de lectura. */
+function MiniTabla({ t, onAmpliar }: { t: any; onAmpliar: () => void }) {
+  const MAX = 7
+  const filas = (t.filas || []).slice(0, MAX)
+  const sobran = (t.filas || []).length - filas.length
+  return (
+    <div onClick={onAmpliar} title="Pulsar para ampliar"
+      style={{ cursor: 'zoom-in', border: '1px solid var(--border-color)', borderRadius: 10, padding: '8px 10px', background: 'var(--app-bg)', minWidth: 220, maxWidth: 360, flex: '1 1 260px' }}>
+      <div style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--light-text)', marginBottom: 4 }}>
+        {t.titulo} <span style={{ fontWeight: 600, color: 'var(--medium-gray)' }}>· ampliar 🔍</span>
+      </div>
+      <Rejilla t={{ ...t, filas }} mini />
+      {sobran > 0 && <div style={{ fontSize: 10.5, color: 'var(--medium-gray)', marginTop: 3 }}>… y {sobran} filas más (pulsa para verlas).</div>}
+    </div>
+  )
+}
+
+/** La rejilla en sí (mini o grande): columnas `numericas` alineadas a la derecha. */
+function Rejilla({ t, mini }: { t: any; mini?: boolean }) {
+  const num = new Set<number>(t.numericas || [])
+  const fz = mini ? 10.5 : 13
+  const pad = mini ? '2px 6px' : '6px 10px'
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+        <thead>
+          <tr>
+            {(t.columnas || []).map((c: string, i: number) => (
+              <th key={i} style={{ fontSize: fz - 1.5, textTransform: 'uppercase', letterSpacing: '.03em', color: 'var(--medium-gray)', fontWeight: 700, padding: pad, borderBottom: '1px solid var(--border-color)', textAlign: num.has(i) ? 'right' : 'left', whiteSpace: 'nowrap' }}>{c}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {(t.filas || []).map((f: string[], i: number) => (
+            <tr key={i}>
+              {f.map((v, j) => (
+                <td key={j} style={{ fontSize: fz, color: 'var(--light-text)', padding: pad, borderBottom: '1px solid var(--border-color)', textAlign: num.has(j) ? 'right' : 'left', whiteSpace: mini ? 'nowrap' : undefined, fontVariantNumeric: 'tabular-nums' }}>{v}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   )
 }

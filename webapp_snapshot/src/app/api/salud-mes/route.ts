@@ -46,6 +46,9 @@ export async function GET(request: Request) {
 
   try {
     const { searchParams } = new URL(request.url)
+    // tablas=1: además de los semáforos, mandar las tablas en miniatura de cada
+    // paso (la pantalla las pinta ampliables; el correo del ritual no las pide).
+    const conTablas = searchParams.get('tablas') === '1'
     let periodKey = searchParams.get('periodKey') || ''
     if (!periodKey) {
       const activo = await prisma.workPeriod.findFirst({ where: { status: 'ACTIVE' }, orderBy: { createdAt: 'desc' } })
@@ -105,6 +108,21 @@ export async function GET(request: Request) {
              ...(arpu && futbol ? ['Los dos candados sagrados presentes: Repos (Arpu) y Repo Fútbol.'] : [])],
         ayuda: avisos.length ? 'Revisa las palancas en Entrada de Datos → Comisiones.' : undefined,
         accion: { tipo: 'enlace', etiqueta: 'Ir a Comisiones', href: '/catalogos' },
+        ...(conTablas && reglas.length ? { tablas: [{
+          titulo: 'Palancas del mes',
+          subtitulo: 'Objetivo → importe de cada tramo, y si conserva condicionantes.',
+          columnas: ['Palanca', 'Tramo 1', 'Tramo 2', 'Tramo 3', 'Cond.'],
+          numericas: [1, 2, 3],
+          filas: [...reglas].sort((a, b) => (a.order || 0) - (b.order || 0)).map(r => {
+            const tramo = (o: any, imp: any) => (o || imp) ? `${o ?? '—'} → ${String(imp ?? '—')}` : '—'
+            const c = String(r.condicionantes || '')
+            return [String(r.nombre || ''),
+                    tramo(r.objPrimerTramo, r.importePrimerTramo),
+                    tramo(r.objSegundoTramo, r.importeSegundoTramo),
+                    tramo(r.objTercerTramo, r.importeTercerTramo),
+                    (c.startsWith('[') && c !== '[]') ? '✔' : '—']
+          }),
+        }] } : {}),
       })
     }
 
@@ -127,6 +145,14 @@ export async function GET(request: Request) {
               : [`${horas.length} comerciales, todos con horas y tienda.`]),
         ayuda: mal ? 'Complétalos en «Horarios de Comerciales».' : undefined,
         accion: { tipo: 'enlace', etiqueta: 'Horarios de Comerciales', href: '/catalogos' },
+        ...(conTablas && horas.length ? { tablas: [{
+          titulo: 'Plantilla del mes',
+          subtitulo: 'La hoja oficial que rige todas las pantallas.',
+          columnas: ['Comercial', 'Tienda', 'Horas'],
+          numericas: [2],
+          filas: [...horas].sort((a, b) => String(a.comercial).localeCompare(String(b.comercial)))
+            .map(h => [String(h.comercial || ''), String((h as any).tienda || '—'), String(h.horario ?? '—')]),
+        }] } : {}),
       })
     }
 
@@ -147,6 +173,18 @@ export async function GET(request: Request) {
           ? 'Los publica solo el ERP al subir el Excel «Objetivos pdv» a Comunicados Mensuales (o el envío diario de las 05:00). Si sigue vacío, re-guarda el Excel en el ERP.'
           : undefined,
         accion: { tipo: 'enlace', etiqueta: 'Seguimiento de Tramitación', href: '/seguimiento-ventas/tramitacion' },
+        ...(conTablas && conAlgo.length ? { tablas: [{
+          titulo: 'Objetivos oficiales por tienda',
+          subtitulo: 'Las casillas del Excel de Telefónica que rigen el Seguimiento de Tramitación.',
+          columnas: ['Tienda', 'BAF MS', 'Resto BAF', 'TV/Fútbol', 'Disp. €', 'Disp. uds', 'Seguros', 'Móvil', 'Repos', 'FTTR'],
+          numericas: [1, 2, 3, 4, 5, 6, 7, 8, 9],
+          filas: conAlgo.map(o => [
+            String(o.storeName || ''),
+            String(o.bafConvMS ?? '—'), String(o.restoBaf ?? '—'), String(o.tvFutbol ?? '—'),
+            String(o.dispSegEuros ?? '—'), String(o.dispUnidades ?? '—'), String(o.seguros ?? '—'),
+            String(o.movil ?? '—'), String(o.repos ?? '—'), String(o.fttr ?? '—'),
+          ]),
+        }] } : {}),
       })
     }
 
@@ -166,6 +204,14 @@ export async function GET(request: Request) {
           : [`${catRows.length} productos en ${cats.size} categorías.`, ...(faltan.length ? [`Sin filas en: ${faltan.join(', ')}.`] : [])],
         ayuda: faltan.length ? 'Sube o clona los catálogos de esas categorías en Catálogos.' : undefined,
         accion: { tipo: 'enlace', etiqueta: 'Ir a Catálogos', href: '/catalogos' },
+        ...(conTablas && catRows.length ? { tablas: [{
+          titulo: 'Catálogos del mes',
+          subtitulo: 'Cuántos precios tiene cada categoría en este periodo.',
+          columnas: ['Categoría', 'Productos'],
+          numericas: [1],
+          filas: [...cats].sort().map(cNom => [cNom,
+            String(catRows.filter(x => String(x.categoria) === cNom).length)]),
+        }] } : {}),
       })
     }
 
@@ -221,6 +267,20 @@ export async function GET(request: Request) {
              `Comerciales de tienda con comisión: ${porComercial.filter((x: any) => x.total > 0).length}.`]
           : ['No se pudo calcular la foto de comisiones (¿faltan palancas o plantilla?).'],
         accion: { tipo: 'enlace', etiqueta: 'Panel de Comisiones', href: '/tiendas/comisiones' },
+        ...(conTablas && panelOk ? { tablas: [{
+          titulo: 'Comisiones por comercial (foto de hoy)',
+          subtitulo: 'El mismo motor que el Panel y la liquidación N+3 del ERP.',
+          columnas: ['Comercial', 'Comisión', 'Extras', 'Total'],
+          numericas: [1, 2, 3],
+          filas: [
+            ...[...sellerStats].map((s: any) => ({
+              n: String(s.name || s.comercial || ''), c: r2(Number(s.totalComision || 0)),
+              e: r2(Number(s.totalExtras || 0)), t: comisionDe(s), marta: esMarta(s),
+            })).sort((a, b) => b.t - a.t)
+              .map(x => [x.marta ? `${x.n} (O2)` : x.n, eur(x.c), eur(x.e), eur(x.t)]),
+            ['Jefe (Salva)', '—', '—', eur(jefeTotal)],
+          ],
+        }] } : {}),
       })
     }
 
@@ -229,6 +289,7 @@ export async function GET(request: Request) {
       let estado: EstadoPaso = 'ambar'
       let detalles: string[] = ['No se pudo calcular (falta la foto de comisiones del paso anterior).']
       let ayuda: string | undefined
+      let tablasVersus: any[] = []
       if (panelOk && inputPanel) {
         try {
           // El COBRO usa el universo del feed del ERP (TODAS las ventas con fecha
@@ -269,6 +330,15 @@ export async function GET(request: Request) {
             detalles.push(...vs.multi.ejemplos.map(e => `· ${e}`))
           }
           detalles.push(...vs.avisos.map(a => `⚠ ${a}`))
+          if (conTablas && vs.porPalanca.length) {
+            tablasVersus = [{
+              titulo: 'Cobro vs pago por palanca',
+              subtitulo: 'El pago aquí son las líneas por venta; los extras/bonos y el jefe (por objetivos) van aparte. Los avisos se juzgan por familia (Repos/TV/Fútbol juntos).',
+              columnas: ['Palanca', 'Cobramos', 'Pagamos', 'Margen'],
+              numericas: [1, 2, 3],
+              filas: vs.porPalanca.map(p2 => [p2.palanca, eur(p2.cobro), eur(p2.pago), eur(p2.margen)]),
+            }]
+          }
           if (vs.avisos.length) {
             ayuda = mesCerrado
               ? 'Con el mes cerrado, una palanca en pérdida es real: revisa su regla en el Panel de Comisiones. No se toca ninguna regla sola: la decisión es tuya.'
@@ -287,14 +357,16 @@ export async function GET(request: Request) {
         detalles,
         ayuda,
         accion: { tipo: 'enlace', etiqueta: 'Comisiones VS (detalle)', href: '/direccion-tiendas/comisiones-vs' },
+        ...(tablasVersus.length ? { tablas: tablasVersus } : {}),
       })
     }
 
     // ── Paso 7: los 9 % del jefe del mes ────────────────────────────────────
     {
       const claves = JEFE_PCT_KEYS_BASE.map(k => `${k}_${periodKey}`)
-      const hay = await prisma.appSetting.findMany({ where: { key: { in: claves } }, select: { key: true } })
+      const hay = await prisma.appSetting.findMany({ where: { key: { in: claves } }, select: { key: true, value: true } })
       const n = hay.length
+      const valorDe = new Map(hay.map(x => [x.key, x.value]))
       pasos.push({
         id: 'jefe_pct',
         titulo: 'Los % del Jefe de Ventas del mes',
@@ -305,6 +377,16 @@ export async function GET(request: Request) {
           : ['Ningún % propio de este mes: el jefe cobraría con el respaldo general (puede ser de hace meses).'],
         ayuda: n > 0 ? undefined : 'Revísalos y guárdalos en el Panel del Jefe para que queden anclados a este mes.',
         accion: { tipo: 'enlace', etiqueta: 'Comisiones del Jefe', href: '/seguimiento-ventas/comisiones-jefe' },
+        ...(conTablas && n > 0 ? { tablas: [{
+          titulo: 'Los % del jefe, de este mes',
+          subtitulo: 'Guardados con la clave del mes (sin respaldos viejos).',
+          columnas: ['Concepto', '%'],
+          numericas: [1],
+          filas: JEFE_PCT_KEYS_BASE.map(k => [
+            k.replace(/^jefe_pct_/, '').replace(/_/g, ' '),
+            valorDe.has(`${k}_${periodKey}`) ? String(valorDe.get(`${k}_${periodKey}`)) : '(respaldo)',
+          ]),
+        }] } : {}),
       })
     }
 
@@ -354,6 +436,21 @@ export async function GET(request: Request) {
         }
       }
 
+      let tablasExtras: any[] = []
+      if (conTablas && reglasEx > 0) {
+        const reglasVivas = await prisma.extraRule.findMany({ where: { isActive: true } })
+        tablasExtras = [{
+          titulo: 'Reglas de extras activas',
+          subtitulo: 'Lo que paga cada regla al comercial y a la empresa.',
+          columnas: ['Regla', 'Canal', 'Paga comercial', 'Cobra empresa', 'Tope'],
+          numericas: [2, 3, 4],
+          filas: reglasVivas.map(rx => [
+            String(rx.name || ''), String(rx.channelType || ''),
+            eur(Number(rx.sellerRewardAmount || 0)), eur(Number(rx.telecomRewardAmount || 0)),
+            rx.maxPayoutUnits != null ? String(rx.maxPayoutUnits) : '—',
+          ]),
+        }]
+      }
       pasos.push({
         id: 'extras',
         titulo: 'Extras y bonos KPI',
@@ -363,6 +460,7 @@ export async function GET(request: Request) {
         ayuda,
         accion: { tipo: 'enlace', etiqueta: 'Panel de Comisiones', href: '/tiendas/comisiones' },
         ...(accionSecundaria ? { accionSecundaria } : {}),
+        ...(tablasExtras.length ? { tablas: tablasExtras } : {}),
       } as any)
     }
 
