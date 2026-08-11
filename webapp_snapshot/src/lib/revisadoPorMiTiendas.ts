@@ -16,8 +16,12 @@
 
 import { createHash } from 'crypto'
 
-/** Los pasos que admiten sello. Ningún otro puede darse por revisado. */
-export const PASOS_CON_SELLO = ['extras'] as const
+/** Los pasos que admiten sello. Ningún otro puede darse por revisado.
+ *  'palancas' se añadió en T5: su ámbar («no encuentro Repos (Arpu) / Repo
+ *  Fútbol por nombre») puede ser un renombrado a propósito; el sello lo apaga
+ *  y vuelve solo si cambia el juego de palancas del mes. El rojo del versus
+ *  (dinero en pérdida al cierre) NO se puede sellar a propósito. */
+export const PASOS_CON_SELLO = ['extras', 'palancas'] as const
 export type PasoConSello = (typeof PASOS_CON_SELLO)[number]
 
 export const esPasoConSello = (id: any): id is PasoConSello =>
@@ -71,6 +75,14 @@ export async function huellaDelPaso(prisma: any, pasoId: string, periodKey: stri
       ...reglas.map((r: any) => `R|${firmaReglaExtra(r)}`),
       ...bonos.map((a: any) => `B|${firmaBono(a)}`),
     ])
+  }
+
+  if (pasoId === 'palancas') {
+    // Lo revisado son los NOMBRES de las palancas del mes (el aviso es «no
+    // encuentro Repos (Arpu)/Fútbol por nombre»): si el juego de nombres
+    // cambia, el sello caduca y el aviso vuelve solo.
+    const reglas = await prisma.tiendaCommissionRule.findMany({ where: { periodKey } })
+    return huellaDeContenido(reglas.map((r: any) => `P|${String(r.nombre ?? '').trim()}`))
   }
 
   return null

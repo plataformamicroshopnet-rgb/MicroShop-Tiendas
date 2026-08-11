@@ -97,17 +97,37 @@ export async function GET(request: Request) {
       const avisos: string[] = []
       if (!arpu) avisos.push('No encuentro la palanca de Repos (Arpu).')
       if (!futbol) avisos.push('No encuentro la palanca de Repo Fútbol.')
+      let estadoPal: EstadoPaso = reglas.length === 0 ? 'rojo' : (avisos.length ? 'ambar' : 'verde')
+      const detallesPal = reglas.length === 0
+        ? ['El mes no tiene ninguna palanca de comisiones.']
+        : [`${reglas.length} palancas · ${conCond} con condicionantes.`, ...avisos,
+           ...(arpu && futbol ? ['Los dos candados sagrados presentes: Repos (Arpu) y Repo Fútbol.'] : [])]
+      let ayudaPal: string | undefined = avisos.length ? 'Revisa las palancas en Entrada de Datos → Comisiones.' : undefined
+      let accionSecPal: any = undefined
+      if (estadoPal === 'ambar') {
+        // ¿El dueño ya revisó estos nombres y siguen igual? → verde con constancia.
+        const selloRowP = await prisma.appSetting.findUnique({ where: { key: claveSelloRevision('palancas', periodKey) } })
+        const huellaP = await huellaDelPaso(prisma, 'palancas', periodKey)
+        const { sello: selloP, vigente: vigenteP } = leerSello(selloRowP?.value, huellaP)
+        if (vigenteP && selloP) {
+          estadoPal = 'verde'
+          detallesPal.push(`Lo diste por revisado el ${cuandoEnCristiano(selloP.cuando)} (${selloP.quien}) y las palancas no han cambiado desde entonces.`)
+          ayudaPal = undefined
+        } else {
+          if (selloP && !vigenteP) detallesPal.push(`Lo diste por revisado el ${cuandoEnCristiano(selloP.cuando)}, pero las palancas han cambiado desde entonces.`)
+          ayudaPal = 'Si el nombre es un cambio a propósito, pulsa «Ya lo he revisado» y el aviso se apaga (vuelve solo si las palancas cambian).'
+          accionSecPal = { tipo: 'revisado', etiqueta: 'Ya lo he revisado' }
+        }
+      }
       pasos.push({
         id: 'palancas',
         titulo: 'Palancas de comisiones y sus candados',
         resumen: 'Que las palancas del mes están y conservan sus condicionantes.',
-        estado: reglas.length === 0 ? 'rojo' : (avisos.length ? 'ambar' : 'verde'),
-        detalles: reglas.length === 0
-          ? ['El mes no tiene ninguna palanca de comisiones.']
-          : [`${reglas.length} palancas · ${conCond} con condicionantes.`, ...avisos,
-             ...(arpu && futbol ? ['Los dos candados sagrados presentes: Repos (Arpu) y Repo Fútbol.'] : [])],
-        ayuda: avisos.length ? 'Revisa las palancas en Entrada de Datos → Comisiones.' : undefined,
-        accion: { tipo: 'enlace', etiqueta: 'Ir a Comisiones', href: '/catalogos' },
+        estado: estadoPal,
+        detalles: detallesPal,
+        ayuda: ayudaPal,
+        accion: { tipo: 'enlace', etiqueta: 'Ir a Comisiones', href: '/catalogos?tab=Comisiones%20para%20Tiendas' },
+        ...(accionSecPal ? { accionSecundaria: accionSecPal } : {}),
         ...(conTablas && reglas.length ? { tablas: [{
           titulo: 'Palancas del mes',
           subtitulo: 'Objetivo → importe de cada tramo, y si conserva condicionantes.',
@@ -144,7 +164,7 @@ export async function GET(request: Request) {
                  ...(sinTienda.length ? [`${sinTienda.length} sin tienda: ${sinTienda.map(h => h.comercial).join(', ')}`] : [])]
               : [`${horas.length} comerciales, todos con horas y tienda.`]),
         ayuda: mal ? 'Complétalos en «Horarios de Comerciales».' : undefined,
-        accion: { tipo: 'enlace', etiqueta: 'Horarios de Comerciales', href: '/catalogos' },
+        accion: { tipo: 'enlace', etiqueta: 'Horarios de Comerciales', href: '/catalogos?tab=Comisiones%20para%20Tiendas' },
         ...(conTablas && horas.length ? { tablas: [{
           titulo: 'Plantilla del mes',
           subtitulo: 'La hoja oficial que rige todas las pantallas.',
@@ -221,6 +241,7 @@ export async function GET(request: Request) {
     let despues: any = null
     let jefeTotal = 0
     let inputPanel: any = null   // catálogos y demás insumos, para el paso del versus
+    let panelError = ''          // la causa, para que el rojo del paso 6 no sea mudo
     try {
       const { input, ventas } = await loadPanelInputs(prisma, periodKey)
       inputPanel = input
@@ -241,11 +262,25 @@ export async function GET(request: Request) {
           monthSales: ventas, catalogs: input.catalogs || {}, viewingPeriod: periodKey.replace(/[_-]/g, ''), pcts,
         }).total)
       } catch (e) { console.warn('[salud-mes tiendas] jefe:', e) }
-    } catch (e) { console.warn('[salud-mes tiendas] panel:', e) }
+    } catch (e: any) {
+      panelError = String(e?.message || e)
+      console.warn('[salud-mes tiendas] panel:', e)
+    }
 
     // ── Paso 6: comisiones del equipo (foto) ────────────────────────────────
     {
-      const esMarta = (s: any) => String(s.name || s.comercial || '').toLowerCase().includes('marta')
+      // O2 MovilFree se detecta por la TIENDA de la plantilla del mes (columna
+      // 'O2' de Horarios de Comerciales), no solo por llamarse Marta: aguanta
+      // renombres, homónimos y un relevo en el puesto. El nombre queda de red.
+      const nombresO2 = new Set(
+        (inputPanel?.tiendaHours || [])
+          .filter((h: any) => String(h.tienda || '').trim().toUpperCase() === 'O2')
+          .map((h: any) => String(h.comercial || '').trim().toLowerCase())
+      )
+      const esMarta = (s: any) => {
+        const n = String(s.name || s.comercial || '').trim().toLowerCase()
+        return nombresO2.has(n) || n.includes('marta')
+      }
       const comisionDe = (s: any) => r2(Number(s.totalComision || 0) + Number(s.totalExtras || 0))
       // El equipo de TIENDA (sin Marta) y el jefe van juntos: es lo que cobra la
       // gente de las 4 tiendas físicas y Salva (que no cobra sobre Marta).
@@ -265,7 +300,8 @@ export async function GET(request: Request) {
           ? [`Equipo de tienda: ${eur(equipo)} · Jefe (Salva): ${eur(jefeTotal)}.`,
              `O2 MovilFree (Marta): ${eur(martaO2)}.`,
              `Comerciales de tienda con comisión: ${porComercial.filter((x: any) => x.total > 0).length}.`]
-          : ['No se pudo calcular la foto de comisiones (¿faltan palancas o plantilla?).'],
+          : ['No se pudo calcular la foto de comisiones.',
+             panelError ? `Causa: ${panelError}` : 'Causa desconocida (¿faltan palancas o plantilla?).'],
         accion: { tipo: 'enlace', etiqueta: 'Panel de Comisiones', href: '/tiendas/comisiones' },
         ...(conTablas && panelOk ? { tablas: [{
           titulo: 'Comisiones por comercial (foto de hoy)',

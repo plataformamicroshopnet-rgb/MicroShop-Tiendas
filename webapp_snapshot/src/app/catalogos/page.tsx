@@ -122,6 +122,15 @@ export default function CatalogosPage() {
     "Ti": [], "Rent": [], "Seguro": [], "O2": [], "miMovistar": [], "Suscripciones TV": [], "Varios": [], "Repos": [], [CAT_REPOS]: [], "Resto BAF": [], "Traslado miMovistar": [], "Accesorios": []
   })
   const [activeTab, setActiveTab] = useState('Ti')
+  // Enlace directo a una pestaña (?tab=Comisiones para Tiendas): lo usan los
+  // botones del hub Cambio de Mes para aterrizar donde toca, no en 'Ti'.
+  useEffect(() => {
+    try {
+      const t = new URLSearchParams(window.location.search).get('tab')
+      const validas = [...CATEGORIES, 'Comisiones para Tiendas', 'Comisiones O2 MovilFree', 'PRV Territorial Movistar y O2']
+      if (t && validas.includes(t)) setActiveTab(t)
+    } catch {}
+  }, [])
   const isProductTab = CATEGORIES.includes(activeTab) && activeTab !== 'Comisiones para Tiendas' && activeTab !== 'Comisiones O2 MovilFree' && activeTab !== 'PRV Territorial Movistar y O2'
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
