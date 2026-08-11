@@ -166,24 +166,12 @@ export async function POST(req: Request) {
                   value: o.value,
                   grupo: o.grupo
               }))
-          },
-          extraRules: {
-              create: source.extraRules.filter(r => r.isActive).map(r => ({
-                  name: r.name,
-                  channelType: r.channelType,
-                  description: r.description,
-                  combinationLabel: r.combinationLabel,
-                  requiredGroups: r.requiredGroups,
-                  payoutMode: r.payoutMode,
-                  sameClientRequired: r.sameClientRequired,
-                  sameSellerRequired: r.sameSellerRequired,
-                  minOccurrences: r.minOccurrences,
-                  maxPayoutUnits: r.maxPayoutUnits,
-                  telecomRewardAmount: r.telecomRewardAmount,
-                  sellerRewardAmount: r.sellerRewardAmount,
-                  isActive: true
-              }))
           }
+          // OJO: las ExtraRules NO se clonan A PROPÓSITO (la bomba del pago doble):
+          // los lectores de reglas y bonos son GLOBALES (no filtran por periodo) y
+          // la clave de idempotencia del bono lleva el id de la regla, así que cada
+          // copia clonada PAGARÍA OTRA VEZ el mismo KPI. Las reglas de extras se
+          // gestionan en su propia pantalla y no viajan con el clonado del mes.
         }
       })
       
