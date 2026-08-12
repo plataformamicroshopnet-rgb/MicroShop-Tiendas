@@ -249,7 +249,7 @@ export default function ComisionesJefeTiendasPage() {
                     <div style={{ marginTop: 20, padding: '12px 16px', borderRadius: 10,
                                   background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.4)' }}>
                         <div style={{ fontSize: 13, fontWeight: 700, color: '#92400E', marginBottom: 6 }}>
-                            OJO: palancas con condiciones
+                            Palancas con condiciones
                         </div>
                         {conAviso.map((x: any) => (
                             <div key={x.nombre} style={{ fontSize: 12, color: '#92400E', lineHeight: 1.5, marginBottom: 3 }}>

@@ -835,7 +835,7 @@ export default function ComisionesDashboardPage() {
                                                                 <div style={{ marginTop: 5, padding: '5px 8px', borderRadius: 6,
                                                                               background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.35)',
                                                                               fontSize: 10.5, lineHeight: 1.45, color: '#92400E', fontWeight: 500 }}>
-                                                                  {ojo.length > 0 && <><b>OJO:</b> {ojo.join(' ')}</>}
+                                                                  {ojo.length > 0 && ojo.join(' ')}
                                                                   {/* Lo que pasa ESTE mes: el objetivo 2 puede estar en verde y aun
                                                                       así pagarse al tramo 1 porque otra palanca (o una tienda) no
                                                                       llegó. Se dice aquí, que si no parece un error del programa. */}
