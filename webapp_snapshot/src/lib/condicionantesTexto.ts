@@ -1,17 +1,26 @@
 /**
- * EL «OJO» DE LAS DOS PALANCAS QUE LO NECESITAN.
+ * EL «OJO» DE CADA PALANCA.
  *
- * Va en el Panel de Comisiones (lo ven los comerciales y el jefe). Antes salía
- * un aviso en CADA palanca con toda su letra pequeña, y ocupaba media pantalla:
- * cuando todo avisa, no avisa nada. Petición del dueño (8-ago-2026): dejar solo
- * las dos que de verdad condicionan el cobro, y con sus palabras.
+ * Va en el Panel de Comisiones (lo ven los comerciales y el jefe): debajo del
+ * nombre de la palanca, en ámbar, con las condiciones que tiene puestas.
  *
- * ⚠️ LOS NÚMEROS SIGUEN SALIENDO DE LA REGLA, NUNCA ESCRITOS A MANO. El texto es
- * el suyo, pero el 161, el 186, el 80 % y los 30 dispositivos se leen de la
- * configuración de ese mes. Si un día cambia un objetivo, el aviso cambia con él;
- * si estuviera escrito a mano, la pantalla prometería una condición y el programa
- * aplicaría otra — y eso, en una pantalla que la gente usa para saber lo que va a
- * cobrar, es peor que no poner nada.
+ * HISTORIA (para que nadie lo vuelva atrás sin querer): en agosto de 2026 esto
+ * se recortó a solo dos palancas (Repos ARPU y Fútbol) porque cada fila sacaba
+ * su letra pequeña y ocupaba media pantalla. El dueño pidió después (12-ago)
+ * volver a enseñarlo en TODAS las filas que tengan condición, con una frase
+ * corta por condición. Las palancas sin condiciones siguen sin aviso: no hay
+ * nada que contar y el silencio es la señal de «esta se cobra sin candados».
+ *
+ * ⚠️ LOS NÚMEROS SALEN DE LA REGLA, NUNCA ESCRITOS A MANO. El 80 %, los 30
+ * dispositivos o el nombre de la palanca de la que se depende se leen de la
+ * configuración de ese mes. Si un día cambia un objetivo, el aviso cambia con
+ * él; si estuviera escrito a mano, la pantalla prometería una condición y el
+ * programa aplicaría otra — y eso, en una pantalla que la gente usa para saber
+ * lo que va a cobrar, es peor que no poner nada.
+ *
+ * ⚠️ SOLO SE CUENTAN LAS CONDICIONES COMPLETAS. Una condición sin el «sobre
+ * qué» o sin valor la SALTA el motor, así que aquí tampoco se menciona: no se
+ * promete un candado que no se aplica.
  */
 
 const num = (v: any) => {
@@ -20,78 +29,74 @@ const num = (v: any) => {
 }
 const ent = (v: any) => Math.round(num(v)).toLocaleString('es-ES')
 
-const sinAdornos = (s: any) =>
-  String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim()
-
 const condicionesDe = (rule: any): any[] => {
   const raw = String(rule?.condicionantes || '')
   if (!raw.startsWith('[')) return []
   try { return JSON.parse(raw) || [] } catch { return [] }
 }
 
-/**
- * ¿Es la palanca de los Repos por ARPU? El nombre ha ido cambiando: en mayo de
- * 2026 se llamaba «ARPU» a secas, después «Repos UP» y en pantalla «Repos
- * (Arpu)». Basta con que lleve «arpu» o con que sea un repo que no es el del
- * fútbol. (La primera versión exigía que llevara «repo» Y «arpu», y con la
- * palanca llamada «ARPU» no reconocía ninguna: el aviso no salía nunca.)
- */
-const esReposArpu = (nombre: string) => {
-  const n = sinAdornos(nombre)
-  if (n.includes('futbol')) return false
-  return n.includes('arpu') || (n.includes('repo') && n.includes('up'))
+/** ¿Tiene «sobre qué» y un valor mayor que 0? (las de equipo/acumulativas no
+ *  necesitan ninguna de las dos cosas: son una forma de pago, no un candado). */
+const completa = (c: any) => String(c?.targetGroup || '').trim() !== '' && num(c?.value) > 0
+
+const sinAdornos = (s: any) =>
+  String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim()
+
+/** La frase de UNA condición. '' = esa condición no se cuenta.
+ *  `nombreRegla` sirve para detectar las condiciones que apuntan a la PROPIA
+ *  palanca («swap requiere 1 de swap»), que en la pantalla del comercial no
+ *  dicen nada: se traducen a «se paga a partir de N unidades» y, si es 1, se
+ *  callan (que una venta necesite existir para cobrarse ya se da por hecho). */
+function fraseDe(c: any, nombreRegla: string): string {
+  const tipo = String(c?.type || '')
+  const sobre = String(c?.targetGroup || '').trim()
+  const esSiMisma = sinAdornos(sobre) === sinAdornos(nombreRegla)
+
+  switch (tipo) {
+    case 'REQUIRE_GROUP_QTY':
+      if (!completa(c)) return ''
+      if (esSiMisma) return num(c.value) > 1 ? `Se paga a partir de ${ent(c.value)} unidades.` : ''
+      return `Condicionado a llegar a ${ent(c.value)} de ${sobre}.`
+    case 'REQUIRE_GROUP_PCT':
+      return completa(c) ? `Condicionado a llegar a un mínimo al ${ent(c.value)} % de ${sobre}.` : ''
+    case 'REQUIRE_GROUP_PCT_TRAMO2':
+      return completa(c)
+        ? `Condicionado el cobro del segundo tramo a llegar al ${ent(c.value)} % en ${sobre} para Cobrar.`
+        : ''
+    case 'REQUIRE_STORE_QTY_TRAMO2':
+      return completa(c)
+        ? `Condicionado el cobro del segundo tramo a ${ent(c.value)} ${sobre} por Tienda.`
+        : ''
+    // Las de equipo y las acumulativas no son candados: cambian CÓMO se paga.
+    // Se dicen igual, porque explican por qué un objetivo no es el que uno cree.
+    case 'REQUIRE_TEAM_OBJ2':
+      return 'El objetivo del segundo tramo es del EQUIPO, no individual.'
+    case 'REQUIRE_TEAM_OBJ3':
+      return 'El objetivo del tercer tramo es del EQUIPO, no individual.'
+    case 'REQUIRE_TEAM_OBJ23':
+      return 'Los objetivos del segundo y tercer tramo son del EQUIPO, no individuales.'
+    case 'ACCUMULATIVE_TRAMOS':
+      return 'Tramos acumulativos: al llegar al segundo se cobran los dos por unidad.'
+    case 'ACCUMULATIVE_FIXED_BASE':
+      return 'Tramos acumulativos: bono fijo del primer tramo más las unidades del segundo.'
+    default:
+      return ''
+  }
 }
 
-/** ¿Es la del fútbol? (Repo Fútbol, Altas Fútbol, Desarrollo TV…) */
-const esFutbol = (nombre: string) => {
-  const n = sinAdornos(nombre)
-  return n.includes('futbol') || n.includes('desarrollo tv')
-}
-
 /**
- * El aviso de una regla. Array vacío = esa palanca no lleva aviso, que es el
- * caso de casi todas.
+ * Las frases de una regla, en el orden en que están configuradas. Array vacío =
+ * esa palanca no lleva aviso (no tiene condiciones, o las que tiene están a
+ * medias y el motor las salta).
  */
 export function textoCondicionantes(rule: any): string[] {
   const nombre = String(rule?.nombre || '')
   if (!nombre) return []
-
-  const conds = condicionesDe(rule)
-
-  if (esReposArpu(nombre)) {
-    // El % lo pone la condición REQUIRE_GROUP_PCT_TRAMO2 (hoy, 100 % de
-    // «Dispositivos + Seguros»). Si no está puesta —o está a medias, sin el
-    // «sobre qué» o sin valor, que es como la deja el desplegable a medio
-    // configurar y como la SALTA el motor— no se enseña nada: mejor callar que
-    // prometer un candado que el programa no aplica.
-    const c = conds.find((x: any) => x?.type === 'REQUIRE_GROUP_PCT_TRAMO2'
-      && String(x?.targetGroup || '').trim() && num(x?.value) > 0)
-    if (!c) return []
-    return [
-      `Condicionado el cobro del segundo tramo a llegar al ${ent(c.value)} % en ${String(c.targetGroup).trim()} para Cobrar.`,
-    ]
+  const frases: string[] = []
+  for (const c of condicionesDe(rule)) {
+    const f = fraseDe(c, nombre)
+    // Sin repetir: dos condiciones idénticas no tienen por qué contarse dos veces.
+    if (f && !frases.includes(f)) frases.push(f)
   }
-
-  if (esFutbol(nombre)) {
-    // Solo los dos mínimos de empresa. Los objetivos de la propia palanca NO se
-    // repiten aquí: ya se ven en su fila de la tabla, y meterlos alargaba el
-    // aviso justo de lo que hay que enterarse (decisión del dueño, 8-ago-2026).
-    // Solo cuentan las condiciones COMPLETAS (con «sobre qué» y valor): las que
-    // están a medias el motor las salta, y aquí no se promete lo que no se aplica.
-    const completa = (x: any) => String(x?.targetGroup || '').trim() && num(x?.value) > 0
-    const pct = conds.find((x: any) => (x?.type === 'REQUIRE_GROUP_PCT_TRAMO2' || x?.type === 'REQUIRE_GROUP_PCT') && completa(x))
-    const porTienda = conds.find((x: any) => x?.type === 'REQUIRE_STORE_QTY_TRAMO2' && completa(x))
-    const minimo = pct ? `un mínimo al ${ent(pct.value)} % de ${String(pct.targetGroup).trim()}` : ''
-    const tienda = porTienda ? `${ent(porTienda.value)} ${String(porTienda.targetGroup).trim()} por Tienda` : ''
-    // Sin ninguna de las dos condiciones no hay candado que contar: mejor callar
-    // que prometer uno que el programa no aplica.
-    if (!minimo && !tienda) return []
-    const cuerpo = minimo && tienda ? `${minimo} y ${tienda}` : (minimo || tienda)
-    return [`Condicionado a llegar a ${cuerpo}.`]
-  }
-
-  // El resto de palancas, sin aviso: su letra pequeña ya está en los objetivos
-  // que se ven en la propia tabla, y repetirla en cada fila tapaba lo que sí
-  // hay que leer.
-  return []
+  return frases
 }
