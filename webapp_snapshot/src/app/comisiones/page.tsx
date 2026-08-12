@@ -717,32 +717,36 @@ export default function ComisionesDashboardPage() {
                                             <col style={{ width: '6%' }} />{/* Obj. 1 */}
                                             <col style={{ width: '8%' }} />{/* Obj. 2 */}
                                             <col style={{ width: '8%' }} />{/* Obj. 3 */}
-                                            <col style={{ width: '6%' }} />{/* Falta 1 */}
-                                            <col style={{ width: '9%' }} />{/* Falta 2 */}
-                                            <col style={{ width: '9%' }} />{/* Falta 3 */}
+                                            <col style={{ width: '6%' }} />{/* Faltan 1 */}
+                                            <col style={{ width: '9%' }} />{/* Faltan 2 */}
+                                            <col style={{ width: '9%' }} />{/* Faltan 3 */}
                                             <col style={{ width: '7%' }} />{/* Comisión */}
                                         </colgroup>
                                         <thead>
-                                            <tr style={{ 
-                                                backgroundColor: '#0078D4', 
-                                                color: '#FFFFFF', 
-                                                textTransform: 'uppercase',
+                                            {/* CABECERA (petición del dueño, 12-ago-2026): sin mayúsculas
+                                                forzadas, sin negrita y solo la primera letra en alta. En
+                                                mayúsculas «TRAMO» no cabía en su columna y se partía en
+                                                «TRAM / O»; escrito normal cabe de sobra. «Falta» pasó a
+                                                «Faltan» porque lo que dice la casilla es cuántas faltan. */}
+                                            <tr style={{
+                                                backgroundColor: '#0078D4',
+                                                color: '#FFFFFF',
                                                 fontSize: 13,
                                                 borderBottom: 'none'
                                             }}>
-                                                <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 700 }}>Nombre Comisión</th>
-                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700 }}><AuditableCell metricKey="COMISION_INDIVIDUAL_TRAMO">Imp. 1<br/>Tramo</AuditableCell></th>
-                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700 }}><AuditableCell metricKey="COMISION_INDIVIDUAL_TRAMO">Imp. 2<br/>Tramo</AuditableCell></th>
-                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700 }}><AuditableCell metricKey="COMISION_INDIVIDUAL_TRAMO">Imp. 3<br/>Tramo</AuditableCell></th>
-                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700 }}>Ventas</th>
-                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700 }}>Pte.</th>
-                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700 }}>Obj. 1</th>
-                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700 }}>Obj. 2</th>
-                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700 }}>Obj. 3</th>
-                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700 }}>Falta 1</th>
-                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700 }}>Falta 2</th>
-                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700 }}>Falta 3</th>
-                                                <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700 }}>Comisión</th>
+                                                <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 500 }}>Nombre comisión</th>
+                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 500 }}><AuditableCell metricKey="COMISION_INDIVIDUAL_TRAMO">Imp. 1<br/>tramo</AuditableCell></th>
+                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 500 }}><AuditableCell metricKey="COMISION_INDIVIDUAL_TRAMO">Imp. 2<br/>tramo</AuditableCell></th>
+                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 500 }}><AuditableCell metricKey="COMISION_INDIVIDUAL_TRAMO">Imp. 3<br/>tramo</AuditableCell></th>
+                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 500 }}>Ventas</th>
+                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 500 }}>Pte.</th>
+                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 500 }}>Obj. 1</th>
+                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 500 }}>Obj. 2</th>
+                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 500 }}>Obj. 3</th>
+                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 500 }}>Faltan 1</th>
+                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 500 }}>Faltan 2</th>
+                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 500 }}>Faltan 3</th>
+                                                <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 500 }}>Comisión</th>
                                             </tr>
                                         </thead>
                                         <tbody style={{ backgroundColor: '#ffffff' }}>
