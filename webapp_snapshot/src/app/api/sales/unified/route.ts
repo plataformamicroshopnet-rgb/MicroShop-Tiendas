@@ -293,7 +293,12 @@ export async function POST(request: Request) {
         telf: prod.telf || '',
         pendiente: prod.pendiente || '',
         anulado: 'No',
-        anotaciones: finalAnotaciones,
+        // La promo «sin Paquete Movistar Plus» deja rastro: el importe guardado
+        // ya viene con los −14 € aplicados desde Nueva Venta, y aquí queda
+        // escrito el porqué (para auditorías y para el cruce con Telefónica).
+        anotaciones: prod.descuentoSinPlus
+          ? [finalAnotaciones, 'Promo −14 € sin Paquete Movistar Plus'].filter(Boolean).join(' · ')
+          : finalAnotaciones,
         telefonoFijo: data.telefonoFijo || '',
         telefonoMovil: data.telefonoMovil || '',
         boletin: data.boletin || '',

@@ -373,11 +373,13 @@ export default function NuevaVentaPage() {
          newProducts[index].producto = ''
          newProducts[index].importe = ''
          newProducts[index].gama = ''
+         newProducts[index].descuentoSinPlus = false
       }
-      
+
       if (field === 'fabricante' || field === 'subcategoria') {
          newProducts[index].producto = ''
          newProducts[index].importe = ''
+         newProducts[index].descuentoSinPlus = false
          newProducts[index].gama = ''
       }
       
@@ -487,7 +489,12 @@ export default function NuevaVentaPage() {
             } else if (cat === 'miMovistar' || cat === 'Resto BAF' || cat === 'Traslado miMovistar') {
               const baseCom = parseSafeNum(selectedItem.comision);
               const mult = parseSafeNum(selectedItem.comisionConCoste);
-              newProducts[index].importe = String(baseCom * (mult === 0 ? 1 : mult));
+              let impMm = baseCom * (mult === 0 ? 1 : mult);
+              // Promoción «sin el Paquete Movistar Plus»: −14 € (solo miMovistar).
+              if (cat === 'miMovistar' && newProducts[index].descuentoSinPlus) {
+                impMm = Math.max(0, impMm - 14);
+              }
+              newProducts[index].importe = String(impMm);
             } else if (cat === 'Ti' || cat === 'TMA' || cat === 'Micro' || cat === 'Rent') {
               newProducts[index].importe = selectedItem.anual || selectedItem.mensual || ''
             } else {
@@ -504,6 +511,22 @@ export default function NuevaVentaPage() {
          }
       }
       
+      // Casilla de la promo «sin el Paquete Movistar Plus»: recalcular el importe
+      // desde el catálogo al marcar/desmarcar (−14 €, solo miMovistar AV/MV).
+      if (field === 'descuentoSinPlus' && newProducts[index].categoria === 'miMovistar'
+          && newProducts[index].producto) {
+         const catListMm = catalogs['miMovistar'] || []
+         const selMm = catListMm.find((p: any) => p.producto === newProducts[index].producto
+            && p.subcategoria === newProducts[index].subcategoria
+            && p.gama === newProducts[index].gama)
+         if (selMm) {
+            const numMm = (v: any) => Number(String(v ?? '').replace(',', '.')) || 0
+            const multMm = numMm(selMm.comisionConCoste)
+            const baseMm = numMm(selMm.comision) * (multMm === 0 ? 1 : multMm)
+            newProducts[index].importe = String(value === true ? Math.max(0, baseMm - 14) : baseMm)
+         }
+      }
+
       if (field === 'isLibre') {
          // If they check "Libre", we don't need to clear seguro anymore because it's handled via a separate row
          if (value === true) {
@@ -1227,8 +1250,27 @@ export default function NuevaVentaPage() {
                         </div>
                       )}
 
+                      {/* Promo −14 €: miMovistar SIN el Paquete Movistar Plus (solo AV y MV) */}
+                      {prod.categoria === 'miMovistar'
+                        && ['AV', 'MV'].includes(String(prod.subcategoria || '').toUpperCase().trim()) && (
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8,
+                          padding: '8px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 13,
+                          backgroundColor: prod.descuentoSinPlus ? '#FFF3E0' : '#F8F9FA',
+                          border: `1px solid ${prod.descuentoSinPlus ? '#FFB74D' : '#E0E0E0'}`, color: '#333' }}>
+                          <input type="checkbox" checked={!!prod.descuentoSinPlus}
+                            onChange={e => handleProductChange(index, 'descuentoSinPlus', e.target.checked)}
+                            style={{ width: 16, height: 16, cursor: 'pointer' }} />
+                          <span>
+                            <b>Descuento 14 €</b> · Promoción sin el Paquete Movistar Plus
+                            {prod.descuentoSinPlus && prod.importe !== '' && prod.importe !== undefined
+                              ? <b style={{ color: '#E65100' }}>{` — aplicado: ${Number(prod.importe).toFixed(2)} €`}</b>
+                              : ''}
+                          </span>
+                        </label>
+                      )}
+
                       <div style={{ height: 1, backgroundColor: '#E0E0E0', margin: '8px 0' }}></div>
-                      
+
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
                         <div>
                           <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>Teléfono (Nº Fijo / Móvil)</label>
