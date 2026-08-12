@@ -70,11 +70,11 @@ function fraseDe(c: any, nombreRegla: string): string {
     // Las de equipo y las acumulativas no son candados: cambian CÓMO se paga.
     // Se dicen igual, porque explican por qué un objetivo no es el que uno cree.
     case 'REQUIRE_TEAM_OBJ2':
-      return 'El objetivo del segundo tramo es del EQUIPO, no individual.'
+      return 'El objetivo del segundo tramo es del EQUIPO.'
     case 'REQUIRE_TEAM_OBJ3':
-      return 'El objetivo del tercer tramo es del EQUIPO, no individual.'
+      return 'El objetivo del tercer tramo es del EQUIPO.'
     case 'REQUIRE_TEAM_OBJ23':
-      return 'Los objetivos del segundo y tercer tramo son del EQUIPO, no individuales.'
+      return 'Los objetivos del segundo y tercer tramo son del EQUIPO.'
     case 'ACCUMULATIVE_TRAMOS':
       return 'Tramos acumulativos: al llegar al segundo se cobran los dos por unidad.'
     case 'ACCUMULATIVE_FIXED_BASE':

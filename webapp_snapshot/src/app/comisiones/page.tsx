@@ -796,11 +796,12 @@ export default function ComisionesDashboardPage() {
                                                                 >
                                                                     <span>{gName === 'ARPU' ? 'Repos (Arpu)' : gName}</span>
                                                                 </AuditableCell>
-                                                                {/* La chapa «Tramo 1 por condición» se retiró a peticion del dueño
-                                                                    (12-ago-2026). Su información NO se pierde: el porqué de que se
-                                                                    esté pagando al tramo 1 baja al recuadro «OJO» de aquí abajo,
-                                                                    donde ya viven las condiciones de la palanca — un solo sitio
-                                                                    para lo que condiciona el cobro. */}
+                                                                {/* Aquí vivía la chapa «Tramo 1 por condición» y, después, la línea
+                                                                    «⚠️ Este mes: Tramo 1 forzado…». Las dos fuera por decisión del
+                                                                    dueño (12-ago-2026): la fila deja de contar el ESTADO del mes y
+                                                                    se queda solo con la REGLA (el recuadro ámbar de abajo). El dato
+                                                                    sigue calculándose en el motor (`groupTopeMotivo`), por si algún
+                                                                    día se quiere volver a enseñar. */}
                                                                 {normalizeRole(user?.role) === 'ADMIN' && activeRulesForSeller === tiendaRules && (
                                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                                                         <button 
@@ -829,21 +830,12 @@ export default function ComisionesDashboardPage() {
                                                                 ella; y si no hay ninguna, no se enseña nada. */}
                                                             {(() => {
                                                               const ojo = textoCondicionantes(rule)
-                                                              const tope = s.groupTopeMotivo?.[gName] || ''
-                                                              if (ojo.length === 0 && !tope) return null
+                                                              if (ojo.length === 0) return null
                                                               return (
                                                                 <div style={{ marginTop: 5, padding: '5px 8px', borderRadius: 6,
                                                                               background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.35)',
                                                                               fontSize: 10.5, lineHeight: 1.45, color: '#92400E', fontWeight: 500 }}>
-                                                                  {ojo.length > 0 && ojo.join(' ')}
-                                                                  {/* Lo que pasa ESTE mes: el objetivo 2 puede estar en verde y aun
-                                                                      así pagarse al tramo 1 porque otra palanca (o una tienda) no
-                                                                      llegó. Se dice aquí, que si no parece un error del programa. */}
-                                                                  {tope && (
-                                                                    <div style={{ marginTop: ojo.length > 0 ? 4 : 0, fontWeight: 700 }}>
-                                                                      ⚠️ Este mes: {tope}
-                                                                    </div>
-                                                                  )}
+                                                                  {ojo.join(' ')}
                                                                 </div>
                                                               )
                                                             })()}
