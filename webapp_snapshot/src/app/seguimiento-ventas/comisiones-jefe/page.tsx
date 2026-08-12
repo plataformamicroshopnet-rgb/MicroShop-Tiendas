@@ -246,13 +246,13 @@ export default function ComisionesJefeTiendasPage() {
                     .filter((x: any) => x.lineas.length > 0)
                 if (conAviso.length === 0) return null
                 return (
-                    <div style={{ marginTop: 20, padding: '12px 16px', borderRadius: 10,
+                    <div style={{ marginTop: 16, padding: '8px 14px', borderRadius: 9,
                                   background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.4)' }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: '#92400E', marginBottom: 6 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#92400E', marginBottom: 4 }}>
                             Palancas con condiciones
                         </div>
                         {conAviso.map((x: any) => (
-                            <div key={x.nombre} style={{ fontSize: 12, color: '#92400E', lineHeight: 1.5, marginBottom: 3 }}>
+                            <div key={x.nombre} style={{ fontSize: 12, color: '#92400E', lineHeight: 1.35, marginBottom: 1 }}>
                                 <b>{x.nombre}:</b> {x.lineas.join(' ')}
                             </div>
                         ))}
@@ -269,10 +269,14 @@ export default function ComisionesJefeTiendasPage() {
                         font-size: 14px;
                         background: #fff;
                     }
+                    /* ALTO AL MÍNIMO (petición del dueño, 12-ago-2026), igual que en el
+                       Panel de Comisiones: se recorta SOLO el aire vertical; el lateral
+                       se queda para que las cifras no se peguen a las rayas. */
                     .excel-table th, .excel-table td {
                         border: 1px solid #d1d5db;
-                        padding: 10px 14px;
+                        padding: 4px 14px;
                         text-align: center;
+                        line-height: 1.25;
                     }
                     .header-blue {
                         background-color: #0078d4;
@@ -302,11 +306,11 @@ export default function ComisionesJefeTiendasPage() {
                         background: #f8fafc;
                     }
                     /* Tarjetas de condiciones compactadas para que entren las 4 */
-                    .excel-table.compact th, .excel-table.compact td { padding: 5px 8px; font-size: 12.5px; }
+                    .excel-table.compact th, .excel-table.compact td { padding: 3px 8px; font-size: 12.5px; }
                     .excel-table.compact .input-pct { width: 52px; padding: 3px; }
                     .card-progress { font-size: 10px; color: #64748b; font-weight: 600; }
-                    /* Filas de la tabla de comerciales un pelín más bajas (~3px) para que entre en pantalla */
-                    .excel-table.main-table th, .excel-table.main-table td { padding-top: 8.5px; padding-bottom: 8.5px; }
+                    /* Filas de la tabla de comerciales al mínimo para que entre en pantalla */
+                    .excel-table.main-table th, .excel-table.main-table td { padding-top: 3.5px; padding-bottom: 3.5px; line-height: 1.15; }
                 `}} />
 
                 {/* Aviso: los % son de ESTE mes y solo de este mes (ago-2026) */}
