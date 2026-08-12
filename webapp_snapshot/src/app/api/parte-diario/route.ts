@@ -64,6 +64,18 @@ const esAnulada = (s: any) => {
   return an === 'si' || an === 'sí' || pe === 'anulado'
 }
 
+// La línea compañera del Repo Fútbol (los 10 € de la hoja «Repo Fútbol») es la
+// segunda pata del MISMO cliente: su comisión cuenta, pero NO es otra venta.
+// Regla de la casa: «1 cliente = 2 líneas y 1 unidad» — sin esto, el parte
+// enseñaba ~140 «ventas» donde había ~84 operaciones (caso Carmen, ago-2026).
+// Las madres sustituidas por una corrección tampoco cuentan (su corrección ya
+// cuenta por ellas; mismo criterio que el resto de pantallas).
+const esLineaNoContable = (s: any) => {
+  if (s?.sustituida) return true
+  const hoja = String(s.sheet || '').toLowerCase().trim()
+  return hoja === 'repo fútbol' || hoja === 'repo futbol'
+}
+
 // Mismo parser de importes que el motor ('12,50 €' / '3%' -> número).
 const parseImporte = (val: any) => {
   let s = String(val || '0').replace(/[^0-9.,\-]/g, '').trim()
@@ -154,7 +166,8 @@ export async function GET(request: Request) {
     // ── Cifras del DÍA por comercial (para el equipo y para cada parte) ──────
     const ventasDelDiaPorComercial = new Map<string, any[]>()
     for (const st of result.sellerStats) {
-      ventasDelDiaPorComercial.set(st.name, (st.rawSales || []).filter((s: any) => !esAnulada(s) && esDelDia(s.fecha)))
+      ventasDelDiaPorComercial.set(st.name, (st.rawSales || []).filter(
+        (s: any) => !esAnulada(s) && !esLineaNoContable(s) && esDelDia(s.fecha)))
     }
 
     // Ranking del día con TODA la plantilla (incluidos los que no vendieron):
@@ -187,7 +200,8 @@ export async function GET(request: Request) {
 
         const ventasDia = ventasDelDiaPorComercial.get(st.name) || []
         const idsDia = new Set(ventasDia.map((s: any) => String(s.id)))
-        const ventasMes = (st.rawSales || []).filter((s: any) => !esAnulada(s))
+        const ventasMes = (st.rawSales || []).filter(
+          (s: any) => !esAnulada(s) && !esLineaNoContable(s))
 
         // Comisión del día: la parte de la comisión del mes que corresponde a las
         // ventas de esa fecha (lineasDetalle ya la reparte venta a venta).
