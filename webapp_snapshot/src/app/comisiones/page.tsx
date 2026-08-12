@@ -584,8 +584,19 @@ export default function ComisionesDashboardPage() {
                         grid-template-columns: 1fr;
                     }
                 }
+                /* ALTO DE FILA AL MÍNIMO (petición del dueño, 12-ago-2026). Esta
+                   tabla se mira de un vistazo para saber lo que se lleva uno, y
+                   cada píxel de aire vertical que sobra es una palanca menos en
+                   pantalla. Se recorta SOLO lo vertical: el aire lateral se
+                   respeta para que las cifras no se peguen a las líneas.
+                   Va con !important porque los paddings vienen escritos en el
+                   propio elemento (style=...) y si no, no habría manera. */
                 .comisiones-table th, .comisiones-table td {
                     border-right: 1px solid #e2e8f0;
+                    padding-top: 3px !important;
+                    padding-bottom: 3px !important;
+                    line-height: 1.15;
+                    overflow-wrap: break-word;
                 }
                 .comisiones-table th:last-child, .comisiones-table td:last-child {
                     border-right: none;
@@ -686,7 +697,31 @@ export default function ComisionesDashboardPage() {
                                 {/* GRÁFICO DE BARRAS DE VENTAS POR GRUPO */}
                                 <div style={{ flex: 1 }}>
                                     <div style={{ backgroundColor: '#ffffff', borderRadius: 8, overflow: 'hidden', border: '1px solid #bfdbfe', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-                                    <table className="comisiones-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                                    <table className="comisiones-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, tableLayout: 'fixed' }}>
+                                        {/* EL REPARTO DEL ANCHO (petición del dueño, 12-ago-2026). Antes mandaba
+                                            el contenido: como la columna del nombre lleva el recuadro de
+                                            condiciones, se comía media tabla y las cifras salían partidas
+                                            («1522,96 / €»). Con el reparto fijado, el nombre se queda en su
+                                            quinto de tabla —el aviso usa dos líneas, que para eso están— y
+                                            los euros se leen de un tirón. Los porcentajes suman 100: si se
+                                            toca uno, hay que quitárselo a otro. Las filas con colSpan
+                                            (territorial O2, extras, «sin reglas») siguen cuadrando porque
+                                            todas tienen las 13 columnas. */}
+                                        <colgroup>
+                                            <col style={{ width: '20%' }} />{/* Nombre Comisión */}
+                                            <col style={{ width: '5%' }} />{/* Imp. 1 Tramo */}
+                                            <col style={{ width: '5%' }} />{/* Imp. 2 Tramo */}
+                                            <col style={{ width: '4.5%' }} />{/* Imp. 3 Tramo */}
+                                            <col style={{ width: '7%' }} />{/* Ventas */}
+                                            <col style={{ width: '5.5%' }} />{/* Pte. */}
+                                            <col style={{ width: '6%' }} />{/* Obj. 1 */}
+                                            <col style={{ width: '8%' }} />{/* Obj. 2 */}
+                                            <col style={{ width: '8%' }} />{/* Obj. 3 */}
+                                            <col style={{ width: '6%' }} />{/* Falta 1 */}
+                                            <col style={{ width: '9%' }} />{/* Falta 2 */}
+                                            <col style={{ width: '9%' }} />{/* Falta 3 */}
+                                            <col style={{ width: '7%' }} />{/* Comisión */}
+                                        </colgroup>
                                         <thead>
                                             <tr style={{ 
                                                 backgroundColor: '#0078D4', 
@@ -803,7 +838,7 @@ export default function ComisionesDashboardPage() {
                                                                     sigue calculándose en el motor (`groupTopeMotivo`), por si algún
                                                                     día se quiere volver a enseñar. */}
                                                                 {normalizeRole(user?.role) === 'ADMIN' && activeRulesForSeller === tiendaRules && (
-                                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
                                                                         <button 
                                                                             onClick={(e) => { e.stopPropagation(); handleReorderTiendaRule(idx, 'up'); }}
                                                                             disabled={idx === 0}
@@ -832,9 +867,9 @@ export default function ComisionesDashboardPage() {
                                                               const ojo = textoCondicionantes(rule)
                                                               if (ojo.length === 0) return null
                                                               return (
-                                                                <div style={{ marginTop: 5, padding: '5px 8px', borderRadius: 6,
+                                                                <div style={{ marginTop: 2, padding: '2px 6px', borderRadius: 5,
                                                                               background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.35)',
-                                                                              fontSize: 10.5, lineHeight: 1.45, color: '#92400E', fontWeight: 500 }}>
+                                                                              fontSize: 10, lineHeight: 1.25, color: '#92400E', fontWeight: 500 }}>
                                                                   {ojo.join(' ')}
                                                                 </div>
                                                               )
@@ -931,7 +966,7 @@ export default function ComisionesDashboardPage() {
                                                             if (!val) val = '-';
                                                             return (
                                                                 <div style={{
-                                                                    padding: '5px 7px',
+                                                                    padding: '2px 7px',
                                                                     borderRadius: '4px',
                                                                     backgroundColor: isAchieved ? '#dcfce7' : '#f8fafc',
                                                                     border: `1px solid ${isAchieved ? '#22c55e' : '#e2e8f0'}`,
@@ -1022,8 +1057,13 @@ export default function ComisionesDashboardPage() {
                                                 const safeName = eg.name || 'Bono Extra';
                                                 return (
                                                 <tr key={`extra-${idx}`} style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: '#ecfdf5', transition: 'background 0.2s', color: '#065f46' }}>
-                                                    <td style={{ padding: '8px 10px', fontSize: 12.5, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                        <Trophy size={10} color="#10b981" /> {safeName}
+                                                    {/* El flex va DENTRO de la celda, no en la celda: un <td> en
+                                                        display:flex se sale del modelo de tabla y con el ancho
+                                                        repartido se desalinearía de las demás filas. */}
+                                                    <td style={{ padding: '8px 10px', fontSize: 12.5, fontWeight: 700 }}>
+                                                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                            <Trophy size={10} color="#10b981" /> {safeName}
+                                                        </span>
                                                     </td>
                                                     <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 13.5, fontWeight: 800, color: '#10b981' }}>
                                                         {eg.count}
