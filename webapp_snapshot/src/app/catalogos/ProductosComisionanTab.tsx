@@ -146,13 +146,21 @@ export default function ProductosComisionanTab() {
     }
   }
 
+  // ¿Hay algo escrito que no parece un correo? Vacío NO es raro: es lo normal
+  // mientras no se hayan ido rellenando. Solo se avisa de lo que está a medias.
+  const emailRaro = (v: any) => {
+    const s = String(v || '').trim()
+    return s !== '' && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(s)
+  }
+
   // ---- HOURS HANDLERS ----
   const addHour = () => {
     setHours([...hours, {
       id: Date.now().toString(),
       comercial: '',
       tienda: '',
-      horario: ''
+      horario: '',
+      email: ''
     }])
   }
 
@@ -314,7 +322,7 @@ export default function ProductosComisionanTab() {
         </div>
 
         {/* TABLA 2: HORARIOS COMERCIALES */}
-        <div className="card" style={{ padding: 20, maxWidth: 820 }}>
+        <div className="card" style={{ padding: 20, maxWidth: 1020 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <h3 style={{ margin: 0, color: 'var(--mercedes-cyan)' }}>2. Horarios de Comerciales</h3>
             {!isHistoric && (
@@ -330,6 +338,7 @@ export default function ProductosComisionanTab() {
                 <th style={{ padding: '12px 8px' }}>Comercial</th>
                 <th style={{ padding: '12px 8px' }}>Tienda</th>
                 <th style={{ padding: '12px 8px' }}>Horario (Horas/Semana o Mes)</th>
+                <th style={{ padding: '12px 8px' }}>Correo</th>
                 {!isHistoric && <th style={{ padding: '12px 8px', width: 40 }}></th>}
               </tr>
             </thead>
@@ -348,6 +357,29 @@ export default function ProductosComisionanTab() {
                   <td style={{ padding: '8px' }}>
                     <input type="number" step="0.5" disabled={isHistoric} value={hour.horario ?? ''} onChange={e => updateHour(idx, 'horario', e.target.value)} style={{ width: 120, padding: 6, backgroundColor: isHistoric ? 'transparent' : 'var(--app-bg)', color: 'var(--light-text)', border: isHistoric ? 'none' : '1px solid var(--border-color)', borderRadius: 4 }} placeholder="Ej: 39" />
                   </td>
+                  {/* CORREO. Es el sitio natural: quien esta en esta tabla ES comercial
+                      del mes, y a quien es comercial se le puede escribir. Vacio es
+                      valido — simplemente esa persona no recibe avisos. El borde se
+                      pone ambar si hay algo escrito que no parece un correo, con el
+                      mismo criterio del semaforo de llaves: avisar en el sitio donde
+                      se teclea, no cuando ya es tarde. */}
+                  <td style={{ padding: '8px' }}>
+                    <input
+                      type="email"
+                      disabled={isHistoric}
+                      value={hour.email || ''}
+                      onChange={e => updateHour(idx, 'email', e.target.value)}
+                      style={{
+                        width: '100%', minWidth: 190, padding: 6,
+                        backgroundColor: isHistoric ? 'transparent' : 'var(--app-bg)',
+                        color: 'var(--light-text)',
+                        border: isHistoric ? 'none' : `1px solid ${emailRaro(hour.email) ? '#F57C00' : 'var(--border-color)'}`,
+                        borderRadius: 4
+                      }}
+                      placeholder="nombre@correo.com"
+                      title={emailRaro(hour.email) ? 'Esto no parece un correo' : 'Para los avisos automáticos'}
+                    />
+                  </td>
                   {!isHistoric && (
                     <td style={{ padding: '8px', textAlign: 'center' }}>
                       <button onClick={() => removeHour(idx)} className="btn" style={{ padding: 4, color: '#FF453A', background: 'transparent', border: 'none' }}>
@@ -358,14 +390,14 @@ export default function ProductosComisionanTab() {
                 </tr>
               ))}
               {hours.length === 0 && (
-                <tr><td colSpan={4} style={{ padding: 20, textAlign: 'center', color: 'var(--medium-gray)' }}>No hay comerciales configurados.</td></tr>
+                <tr><td colSpan={5} style={{ padding: 20, textAlign: 'center', color: 'var(--medium-gray)' }}>No hay comerciales configurados.</td></tr>
               )}
             </tbody>
           </table>
 
           <div style={{ marginTop: 12, fontSize: 12, color: 'var(--medium-gray)', display: 'flex', alignItems: 'flex-start', gap: 6 }}>
             <AlertCircle size={14} style={{ marginTop: 2, flexShrink: 0 }} />
-            <span>Esta tabla es la <strong>plantilla del mes</strong>: quien esté aquí cuenta como comercial en todas las pantallas (Comisiones, Torneos, Rentabilidad, MOD…). Si <strong>borras</strong> a alguien desaparece solo de este mes en adelante (su histórico de meses anteriores se conserva). Para <strong>dar de alta</strong> a uno nuevo, añádelo y elígele su Tienda. Los objetivos se prorratean dividiendo el Objetivo Global entre el Total de Horas y multiplicándolo por el Horario de cada comercial.</span>
+            <span>Esta tabla es la <strong>plantilla del mes</strong>: quien esté aquí cuenta como comercial en todas las pantallas (Comisiones, Torneos, Rentabilidad, MOD…). Si <strong>borras</strong> a alguien desaparece solo de este mes en adelante (su histórico de meses anteriores se conserva). Para <strong>dar de alta</strong> a uno nuevo, añádelo y elígele su Tienda. Los objetivos se prorratean dividiendo el Objetivo Global entre el Total de Horas y multiplicándolo por el Horario de cada comercial. El <strong>Correo</strong> es a dónde le llegarán los avisos automáticos (por ejemplo, una venta a la que le falta el Nº de Pedido): si lo dejas vacío, esa persona sencillamente no recibe ninguno.</span>
           </div>
         </div>
       </div>

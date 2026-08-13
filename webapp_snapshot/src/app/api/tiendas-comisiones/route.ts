@@ -113,6 +113,10 @@ export async function POST(request: Request) {
           comercial: h.comercial || '',
           tienda: h.tienda ? String(h.tienda) : null,
           horario: h.horario !== undefined && h.horario !== '' ? Number(h.horario) : 0,
+          // Se normaliza al guardar (sin espacios y en minusculas) porque un
+          // correo con una mayuscula o un espacio delante se envia igual de mal
+          // que uno mal escrito, y ahi no hay aviso que valga.
+          email: String(h.email || '').trim().toLowerCase() || null,
         }))
       })
     ])

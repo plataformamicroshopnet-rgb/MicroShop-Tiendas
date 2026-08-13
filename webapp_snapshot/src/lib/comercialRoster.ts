@@ -13,6 +13,7 @@ export interface HourRow {
   comercial?: string
   tienda?: string | null
   horario?: number | string
+  email?: string | null
 }
 
 export const norm = (s: any) =>
@@ -32,6 +33,15 @@ const legacyNameToTienda: Record<string, string> = (() => {
 // Tienda de un comercial según el mapa heredado ('' si no se conoce)
 export function tiendaDeComercial(nombre: string): string {
   return legacyNameToTienda[norm(nombre)] || ''
+}
+
+// Correo de un comercial según la plantilla del mes ('' si no lo tiene puesto).
+// AQUÍ NO SE INVENTA NADA: si la casilla está vacía se devuelve '' y quien llame
+// decide qué hacer. Componer un correo a partir del nombre (nombre@…) mandaría
+// avisos a direcciones que no existen y nadie se enteraría de que se pierden.
+export function emailDeComercial(hours: HourRow[] | null | undefined, nombre: string): string {
+  const fila = (hours || []).find(h => norm(h?.comercial) === norm(nombre))
+  return String(fila?.email || '').trim()
 }
 
 // Mapa efectivo tienda -> [comerciales] de un periodo, a partir de sus horarios.

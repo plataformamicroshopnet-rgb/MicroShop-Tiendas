@@ -505,6 +505,11 @@ model TiendaComercialHour {
   comercial String
   tienda    String?
   horario   Float
+  // Correo del comercial. Vive aqui porque esta tabla es la PLANTILLA OFICIAL
+  // del mes: quien esta aqui es comercial, y a quien es comercial se le puede
+  // escribir. Opcional a proposito: sin correo el comercial funciona igual, solo
+  // que no recibe avisos (y quien lo mire ve la casilla vacia y sabe por que).
+  email     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
