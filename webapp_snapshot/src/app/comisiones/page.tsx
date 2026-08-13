@@ -890,14 +890,14 @@ export default function ComisionesDashboardPage() {
                                                         </td>
                                                         <td
                                                              onClick={(e) => { e.stopPropagation(); const allSales = s.groupSales[gName] || []; const confirmed = allSales.filter((x:any) => String(x.pendiente||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim() !== 'si'); if(confirmed.length>0) setSalesModal({ title: `${s.name} · ${gName} — Ventas confirmadas`, sales: confirmed }); }}
-                                                             style={{ padding: '8px 8px', textAlign: 'center', fontSize: 13.5, fontWeight: 800, color: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.05)', cursor: qtty > 0 ? 'pointer' : 'default', textDecoration: qtty > 0 ? 'underline' : 'none', textUnderlineOffset: 2 }}
+                                                             style={{ padding: '8px 8px', textAlign: 'center', fontSize: 13.5, fontWeight: 400, color: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.05)', cursor: qtty > 0 ? 'pointer' : 'default', textDecoration: qtty > 0 ? 'underline' : 'none', textUnderlineOffset: 2 }}
                                                              title={qtty > 0 ? 'Ver detalle de ventas confirmadas' : ''}
                                                          >
                                                              {formatQtty(qtty)}
                                                          </td>
                                                          <td
                                                              onClick={(e) => { e.stopPropagation(); const allSales = s.groupSales[gName] || []; const pending = allSales.filter((x:any) => String(x.pendiente||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim() === 'si'); if(pending.length>0) setSalesModal({ title: `${s.name} · ${gName} — Pendientes`, sales: pending }); }}
-                                                             style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5, fontWeight: 700, color: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.05)', cursor: pendingQtty > 0 ? 'pointer' : 'default', textDecoration: pendingQtty > 0 ? 'underline' : 'none', textUnderlineOffset: 2 }}
+                                                             style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5, fontWeight: 400, color: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.05)', cursor: pendingQtty > 0 ? 'pointer' : 'default', textDecoration: pendingQtty > 0 ? 'underline' : 'none', textUnderlineOffset: 2 }}
                                                              title={pendingQtty > 0 ? 'Ver detalle de ventas pendientes' : ''}
                                                          >
                                                              {pendingQtty > 0 ? formatQtty(pendingQtty) : '-'}
@@ -911,13 +911,13 @@ export default function ComisionesDashboardPage() {
                                                         <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5 }}>
                                                             {displayObj3 === 0 ? '-' : <>{format(displayObj3)} {isTeamObj3 && <span style={{ fontSize: 10.5, color: 'var(--medium-gray)' }}>(Eq)</span>}</>}
                                                         </td>
-                                                        <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5, fontWeight: 600 }}>
+                                                        <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5, fontWeight: 400 }}>
                                                             {obj1 === 0 ? '-' : (falt1 > 0 ? <span style={{ color: '#ef4444' }}>{format(falt1)}</span> : <span style={{ color: '#10b981' }}>✓</span>)}
                                                         </td>
-                                                        <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5, fontWeight: 600 }}>
+                                                        <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5, fontWeight: 400 }}>
                                                             {displayObj2 === 0 ? '-' : (falt2 > 0 ? <span style={{ color: '#ef4444' }}>{format(falt2)} {isTeamObj2 ? 'entre todo el Equipo' : ''}</span> : <span style={{ color: '#10b981' }}>✓</span>)}
                                                         </td>
-                                                        <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5, fontWeight: 600 }}>
+                                                        <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5, fontWeight: 400 }}>
                                                             {displayObj3 === 0 ? '-' : (falt3 > 0 ? <span style={{ color: '#ef4444' }}>{format(falt3)} {isTeamObj3 ? 'entre todo el Equipo' : ''}</span> : <span style={{ color: '#10b981' }}>✓</span>)}
                                                         </td>
                                                         <td style={{
@@ -1040,12 +1040,12 @@ export default function ComisionesDashboardPage() {
                                                     <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5, color: '#334155' }}>-</td>
                                                     <td
                                                         onClick={(e) => { e.stopPropagation(); const conf = (s.o2Otras.sales || []).filter((x: any) => String(x.pendiente || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim() !== 'si'); if (conf.length > 0) setSalesModal({ title: `${s.name} · Altas O2/Otras — Ventas confirmadas`, sales: conf }); }}
-                                                        style={{ padding: '8px 8px', textAlign: 'center', fontSize: 13.5, fontWeight: 800, color: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.05)', cursor: s.o2Otras.confirmed > 0 ? 'pointer' : 'default', textDecoration: s.o2Otras.confirmed > 0 ? 'underline' : 'none', textUnderlineOffset: 2 }}
+                                                        style={{ padding: '8px 8px', textAlign: 'center', fontSize: 13.5, fontWeight: 400, color: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.05)', cursor: s.o2Otras.confirmed > 0 ? 'pointer' : 'default', textDecoration: s.o2Otras.confirmed > 0 ? 'underline' : 'none', textUnderlineOffset: 2 }}
                                                         title={s.o2Otras.confirmed > 0 ? 'Ver detalle de ventas O2 confirmadas' : ''}
                                                     >
                                                         {s.o2Otras.confirmed}
                                                     </td>
-                                                    <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5, fontWeight: 700, color: '#f59e0b' }}>{s.o2Otras.pending > 0 ? s.o2Otras.pending : '-'}</td>
+                                                    <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5, fontWeight: 400, color: '#f59e0b' }}>{s.o2Otras.pending > 0 ? s.o2Otras.pending : '-'}</td>
                                                     <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5 }}>-</td>
                                                     <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5 }}>-</td>
                                                     <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5 }}>-</td>
@@ -1069,7 +1069,7 @@ export default function ComisionesDashboardPage() {
                                                             <Trophy size={10} color="#10b981" /> {safeName}
                                                         </span>
                                                     </td>
-                                                    <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 13.5, fontWeight: 800, color: '#10b981' }}>
+                                                    <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 13.5, fontWeight: 400, color: '#10b981' }}>
                                                         {eg.count}
                                                     </td>
                                                     <td colSpan={10} style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5, color: '#a7f3d0' }}>
