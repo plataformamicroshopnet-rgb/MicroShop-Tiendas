@@ -48,6 +48,71 @@ export const PALANCA_REPOS = 'Repos UP'
 export const PALANCA_REPO_FUTBOL = 'Repo Fútbol'
 
 /**
+ * REPO DE ARPU CON IMPORTE A MANO (ago-2026). FUENTE ÚNICA del multiplicador.
+ *
+ * Telefónica paga estos reposicionamientos «en función incremental del ARPU real
+ * (IVA incluido)»: no hay tarifa fija, se cobra un múltiplo de lo que le sube la
+ * factura al cliente. Hasta ahora eso se tecleaba eligiendo UNO DE CUATRO
+ * productos (uno por tramo) con el multiplicador guardado en el catálogo: si el
+ * tramitador se equivocaba de tramo, el importe salía mal y no lo veía nadie.
+ * Ahora hay UN producto, se teclea el incremento y el tramo lo pone el programa.
+ *
+ * LA TABLA (comunicado de Telefónica, confirmada por el dueño el 14-ago-2026):
+ *   · ∆ARPU >= 10 €  →  ×2   (200 %)
+ *   · ∆ARPU <  10 €  →  ×1,5 (150 %)
+ * Coincide EXACTAMENTE con los cuatro productos viejos (< 6 € y 6-10 € → 1,5;
+ * 10-35 € y >= 35 € → 2), así que el dinero no cambia: lo que desaparece es la
+ * posibilidad de equivocarse de tramo.
+ *
+ * OJO: el multiplicador vive AQUÍ y no en el catálogo porque una fila de catálogo
+ * solo admite UN multiplicador (por eso hacían falta cuatro productos). La casilla
+ * «Multiplicador X» de esa fila se deja vacía: no se lee.
+ */
+export const REPO_ARPU_PRODUCTO = 'Reposicionamientos destino BAF miMovistar/Fusión'
+export const REPO_ARPU_CORTE = 10
+
+/** Número tecleado a la española ('12,50') o a la inglesa ('12.50'). Nunca NaN. */
+function _numArpu(v: any): number {
+    const n = parseFloat(String(v ?? '').replace(',', '.'))
+    return isNaN(n) ? 0 : n
+}
+
+/**
+ * ¿Es el producto de repo de ARPU que se teclea con el incremento a mano?
+ * Se reconoce por el nombre para que el dueño pueda darlo de alta en el catálogo
+ * sin tocar código. NO confundir con los CUATRO viejos («Repos destino BAF …
+ * incremento de ARPU < 6€»…), que llevan sus dos casillas Fact. Anterior/Nueva:
+ * aquellos dicen «incremento de ARPU» y este empieza por «Reposicionamientos».
+ */
+export function esRepoArpuManual(producto?: string | null): boolean {
+    const p = normalizeString(producto || '')
+    return p.includes('reposicionamientos') && p.includes('destinobaf')
+}
+
+/** El multiplicador que toca según el incremento de ARPU tecleado. */
+export function factorRepoArpu(incremento: any): number {
+    return _numArpu(incremento) >= REPO_ARPU_CORTE ? 2 : 1.5
+}
+
+/** Lo que se cobra por el repo: el incremento por su multiplicador (2 decimales). */
+export function importeRepoArpu(incremento: any): number {
+    const inc = Math.max(0, _numArpu(incremento))
+    return Math.round(inc * factorRepoArpu(inc) * 100) / 100
+}
+
+/**
+ * Rastro que se guarda en las anotaciones de la venta. Sin él, un importe de
+ * 24 € podría venir de 12 × 2 o de 16 × 1,5 y no habría forma de saberlo: la
+ * venta solo guarda el resultado, y el tramo ya no viaja en el nombre del
+ * producto como pasaba con los cuatro viejos.
+ */
+export function rastroRepoArpu(incremento: any): string {
+    const inc = Math.max(0, _numArpu(incremento))
+    const factor = String(factorRepoArpu(inc)).replace('.', ',')
+    return `Incremento ARPU ${inc.toFixed(2).replace('.', ',')} € × ${factor} (IVA incl.)`
+}
+
+/**
  * FUENTE ÚNICA de "esta venta ya no cuenta para el COBRO porque tiene una
  * corrección" (ago-2026). Los precios de los Repos estaban mal; en vez de
  * reescribir un mes ya pagado, a la venta vieja se le cuelga una HIJA con el

@@ -4,6 +4,7 @@ import { canEdit } from '@/lib/permissions'
 import { PrismaClient } from '@prisma/client'
 import { runExtrasEngine } from '@/lib/extrasEngine'
 import { randomUUID } from 'crypto'
+import { esRepoArpuManual, importeRepoArpu, rastroRepoArpu } from '@/lib/salesUtils'
 
 const prisma = new PrismaClient()
 
@@ -95,6 +96,14 @@ export async function POST(request: Request) {
 
     const numValidProducts = data.productos.filter((p: any) => p.producto !== '').length
     if (numValidProducts === 0) return NextResponse.json({ success: false, error: 'Configura al menos un producto' }, { status: 400 })
+
+    // Repo de ARPU: sin incremento no hay venta. El importe de estas ventas SIEMPRE
+    // sale de incremento × multiplicador; si se dejara pasar sin él, entraría el
+    // número en crudo (sin multiplicar) y nadie lo notaría hasta la liquidación.
+    if (data.productos.some((p: any) => p.producto !== '' && esRepoArpuManual(p.producto)
+        && !(importeRepoArpu(p.arpuIncremento) > 0))) {
+      return NextResponse.json({ success: false, error: 'Falta el Incremento de ARPU del repo «Reposicionamientos destino BAF miMovistar/Fusión»: el importe se calcula con él (×2 desde 10 €, ×1,5 por debajo).' }, { status: 400 })
+    }
 
     // En Rent es obligatorio indicar el origen del terminal: TIENDA descuenta
     // stock, LOGISTICO no (a veces se vende por envío aunque haya unidades).
@@ -268,7 +277,22 @@ export async function POST(request: Request) {
       console.log('prod.producto:', prod.producto)
       console.log('Valor final asignado a grupo:', calculatedGroup)
 
+      // ── REPO DE ARPU CON IMPORTE A MANO ──────────────────────────────────
+      // El precio no está en ninguna tarifa: es el incremento de ARPU tecleado
+      // por su multiplicador (×2 desde 10 €, ×1,5 por debajo). Se recalcula AQUÍ
+      // y no se da por bueno lo que llegue del navegador — la cuenta del dinero
+      // la hace el servidor. Y el incremento se guarda en las anotaciones porque
+      // la venta solo guarda el resultado: sin el rastro, 24 € podrían venir de
+      // 12 × 2 o de 16 × 1,5 y nadie podría saberlo después.
+      const esRepoArpu = esRepoArpuManual(prod.producto)
+      const incArpu = esRepoArpu ? prod.arpuIncremento : null
+      const hayIncArpu = esRepoArpu && incArpu !== null && incArpu !== undefined
+        && String(incArpu).trim() !== '' && importeRepoArpu(incArpu) > 0
+
       let finalAnotaciones = data.anotaciones || ''
+      if (hayIncArpu) {
+        finalAnotaciones = [finalAnotaciones, rastroRepoArpu(incArpu)].filter(Boolean).join(' · ')
+      }
       if (prod.motivoSinStock) {
         finalAnotaciones = finalAnotaciones 
           ? `${finalAnotaciones} | Motivo Sin Stock: ${prod.motivoSinStock}`
@@ -305,9 +329,11 @@ export async function POST(request: Request) {
         grupo: calculatedGroup,
         // Para Seguros: cuota en BD = Cuota Total (seguroImporte), no la Comisión (importe)
         // Esto asegura que el Registro de Operaciones y todos los paneles lean el valor correcto.
-        cuota: (prod.categoria === 'Seguro' && prod.seguroImporte && parseFloat(prod.seguroImporte.toString().replace(',','.')) > 0)
-          ? parseFloat(prod.seguroImporte.toString().replace(',','.'))
-          : (prod.importe ? parseFloat(prod.importe.toString().replace(',','.')) : null),
+        cuota: hayIncArpu
+          ? importeRepoArpu(incArpu)
+          : ((prod.categoria === 'Seguro' && prod.seguroImporte && parseFloat(prod.seguroImporte.toString().replace(',','.')) > 0)
+            ? parseFloat(prod.seguroImporte.toString().replace(',','.'))
+            : (prod.importe ? parseFloat(prod.importe.toString().replace(',','.')) : null)),
         detalle: prod.categoria || '',
         imei: prod.imei || null,
         numeroPedido: prod.numeroPedido || null,

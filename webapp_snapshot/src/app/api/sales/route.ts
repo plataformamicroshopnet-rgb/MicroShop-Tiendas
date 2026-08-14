@@ -4,7 +4,7 @@ import { getSession } from '@/lib/auth'
 import { PrismaClient } from '@prisma/client'
 import { ROLES } from '@/lib/appConfig'
 import { can, canEdit, canView } from '@/lib/permissions'
-import { findCatalogVigente } from '@/lib/salesUtils'
+import { findCatalogVigente, esRepoArpuManual } from '@/lib/salesUtils'
 import { runExtrasEngine } from '@/lib/extrasEngine'
 const prisma = new PrismaClient()
 
@@ -327,8 +327,13 @@ export async function PATCH(request: Request) {
              // importe sale de Fact. Nueva − Fact. Anterior por el % del catálogo,
              // que se teclea en Nueva Venta. Aquí NO se toca, o al corregir una
              // errata de fecha se les pondría el precio de una suscripción.
+             // El repo de ARPU con importe a mano tampoco tiene precio de tarifa
+             // (su fila del catálogo va a 0 €): sin esta guarda, tocar la fecha
+             // de la venta la dejaría a 0 € — que es justo el fallo que ya nos
+             // pasó una vez con las demás palancas.
              const esIncrementoArpu = String(effectiveProducto).toLowerCase()
                .normalize('NFD').replace(/[̀-ͯ]/g, '').includes('incremento de arpu')
+               || esRepoArpuManual(effectiveProducto)
              const multiplica = !esIncrementoArpu && (pal === 'suscripciones tv' || pal === 'repos up')
              const planas = ['o2', 'seguro', 'prepago', 'varios', 'accesorios']
              let nuevoPrecio: number | null = null

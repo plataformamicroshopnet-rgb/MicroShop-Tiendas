@@ -6,7 +6,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { FilePlus, ShieldPlus } from 'lucide-react'
 import { CODIGOS_TRAMITACION } from '@/lib/constants'
 import { getEffectiveTiendaComerciales, getEffectiveSellers } from '@/lib/comercialRoster'
-import { isVentaWithinDates } from '@/lib/salesUtils'
+import { isVentaWithinDates, esRepoArpuManual, importeRepoArpu, factorRepoArpu, REPO_ARPU_CORTE, PALANCA_REPOS } from '@/lib/salesUtils'
 import { useGuard } from '@/hooks/useGuard'
 import { usePeriod } from '@/components/PeriodProvider'
 
@@ -52,7 +52,8 @@ export default function NuevaVentaPage() {
         isLibre: false,
         isSwap: false,
         facturacionAnterior: '',
-        facturacionNueva: ''
+        facturacionNueva: '',
+        arpuIncremento: ''
       }
     ]
   })
@@ -445,7 +446,13 @@ export default function NuevaVentaPage() {
             // multiplicador. OJO, la pestaña VIEJA («Repos») usa el multiplicador
             // para otra cosa (el modo Fact. Anterior / Fact. Nueva del ARPU), y si
             // la nueva entrara por ahí el producto de 78 € se autorrellenaría a 0 €.
-            if (cat === 'Repos UP' && esRepoIncrementoArpu(newProducts[index].producto)) {
+            if (usaIncrementoArpu(newProducts[index])) {
+              // Repo de ARPU con importe a mano: el precio no está en la tarifa,
+              // sale del incremento que teclea el tramitador por su multiplicador
+              // (lo elige el programa según el tramo). Al elegir el producto aún
+              // no hay incremento: el importe se rellena al teclearlo.
+              newProducts[index].importe = String(importeRepoArpu(newProducts[index].arpuIncremento))
+            } else if (cat === 'Repos UP' && esRepoIncrementoArpu(newProducts[index].producto)) {
               // Repo de incremento de ARPU dentro de la palanca nueva: el importe
               // lo ponen las casillas Fact. Anterior / Fact. Nueva, no la tarifa.
               if (selectedItem.comisionConCoste && Number(selectedItem.comisionConCoste) > 0) {
@@ -533,6 +540,11 @@ export default function NuevaVentaPage() {
          }
       }
       
+      // Repo de ARPU a mano: el importe se rehace en cuanto cambia el incremento.
+      if (usaIncrementoArpu(newProducts[index]) && field === 'arpuIncremento') {
+         newProducts[index].importe = String(importeRepoArpu(value))
+      }
+
       // Recalcular importe para Repos si cambian los factores numéricos
       if (usaModoArpu(newProducts[index]) && (field === 'facturacionAnterior' || field === 'facturacionNueva')) {
          const catList = catalogs[newProducts[index].categoria] || []
@@ -573,7 +585,8 @@ export default function NuevaVentaPage() {
           isLibre: false,
           isSwap: false,
           facturacionAnterior: '',
-          facturacionNueva: ''
+          facturacionNueva: '',
+          arpuIncremento: ''
         }
       ]
     }))
@@ -666,7 +679,16 @@ export default function NuevaVentaPage() {
       .includes('incremento de arpu')
   /** ¿Esta línea se teclea con las casillas Fact. Anterior / Fact. Nueva? */
   const usaModoArpu = (prod: any) =>
-    prod?.categoria === 'Repos' || (prod?.categoria === 'Repos UP' && esRepoIncrementoArpu(prod?.producto))
+    (prod?.categoria === 'Repos' || (prod?.categoria === 'Repos UP' && esRepoIncrementoArpu(prod?.producto)))
+    && !esRepoArpuManual(prod?.producto)
+
+  /**
+   * ¿Esta línea se teclea con UNA casilla (el incremento de ARPU) y el programa
+   * pone el multiplicador? Es el relevo de los cuatro productos por tramos: el
+   * tramitador ya no elige tramo, solo dice cuánto sube la factura.
+   */
+  const usaIncrementoArpu = (prod: any) =>
+    prod?.categoria === PALANCA_REPOS && esRepoArpuManual(prod?.producto)
 
   // Palancas RETIRADAS: no se pueden elegir al teclear una venta nueva.
   // · «Suscripciones TV» → sus productos viven ahora en «Repos (Arpu)».
@@ -779,7 +801,16 @@ export default function NuevaVentaPage() {
       return
     }
 
-    const missingMotivos = formData.productos.some((p: any) => 
+    // El repo de ARPU no se puede guardar sin su incremento: sin él no hay
+    // multiplicador que aplicar y la venta entraría con el importe en crudo.
+    if (formData.productos.some((p: any) => esRepoArpuManual(p.producto)
+        && !(Number(String(p.arpuIncremento ?? '').replace(',', '.')) > 0))) {
+      setError('En el repo de «Reposicionamientos destino BAF miMovistar/Fusión» tienes que teclear el Incremento de ARPU (IVA incl.): el programa lo multiplica solo (×2 desde 10 €, ×1,5 por debajo).')
+      setLoading(false)
+      return
+    }
+
+    const missingMotivos = formData.productos.some((p: any) =>
       p.categoria === 'Rent' && p.producto && p.showMotivoSinStock && !String(p.motivoSinStock || '').trim()
     )
     if (missingMotivos) {
@@ -816,7 +847,7 @@ export default function NuevaVentaPage() {
         setSelectedTienda('')
         setFormData({
           vendedor: '', nombreCliente: '', codigo: '', nif: '', telefonoMovil: '', telefonoFijo: '', fechaVenta: new Date().toISOString().slice(0, 10), anotaciones: '',
-          productos: [{ categoria: '', producto: '', telf: '', noCliente: '', pendiente: 'No', importe: '', imei: '', numeroPedido: '', rentConCoste: '', origenStock: '', seguro: '', seguroImporte: 0, fabricante: '', subcategoria: '', gama: '', isLibre: false, isSwap: false, facturacionAnterior: '', facturacionNueva: '' }]
+          productos: [{ categoria: '', producto: '', telf: '', noCliente: '', pendiente: 'No', importe: '', imei: '', numeroPedido: '', rentConCoste: '', origenStock: '', seguro: '', seguroImporte: 0, fabricante: '', subcategoria: '', gama: '', isLibre: false, isSwap: false, facturacionAnterior: '', facturacionNueva: '', arpuIncremento: '' }]
         })
       } else {
         setError(data.error || 'Error al guardar la venta')
@@ -1395,6 +1426,11 @@ export default function NuevaVentaPage() {
                               // Si se dejara, se seguiría apuntando a 10 € como hasta ahora.
                               ?.filter((p: any) => !(PRODUCTOS_RETIRADOS[prod.categoria] || []).includes(String(p.producto || '').trim())
                                                   || String(p.producto || '').trim() === prod.producto)
+                              // El repo de ARPU, EL PRIMERO de la lista: es el que más se
+                              // teclea y el catálogo lo dejaba el último de veinte (el orden
+                              // del desplegable es el de alta de las filas). El sort es
+                              // estable, así que el resto conserva su orden de siempre.
+                              ?.sort((a: any, b: any) => (esRepoArpuManual(b?.producto) ? 1 : 0) - (esRepoArpuManual(a?.producto) ? 1 : 0))
                               .map((p: any, i: number) => <option key={p.id || i} value={p.producto}>{p.producto}</option>)}
                           </select>
                         </div>
@@ -1432,6 +1468,45 @@ export default function NuevaVentaPage() {
 
                     {/* COLUMNA 3: FINANZAS / ESTADO */}
                     <div style={{ flex: '1', minWidth: '200px', backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {/* Repo de ARPU con importe a mano: UNA casilla y la cuenta
+                          a la vista. La casilla «Comisión» de al lado solo la ve
+                          un Admin, así que el tramitador se quedaría sin poder
+                          teclear nada; esta la ve todo el mundo. */}
+                      {usaIncrementoArpu(prod) && (() => {
+                        const inc = parseFloat(String(prod.arpuIncremento ?? '').replace(',', '.'))
+                        const hayInc = !isNaN(inc) && inc > 0
+                        const factor = factorRepoArpu(prod.arpuIncremento)
+                        const total = importeRepoArpu(prod.arpuIncremento)
+                        return (
+                          <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label className="form-label" style={{ color: '#555', fontSize: 11, fontWeight: 'bold' }}>
+                              Incremento de ARPU (IVA incl.) 🔑
+                            </label>
+                            <div style={{ position: 'relative' }}>
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                className="form-input"
+                                style={{ width: '100%', backgroundColor: '#FFF3E0', border: '1px solid #FFCC80', color: '#E65100', fontWeight: 'bold', paddingRight: 24 }}
+                                value={prod.arpuIncremento ?? ''}
+                                onChange={e => handleProductChange(index, 'arpuIncremento', e.target.value)}
+                                placeholder="Lo que le sube la factura"
+                              />
+                              <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: '#E65100', fontSize: 13, pointerEvents: 'none' }}>€</span>
+                            </div>
+                            <div style={{ marginTop: 4, fontSize: 11, lineHeight: 1.35, color: hayInc ? '#1B5E20' : '#777' }}>
+                              {hayInc ? (
+                                <><b>{inc.toFixed(2).replace('.', ',')} € × {String(factor).replace('.', ',')}</b>{' = '}
+                                  <b style={{ fontSize: 13 }}>{total.toFixed(2).replace('.', ',')} €</b>
+                                  <span style={{ color: '#777' }}>{' '}(tramo {inc >= REPO_ARPU_CORTE ? `≥ ${REPO_ARPU_CORTE} €` : `< ${REPO_ARPU_CORTE} €`})</span></>
+                              ) : (
+                                <>Teclea cuánto sube la factura del cliente: desde {REPO_ARPU_CORTE} € se paga ×2, por debajo ×1,5.</>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })()}
                       {usaModoArpu(prod) && (() => {
                         const selRepos = (catalogs[prod.categoria] || []).find((p: any) => p.producto === prod.producto);
                         const isReposMult = selRepos && selRepos.comisionConCoste && Number(selRepos.comisionConCoste) > 0;
@@ -1471,15 +1546,21 @@ export default function NuevaVentaPage() {
                       })()}
                       <div style={{ display: 'grid', gridTemplateColumns: (isAdmin && prod.categoria === 'Seguro') ? '1fr 1fr 1fr' : ((isAdmin || prod.categoria === 'Seguro') ? '1fr 1fr' : '1fr'), gap: '6px' }}>
                         <div className="form-group" style={{ marginBottom: 0, display: isAdmin ? 'block' : 'none' }}>
-                          <label className="form-label" style={{ color: '#555' }}>{(prod.categoria === 'O2' || prod.categoria === 'Suscripciones TV' || prod.categoria === 'Prepago' || prod.categoria === 'Varios' || prod.categoria === 'Accesorios' || prod.categoria === 'Repos' || prod.categoria === 'Repos UP' || prod.categoria === 'Seguro') ? 'Comisión' : 'Importe'}</label>
+                          <label className="form-label" style={{ color: '#555' }}>{usaIncrementoArpu(prod) ? 'Comisión (la calcula el programa)' : ((prod.categoria === 'O2' || prod.categoria === 'Suscripciones TV' || prod.categoria === 'Prepago' || prod.categoria === 'Varios' || prod.categoria === 'Accesorios' || prod.categoria === 'Repos' || prod.categoria === 'Repos UP' || prod.categoria === 'Seguro') ? 'Comisión' : 'Importe')}</label>
                           <div style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
                             <input 
                               type="number" 
                               step="0.01"
                               className="form-input" 
-                              style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A', fontWeight: 'bold', width: '100%', paddingRight: 24 }}
-                              value={prod.importe !== '' && prod.importe !== undefined ? Number(prod.importe).toFixed(2) : ''} 
-                              onChange={e => handleProductChange(index, 'importe', e.target.value)} 
+                              // El repo de ARPU se teclea SOLO en su casilla: aquí sale la
+                              // cuenta ya hecha y no se puede escribir. Un Admin ve las dos
+                              // casillas y, escribiendo en esta, se saltaba el multiplicador
+                              // SIN AVISO (una venta de 55 € que debía cobrar 110).
+                              readOnly={usaIncrementoArpu(prod)}
+                              title={usaIncrementoArpu(prod) ? 'Sale del incremento de ARPU × su multiplicador' : undefined}
+                              style={{ backgroundColor: usaIncrementoArpu(prod) ? '#ECEFF1' : '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A', fontWeight: 'bold', width: '100%', paddingRight: 24, cursor: usaIncrementoArpu(prod) ? 'not-allowed' : 'auto' }}
+                              value={prod.importe !== '' && prod.importe !== undefined ? Number(prod.importe).toFixed(2) : ''}
+                              onChange={e => handleProductChange(index, 'importe', e.target.value)}
                             />
                             <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: '#1B3D6A', fontSize: 13, pointerEvents: 'none' }}>€</span>
                           </div>
