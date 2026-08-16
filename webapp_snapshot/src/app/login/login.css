@@ -1,5 +1,33 @@
-/* Login MicroShop — mismo estilo en ERP, FFVV y Tiendas */
+/* ─────────────────────────────────────────────────────────────────────────
+   Login MicroShop — mismo estilo en ERP, FFVV y Tiendas.
+
+   Rehecho con las proporciones del panel de Studio 54 (16-ago-2026), que es
+   lo que pidió el dueño: la misma caja, las mismas medidas y el mismo tamaño
+   de letra, pero conservando el color de cada programa.
+
+   Qué cambia respecto a lo anterior, y por qué:
+
+   · La tarjeta pierde el radio de 20 px y la sombra de 70 px. Una caja de
+     entrada no necesita flotar: necesita leerse. Radio 14 y una sombra que
+     apenas se nota.
+   · Las etiquetas dejan de ir en MAYÚSCULAS y en negrita 600. En un
+     formulario de dos campos, gritar «USUARIO» no ayuda a nadie.
+   · Los campos bajan de 3,2 rem a 46 px, que sigue estando por encima del
+     mínimo táctil de 44. Y el foco pasa de un halo de 4 px a un contorno
+     limpio de 2: se ve igual de bien y no parece que el campo esté en llamas.
+   · El botón pierde el degradado y el brillo. Color plano del programa.
+
+   El acento se cambia en UN sitio, la variable --acento de aquí abajo.
+   ───────────────────────────────────────────────────────────────────────── */
+
 .login-container {
+  /* El color del programa. Es lo único que hay que tocar para otro. */
+  --acento: #0EA5E9;
+  --acento-oscuro: #0284C7;
+  --tinta: #0F172A;
+  --suave: #64748B;
+  --linea: #E2E8F0;
+
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -14,137 +42,141 @@
   background:
     radial-gradient(ellipse 65% 55% at 15% -5%, rgba(14, 165, 233, 0.22), transparent 60%),
     radial-gradient(ellipse 55% 45% at 90% 105%, rgba(99, 102, 241, 0.20), transparent 60%),
-    radial-gradient(ellipse 40% 35% at 70% 20%, rgba(245, 158, 11, 0.07), transparent 60%),
     linear-gradient(160deg, #0B1220 0%, #0F172A 55%, #131D35 100%);
 }
 
 @keyframes loginFadeUp {
-  from { opacity: 0; transform: translateY(16px); }
+  from { opacity: 0; transform: translateY(14px); }
   to   { opacity: 1; transform: none; }
 }
+@media (prefers-reduced-motion: reduce) {
+  .login-header, .login-card { animation: none !important; }
+}
 
-/* Logo + título sobre el fondo (fuera de la tarjeta) */
+/* Logo + título sobre el fondo, fuera de la tarjeta. */
 .login-header {
   text-align: center;
-  margin-bottom: 28px;
+  margin-bottom: 26px;
   animation: loginFadeUp 0.5s ease both;
 }
 .login-header img {
-  width: 76px; height: 76px;
-  border-radius: 18px;
-  box-shadow: 0 12px 30px -8px rgba(0, 0, 0, 0.5);
-  margin-bottom: 18px;
+  width: 64px; height: 64px;
+  border-radius: 14px;
+  box-shadow: 0 10px 26px -10px rgba(0, 0, 0, 0.5);
+  margin-bottom: 16px;
 }
 .login-header h1 {
-  font-size: 2.3rem;
-  font-weight: 800;
-  letter-spacing: -0.5px;
+  font-size: 1.7rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   color: #F8FAFC;
-  margin: 0 0 10px;
+  margin: 0 0 8px;
 }
-.login-header h1 .text-cyan { color: #38BDF8 !important; }
+.login-header h1 .text-cyan { color: var(--acento) !important; }
 .login-header p {
   color: #94A3B8;
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   margin: 0;
 }
 
-/* Tarjeta blanca del formulario */
+/* La tarjeta. */
 .login-card {
   width: 100%;
-  max-width: 460px;
+  max-width: 440px;
   background: #FFFFFF;
-  border-radius: 20px;
-  padding: 2.4rem 2.6rem 2rem;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 24px 70px -16px rgba(2, 6, 23, 0.65);
+  border-radius: 14px;
+  padding: 26px 28px 28px;
+  border: 1px solid var(--linea);
+  box-shadow: 0 18px 50px -20px rgba(2, 6, 23, 0.7);
   display: flex;
   flex-direction: column;
   animation: loginFadeUp 0.5s ease 0.08s both;
 }
 
-.login-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-.login-card .form-group { display: flex; flex-direction: column; }
+.login-form { display: grid; gap: 18px; }
+.login-card .form-group { display: block; }
 
-/* Etiquetas (scoped a la tarjeta — no afecta al resto de la app) */
+/* Etiquetas: en minúscula y con peso medio, como el resto de la casa. */
 .login-card .form-label {
   display: block;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #475569;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--tinta);
+  text-transform: none;
+  letter-spacing: 0;
   margin-bottom: 6px;
 }
 
-/* Inputs (scoped) */
+/* Campos. */
 .login-card .form-input {
   width: 100%;
-  height: 3.2rem;
-  border-radius: 12px;
-  background: #F8FAFC;
-  border: 1.5px solid #E2E8F0;
-  color: #0F172A;
-  font-size: 1.05rem;
-  padding: 0 14px;
+  min-height: 46px;
+  border-radius: 8px;
+  background: #FFFFFF;
+  border: 1px solid var(--linea);
+  color: var(--tinta);
+  font-family: inherit;
+  font-size: 1rem;
+  padding: 11px 13px;
   outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  transition: border-color 0.2s ease;
 }
 .login-card .form-input::placeholder { color: #94A3B8; }
 .login-card .form-input:focus {
-  border-color: #0EA5E9;
-  background: #FFFFFF;
-  box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.18);
+  border-color: var(--acento);
+  outline: 2px solid var(--acento);
+  outline-offset: 1px;
+  box-shadow: none;
 }
 
-.password-wrapper { position: relative; width: 100%; }
+/* El ojo de la contraseña. */
+.password-wrapper { position: relative; width: 100%; display: flex; }
+.password-wrapper .form-input { padding-right: 50px; }
 .password-toggle-btn {
   position: absolute;
-  right: 12px; top: 50%;
+  right: 4px; top: 50%;
   transform: translateY(-50%);
-  background: none; border: none;
-  color: #64748B;
+  width: 40px; height: 40px;
+  background: none; border: none; border-radius: 8px;
+  color: var(--suave);
   cursor: pointer;
-  padding: 4px;
   display: flex; align-items: center; justify-content: center;
-  transition: color 0.2s ease;
+  transition: color 0.2s ease, background 0.2s ease;
 }
-.password-toggle-btn:hover { color: #0F172A; }
+.password-toggle-btn:hover { color: var(--acento-oscuro); background: #F1F5F9; }
+.password-toggle-btn:focus-visible { outline: 2px solid var(--acento); outline-offset: -2px; }
 
-/* Botón entrar (scoped) */
+/* Botón. Color plano: ni degradado ni brillo. */
 .login-card .btn-primary {
-  height: 3.4rem;
-  border-radius: 12px;
-  font-size: 1.1rem;
-  font-weight: 700;
-  margin-top: 10px;
-  background: linear-gradient(135deg, #0EA5E9 0%, #2563EB 100%);
-  border: none;
+  min-height: 46px;
+  width: 100%;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 500;
+  margin-top: 4px;
+  background: var(--acento-oscuro);
+  border: 1px solid var(--acento-oscuro);
   color: #FFFFFF;
-  letter-spacing: 0.3px;
+  letter-spacing: 0;
   cursor: pointer;
-  box-shadow: 0 8px 20px -6px rgba(14, 165, 233, 0.45);
-  display: flex; align-items: center; justify-content: center; gap: 10px;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: background 0.2s ease, border-color 0.2s ease;
 }
-.login-card .btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 14px 30px -8px rgba(37, 99, 235, 0.55);
-  filter: brightness(1.06);
-}
-.login-card .btn-primary:active { transform: translateY(0); }
-.login-card .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+.login-card .btn-primary:hover { background: var(--acento); border-color: var(--acento); }
+.login-card .btn-primary:disabled { opacity: 0.55; cursor: default; }
 
 .login-error {
-  color: #DC2626;
-  background: #FEF2F2;
-  border: 1px solid #FECACA;
-  border-radius: 10px;
-  padding: 8px 12px;
+  color: #B3261E;
+  background: #FDF4F3;
+  border: 1px solid #F0C9C6;
+  border-radius: 8px;
+  padding: 11px 14px;
   font-size: 0.9rem;
-  text-align: center;
+  line-height: 1.5;
+}
+
+@media (max-width: 480px) {
+  .login-card { padding: 22px 20px 24px; }
+  .login-header h1 { font-size: 1.45rem; }
 }
