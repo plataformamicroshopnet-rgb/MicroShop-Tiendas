@@ -17,13 +17,18 @@
      limpio de 2: se ve igual de bien y no parece que el campo esté en llamas.
    · El botón pierde el degradado y el brillo. Color plano del programa.
 
-   El acento se cambia en UN sitio, la variable --acento de aquí abajo.
+   El color se cambia en UN sitio, el bloque de variables de aquí abajo.
    ───────────────────────────────────────────────────────────────────────── */
 
 .login-container {
-  /* El color del programa. Es lo único que hay que tocar para otro. */
+  /* El color del programa. Es lo único que hay que tocar para otro.
+     Tres tonos y no dos, y con un motivo: sobre --acento el texto blanco
+     solo llega a 2,8:1 y sobre --acento-oscuro a 4,1:1, los dos por debajo
+     del 4,5:1 que hace falta para leer con comodidad. El botón usa los dos
+     de abajo, que dan 5,9:1 en reposo y 7,6:1 al pasar el ratón. */
   --acento: #0EA5E9;
-  --acento-oscuro: #0284C7;
+  --acento-oscuro: #0369A1;
+  --acento-hundido: #075985;
   --tinta: #0F172A;
   --suave: #64748B;
   --linea: #E2E8F0;
@@ -148,7 +153,13 @@
 
 /* Botón. Color plano: ni degradado ni brillo. */
 .login-card .btn-primary {
+  /* Alto exacto y padding vertical a cero: globals.css le pone 14px arriba y
+     abajo a todos los .btn-primary, y con eso el botón se iba a 50 px mientras
+     los campos median 46. Es flex con align-items:center, asi que el texto
+     queda centrado igual. */
   min-height: 46px;
+  height: 46px;
+  padding: 0 16px;
   width: 100%;
   border-radius: 8px;
   font-family: inherit;
@@ -163,8 +174,16 @@
   display: flex; align-items: center; justify-content: center; gap: 8px;
   transition: background 0.2s ease, border-color 0.2s ease;
 }
-.login-card .btn-primary:hover { background: var(--acento); border-color: var(--acento); }
-.login-card .btn-primary:disabled { opacity: 0.55; cursor: default; }
+/* Al pasar el ratón se OSCURECE, no se aclara. Parece una tontería y no lo
+   es: aclarar lava las letras blancas justo en el momento en que el usuario
+   está mirando el botón para pulsarlo. */
+.login-card .btn-primary:hover { background: var(--acento-hundido); border-color: var(--acento-hundido); }
+
+/* El tema global encoge todos los botones un 2 % al pulsarlos, y aquí ese
+   salto no pega con una caja de entrada quieta. Se anula, como estaba antes. */
+.login-card .btn-primary:active { transform: none; }
+
+.login-card .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .login-error {
   color: #B3261E;
@@ -178,5 +197,8 @@
 
 @media (max-width: 480px) {
   .login-card { padding: 22px 20px 24px; }
-  .login-header h1 { font-size: 1.45rem; }
+  /* Con !important a la fuerza: globals.css fija .main-content h1 a 22px
+     !important por debajo de 768px, y sin esto la línea de aquí no pinta
+     nada — quien la retocara buscando afinar el móvil perdería el rato. */
+  .login-header h1 { font-size: 1.45rem !important; }
 }

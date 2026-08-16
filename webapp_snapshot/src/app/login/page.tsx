@@ -70,7 +70,6 @@ export default function LoginPage() {
                 placeholder="••••••••" 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                style={{ paddingRight: '40px' }}
                 required
               />
               <button 
