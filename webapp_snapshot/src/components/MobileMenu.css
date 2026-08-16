@@ -1,0 +1,125 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   El menú del móvil: tres rayitas y un panel que baja.
+
+   Sustituye a la barra inferior. Solo existe por debajo de 768 px; de ahí
+   para arriba manda el carril lateral de siempre.
+
+   NO se usan `(hover: hover)` ni `(pointer: fine)` en ningún sitio: hay
+   navegadores de escritorio que se declaran táctiles y romperían el corte.
+   Está avisado por escrito en Sidebar.css y es una lección que ya se pagó
+   en el ERP.
+   ───────────────────────────────────────────────────────────────────────── */
+
+.menu-movil-boton {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--light-text);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.menu-movil-velo,
+.menu-movil-panel { display: none; }
+
+@media (max-width: 767px) {
+  .menu-movil-boton { display: flex; }
+
+  /* Por encima de TODO lo que hay: la barra superior está en 10, los menús en
+     100 y los globos de ayuda de las cabeceras en 1000. Si el panel no pasa de
+     ahí, esos globos aparecen flotando sobre el menú abierto. */
+  .menu-movil-velo {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1400;
+    animation: menuVelo 0.2s ease both;
+  }
+
+  .menu-movil-panel {
+    display: block;
+    position: fixed;
+    /* Debajo de la barra superior, y respetando el hueco del notch: la app se
+       instala en la pantalla de inicio del iPhone con la barra de estado
+       translúcida, así que sin esto la primera opción queda bajo la hora. */
+    top: calc(56px + env(safe-area-inset-top, 0px));
+    left: 0;
+    right: 0;
+    /* Nunca más alto que lo que queda de pantalla: con nueve opciones y el pie
+       de sesión no cabe en un móvil pequeño, así que scrollea por dentro. */
+    max-height: calc(100vh - 56px - env(safe-area-inset-top, 0px));
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    z-index: 1401;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.6);
+    animation: menuBaja 0.24s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .menu-movil-panel ul { list-style: none; margin: 0; padding: 6px 0; }
+
+  .menu-movil-panel a {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    /* 52 px de alto: por encima del mínimo cómodo para un dedo. */
+    min-height: 52px;
+    padding: 0 20px;
+    color: var(--light-text);
+    text-decoration: none;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.95rem;
+  }
+  .menu-movil-panel li:last-child a { border-bottom: 0; }
+  .menu-movil-panel a.activo {
+    color: var(--mercedes-cyan);
+    background: rgba(0, 173, 239, 0.08);
+    box-shadow: inset 3px 0 0 var(--mercedes-cyan);
+  }
+  .menu-movil-panel a:active { background: rgba(0, 173, 239, 0.14); }
+
+  /* El pie con quién eres y el botón de salir. Esto ANTES NO EXISTÍA en el
+     móvil: «Cerrar sesión» solo estaba en el menú lateral, que aquí está
+     oculto, así que no había manera de salir del programa desde el teléfono. */
+  .menu-movil-pie {
+    border-top: 1px solid var(--border-color);
+    padding: 14px 20px calc(18px + env(safe-area-inset-bottom, 0px));
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+  }
+  .menu-movil-pie .quien { display: flex; flex-direction: column; min-width: 0; }
+  .menu-movil-pie .quien b { font-size: 0.9rem; color: var(--light-text); }
+  .menu-movil-pie .quien span {
+    font-size: 0.72rem; color: var(--medium-gray);
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .menu-movil-pie button {
+    display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+    min-height: 42px; padding: 0 16px;
+    border: 1px solid rgba(220, 38, 38, 0.4);
+    border-radius: 10px;
+    background: rgba(220, 38, 38, 0.08);
+    color: #ef4444;
+    font-size: 0.88rem;
+    cursor: pointer;
+  }
+}
+
+@keyframes menuVelo { from { opacity: 0 } to { opacity: 1 } }
+@keyframes menuBaja {
+  from { opacity: 0; transform: translateY(-10px) }
+  to   { opacity: 1; transform: none }
+}
+@media (prefers-reduced-motion: reduce) {
+  .menu-movil-velo, .menu-movil-panel { animation: none !important; }
+}

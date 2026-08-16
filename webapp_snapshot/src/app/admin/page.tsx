@@ -11,7 +11,6 @@ import { PageHeader } from '@/components/PageHeader'
 
 export default function AdminDashboardPage() {
   const { authorized, user } = useGuard('MODULE_ADMIN')
-  const [menuOpen, setMenuOpen] = useState(false)
   const router = useRouter()
 
   const cards = [
@@ -146,7 +145,7 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="w-full" style={{ paddingTop: 12, paddingRight: 32, paddingBottom: 100, paddingLeft: 32, backgroundColor: 'var(--bg-app)', minHeight: '100vh' }}>
+    <div className="w-full" style={{ paddingTop: 12, paddingRight: 32, paddingBottom: 24, paddingLeft: 32, backgroundColor: 'var(--bg-app)', minHeight: '100vh' }}>
       <style dangerouslySetInnerHTML={{__html: `
         .premium-card {
             background-color: var(--bg-card);
@@ -191,87 +190,12 @@ export default function AdminDashboardPage() {
         }
       `}} />
 
-      {/* HEADER LOCAL */}
-      <div className="md:hidden" style={{ display: 'flex', alignItems: 'center', marginBottom: 0 }}>
-        <button
-          onClick={() => setMenuOpen(true)}
-          style={{
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            padding: '8px 0',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-          title="Abrir Menú Móvil"
-        >
-          <Menu size={28} color="var(--text-main)" strokeWidth={2} />
-        </button>
-      </div>
-
-      <div
-        onClick={() => setMenuOpen(false)}
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          backgroundColor: menuOpen ? "rgba(0,0,0,0.3)" : "transparent",
-          pointerEvents: menuOpen ? "auto" : "none",
-          transition: "background-color 0.25s ease",
-          zIndex: 999
-        }}
-      >
-        <div
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            width: 220,
-            height: "100%",
-            background: "var(--bg-card)",
-            color: "var(--text-main)",
-            padding: 20,
-            borderRight: "1px solid var(--border-strong)",
-            boxShadow: "2px 0 10px rgba(0,0,0,0.1)",
-            transform: menuOpen ? "translateX(0)" : "translateX(-100%)",
-            transition: "transform 0.25s ease",
-            display: "flex",
-            flexDirection: "column",
-            gap: 16
-          }}
-        >
-          <h3 style={{ color: '#00ADEF', marginTop: 0 }}>Menú</h3>
-
-          {[
-            { name: 'Inicio', href: '/', permission: 'MODULE_TIENDAS' },
-            { name: 'Tiendas Hub', href: '/tiendas', permission: 'MODULE_TIENDAS' },
-            { name: 'Jefe Tiendas', href: '/seguimiento-ventas', permission: 'MODULE_JEFE_TIENDAS' },
-            { name: 'Back Office', href: '/back-office', permission: 'MODULE_BACK_OFFICE' },
-            { name: 'Liquidaciones', href: '/liquidacion', permission: 'MODULE_LIQUIDACION' },
-            { name: 'Admin', href: '/admin', permission: 'MODULE_ADMIN' },
-          ].map((item) => {
-            if (user && !can(user, item.permission)) return null;
-            return (
-              <button
-                key={item.href}
-                style={{ padding: "12px 16px", borderRadius: 10, background: "var(--bg-input)", color: "var(--text-main)", border: "1px solid var(--border-light)", textAlign: "left", fontSize: 16 }}
-                onClick={() => { setMenuOpen(false); router.push(item.href); }}
-              >
-                {item.name}
-              </button>
-            );
-          })}
-
-          <button
-            onClick={() => setMenuOpen(false)}
-            style={{ padding: "12px 16px", borderRadius: 10, background: "transparent", color: "var(--text-main)", border: "1px solid var(--border-strong)", textAlign: "left", fontSize: 16, marginTop: 20 }}
-          >
-            Cerrar
-          </button>
-        </div>
-      </div>
-
+      {/* Aquí vivía un cajón de menú propio de esta página, envuelto en
+          className="md:hidden". Esa clase es de Tailwind y este proyecto NO
+          tiene Tailwind: no hacía nada, así que el cajón se estaba viendo
+          TAMBIÉN en el escritorio, encima del menú lateral. Y su lista se
+          había quedado en seis entradas, sin MovilFree, Dirección Tiendas ni
+          Cristina Admin. Ahora el menú del móvil es uno solo, en el layout. */}
       <div style={{ marginBottom: -8 }}>
         <PageHeader 
           title={<><Shield className="text-cyan" size={28} /> Panel de Administración</>}

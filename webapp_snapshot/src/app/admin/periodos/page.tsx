@@ -233,7 +233,7 @@ export default function AdminPeriodosPage() {
   }
 
   return (
-    <div style={{ padding: 20, paddingBottom: 100 }}>
+    <div style={{ padding: 20, paddingBottom: 24 }}>
       {/* Usamos PageHeader existente */}
       <PageHeader 
         title={<><CalendarDays className="text-cyan" size={28} /> Dashboard de Periodos Operativos</>}

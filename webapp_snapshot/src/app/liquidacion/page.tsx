@@ -2382,7 +2382,7 @@ export default function LiquidacionesPage() {
     if (loading) return <div style={{ padding: 20, fontSize: 16, fontWeight: 600, color: 'var(--mercedes-cyan)' }}>Buscando operaciones...</div>
 
     return (
-        <div style={{ padding: '24px 32px', paddingBottom: 100, background: 'var(--bg-app)', minHeight: '100vh' }}>
+        <div style={{ padding: '24px 32px', paddingBottom: 24, background: 'var(--bg-app)', minHeight: '100vh' }}>
             <style>{`
                 .tabla-liquidacion-compacta {
                     border-collapse: collapse !important;

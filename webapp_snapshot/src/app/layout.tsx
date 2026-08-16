@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import Sidebar from '@/components/Sidebar'
-import BottomNav from '@/components/BottomNav'
 import { ThemeProvider } from '@/components/ThemeProvider'
+import { MobileMenu } from '@/components/MobileMenu'
 import { PeriodProvider } from '@/components/PeriodProvider'
 import ClientTracker from '@/components/ClientTracker'
 
@@ -43,11 +43,11 @@ export default function RootLayout({
                 <Sidebar />
                 <main className="main-content">
                   <div className="topbar">
+                    <MobileMenu />
                     <span style={{ fontWeight: 800, fontSize: 18 }}>MicroShop <span style={{ color: 'var(--mercedes-cyan)' }}>Tiendas</span></span>
                   </div>
                   {children}
                 </main>
-                <BottomNav />
               </div>
           </PeriodProvider>
         </ThemeProvider>

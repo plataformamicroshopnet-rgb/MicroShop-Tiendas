@@ -96,7 +96,7 @@ export default function BackOfficePage() {
   }
 
   return (
-    <div style={{ padding: '24px 32px', paddingBottom: 100, background: 'var(--bg-app)', minHeight: '100vh' }}>
+    <div style={{ padding: '24px 32px', paddingBottom: 24, background: 'var(--bg-app)', minHeight: '100vh' }}>
       <style>{`
         .premium-card {
            background: var(--bg-card);

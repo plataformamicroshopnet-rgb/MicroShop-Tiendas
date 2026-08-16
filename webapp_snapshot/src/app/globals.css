@@ -106,12 +106,14 @@ button, input, select, textarea {
   height: 100vh;
   overflow-y: auto;
   min-width: 0;
-  padding-bottom: 70px; /* Space for bottom nav on mobile */
+  /* Ya no hay barra inferior: el menú del móvil es la hamburguesa de
+     arriba. Sin quitar este hueco quedaba una franja muerta al final de
+     todas las páginas. */
+  padding-bottom: 0;
 }
 
 @media (min-width: 768px) {
   .main-content {
-    padding-bottom: 0; /* No bottom nav on desktop */
     padding-left: 76px; /* Space for collapsed sidebar */
   }
 }
