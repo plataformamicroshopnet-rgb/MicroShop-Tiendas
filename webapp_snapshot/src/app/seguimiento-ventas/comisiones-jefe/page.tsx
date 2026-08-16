@@ -6,7 +6,6 @@ import { textoCondicionantes } from '@/lib/condicionantesTexto'
 import { useComisionesData } from '@/hooks/useComisionesData'
 import { useGuard } from '@/hooks/useGuard'
 import { useRouter } from 'next/navigation'
-import { AuditableCell } from '@/components/AuditableCell'
 import {
     computeComisionJefeTiendas,
     JEFE_PCT_SETTING_KEYS,
@@ -645,12 +644,12 @@ export default function ComisionesJefeTiendasPage() {
                     <thead>
                         <tr>
                             <th className="header-lightblue" style={{ background: '#0078d4' }}>Comercial</th>
-                            <th className="header-lightblue" style={{ background: PAL.disp.head }}><AuditableCell metricKey="DISP_SEG_VENTAS">Ventas Disp+Seg</AuditableCell></th>
+                            <th className="header-lightblue" style={{ background: PAL.disp.head }}>Ventas Disp+Seg</th>
                             <th className="header-lightblue" style={{ background: PAL.disp.head }}>Total Ventas</th>
-                            <th className="header-lightblue" style={{ background: PAL.disp.head }}><AuditableCell metricKey="AVANCE_IMPORTE_JEFE_DISP">Avance de Importe</AuditableCell></th>
-                            <th className="header-lightblue" style={{ background: PAL.arpu.head }}><AuditableCell metricKey="ARPU_VENTAS">Ventas Arpu (Repos)</AuditableCell></th>
+                            <th className="header-lightblue" style={{ background: PAL.disp.head }}>Avance de Importe</th>
+                            <th className="header-lightblue" style={{ background: PAL.arpu.head }}>Ventas Arpu (Repos)</th>
                             <th className="header-lightblue" style={{ background: PAL.arpu.head }}>Total Ventas</th>
-                            <th className="header-lightblue" style={{ background: PAL.arpu.head }}><AuditableCell metricKey="AVANCE_IMPORTE_JEFE_ARPU">Avance de Importe</AuditableCell></th>
+                            <th className="header-lightblue" style={{ background: PAL.arpu.head }}>Avance de Importe</th>
                             <th className="header-lightblue" style={{ background: PAL.baf.head }}>Ventas Altas BAF</th>
                             <th className="header-lightblue" style={{ background: PAL.baf.head }}>Total Ventas</th>
                             <th className="header-lightblue" style={{ background: PAL.baf.head }}>Avance de Importe</th>

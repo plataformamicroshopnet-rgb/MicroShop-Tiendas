@@ -1,0 +1,80 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   El interruptor de día / noche, con forma de pastilla.
+
+   Sustituye al botón redondo de un solo icono que había antes. La diferencia
+   no es de gusto: el botón viejo enseñaba el icono del modo AL QUE IBAS, así
+   que había que pararse a pensar si la luna significaba «estoy en noche» o
+   «ve a noche». La pastilla enseña los dos a la vez y marca el que está
+   puesto, que se lee sin pensar.
+
+   El color se pasa por la variable --pastilla-acento, así el mismo componente
+   vale para todos los programas de la casa con el color de cada uno.
+   ───────────────────────────────────────────────────────────────────────── */
+
+.pastilla-tema {
+  --pastilla-acento: #00ADEF;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 72px;
+  height: 36px;
+  padding: 0 4px;
+  border: 2px solid var(--border-color);
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.25s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.pastilla-tema:hover { border-color: var(--pastilla-acento); }
+.pastilla-tema:focus-visible {
+  outline: 2px solid var(--pastilla-acento);
+  outline-offset: 2px;
+}
+
+/* El círculo relleno que se desliza. Va DEBAJO de los iconos (z-index), así
+   que el icono activo queda encima de él y sale en blanco. */
+.pastilla-bola {
+  position: absolute;
+  top: 50%;
+  left: 4px;
+  width: 28px;
+  height: 28px;
+  margin-top: -14px;
+  border-radius: 50%;
+  background: var(--pastilla-acento);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 0;
+}
+.pastilla-tema[data-modo='dark'] .pastilla-bola { transform: translateX(32px); }
+
+.pastilla-hueco {
+  position: relative;
+  z-index: 1;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--light-text);
+  opacity: 0.45;
+  transition: color 0.25s ease, opacity 0.25s ease;
+}
+.pastilla-hueco.activo { color: #FFFFFF; opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pastilla-bola { transition: none; }
+}
+
+/* En móvil se encoge un poco, pero SIN perder la forma de pastilla. Ojo: en
+   globals.css hay una regla que fuerza 34x34 con !important a todos los
+   botones de la derecha de la cabecera; está excluida esta clase a propósito,
+   porque si no la aplastaba a un círculo. */
+@media (max-width: 767px) {
+  .pastilla-tema { width: 62px; height: 32px; padding: 0 3px; }
+  .pastilla-bola { width: 24px; height: 24px; margin-top: -12px; left: 3px; }
+  .pastilla-tema[data-modo='dark'] .pastilla-bola { transform: translateX(28px); }
+  .pastilla-hueco { width: 24px; height: 24px; }
+}

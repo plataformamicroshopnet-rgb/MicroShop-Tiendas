@@ -12,7 +12,6 @@ import { useRouter } from 'next/navigation'
 import { normalizeRole } from '@/lib/appConfig'
 import { useEffect } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts'
-import { AuditableCell } from '@/components/AuditableCell'
 import { normalizeString, findCatalogVigente } from '@/lib/salesUtils'
 
 // ── Modal detalle de ventas ────────────────────────────────────────────────
@@ -735,9 +734,9 @@ export default function ComisionesDashboardPage() {
                                                 borderBottom: 'none'
                                             }}>
                                                 <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 500 }}>Nombre comisión</th>
-                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 500 }}><AuditableCell metricKey="COMISION_INDIVIDUAL_TRAMO">Imp. 1<br/>tramo</AuditableCell></th>
-                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 500 }}><AuditableCell metricKey="COMISION_INDIVIDUAL_TRAMO">Imp. 2<br/>tramo</AuditableCell></th>
-                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 500 }}><AuditableCell metricKey="COMISION_INDIVIDUAL_TRAMO">Imp. 3<br/>tramo</AuditableCell></th>
+                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 500 }}>Imp. 1<br/>tramo</th>
+                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 500 }}>Imp. 2<br/>tramo</th>
+                                                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 500 }}>Imp. 3<br/>tramo</th>
                                                 <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 500 }}>Ventas</th>
                                                 <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 500 }}>Pte.</th>
                                                 <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 500 }}>Obj. 1</th>
@@ -829,12 +828,7 @@ export default function ComisionesDashboardPage() {
                                                     <tr style={{ backgroundColor: rowBg, borderBottom: '1px solid #e2e8f0', transition: 'background 0.2s', color: '#334155' }}>
                                                         <td style={{ padding: '8px 10px', fontSize: 12.5, fontWeight: 700, color: '#0f172a' }}>
                                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                                <AuditableCell 
-                                                                    metricKey={gName === 'ARPU' ? 'ARPU_VENTAS' : 'DISP_SEG_VENTAS'}
-                                                                    data={{ sales: s.groupSales[gName] || [] }}
-                                                                >
-                                                                    <span>{gName === 'ARPU' ? 'Repos (Arpu)' : gName}</span>
-                                                                </AuditableCell>
+                                                                <span>{gName === 'ARPU' ? 'Repos (Arpu)' : gName}</span>
                                                                 {/* Aquí vivía la chapa «Tramo 1 por condición» y, después, la línea
                                                                     «⚠️ Este mes: Tramo 1 forzado…». Las dos fuera por decisión del
                                                                     dueño (12-ago-2026): la fila deja de contar el ESTADO del mes y

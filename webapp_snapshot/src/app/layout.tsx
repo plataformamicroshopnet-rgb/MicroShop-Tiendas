@@ -5,8 +5,6 @@ import BottomNav from '@/components/BottomNav'
 import { ThemeProvider } from '@/components/ThemeProvider'
 import { PeriodProvider } from '@/components/PeriodProvider'
 import ClientTracker from '@/components/ClientTracker'
-import { AuditProvider } from '@/hooks/useAuditMode'
-import { AuditDrawer } from '@/components/AuditDrawer'
 
 export const metadata: Metadata = {
   title: 'MicroShop Tiendas',
@@ -40,7 +38,6 @@ export default function RootLayout({
       <body>
         <ThemeProvider>
           <PeriodProvider>
-            <AuditProvider>
               <ClientTracker />
               <div className="app-container">
                 <Sidebar />
@@ -52,8 +49,6 @@ export default function RootLayout({
                 </main>
                 <BottomNav />
               </div>
-              <AuditDrawer />
-            </AuditProvider>
           </PeriodProvider>
         </ThemeProvider>
       </body>

@@ -327,7 +327,11 @@ button, input, select, textarea {
   .page-header-bar p {
     white-space: normal !important;
   }
-  .page-header-bar > div:last-child > button {
+  /* El :not() no es un capricho. Esta regla aplasta a 34x34 CUALQUIER botón
+     del grupo derecho de la cabecera, y con !important, así que le ganaría
+     incluso a un estilo en línea. El interruptor de día/noche es una pastilla
+     alargada: sin esta excepción quedaba convertido en un círculo. */
+  .page-header-bar > div:last-child > button:not(.pastilla-tema) {
     width: 34px !important;
     height: 34px !important;
   }
