@@ -100,49 +100,20 @@ export function PeriodSelector() {
           z-index: 5;
         }
         
-        @media (min-width: 768px) {
-          .period-selector-wrapper {
-            position: static;
-            width: auto;
-            height: auto;
-            border-radius: 10px;
-            padding: 6px 12px;
-            gap: 8px;
-            box-shadow: 0 2px 6px -1px rgba(0,0,0,0.05);
-          }
-          .period-selector-select {
-            /* Desktop: Restore visible select natively */
-            position: static;
-            width: auto;
-            height: auto;
-            opacity: 1;
-            z-index: auto;
-            background: transparent;
-            color: var(--text-main);
-            border: none;
-            outline: none;
-            font-size: 14px;
-            font-weight: 700;
-            padding-right: 12px;
-            background-image: linear-gradient(45deg, transparent 50%, var(--text-main) 50%), linear-gradient(135deg, var(--text-main) 50%, transparent 50%);
-            background-position: calc(100% - 4px) calc(1em + 0px), calc(100% - 0px) calc(1em + 0px);
-            background-size: 4px 4px, 4px 4px;
-            background-repeat: no-repeat;
-          }
-          .period-selector-icon {
-            width: 16px;
-            height: 16px;
-          }
-          .period-selector-dot {
-            position: static;
-            width: 8px;
-            height: 8px;
-            border: none;
-            margin-right: 2px;
-          }
-        }
+        /* AQUI VIVIA UN BLOQUE @media (min-width: 768px) que en escritorio
+           convertia este boton en una pastilla con el NOMBRE DEL PERIODO
+           escrito al lado. Fuera por decision del dueno (17-ago-2026): asi
+           los tres botones de la cabecera —dia/noche, rueda dentada y
+           calendario— miden lo mismo y el titulo recupera el sitio.
+
+           Se queda el circulo de 40 px en TODOS los tamanos. El periodo
+           activo no se pierde de vista: esta en el tooltip del boton, y el
+           puntito de color sigue diciendo si el mes esta abierto o cerrado. */
       `}} />
-      <div className="period-selector-wrapper">
+      <div
+        className="period-selector-wrapper"
+        title={`Periodo: ${formatPeriodName(activePeriodKey, currentSelectedPeriod?.name)} — pulsa para cambiarlo`}
+      >
         {/* Indicador visual de estado temporal (ACTIVE vs HISTORIC_EDITABLE) */}
         <div 
           className="period-selector-dot"

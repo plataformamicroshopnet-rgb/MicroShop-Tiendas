@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Trophy, Flame, Target, Award, Zap, Crown, Wifi, Smartphone, Shield, TrendingUp, Tv, Layers, Repeat, X } from 'lucide-react'
+import { Trophy, Flame, Target, Award, Zap, Crown, Wifi, Smartphone, Shield, TrendingUp, Tv, Layers, Repeat, X, Settings } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
 import Link from 'next/link'
 import { usePeriod } from '@/components/PeriodProvider'
@@ -593,6 +593,13 @@ export default function DashboardPage() {
 
   return (
     <div style={{ padding: 20 }}>
+      {/* La rueda dentada va SIN TEXTO y con la misma forma que el calendario de
+          al lado: los dos son botones redondos de 40 px con su icono de 18.
+          Antes era una pastilla con «⚙ Configurar Dashboard» escrito, que junto
+          al interruptor de día/noche y al calendario dejaba la cabecera
+          apretada y le comía sitio al título. El icono es de lucide como el
+          resto: el ⚙ anterior era un carácter de texto y salía distinto en cada
+          sistema. */}
       <PageHeader
         title={<>Dashboard <span className="text-cyan">Tiempo Real</span></>}
         subtitle="Sincronizado directamente con las celdas del Excel central."
@@ -603,15 +610,9 @@ export default function DashboardPage() {
             type="button"
             onClick={() => router.push('/config-dashboard')}
             title="Configurar los bloques del Dashboard"
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8,
-              background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--medium-gray)',
-              fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s'
-            }}
-            onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-main)'; e.currentTarget.style.borderColor = 'var(--mercedes-cyan)' }}
-            onMouseLeave={e => { e.currentTarget.style.color = 'var(--medium-gray)'; e.currentTarget.style.borderColor = 'var(--border-color)' }}
+            className="boton-icono-cabecera"
           >
-            ⚙ Configurar Dashboard
+            <Settings size={18} />
           </button>
         ) : undefined}
       />

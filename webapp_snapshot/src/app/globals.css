@@ -239,6 +239,32 @@ button, input, select, textarea {
   color: var(--light-text);
 }
 
+/* Botones de solo icono de la cabecera (rueda dentada, y lo que venga).
+   Mismo tamaño y forma que el selector de periodo de al lado: circulo de 40
+   con el icono a 18. Antes la rueda era una pastilla con «⚙ Configurar
+   Dashboard» escrito, que junto al interruptor de dia/noche y al calendario
+   dejaba la cabecera apretada y le comia sitio al titulo. */
+.boton-icono-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  color: var(--medium-gray);
+  cursor: pointer;
+  box-shadow: 0 4px 10px -2px rgba(0,0,0,0.1);
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+.boton-icono-cabecera:hover {
+  color: var(--text-main);
+  border-color: var(--mercedes-cyan);
+}
+
 /* Topbar for mobile */
 .topbar {
   display: flex;
@@ -330,6 +356,14 @@ button, input, select, textarea {
     white-space: normal !important;
     font-size: 19px !important;
     line-height: 1.25 !important;
+    /* El titulo es un contenedor FLEX (lo monta asi PageHeader para poner el
+       icono de ayuda al lado), asi que «Dashboard» y «Tiempo Real» son dos
+       piezas sueltas, no un texto corrido: sin flex-wrap se apretaban en una
+       linea y el overflow:hidden de su estilo en linea las cortaba. Con esto
+       bajan de linea y se leen enteras. */
+    flex-wrap: wrap !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
   }
   .page-header-bar p {
     white-space: normal !important;
