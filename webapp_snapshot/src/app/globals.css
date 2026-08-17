@@ -244,7 +244,12 @@ button, input, select, textarea {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
+  /* El hueco de la hora y la batería. La app se instala en la pantalla de
+     inicio con `viewportFit: cover` y la barra de estado translúcida, así que
+     la página EMPIEZA DEBAJO del reloj. Sin esto, la barra de arriba —y con
+     ella las tres rayitas del menú— quedaban tapadas por la hora y no había
+     manera de pulsarlas. */
+  padding: calc(16px + env(safe-area-inset-top, 0px)) 20px 16px;
   background-color: var(--bg-app); /* Match global app background */
   border-bottom: 1px solid var(--border-light);
   position: sticky;
