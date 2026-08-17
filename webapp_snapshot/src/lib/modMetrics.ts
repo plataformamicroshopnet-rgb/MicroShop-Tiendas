@@ -37,8 +37,12 @@ export const getWorkingDaysInMonth = (y: number, m: number) => {
     return days
 }
 
-export const calcDiasLaborablesHastaHoy = (y: number, m: number) => {
-    const today = new Date()
+// `hoy` inyectable (opcional): el navegador vive en hora de Madrid, pero el
+// servidor va en UTC — el informe diario por correo (/api/informe-mod) pasa el
+// día de Madrid calculado con Intl para que los «días transcurridos» sean los
+// mismos que ve la pantalla. Sin argumento, comportamiento idéntico al de antes.
+export const calcDiasLaborablesHastaHoy = (y: number, m: number, hoy: Date = new Date()) => {
+    const today = hoy
     const targetIsPast = (today.getFullYear() > y) || (today.getFullYear() === y && today.getMonth() > m - 1)
     let lastDayToCount = new Date(y, m, 0).getDate()
     if (!targetIsPast && today.getFullYear() === y && today.getMonth() === m - 1) {
@@ -66,11 +70,12 @@ export interface ModMonthInput {
     o2Rules?: any[]   // reglas O2 de la Entrada de Datos (/api/territorial -> o2) para el bono PRV Territorial O2
     tiendasRules?: any[]  // reglas TIENDAS de la Entrada de Datos (/api/territorial -> tiendas) para el PRV Territorial Tiendas
     includeTerritorialTiendas?: boolean  // SOLO la página MOD lo suma; Ganancias lo añade por su cuenta (evita doble conteo)
+    hoy?: Date  // «hoy» para los días transcurridos (el servidor UTC pasa el día de Madrid); omitido = new Date()
 }
 
 // Reproduce EXACTAMENTE el processMetrics de la página MOD para un mes dado.
 export function computeMonthMetrics(input: ModMonthInput) {
-    const { salesRaw, configs, catalogs, periods, mfSales, mfProducts, year: y, month: m, periodKeyForConfig, o2Rules, tiendasRules, includeTerritorialTiendas } = input
+    const { salesRaw, configs, catalogs, periods, mfSales, mfProducts, year: y, month: m, periodKeyForConfig, o2Rules, tiendasRules, includeTerritorialTiendas, hoy } = input
     const daysInMonth = new Date(y, m, 0).getDate()
 
     const [objData, pymeData, plusData, extrasData] = configs
@@ -227,7 +232,7 @@ export function computeMonthMetrics(input: ModMonthInput) {
         d.accumImporte = totalImporte
     })
 
-    const workingDaysElapsed = calcDiasLaborablesHastaHoy(y, m)
+    const workingDaysElapsed = calcDiasLaborablesHastaHoy(y, m, hoy)
     const effectiveDays = workingDaysElapsed || 1
     const totalWorkingDaysInMonth = getWorkingDaysInMonth(y, m)
 
