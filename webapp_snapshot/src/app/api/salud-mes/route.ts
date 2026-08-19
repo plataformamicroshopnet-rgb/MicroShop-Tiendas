@@ -235,6 +235,56 @@ export async function GET(request: Request) {
       })
     }
 
+    // ── Paso 5b: la tabla de dispositivos en el catálogo Rent ───────────────
+    // El dueño la pasa cada mes desde el ERP (casilla TABLA DISPOSITIVOS →
+    // «tabla lista para pegar») a Catálogos → Rent. Este paso vigila que el
+    // Rent del mes existe y que NO huele a clon: si cada producto repite
+    // exactamente la cuota del mes pasado, seguramente aún no se pegó la
+    // tabla nueva de Telefónica (los precios cambian todos los meses).
+    {
+      const rentRows = wp ? await prisma.productCatalog.findMany({
+        where: { periodId: wp.id, categoria: 'Rent' },
+        select: { producto: true, anual: true, validFrom: true },
+      }) : []
+      const [aa, mm] = periodKey.split('_').map(Number)
+      const prevKey = mm === 1 ? `${aa - 1}_12` : `${aa}_${String(mm - 1).padStart(2, '0')}`
+      const wpPrev = await prisma.workPeriod.findUnique({ where: { period_key: prevKey } })
+      const prevRows = wpPrev ? await prisma.productCatalog.findMany({
+        where: { periodId: wpPrev.id, categoria: 'Rent' }, select: { producto: true, anual: true },
+      }) : []
+      const prevMap = new Map(prevRows.map(r => [String(r.producto).trim().toLowerCase(), String(r.anual)]))
+      const igualQuePrev = rentRows.length > 0 && prevRows.length === rentRows.length &&
+        rentRows.every(r => prevMap.get(String(r.producto).trim().toLowerCase()) === String(r.anual))
+      const vigencias = new Map<string, number>()
+      for (const r of rentRows) {
+        const k = String(r.validFrom || 'sin fecha')
+        vigencias.set(k, (vigencias.get(k) || 0) + 1)
+      }
+      pasos.push({
+        id: 'rent_dispositivos',
+        titulo: 'Tabla de dispositivos → catálogo Rent',
+        resumen: 'Que los precios Rent del mes son los de la TABLA_DISPOSITIVOS de Telefónica, no un arrastre.',
+        estado: rentRows.length === 0 ? 'rojo' : (igualQuePrev ? 'ambar' : 'verde'),
+        detalles: rentRows.length === 0
+          ? ['El mes no tiene catálogo Rent.']
+          : [
+              `${rentRows.length} dispositivos · ${vigencias.size} vigencia${vigencias.size === 1 ? '' : 's'}.`,
+              ...(igualQuePrev ? ['Cada producto repite la cuota del mes pasado: parece el catálogo clonado, sin la tabla nueva.'] : []),
+            ],
+        ayuda: rentRows.length === 0 || igualQuePrev
+          ? 'En el ERP («Archivos y documentos» → casilla TABLA DISPOSITIVOS) baja la «tabla lista para pegar» y pégala en Catálogos → Rent → «Importar Lista»; allí eliges el «Vigente desde» si llegó tarde.'
+          : undefined,
+        accion: { tipo: 'enlace', etiqueta: 'Ir al catálogo Rent', href: '/catalogos?tab=Rent' },
+        ...(conTablas && rentRows.length ? { tablas: [{
+          titulo: 'Vigencias del Rent',
+          subtitulo: 'Cuántos dispositivos entran en cada «Vigente desde» — dos tarifas el mismo mes = dos filas.',
+          columnas: ['Vigente desde', 'Dispositivos'],
+          numericas: [1],
+          filas: [...vigencias.entries()].sort().map(([f, n]) => [f, String(n)]),
+        }] } : {}),
+      })
+    }
+
     // ── Pasos 6-9: los que necesitan el motor (comisiones/jefe/candados) ─────
     let panelOk = false
     let sellerStats: any[] = []
