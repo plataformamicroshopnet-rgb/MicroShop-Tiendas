@@ -17,8 +17,7 @@ import { can, canEdit } from '@/lib/permissions'
 import { useGuard } from '@/hooks/useGuard'
 import { useComisionesData } from '@/hooks/useComisionesData'
 import { RepescaTrimestral } from './RepescaTrimestral'
-import { ComisionesV3 } from './ComisionesV3'
-type ViewType = 'menu' | 'plus' | 'basico' | 'operaciones' | 'cruce' | 'objetivos' | 'auditoria' | 'repesca' | 'comisiones_v3' | 'rentabilidad_total' | 'comisiones_comerciales'
+type ViewType = 'menu' | 'plus' | 'basico' | 'operaciones' | 'cruce' | 'objetivos' | 'auditoria' | 'repesca' | 'rentabilidad_total' | 'comisiones_comerciales'
 
 const getDisplayGroup = (producto: string) => {
     if (!producto) return null;
@@ -1705,13 +1704,6 @@ export default function LiquidacionesPage() {
                 view: 'operaciones' as ViewType
             },
             {
-                title: 'Comisiones Tiendas y FFVV v3',
-                description: 'Tabla integrada para gestionar dietas, km, incentivos y cruce de datos O2 (Excel).',
-                icon: ClipboardList,
-                image: '/nx-comisiones-ffvv.png',
-                view: 'comisiones_v3' as ViewType
-            },
-            {
                 title: 'Operaciones por Grupo Cliente',
                 description: 'Análisis consolidado de ventas agrupadas por NIF/CIF y producto — secciones Plus y Básico.',
                 icon: Users,
@@ -1771,14 +1763,14 @@ export default function LiquidacionesPage() {
                         position: 'relative', 
                         cursor: 'pointer', 
                         borderLeft: c.title === 'Agenda de Llamadas Cristina' ? '5px solid #5CB615' : 
-                                    c.title === 'Operaciones Telefónica' || c.title === 'Operaciones por Grupo Cliente' || c.title === 'Comisiones Tiendas y FFVV v3' ? '5px solid #b8860b' :
+                                    c.title === 'Operaciones Telefónica' || c.title === 'Operaciones por Grupo Cliente' ? '5px solid #b8860b' :
                                     c.title === 'Rentabilidad por Tiendas' || c.title === 'Rentabilidad Total de Tiendas Movistar/O2/Movilfree' ? '5px solid #0ea5e9' : 
                                     '1px solid transparent' 
                     }}
                 >
                     <div className="card-icon-wrapper" style={
                         c.title === 'Agenda de Llamadas Cristina' ? { backgroundColor: 'rgba(92, 182, 21, 0.1)', color: '#5CB615' } : 
-                        c.title === 'Operaciones Telefónica' || c.title === 'Operaciones por Grupo Cliente' || c.title === 'Comisiones Tiendas y FFVV v3' ? { backgroundColor: 'rgba(184, 134, 11, 0.1)', color: '#b8860b' } :
+                        c.title === 'Operaciones Telefónica' || c.title === 'Operaciones por Grupo Cliente' ? { backgroundColor: 'rgba(184, 134, 11, 0.1)', color: '#b8860b' } :
                         c.title === 'Rentabilidad por Tiendas' || c.title === 'Rentabilidad Total de Tiendas Movistar/O2/Movilfree' ? { backgroundColor: 'rgba(14, 165, 233, 0.1)', color: '#0ea5e9' } :
                         { backgroundColor: 'rgba(37, 99, 235, 0.1)', color: '#2563eb' }
                     }>
@@ -1790,7 +1782,7 @@ export default function LiquidacionesPage() {
             );
         };
 
-        const brownCards = menuCardsRaw.filter(c => c.title === 'Operaciones Realizadas en Tiendas' || c.title === 'Operaciones por Grupo Cliente' || c.title === 'Comisiones Tiendas y FFVV v3');
+        const brownCards = menuCardsRaw.filter(c => c.title === 'Operaciones Realizadas en Tiendas' || c.title === 'Operaciones por Grupo Cliente');
         const blueCards = menuCardsRaw.filter(c => c.title === 'Rentabilidad por Tiendas' || c.title === 'Rentabilidad Total de Tiendas Movistar/O2/Movilfree' || c.title === 'Cuadro de Comisiones Comerciales');
         const greenCards = menuCardsRaw.filter(c => c.title === 'Agenda de Llamadas Cristina');
 
@@ -2554,7 +2546,6 @@ export default function LiquidacionesPage() {
             {currentView === 'cruce' && renderCruceView()}
             {currentView === 'auditoria' && renderAuditoria()}
             {currentView === 'repesca' && <RepescaTrimestral user={user} activeYear={activePeriodObj?.year || 2026} />}
-            {currentView === 'comisiones_v3' && <div style={{ padding: 24 }}><ComisionesV3 activePeriodKey={activePeriodKey} canModify={canModify} /></div>}
 
             {/* PASTE EXCEL MODAL */}
             {showPasteModal && (

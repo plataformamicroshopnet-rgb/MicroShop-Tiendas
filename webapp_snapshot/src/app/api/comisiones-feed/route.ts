@@ -5,11 +5,16 @@ import path from 'path';
 import { norm } from '@/lib/comercialRoster';
 
 // ─── Feed de comisiones publicado por el ERP (mi-nuevo-erp) ─────────────────
+// OJO: la carta «Comisiones Tiendas y FFVV v3» SE MUDO AL ERP (agosto-2026),
+// a «Liquidaciones → Comisiones Tiendas y FFVV». Aqui ya no hay pantalla que
+// lea esta tabla: el feed se mantiene un tiempo por si hiciera falta volver,
+// pero su destino es desaparecer junto con la tabla ComisionFFVVTienda.
 // Cuando el ERP aprueba el pago de comisiones (regla N+3) POSTea aquí los
 // importes por comercial. Se escriben en la tabla ComisionFFVVTienda, que es la
 // que pinta la carta "Comisiones Tiendas y FFVV v3" de /liquidacion.
 //
-// CORRESPONDENCIA DE PERIODOS: el título de la carta v3 (ComisionesV3.tsx:14-21)
+// CORRESPONDENCIA DE PERIODOS: el título de la carta v3 (ahora en el ERP,
+// app/services/comisiones_v3.py, titulo_por_defecto)
 // dice «LIQUIDACIÓN DE VENTAS DE {mes(P)} SE PAGA EN LA NÓMINA DE {mes(P+3)}»,
 // es decir, la fila de periodKey P contiene las ventas de P. El ERP manda el MES
 // DE VENTA, así que periodKeyDestino = periodKey recibido (sin conversión).
@@ -59,7 +64,7 @@ function writeState(state: FeedState) {
 
 const eq = (a: number, b: number) => Math.abs(a - b) < 0.005; // tolerancia céntimos/float
 
-// Fórmulas de la carta v3 (ComisionesV3.tsx:88-108)
+// Fórmulas de la carta v3 (ahora en el ERP, comisiones_v3.calcular)
 function recalc(tipo: 'FFVV' | 'TIENDA', row: {
     importe: number; aceleradores: number; descuentos: number;
     dietas: number; km: number; o2Varios: number;
