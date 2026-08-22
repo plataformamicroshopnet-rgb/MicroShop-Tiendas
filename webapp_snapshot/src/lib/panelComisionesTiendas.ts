@@ -746,8 +746,16 @@ export function computePanelComisionesTiendas(input: PanelComisionesTiendasInput
                                     // No bloquea la regla entera: solo impide subir de tramo.
                                     topeTramo1.push(cond);
                                 } else if (cond.type === 'REQUIRE_GROUP_PCT') {
-                                    const targetQtty = (groupCounts[cond.targetGroup] || 0) + (groupPending[cond.targetGroup] || 0);
-                                    const targetObj = groupObj1[cond.targetGroup] || 0;
+                                    // TEAM-WIDE (pedido del dueno, 22-ago-2026): la llave mira
+                                    // el % de TODO EL EQUIPO en la palanca ajena, no el del
+                                    // propio comercial — «son para todo el equipo». Mismos
+                                    // agregados que usa REQUIRE_TEAM_OBJ2/3 (activeTeamGroup*)
+                                    // y el objetivo SIN prorratear de esa regla (objPrimerTramo
+                                    // no se toca por FTTR, solo obj2/obj3).
+                                    const targetRulePct = activeTiendaRules.find((r: any) => r.nombre === cond.targetGroup);
+                                    const targetObj = targetRulePct ? (targetRulePct.objPrimerTramo || 0) : 0;
+                                    const targetQtty = (activeTeamGroupCounts[cond.targetGroup] || 0)
+                                                      + (activeTeamGroupPending[cond.targetGroup] || 0);
                                     if (targetObj > 0) {
                                         const pct = (targetQtty / targetObj) * 100;
                                         if (pct < cond.value) {
@@ -821,16 +829,21 @@ export function computePanelComisionesTiendas(input: PanelComisionesTiendasInput
                             return;
                         }
 
-                        const targetObj = groupObj1[cond.targetGroup] || 0;
+                        // TEAM-WIDE (pedido del dueno, 22-ago-2026): igual que
+                        // REQUIRE_GROUP_PCT, mira el % del EQUIPO en la palanca ajena
+                        // — «son para todo el equipo» — no el del propio comercial.
+                        const targetRuleT2 = activeTiendaRules.find((r: any) => r.nombre === cond.targetGroup);
+                        const targetObj = targetRuleT2 ? (targetRuleT2.objPrimerTramo || 0) : 0;
                         // Objetivo 0 (o palanca que no existe en este juego de reglas, p.ej.
                         // O2, o renombrada en Catalogos) = no se puede fallar un objetivo
                         // que no existe: NO bloquea. Preferimos no cobrar de menos por una
                         // casilla mal escrita, que es un error mudo e imposible de ver.
                         if (targetObj <= 0) return;
-                        const targetQtty = (groupCounts[cond.targetGroup] || 0) + (groupPending[cond.targetGroup] || 0);
+                        const targetQtty = (activeTeamGroupCounts[cond.targetGroup] || 0)
+                                          + (activeTeamGroupPending[cond.targetGroup] || 0);
                         const logro = (targetQtty / targetObj) * 100;
                         if (logro < cond.value) {
-                            culpables.push(`${cond.targetGroup} al ${logro.toFixed(0)} % (exige ${cond.value} %)`);
+                            culpables.push(`${cond.targetGroup} al ${logro.toFixed(0)} % de TODO el equipo (exige ${cond.value} %)`);
                         }
                     });
                     if (culpables.length > 0) {
@@ -851,6 +864,25 @@ export function computePanelComisionesTiendas(input: PanelComisionesTiendasInput
                     }
                 }
 
+                // SIN LLEGAR AL OBJETIVO 1 (ya prorrateado por horas), NO SE COBRA.
+                //
+                // Hasta el 22-ago-2026 esta rama pagaba SIEMPRE el tramo 1, aunque
+                // faltara para el objetivo (el comentario decia literal «Valorar
+                // siempre al Tramo 1 aunque no llegue al objetivo»). Palabras del
+                // dueno: «el unico motivo que tienen para poder cobrar es llegar a
+                // su objetivo una vez tienen el reparto de sus horas». El reparto
+                // por horas (0d1e3f4, mismo dia) ya esta bien: esto es la otra
+                // mitad — la CONDICION DE COBRO.
+                //
+                // Se usa `isConsolidado`, que ya reune el objetivo 1 propio Y
+                // cualquier REQUIRE_GROUP_QTY/PCT que lo condicione (por ejemplo
+                // swap y MPA exigen minimo 1 unidad propia): una sola condicion de
+                // cobro, no dos criterios que puedan divergir.
+                //
+                // Los otros tres caminos (ACCUMULATIVE_FIXED_BASE y las dos ramas
+                // ACCUMULATIVE_TRAMOS) NO se tocan: el primero ya se paga a 0 sin
+                // objetivo, y los otros dos solo se activan cuando qttyTotal>=obj2,
+                // que ya implica el objetivo 1 superado.
                 if (isPercentage) {
                     if (isAccumulativeFixed) {
                         if (qttyTotal >= obj1 && obj1 > 0) {
@@ -864,7 +896,7 @@ export function computePanelComisionesTiendas(input: PanelComisionesTiendasInput
                         const extraQty = qttyTotal - baseQty;
                         comTotal = (baseQty * (imp1 / 100)) + (extraQty * (imp2 / 100));
                     } else {
-                        comTotal = qttyTotal * (activeImp / 100);
+                        comTotal = isConsolidado ? qttyTotal * (activeImp / 100) : 0;
                     }
                 } else {
                     if (isAccumulativeFixed) {
@@ -879,7 +911,7 @@ export function computePanelComisionesTiendas(input: PanelComisionesTiendasInput
                         const extraQty = qttyTotal - baseQty;
                         comTotal = (baseQty * imp1) + (extraQty * imp2);
                     } else {
-                        comTotal = qttyTotal * activeImp;
+                        comTotal = isConsolidado ? qttyTotal * activeImp : 0;
                     }
                 }
 
