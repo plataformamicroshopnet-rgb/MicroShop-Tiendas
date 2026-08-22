@@ -231,8 +231,29 @@ export interface PanelComisionesTiendasInput {
 
 const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ¿ESTE MES YA NO PUEDE CRECER? — regla del dueno (22-ago-2026).
+//
+// Un mes de ventas deja de moverse el DIA 5 del mes SIGUIENTE: hasta entonces
+// todavia se meten ventas de los ultimos dias, asi que quien no ha llegado a su
+// objetivo aun puede llegar. A partir del dia 5 «donde no haya llegado no puede
+// hacer nada y se queda a lo que si haya llegado».
+//
+// No se usa el estado del WorkPeriod: el mes rota el dia 1 (api/rotar-mes) y eso
+// cerraria los objetivos cuatro dias antes de tiempo.
+// ─────────────────────────────────────────────────────────────────────────────
+export function objetivosCerrados(periodKey: string, hoy: Date = new Date()): boolean {
+    const [y, m] = String(periodKey || '').split('_').map(Number);
+    if (!y || !m) return false;
+    // Date cuenta los meses desde 0, asi que `m` YA es el mes siguiente
+    return hoy > new Date(y, m, 5, 23, 59, 59);
+}
+
 export function computePanelComisionesTiendas(input: PanelComisionesTiendasInput) {
     const activePeriodKey = input.periodKey || '';
+    // Mientras el mes pueda crecer, lo que depende de un objetivo sin alcanzar
+    // TAMBIEN esta por consolidar: puede subir de tramo si se vende mas.
+    const objCerrados = objetivosCerrados(activePeriodKey);
 
     // ── Mismo pre-procesado que hacía el hook con las respuestas de los fetches ──
     // (filtros idempotentes: da igual si el llamante ya los aplicó)
@@ -909,8 +930,17 @@ export function computePanelComisionesTiendas(input: PanelComisionesTiendasInput
             lineasGrupo.forEach((l, i) => {
                 if (esPte(entradas[i]?.sale)) comPteLineas = r2(comPteLineas + l.comision);
             });
-            comPendiente = comPteLineas;
-            comConsolidada = r2(objetivoRedondeo - comPteLineas);
+            if (!objCerrados && !groupIsConsolidado[ruleName] && objetivoRedondeo !== 0) {
+                // Mes VIVO y objetivo sin alcanzar: toda la comision de esta palanca
+                // esta por consolidar, porque aun puede cambiar vendiendo mas.
+                comPendiente = objetivoRedondeo;
+                comConsolidada = 0;
+            } else {
+                // Mes cerrado (o objetivo ya alcanzado): lo unico que queda por
+                // consolidar son las ventas pendientes de INSTALAR.
+                comPendiente = comPteLineas;
+                comConsolidada = r2(objetivoRedondeo - comPteLineas);
+            }
             groupConsolidada[ruleName] = comConsolidada;
             internalTotalConsolidada += comConsolidada;
             internalTotalPendiente += comPendiente;
