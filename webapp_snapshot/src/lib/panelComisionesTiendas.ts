@@ -840,24 +840,40 @@ export function computePanelComisionesTiendas(input: PanelComisionesTiendasInput
                     }
                 }
 
-                if (isConsolidado) {
-                    comConsolidada = comTotal;
-                    comPendiente = 0;
-                } else {
-                    comConsolidada = 0;
-                    comPendiente = comTotal;
-                }
+                // CONSOLIDADO / POR CONSOLIDAR = INSTALADO / PENDIENTE DE INSTALAR.
+                //
+                // Hasta el 22-ago-2026 este reparto miraba `isConsolidado`, o sea
+                // si la palanca habia llegado a su primer OBJETIVO: la comision
+                // entera se iba al consolidado o entera a lo pendiente. Eso no es
+                // lo que significan esas palabras para el negocio — «consolidar es
+                // que las ventas se instalen» (el dueno) — y daba numeros absurdos:
+                // Elena, julio, con 55 ventas esperando instalacion salia con 0,00 €
+                // por consolidar (habia superado todos sus objetivos), y Lara salia
+                // con 125,64 € sin tener NI UNA venta pendiente.
+                //
+                // Ahora se reparte por lo unico que importa: cuanto de la comision
+                // viene de ventas ya finalizadas y cuanto de ventas pendientes. Es
+                // el mismo peso con el que cada venta conto para la regla, asi que
+                // cuadra con la columna «Pte.» de la tabla y con el detalle por
+                // linea que se manda al ERP.
+                // El reparto en si se hace MAS ABAJO, cuando ya estan calculadas
+                // las lineas: se suman las de las ventas pendientes con SUS MISMOS
+                // centimos redondeados. Repartir aqui en proporcion daba hasta 2
+                // centimos de diferencia con el detalle que recibe el ERP, y dos
+                // pantallas que no cuadran por dos centimos son dos pantallas que
+                // no cuadran.
+                //
+                // El flag de objetivo NO se toca: alimenta `cumplido` y las columnas
+                // «Faltan 1/2/3», que si van de objetivos. Son dos cosas distintas y
+                // ahora cada una esta en su sitio.
                 groupIsConsolidado[ruleName] = isConsolidado;
             } else {
                 groupIsConsolidado[ruleName] = false;
             }
 
             groupComisions[ruleName] = comTotal;
-            groupConsolidada[ruleName] = comConsolidada;
             groupTopeMotivo[ruleName] = topeAplicado ? topeMotivo : null;
             internalTotalComision += comTotal;
-            internalTotalConsolidada += comConsolidada;
-            internalTotalPendiente += comPendiente;
 
             // ── ADICIÓN (liquidación): detalle por línea de la palanca ────────────
             // Reparte la MISMA comisión de la palanca línea a línea con el peso con el
@@ -882,6 +898,23 @@ export function computePanelComisionesTiendas(input: PanelComisionesTiendasInput
                     last.comision = r2(last.comision + diff);
                 }
             }
+            // ── El reparto CONSOLIDADO / POR CONSOLIDAR, con las lineas ya hechas ─
+            // «Por consolidar» = lo que suman las lineas de las ventas marcadas
+            // PENDIENTES (la columna «Pte.» de la tabla). Se usan las cifras ya
+            // redondeadas, las MISMAS que se mandan al ERP, para que el importe
+            // que retiene alli y el que aparece aqui sean el mismo al centimo.
+            const esPte = (venta: any) => String(venta?.pendiente || '')
+                .toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim() === 'si';
+            let comPteLineas = 0;
+            lineasGrupo.forEach((l, i) => {
+                if (esPte(entradas[i]?.sale)) comPteLineas = r2(comPteLineas + l.comision);
+            });
+            comPendiente = comPteLineas;
+            comConsolidada = r2(objetivoRedondeo - comPteLineas);
+            groupConsolidada[ruleName] = comConsolidada;
+            internalTotalConsolidada += comConsolidada;
+            internalTotalPendiente += comPendiente;
+
             lineasDetalle.push(...lineasGrupo);
 
             // ── ADICIÓN (liquidación): resumen del objetivo de la palanca ─────────
