@@ -116,6 +116,19 @@ export async function POST(request: Request) {
       })
       const totalLineas = r2(lineas.reduce((acc, l) => acc + l.comision, 0))
       const totalExtras = r2(st.extrasConceptos.reduce((acc, e) => acc + e.importe, 0))
+      const total = r2(totalLineas + totalExtras)
+      // El reparto CONSOLIDADO / POR CONSOLIDAR, el mismo que enseña el Panel de
+      // Comisiones en su cabecera (verde / ámbar / azul). Lo pidió el dueño el
+      // 22-ago-2026 para verlo también en el ERP: así Cristina entra a Pago de
+      // Comisiones y ve la previsión del mes sin tener que abrir este programa.
+      //
+      // OJO al reparto: se manda `porConsolidar` tal cual del motor y el
+      // consolidado se DERIVA restando del `total` de esta misma respuesta, no
+      // de st.totalConsolidada. Los dos caminos difieren en céntimos (el panel
+      // acumula sin redondear y aquí se redondea palanca a palanca), y así las
+      // dos cifras SIEMPRE suman el total que el ERP ya usa. Un desglose que no
+      // cuadra con su propio total es peor que no tener desglose.
+      const porConsolidar = r2(st.totalPendiente)
       return {
         comercial: st.name,
         perfil: tiendaDe(st.name),
@@ -124,7 +137,9 @@ export async function POST(request: Request) {
         objetivos: st.objetivosResumen,
         totalLineas,
         totalExtras,
-        total: r2(totalLineas + totalExtras),
+        total,
+        porConsolidar,
+        consolidada: r2(total - porConsolidar),
       }
     })
 
@@ -197,6 +212,12 @@ export async function POST(request: Request) {
         totalLineas: 0,
         totalExtras: r2(cj.total),
         total: r2(cj.total),
+        // La comisión del Jefe NO se reparte en consolidado / por consolidar:
+        // ya se calcula sobre los tramos REALMENTE alcanzados de cada palanca,
+        // así que lo que hay, hay. Se manda entero como consolidado para que su
+        // fila no salga a cero en el desglose del ERP.
+        porConsolidar: 0,
+        consolidada: r2(cj.total),
       } as any)
     }
 
