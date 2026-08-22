@@ -520,7 +520,29 @@ export function computePanelComisionesTiendas(input: PanelComisionesTiendasInput
             groupSales[ruleName] = [];
             groupLineEntries[ruleName] = [];
 
-            const totalHoras = rule.totalHoras || 0;
+            // EL DIVISOR SON LAS HORAS DE VERDAD DE LA PLANTILLA DEL MES.
+            //
+            // Hasta el 22-ago-2026 se usaba `rule.totalHoras`, una casilla que se
+            // teclea a mano en la misma pantalla que los horarios y que nadie
+            // cuadraba: llevaba clavada en 262 desde mayo mientras la plantilla
+            // real era 244 en julio y 258 en agosto. Resultado: los objetivos
+            // individuales salian un 6,87% bajos y los ocho juntos sumaban
+            // 92.198 € en vez de los 99.000 € que pide el equipo — 6.801 € de
+            // objetivo evaporados sin que nadie lo viera.
+            //
+            // Regla del dueno: «cuando subo horas a Gabriel es normal que se
+            // ajusten los objetivos, ya que se reparten equitativamente por
+            // horas». Asi que el divisor se CALCULA, y cambiar un horario mueve
+            // los objetivos solo, que es lo que se espera.
+            //
+            // El 0 se respeta: `totalHoras = 0` significa «esta palanca NO se
+            // prorratea» (en julio, FTTR y swap: a cada uno se le pide 1). Si se
+            // sustituyera por la suma, esos objetivos cambiarian sin querer.
+            const horasPlantilla = activeTiendaHours
+                .reduce((acc: number, h: any) => acc + (Number(h.horario) || 0), 0);
+            const totalHoras = (rule.totalHoras || 0) > 0
+                ? (horasPlantilla > 0 ? horasPlantilla : rule.totalHoras)
+                : 0;
             let valObj1 = 0;
             let valObj2 = 0;
             let valObj3 = 0;
