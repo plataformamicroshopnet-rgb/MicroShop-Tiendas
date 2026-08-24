@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
-import { canEdit } from '@/lib/permissions'
+import { canEdit, can } from '@/lib/permissions'
+import { mesYaPagadoN3, fechaPagoN3, nombreMes } from '@/lib/nominaN3'
 import { PrismaClient } from '@prisma/client'
 import { runExtrasEngine } from '@/lib/extrasEngine'
 import { randomUUID } from 'crypto'
@@ -82,7 +83,10 @@ function resolveGrupo(prod: any): string {
 export async function POST(request: Request) {
   try {
     const session = await getSession()
-    if (!session || !canEdit(session.user, 'MODULE_TIENDAS')) {
+    // El formulario de Nueva Venta se abre con CARD_NUEVA_VENTA; aquí se
+    // aceptaba SOLO la edición de Tiendas y un Back Office/Gestora podía abrir
+    // el formulario y estrellarse con un 403 al guardar. Misma llave que la puerta.
+    if (!session || !(canEdit(session.user, 'MODULE_TIENDAS') || can(session.user, 'CARD_NUEVA_VENTA'))) {
       return NextResponse.json({ success: false, error: 'No autorizado / Solo Lectura' }, { status: 403 })
     }
 
@@ -167,6 +171,20 @@ export async function POST(request: Request) {
 
     if (fechaVentaDate.getTime() > hoyDate.getTime()) {
       return NextResponse.json({ success: false, error: 'La Fecha de Venta no puede ser futura: pon la fecha real de tramitación en Movistar.' }, { status: 400 })
+    }
+
+    // ── CANDADO DE NÓMINA PAGADA (25-ago-2026, para TODOS, admin incluido) ──
+    // Se puede añadir una operación en un mes cerrado MIENTRAS su nómina siga
+    // en borrador en el ERP (regla N+3: el mes M se paga el 1 de M+4) — la
+    // re-verificación nocturna la incorpora sola y cuenta para todo como si el
+    // mes estuviera en vigor. En un mes ya PAGADO no: la nómina es inmutable y
+    // la venta descuadraría Tiendas contra el abonaré sin que nadie lo viera.
+    if (mesYaPagadoN3(fechaVentaDate, hoyDate)) {
+      const _pago = fechaPagoN3(fechaVentaDate)
+      return NextResponse.json({
+        success: false,
+        error: `La nómina de ${nombreMes(fechaVentaDate)} ya se pagó (el 1 de ${nombreMes(_pago)}, regla N+3) y es inmutable: no se pueden añadir operaciones a ese mes. Si de verdad falta una operación ahí, coméntalo con el administrador.`,
+      }, { status: 400 })
     }
 
     // Marcha atrás permitida para AÑADIR olvidadas (días laborables, por usuario)

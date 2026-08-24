@@ -60,7 +60,12 @@ export function can(user: any, permission: string): boolean {
   // Traductores de acciones heredadas
   if (permission === 'VIEW_DASHBOARD') return true;
   if (permission === 'SEND_EMAIL') return activePerms.includes('PRINT') || activePerms.includes('EXPORT_EXCEL');
-  if (permission === 'CREATE_SALES') return activePerms.includes('CARD_NUEVA_VENTA');
+  // OJO bidireccional: hay usuarios con el nombre ANTIGUO ('CREATE_SALES')
+  // GUARDADO en su lista (p. ej. Cris de Back Office) y pantallas que preguntan
+  // por el nuevo. Sin las dos direcciones, ese permiso guardado no abría nada
+  // (25-ago-2026: Back Office se estrellaba con 403 al guardar una venta).
+  if (permission === 'CREATE_SALES') return activePerms.includes('CARD_NUEVA_VENTA') || activePerms.includes('CREATE_SALES');
+  if (permission === 'CARD_NUEVA_VENTA') return activePerms.includes('CARD_NUEVA_VENTA') || activePerms.includes('CREATE_SALES');
   if (permission === 'EDIT_SALES' || permission === 'CANCEL_SALES') return activePerms.includes('CARD_REGISTRO_OPERACIONES');
   if (permission === 'MANAGE_CATALOG') return activePerms.includes('CARD_CATALOGOS');
   if (permission === 'CLOSE_MONTH') return activePerms.includes('CLOSE_MONTH'); // Mantenemos el nombre original si hace falta

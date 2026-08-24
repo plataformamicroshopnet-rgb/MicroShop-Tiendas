@@ -444,15 +444,29 @@ export default function AdminUsuariosPage() {
                                         />
 
                                         <label style={{ fontSize: 13, color: '#475569', fontWeight: 600 }} title="Días LABORABLES hacia atrás que puede poner como Fecha de Venta al registrar una venta olvidada. Vacío = 5 (recomendado). 0 = solo hoy.">⏪ Añadir olvidadas (días laborables):</label>
-                                        <input
-                                            type="number"
-                                            min={0}
-                                            max={5}
-                                            value={userForm.retroDiasCrear}
-                                            onChange={e => setUserForm({...userForm, retroDiasCrear: e.target.value})}
-                                            placeholder="Vacío = 5"
-                                            style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #CBD5E1', fontSize: 14, outline: 'none' }}
-                                        />
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                            <input
+                                                type="number"
+                                                min={0}
+                                                value={String(userForm.retroDiasCrear) === '9999' ? '' : userForm.retroDiasCrear}
+                                                disabled={String(userForm.retroDiasCrear) === '9999'}
+                                                onChange={e => setUserForm({...userForm, retroDiasCrear: e.target.value})}
+                                                placeholder={String(userForm.retroDiasCrear) === '9999' ? 'Sin tope' : 'Vacío = 5'}
+                                                style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #CBD5E1', fontSize: 14, outline: 'none',
+                                                         background: String(userForm.retroDiasCrear) === '9999' ? '#F1F5F9' : undefined }}
+                                            />
+                                            {/* Para Administración (Cristina): puede añadir operaciones en
+                                                meses cerrados MIENTRAS su nómina siga en borrador (regla N+3
+                                                del ERP: el mes M se paga el 1 de M+4). Los meses ya pagados
+                                                los bloquea el servidor para todo el mundo, admin incluido. */}
+                                            <label style={{ fontSize: 12, color: '#475569', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontWeight: 500 }}
+                                                   title="Puede poner CUALQUIER fecha pasada cuya nómina siga en borrador (el mes M se paga el 1 de M+4). Los meses con la nómina ya pagada quedan bloqueados para todos.">
+                                                <input type="checkbox"
+                                                       checked={String(userForm.retroDiasCrear) === '9999'}
+                                                       onChange={e => setUserForm({...userForm, retroDiasCrear: e.target.checked ? '9999' : ''})} />
+                                                Sin tope: puede añadir en meses cerrados (hasta que su nómina se pague)
+                                            </label>
+                                        </div>
 
                                         <label style={{ fontSize: 13, color: '#475569', fontWeight: 600 }} title="Días naturales hacia atrás en los que puede MODIFICAR operaciones (con permiso de edición). Vacío = 120 (4 meses, máximo). 0 = no puede tocar el pasado.">⏪ Modificar operaciones (días, máx 120):</label>
                                         <input

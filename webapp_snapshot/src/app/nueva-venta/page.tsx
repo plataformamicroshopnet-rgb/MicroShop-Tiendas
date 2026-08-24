@@ -960,7 +960,7 @@ export default function NuevaVentaPage() {
                   </div>
                   <div style={{ fontSize: 11.5, color: '#5A6B7F', lineHeight: 1.45 }}>
                     {formData.fechaVenta.slice(0, 7) !== hoyISO.slice(0, 7)
-                      ? `OJO: con fecha ${formData.fechaVenta.split('-').reverse().join('/')}, la venta quedará anclada a ese mes (sus listados, comisiones y liquidación), no al mes actual. Asegúrate de que es la fecha real de tramitación.`
+                      ? `OJO: con fecha ${formData.fechaVenta.split('-').reverse().join('/')}, la venta quedará anclada a ese mes y contará para TODO como si el mes estuviera en vigor: listados, comisiones (su nómina en borrador se re-verifica sola cada madrugada) y liquidación con Telefónica. Asegúrate de que es la fecha real de tramitación. Los meses con la nómina ya pagada están bloqueados.`
                       : 'Comprueba que es la fecha real en la que se tramitó la operación en Movistar; de ella depende el mes en que se reclama el cobro.'}
                   </div>
                 </div>
