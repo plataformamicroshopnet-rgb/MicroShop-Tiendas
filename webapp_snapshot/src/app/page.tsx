@@ -560,8 +560,11 @@ export default function DashboardPage() {
           items.push({ name: v, sale: s });
         });
         const rep = repartoPorVenta(items, c, catalogs);
+        // Con el mínimo de equipo sin llegar se enseña lo EN JUEGO (lo que se
+        // puede perder), que motiva más que un 0,00 € (dueño, 24-ago-2026).
         const data = rep.filas.filter(f => f.ventas > 0)
-          .map(f => ({ name: f.name, value: f.ventas, etiqueta: `${f.ventas} · ${eurFmt(f.ganado)}` }));
+          .map(f => ({ name: f.name, value: f.ventas,
+                       etiqueta: `${f.ventas} · ${eurFmt(rep.grupalCumplido ? f.ganado : f.enJuego)}` }));
         return { concurso: c, isCurrency: false, data, fmt: (v: number) => String(v), porVenta: rep };
       }
       const isCurrency = c.metrica === 'importe' || c.metrica === 'comisiones';
@@ -680,7 +683,7 @@ export default function DashboardPage() {
                   <div style={{ textAlign: 'center', marginBottom: 6, fontSize: 10.5, fontWeight: 700,
                                 color: !r.grupalCumplido ? '#b45309' : r.agotado ? '#b91c1c' : '#0f766e', lineHeight: 1.4 }}>
                     {!r.grupalCumplido
-                      ? <>⚠️ mínimo de equipo {r.minGrupal} — lleváis {r.teamVentas}</>
+                      ? <>⚠️ mínimo de equipo {r.minGrupal} — lleváis {r.teamVentas}{r.enJuegoTotal > 0 ? ` · ${eurFmt(r.enJuegoTotal)} en juego` : ''}</>
                       : r.tope > 0
                         ? <>bote {eurFmt(r.repartido)} de {eurFmt(r.tope)}{r.agotado ? ' — ⛔ agotado' : ''}</>
                         : <>repartido {eurFmt(r.repartido)}</>}

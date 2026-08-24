@@ -176,8 +176,13 @@ export function concursoSaleValue(sale: any, concurso: Concurso, catalogs?: Reco
 // agotarlo: al llegar al tope, las siguientes cuentan en el ranking pero ya no
 // cobran. Devuelve el ranking por Nº DE VENTAS con lo ganado por cada uno.
 export interface RepartoPorVenta {
-  filas: { name: string; ventas: number; ganado: number; cumpleMin: boolean }[]
-  repartido: number       // € ya pagados entre todos
+  // ganado = lo que COBRA de verdad (0 mientras el mínimo de equipo no llegue).
+  // enJuego = lo que LLEVARÍA si el equipo llega — se enseña en ámbar para que
+  // se vea lo que se puede perder (dueño, 24-ago-2026: «siempre motiva más ver
+  // la cifra que sale y que la puedas perder por no llegar entre todos»).
+  filas: { name: string; ventas: number; ganado: number; enJuego: number; cumpleMin: boolean }[]
+  repartido: number       // € ya pagados de verdad entre todos
+  enJuegoTotal: number    // € que habría repartidos si el equipo llega al mínimo
   tope: number            // 0 = sin tope
   agotado: boolean
   teamVentas: number      // ventas que puntúan, entre todos
@@ -209,24 +214,28 @@ export function repartoPorVenta(items: { name: string; sale: any }[], c: Concurs
   puntuan.forEach(({ name }) => { conteo[name] = (conteo[name] || 0) + 1 })
   const teamVentas = puntuan.length
   const grupalCumplido = teamVentas >= minGrp
+  // El reparto se calcula COMO SI el mínimo de equipo estuviera cumplido
+  // (mismos bote, orden de fecha y mínimo individual): eso es lo «en juego».
+  // El pago REAL solo existe cuando el grupal llega — hasta entonces, 0.
   let restante = tope > 0 ? tope : Number.POSITIVE_INFINITY
-  const porNombre: Record<string, { ventas: number; ganado: number }> = {}
+  const porNombre: Record<string, { ventas: number; enJuego: number }> = {}
   for (const { name, sale: _s } of puntuan) {
-    const st = porNombre[name] || (porNombre[name] = { ventas: 0, ganado: 0 })
+    const st = porNombre[name] || (porNombre[name] = { ventas: 0, enJuego: 0 })
     st.ventas += 1
-    const cobra = grupalCumplido && (conteo[name] || 0) >= minInd
-    if (cobra && rate > 0 && restante >= rate) {
-      st.ganado += rate
+    const cobraInd = (conteo[name] || 0) >= minInd
+    if (cobraInd && rate > 0 && restante >= rate) {
+      st.enJuego += rate
       restante -= rate
     }
   }
   const filas = Object.entries(porNombre)
-    .map(([name, v]) => ({ name, ventas: v.ventas, ganado: v.ganado,
+    .map(([name, v]) => ({ name, ventas: v.ventas, enJuego: v.enJuego,
+                           ganado: grupalCumplido ? v.enJuego : 0,
                            cumpleMin: (conteo[name] || 0) >= minInd }))
-    .sort((a, b) => b.ventas - a.ventas || b.ganado - a.ganado)
-  const repartido = tope > 0 ? tope - (restante === Number.POSITIVE_INFINITY ? tope : restante)
-                             : filas.reduce((acc, f) => acc + f.ganado, 0)
-  return { filas, repartido, tope, agotado: tope > 0 && restante < rate,
+    .sort((a, b) => b.ventas - a.ventas || b.enJuego - a.enJuego)
+  const enJuegoTotal = filas.reduce((acc, f) => acc + f.enJuego, 0)
+  const repartido = grupalCumplido ? enJuegoTotal : 0
+  return { filas, repartido, enJuegoTotal, tope, agotado: tope > 0 && restante < rate,
            teamVentas, minIndividual: minInd, minGrupal: minGrp, grupalCumplido }
 }
 

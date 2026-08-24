@@ -217,7 +217,7 @@ export default function TorneosVentasPage() {
       validSellers.forEach(s => s.rawSales.filter(noAnulada).forEach((rs: any) => items.push({ name: s.name, sale: rs })));
       const rep = repartoPorVenta(items, c, catalogs);
       const conFila = new Set(rep.filas.map(f => f.name));
-      validSellers.forEach(s => { if (!conFila.has(s.name)) rep.filas.push({ name: s.name, ventas: 0, ganado: 0, cumpleMin: !(Number(c.minIndividual) > 0) }); });
+      validSellers.forEach(s => { if (!conFila.has(s.name)) rep.filas.push({ name: s.name, ventas: 0, ganado: 0, enJuego: 0, cumpleMin: !(Number(c.minIndividual) > 0) }); });
       const data = rep.filas.map((f, idx) => ({ pos: idx + 1, name: f.name, value: f.ventas, label: String(f.ventas) }));
       return { concurso: c, isCurrency: false, data, max: Math.max(...data.map(d => d.value), 0), porVenta: rep as RepartoPorVenta };
     }
@@ -403,7 +403,8 @@ export default function TorneosVentasPage() {
                 {col.porVenta && concursoJuegaEnMes(col.concurso, _mesVisto.year, _mesVisto.month) ? (
                   <div style={{ textAlign: 'center', marginBottom: 8, fontSize: 12.5, fontWeight: 700, color: !col.porVenta.grupalCumplido ? '#b45309' : col.porVenta.agotado ? '#b91c1c' : '#0f766e' }}>
                     {!col.porVenta.grupalCumplido ? (
-                      <>⚠️ Mínimo de equipo: {col.porVenta.minGrupal} ventas — lleváis {col.porVenta.teamVentas}</>
+                      <>⚠️ Mínimo de equipo: {col.porVenta.minGrupal} ventas — lleváis {col.porVenta.teamVentas}
+                      {col.porVenta.enJuegoTotal > 0 ? <> · <span style={{ color: '#b45309' }}>{fmtEur(col.porVenta.enJuegoTotal)} en juego</span></> : null}</>
                     ) : (
                       <>💶 {fmtEur(col.concurso.importePorVenta || 0)} por venta ·
                       {col.porVenta.tope > 0
@@ -452,8 +453,13 @@ export default function TorneosVentasPage() {
                             </div>
                           </td>
                           <td style={{ fontWeight: 800 }}>{f.ventas}</td>
-                          <td style={{ fontWeight: 800, color: f.ganado > 0 ? '#0f766e' : '#cbd5e1', fontSize: f.ganado > 0 ? undefined : 12 }}>
+                          {/* Verde = cobrado de verdad; ÁMBAR = en juego (se pierde si el
+                              equipo no llega al mínimo — la zanahoria del dueño). */}
+                          <td style={{ fontWeight: 800,
+                                       color: f.ganado > 0 ? '#0f766e' : f.enJuego > 0 ? '#b45309' : '#cbd5e1',
+                                       fontSize: (f.ganado > 0 || f.enJuego > 0) ? undefined : 12 }}>
                             {f.ganado > 0 ? fmtEur(f.ganado)
+                              : f.enJuego > 0 ? `${fmtEur(f.enJuego)} en juego`
                               : (f.ventas > 0 && !f.cumpleMin && col.porVenta ? `mín. ${col.porVenta.minIndividual}` : '—')}
                           </td>
                         </tr>
