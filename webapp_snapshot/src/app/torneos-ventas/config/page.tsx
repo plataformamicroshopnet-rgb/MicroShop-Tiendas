@@ -25,16 +25,19 @@ const nuevoConcurso = (): Concurso => ({
 // «Quitar» + «Guardar» borró el 24-ago (la config es GLOBAL y no había red).
 // Recuperada de las copias de seguridad; el botón de rescate la carga en el
 // editor cuando la lista está vacía — se revisa y se guarda, nada automático.
+// SOLO JULIO (decisión del dueño, 24-ago: «solo quería recuperar el de Julio»):
+// se restaura con fechas 01/07→31/07 y ventana 'tramo', así el concurso queda
+// finalizado y no puntúa nada de agosto en adelante.
 const CONFIG_RECUPERADA_20260630: Concurso[] = [
   {
     id: 'c1', nombre: 'Dispositivos + Seguros', tipoVenta: 'Dispositivos + Seguros',
-    metrica: 'importe', fechaInicio: '', fechaFin: '', ventana: 'mes',
+    metrica: 'importe', fechaInicio: '2026-07-01', fechaFin: '2026-07-31', ventana: 'tramo',
     premios: [{ pos: 1, importe: 100, texto: '' }, { pos: 2, importe: 75, texto: '' },
               { pos: 3, importe: 50, texto: '' }],
   },
   {
     id: 'c2', nombre: 'Seguros (Dispositivo, Smartphone y Tablet)', tipoVenta: 'Seguro',
-    metrica: 'count', fechaInicio: '', fechaFin: '', ventana: 'mes',
+    metrica: 'count', fechaInicio: '2026-07-01', fechaFin: '2026-07-31', ventana: 'tramo',
     premios: [{ pos: 1, importe: 100, texto: '' }, { pos: 2, importe: 75, texto: '' },
               { pos: 3, importe: 50, texto: '' }],
   },
@@ -227,11 +230,13 @@ export default function ConfiguradorTorneosPage() {
               <button
                 onClick={() => setConfig({ concursos: CONFIG_RECUPERADA_20260630.map(c => ({ ...c, premios: c.premios.map(p => ({ ...p })) })) })}
                 style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 14px', fontWeight: 700, cursor: 'pointer' }}>
-                🛟 Recuperar los concursos borrados (config del 30/06/2026)
+                🛟 Recuperar el torneo de JULIO (config del 30/06/2026)
               </button>
               <div style={{ fontSize: 12, marginTop: 6 }}>
-                Carga en el editor los 2 concursos que había desde el 30/06/2026 con sus premios
-                (100/75/50 €). Revísalos y pulsa «Guardar configuración» para dejarlos activos.
+                Carga en el editor los 2 concursos que había, con sus premios (100/75/50 €) y las
+                fechas 01/07 → 31/07 ya puestas: solo puntúan las ventas de julio y en agosto no
+                juega nada. Revísalos y pulsa «Guardar configuración». Para ver a los ganadores,
+                pon el programa en el mes de julio.
               </div>
             </div>
           </div>
