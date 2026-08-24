@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { PageHeader } from '@/components/PageHeader'
 import { Building2, RefreshCw, UploadCloud, X, ClipboardPaste, Search } from 'lucide-react'
 import { usePeriod } from '@/components/PeriodProvider'
-import { calculateTramitacion, isValidSale, isPending, isSellerInStore } from '@/lib/tramitacionEngine'
+import { calculateTramitacion, desgloseTiendaPorComercial, isValidSale, isPending, isSellerInStore } from '@/lib/tramitacionEngine'
 import { getEffectiveTiendaComerciales } from '@/lib/comercialRoster'
 
 const getWorkingDaysInMonth = (year: number, month: number) => {
@@ -62,6 +62,10 @@ export default function TramitacionPage() {
     const [comercialSel, setComercialSel] = useState<string | null>(null);
     const [rawSales, setRawSales] = useState<any[]>([]);
     const [hoursAll, setHoursAll] = useState<any[]>([]);
+    // Reglas del mes (Movistar y O2): las guarda loadData para que el desglose
+    // por comercial cuente con las mismas que la tabla.
+    const [rulesAll, setRulesAll] = useState<any[]>([]);
+    const [o2RulesAll, setO2RulesAll] = useState<any[]>([]);
 
     const loadData = async () => {
         if (!activePeriodKey) return;
@@ -107,6 +111,8 @@ export default function TramitacionPage() {
             setDataRows(calculated);
             setRawSales(sData.logs || []);
             setHoursAll(tData.hours || []);
+            setRulesAll(tData.rules || []);
+            setO2RulesAll(o2Rules);
         } catch(e) {
             console.error("Error loading tramitacion data", e);
         } finally {
@@ -529,6 +535,26 @@ export default function TramitacionPage() {
         return { comerciales, semanas };
     })();
 
+    // ── Desglose por comercial DENTRO de la tabla (dueño, 25-ago-2026): con el
+    //    modo análisis, pulsar una tienda despliega debajo de su fila una fila
+    //    por comercial con las unidades de cada columna. Cuenta con las MISMAS
+    //    reglas que la fila de la tienda (contarVentasTramitacion del motor):
+    //    la suma de los comerciales da la fila, siempre. ──
+    const desgloseTabla = (modoAnalisis && tiendaSel && tiendaSel !== 'O2')
+        ? desgloseTiendaPorComercial(tiendaSel, rawSales, hoursAll, rulesAll, o2RulesAll)
+        : [];
+
+    const SubCell = ({ v, tram = false, euro = false, cyan = false, right = false }: any) => (
+        <td style={{ padding: '5px 2px', textAlign: 'center', fontWeight: 600,
+                     color: tram ? '#ec4899' : cyan ? 'var(--mercedes-cyan)' : 'var(--light-text)',
+                     borderRight: right ? '2px solid var(--border-color)' : undefined }}>
+            {v ? formatNum(v, euro) : ''}
+        </td>
+    );
+    const SubGap = ({ right = false }: any) => (
+        <td style={{ borderRight: right ? '2px solid var(--border-color)' : undefined }} />
+    );
+
     return (
         <div style={{ padding: '8px 12px', backgroundColor: 'var(--bg-app)', minHeight: '100vh', paddingBottom: 80 }}>
             <PageHeader 
@@ -644,7 +670,8 @@ export default function TramitacionPage() {
                     </thead>
                     <tbody>
                         {movistarRows.map((r, i) => (
-                            <tr key={r.store} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: i % 2 === 0 ? 'var(--bg-card)' : 'rgba(0,0,0,0.01)' }}>
+                            <React.Fragment key={r.store}>
+                            <tr style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: i % 2 === 0 ? 'var(--bg-card)' : 'rgba(0,0,0,0.01)' }}>
                                 <td style={{ padding: '8px 4px', fontWeight: 600, borderRight: '1px solid var(--border-color)',
                                              color: modoAnalisis ? 'var(--mercedes-cyan)' : 'var(--light-text)',
                                              cursor: modoAnalisis ? 'pointer' : undefined,
@@ -699,6 +726,32 @@ export default function TramitacionPage() {
                                 <td style={{ padding: '8px 2px', textAlign: 'center', backgroundColor: '#e5e7eb', color: '#374151' }}>{formatNum(r.alarmas_proj)}</td>
                                 <CellProjPct obj={r.alarmas_obj} proj={r.alarmas_proj} />
                             </tr>
+                            {/* ── Modo análisis: los comerciales de la tienda pulsada,
+                                   desplegados como filas con sus unidades por columna
+                                   (Obj/Proy/% en blanco: son cosa de la tienda) ── */}
+                            {modoAnalisis && tiendaSel === r.store && desgloseTabla.map(d => (
+                                <tr key={`${r.store}-${d.comercial}`}
+                                    style={{ backgroundColor: 'rgba(14,165,233,0.06)', borderBottom: '1px dashed var(--border-color)', fontSize: 10.5 }}>
+                                    <td style={{ padding: '5px 4px 5px 20px', fontWeight: 600, color: 'var(--mercedes-cyan)', borderRight: '1px solid var(--border-color)' }}>↳ {d.comercial}</td>
+                                    <td style={{ borderRight: '1px solid var(--border-color)' }} />
+                                    <td style={{ padding: '5px 2px', textAlign: 'center', fontWeight: 700, color: 'var(--mercedes-cyan)', borderRight: '2px solid var(--border-color)' }}>{d.altasTotales}</td>
+                                    {/* BAF */}
+                                    <SubGap /><SubCell v={d.bafNoTrasl_vent} /><SubCell v={d.bafNoTrasl_tram} tram /><SubGap /><SubGap right />
+                                    {/* BAF Conv MS */}
+                                    <SubGap /><SubCell v={d.bafConvMS_vent} /><SubCell v={d.bafConvMS_tram} tram /><SubGap /><SubGap right />
+                                    {/* TV */}
+                                    <SubGap /><SubCell v={d.tvFutbol_vent} /><SubGap /><SubGap right />
+                                    {/* Disp € (Obj2 = unidades) */}
+                                    <SubCell v={d.dispUnidades_vent} cyan /><SubGap /><SubCell v={d.dispSegEuros_vent} euro /><SubGap /><SubGap right />
+                                    {/* Repos */}
+                                    <SubGap /><SubCell v={d.repos_vent} /><SubGap /><SubGap right />
+                                    {/* FTTR */}
+                                    <SubGap /><SubCell v={d.fttr_vent} /><SubGap /><SubGap right />
+                                    {/* Alarmas */}
+                                    <SubGap /><SubCell v={d.alarmas_vent} /><SubGap /><SubGap />
+                                </tr>
+                            ))}
+                            </React.Fragment>
                         ))}
 
                         {/* TOTALS ROW */}

@@ -276,6 +276,179 @@ const countRuleSales = (storeSales: any[], rule: any, forzarUnidades = false) =>
     return { completed, pending };
 };
 
+// ── Las reglas que usa cada tienda (Movistar u O2), buscadas UNA vez ─────────
+const reglasDeTienda = (activeRules: any[], store: string) => ({
+    rBafNoTrasl: findRule(activeRules, store === 'O2' ? "Altas/Portas Fibra" : "Alta BAF Total"),
+    rBafConvMS: findRule(activeRules, store === 'O2' ? "Internas Fibra" : "Alta BAF Convergente"),
+    rTvFutbol: store === 'O2' ? null : findRule(activeRules, "Repo Fútbol"),
+    rDispSegEuros: store === 'O2' ? null : findRule(activeRules, "Dispositivos + Seguros"),
+    rRepos: store === 'O2' ? null : findRule(activeRules, "ARPU"),
+    rFttr: store === 'O2' ? null : findRule(activeRules, "FTTR"),
+    rAlarmas: store === 'O2' ? null : findRule(activeRules, "MPA"),
+});
+
+// ── EL CONTEO de una lista de ventas, columna a columna ──────────────────────
+// Extraído de calculateTramitacion SIN cambiar una coma (25-ago-2026) para que
+// el desglose por comercial del modo análisis cuente con las MISMAS reglas y
+// los mismos respaldos que la fila de su tienda: la suma de los comerciales
+// tiene que dar la fila, siempre.
+export const contarVentasTramitacion = (ventas: any[], reglas: ReturnType<typeof reglasDeTienda>, store: string) => {
+    const { rBafNoTrasl, rBafConvMS, rTvFutbol, rDispSegEuros, rRepos, rFttr, rAlarmas } = reglas;
+    const row: any = {
+        altasTotales: ventas.length,
+        bafNoTrasl_vent: 0, bafNoTrasl_tram: 0,
+        bafConvMS_vent: 0, bafConvMS_tram: 0,
+        tvFutbol_vent: 0, alarmas_vent: 0, dispSegEuros_vent: 0,
+        repos_vent: 0, fttr_vent: 0,
+        dispUnidades_vent: 0, seguros_vent: 0, movil_vent: 0,
+    };
+
+    // 1. bafNoTrasl
+    if (rBafNoTrasl) {
+        const counts = countRuleSales(ventas, rBafNoTrasl);
+        row.bafNoTrasl_vent = counts.completed;
+        row.bafNoTrasl_tram = counts.pending;
+    } else {
+        ventas.forEach(s => {
+            const pending = isPending(s);
+            const p = s.producto?.toLowerCase() || '';
+            if (store === 'O2') {
+                if (p.includes('fibra') && !p.includes('interna')) {
+                    row.bafNoTrasl_vent++;
+                    if (pending) row.bafNoTrasl_tram++;
+                }
+            } else {
+                if (isBAFNoTrasl(s)) {
+                    row.bafNoTrasl_vent++;
+                    if (pending) row.bafNoTrasl_tram++;
+                }
+            }
+        });
+    }
+
+    // 2. bafConvMS
+    if (rBafConvMS) {
+        const counts = countRuleSales(ventas, rBafConvMS);
+        row.bafConvMS_vent = counts.completed;
+        row.bafConvMS_tram = counts.pending;
+    } else {
+        ventas.forEach(s => {
+            const pending = isPending(s);
+            const p = s.producto?.toLowerCase() || '';
+            if (store === 'O2') {
+                if (p.includes('interna')) {
+                    row.bafConvMS_vent++;
+                    if (pending) row.bafConvMS_tram++;
+                }
+            } else {
+                if (isBAFConvMS(s)) {
+                    row.bafConvMS_vent++;
+                    if (pending) row.bafConvMS_tram++;
+                }
+            }
+        });
+    }
+
+    // 3. tvFutbol
+    if (rTvFutbol) {
+        const counts = countRuleSales(ventas, rTvFutbol);
+        row.tvFutbol_vent = counts.completed + counts.pending;
+    } else {
+        ventas.forEach(s => {
+            const p = s.producto?.toLowerCase() || '';
+            if (store === 'O2') {
+                if (isTVFutbol(s) || p.includes('movistar+')) {
+                    row.tvFutbol_vent++;
+                }
+            } else {
+                if (isTVFutbol(s)) {
+                    row.tvFutbol_vent++;
+                }
+            }
+        });
+    }
+
+    // 4. alarmas (MPA)
+    if (rAlarmas) {
+        const counts = countRuleSales(ventas, rAlarmas);
+        row.alarmas_vent = counts.completed + counts.pending;
+    } else {
+        ventas.forEach(s => {
+            if (isAlarmas(s)) {
+                row.alarmas_vent++;
+            }
+        });
+    }
+
+    // 5. dispSegEuros (Dispositivos + Seguros)
+    if (rDispSegEuros) {
+        const counts = countRuleSales(ventas, rDispSegEuros);
+        row.dispSegEuros_vent = counts.completed + counts.pending;
+    } else {
+        ventas.forEach(s => {
+            if (isDispositivos(s)) {
+                row.dispSegEuros_vent += (s.importe_c || s.cuota || 0);
+            }
+        });
+    }
+
+    // 6. repos (ARPU) — en unidades, no en euros (ver forzarUnidades)
+    if (rRepos) {
+        const counts = countRuleSales(ventas, rRepos, true);
+        row.repos_vent = counts.completed + counts.pending;
+    } else {
+        ventas.forEach(s => {
+            if (isRepos(s)) {
+                row.repos_vent++;
+            }
+        });
+    }
+
+    // 7. fttr
+    if (rFttr) {
+        const counts = countRuleSales(ventas, rFttr);
+        row.fttr_vent = counts.completed + counts.pending;
+    } else {
+        ventas.forEach(s => {
+            if (isFTTR(s)) {
+                row.fttr_vent++;
+            }
+        });
+    }
+
+    // Standard units counts / fallback for not shown columns
+    ventas.forEach(s => {
+        if (isDispositivos(s)) row.dispUnidades_vent++;
+        if (isSeguros(s)) row.seguros_vent++;
+        if (isMovil(s)) row.movil_vent++;
+    });
+
+    return row;
+};
+
+// ── DESGLOSE POR COMERCIAL de una tienda (modo análisis, 25-ago-2026) ────────
+// Una fila por comercial con los mismos conteos que la fila de la tienda: al
+// pulsar la tienda, la tabla despliega debajo lo que lleva cada uno.
+export function desgloseTiendaPorComercial(
+    store: string,
+    sales: any[],
+    hours: any[],
+    rules: any[],
+    o2Rules: any[] = []
+) {
+    const sellers = getEffectiveTiendaComerciales(hours)[store] || [];
+    const activeRules = store === 'O2' ? o2Rules : rules;
+    const reglas = reglasDeTienda(activeRules, store);
+    return sellers
+        .map(seller => ({
+            comercial: seller,
+            ...contarVentasTramitacion(
+                sales.filter(s => isValidSale(s) && isSellerInStore(s.vendedor, [seller])),
+                reglas, store),
+        }))
+        .sort((a, b) => b.altasTotales - a.altasTotales);
+}
+
 // --- Main Engine Function ---
 export function calculateTramitacion(
     sales: any[],
@@ -332,17 +505,12 @@ export function calculateTramitacion(
 
         const exactObj = storeObjectives.find(o => o.storeName === store);
 
-        // Find rules dynamically
+        // Find rules dynamically (una sola búsqueda, compartida con el conteo)
         const activeRules = store === 'O2' ? o2Rules : rules;
         const activeHours = store === 'O2' ? o2Hours : hours;
 
-        const rBafNoTrasl = findRule(activeRules, store === 'O2' ? "Altas/Portas Fibra" : "Alta BAF Total");
-        const rBafConvMS = findRule(activeRules, store === 'O2' ? "Internas Fibra" : "Alta BAF Convergente");
-        const rTvFutbol = store === 'O2' ? null : findRule(activeRules, "Repo Fútbol");
-        const rDispSegEuros = store === 'O2' ? null : findRule(activeRules, "Dispositivos + Seguros");
-        const rRepos = store === 'O2' ? null : findRule(activeRules, "ARPU");
-        const rFttr = store === 'O2' ? null : findRule(activeRules, "FTTR");
-        const rAlarmas = store === 'O2' ? null : findRule(activeRules, "MPA");
+        const reglas = reglasDeTienda(activeRules, store);
+        const { rBafNoTrasl, rBafConvMS, rTvFutbol, rDispSegEuros, rRepos, rFttr, rAlarmas } = reglas;
 
         // Compute Objectives (Obj)
         // LA CASILLA OFICIAL MANDA (ago-2026): TiendaStoreObjective es la tabla
@@ -447,134 +615,8 @@ export function calculateTramitacion(
             repos_vent: 0
         };
 
-        // --- Count Sales ---
-        
-        // 1. bafNoTrasl
-        if (rBafNoTrasl) {
-            const counts = countRuleSales(storeSales, rBafNoTrasl);
-            row.bafNoTrasl_vent = counts.completed;
-            row.bafNoTrasl_tram = counts.pending;
-        } else {
-            // fallback
-            storeSales.forEach(s => {
-                const pending = isPending(s);
-                const p = s.producto?.toLowerCase() || '';
-                if (store === 'O2') {
-                    if (p.includes('fibra') && !p.includes('interna')) {
-                        row.bafNoTrasl_vent++;
-                        if (pending) row.bafNoTrasl_tram++;
-                    }
-                } else {
-                    if (isBAFNoTrasl(s)) {
-                        row.bafNoTrasl_vent++;
-                        if (pending) row.bafNoTrasl_tram++;
-                    }
-                }
-            });
-        }
-
-        // 2. bafConvMS
-        if (rBafConvMS) {
-            const counts = countRuleSales(storeSales, rBafConvMS);
-            row.bafConvMS_vent = counts.completed;
-            row.bafConvMS_tram = counts.pending;
-        } else {
-            // fallback
-            storeSales.forEach(s => {
-                const pending = isPending(s);
-                const p = s.producto?.toLowerCase() || '';
-                if (store === 'O2') {
-                    if (p.includes('interna')) {
-                        row.bafConvMS_vent++;
-                        if (pending) row.bafConvMS_tram++;
-                    }
-                } else {
-                    if (isBAFConvMS(s)) {
-                        row.bafConvMS_vent++;
-                        if (pending) row.bafConvMS_tram++;
-                    }
-                }
-            });
-        }
-
-        // 3. tvFutbol
-        if (rTvFutbol) {
-            const counts = countRuleSales(storeSales, rTvFutbol);
-            row.tvFutbol_vent = counts.completed + counts.pending;
-        } else {
-            // fallback
-            storeSales.forEach(s => {
-                const p = s.producto?.toLowerCase() || '';
-                if (store === 'O2') {
-                    if (isTVFutbol(s) || p.includes('movistar+')) {
-                        row.tvFutbol_vent++;
-                    }
-                } else {
-                    if (isTVFutbol(s)) {
-                        row.tvFutbol_vent++;
-                    }
-                }
-            });
-        }
-
-        // 4. alarmas (MPA)
-        if (rAlarmas) {
-            const counts = countRuleSales(storeSales, rAlarmas);
-            row.alarmas_vent = counts.completed + counts.pending;
-        } else {
-            // fallback
-            storeSales.forEach(s => {
-                if (isAlarmas(s)) {
-                    row.alarmas_vent++;
-                }
-            });
-        }
-
-        // 5. dispSegEuros (Dispositivos + Seguros)
-        if (rDispSegEuros) {
-            const counts = countRuleSales(storeSales, rDispSegEuros);
-            row.dispSegEuros_vent = counts.completed + counts.pending;
-        } else {
-            // fallback
-            storeSales.forEach(s => {
-                if (isDispositivos(s)) {
-                    row.dispSegEuros_vent += (s.importe_c || s.cuota || 0);
-                }
-            });
-        }
-
-        // 6. repos (ARPU) — en unidades, no en euros (ver forzarUnidades)
-        if (rRepos) {
-            const counts = countRuleSales(storeSales, rRepos, true);
-            row.repos_vent = counts.completed + counts.pending;
-        } else {
-            // fallback
-            storeSales.forEach(s => {
-                if (isRepos(s)) {
-                    row.repos_vent++;
-                }
-            });
-        }
-
-        // 7. fttr
-        if (rFttr) {
-            const counts = countRuleSales(storeSales, rFttr);
-            row.fttr_vent = counts.completed + counts.pending;
-        } else {
-            // fallback
-            storeSales.forEach(s => {
-                if (isFTTR(s)) {
-                    row.fttr_vent++;
-                }
-            });
-        }
-
-        // Standard units counts / fallback for not shown columns
-        storeSales.forEach(s => {
-            if (isDispositivos(s)) row.dispUnidades_vent++;
-            if (isSeguros(s)) row.seguros_vent++;
-            if (isMovil(s)) row.movil_vent++;
-        });
+        // --- Count Sales --- (el MISMO conteo que usa el desglose por comercial)
+        Object.assign(row, contarVentasTramitacion(storeSales, reglas, store));
 
         // Projections
         row.bafNoTrasl_proj = (row.bafNoTrasl_vent + row.bafNoTrasl_tram) * projectionFactor;
