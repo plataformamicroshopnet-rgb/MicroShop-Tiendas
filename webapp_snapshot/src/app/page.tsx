@@ -680,7 +680,7 @@ export default function DashboardPage() {
                   <div style={{ textAlign: 'center', marginBottom: 6, fontSize: 10.5, fontWeight: 700,
                                 color: !r.grupalCumplido ? '#b45309' : r.agotado ? '#b91c1c' : '#0f766e', lineHeight: 1.4 }}>
                     {!r.grupalCumplido
-                      ? <>⚠️ mínimo de equipo {r.minGrupal} — lleváis {r.teamVentas}; sin llegar, no se paga</>
+                      ? <>⚠️ mínimo de equipo {r.minGrupal} — lleváis {r.teamVentas}</>
                       : r.tope > 0
                         ? <>bote {eurFmt(r.repartido)} de {eurFmt(r.tope)}{r.agotado ? ' — ⛔ agotado' : ''}</>
                         : <>repartido {eurFmt(r.repartido)}</>}

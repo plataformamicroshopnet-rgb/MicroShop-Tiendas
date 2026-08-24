@@ -248,7 +248,7 @@ export function generaNotasConcurso(c: Concurso): string {
   if ((c.premioModo || 'podio') === 'porVenta') {
     if (Number(c.importePorVenta) > 0) partes.push(`Se paga ${fmtEur(Number(c.importePorVenta))} por venta realizada.`)
     if (Number(c.minIndividual) > 0) partes.push(`Mínimo individual: ${c.minIndividual} venta(s) para cobrar.`)
-    if (Number(c.minGrupal) > 0) partes.push(`Mínimo de equipo: ${c.minGrupal} venta(s) entre todos — sin llegar, no se paga.`)
+    if (Number(c.minGrupal) > 0) partes.push(`Mínimo de equipo: ${c.minGrupal} venta(s) entre todos.`)
     if (Number(c.topeBote) > 0) partes.push(`Bote máximo: ${fmtEur(Number(c.topeBote))} entre todos, por orden de venta.`)
   }
   if (c.notas) partes.push(String(c.notas))

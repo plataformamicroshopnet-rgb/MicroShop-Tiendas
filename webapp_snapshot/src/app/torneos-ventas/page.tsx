@@ -403,7 +403,7 @@ export default function TorneosVentasPage() {
                 {col.porVenta && concursoJuegaEnMes(col.concurso, _mesVisto.year, _mesVisto.month) ? (
                   <div style={{ textAlign: 'center', marginBottom: 8, fontSize: 12.5, fontWeight: 700, color: !col.porVenta.grupalCumplido ? '#b45309' : col.porVenta.agotado ? '#b91c1c' : '#0f766e' }}>
                     {!col.porVenta.grupalCumplido ? (
-                      <>⚠️ Mínimo de equipo: {col.porVenta.minGrupal} ventas — lleváis {col.porVenta.teamVentas}. Sin llegar, no se paga.</>
+                      <>⚠️ Mínimo de equipo: {col.porVenta.minGrupal} ventas — lleváis {col.porVenta.teamVentas}</>
                     ) : (
                       <>💶 {fmtEur(col.concurso.importePorVenta || 0)} por venta ·
                       {col.porVenta.tope > 0
