@@ -478,10 +478,22 @@ export default function TramitacionPage() {
             });
             const dd = (x: Date) => `${String(x.getDate()).padStart(2, '0')}/${String(x.getMonth() + 1).padStart(2, '0')}`;
             const DIA_NOMBRE = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+            // El tipo lleva la CATEGORÍA delante cuando el producto no la dice:
+            // un seguro viene como producto «Smartphone» + detalle «Seguro», y a
+            // secas no se sabía qué era (dueño, 25-ago-2026). Si el producto ya
+            // la lleva («… Rent», «Repos destino…»), no se repite.
+            const etiquetaTipo = (s: any): string => {
+                const prod = String(s.producto || '').trim();
+                const det = String(s.detalle || '').trim();
+                if (!prod) return det || '—';
+                if (!det) return prod;
+                const norm = (x: string) => x.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+                return norm(prod).includes(norm(det)) ? prod : `${det} — ${prod}`;
+            };
             const agruparTipos = (vs: any[]): Tipo[] => {
                 const porTipo: Record<string, any[]> = {};
                 vs.forEach(s => {
-                    const t = String(s.producto || '—').trim() || '—';
+                    const t = etiquetaTipo(s);
                     (porTipo[t] = porTipo[t] || []).push(s);
                 });
                 // Los tipos con más ventas primero; a igualdad, alfabético.
