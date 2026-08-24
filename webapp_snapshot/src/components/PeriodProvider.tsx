@@ -1,6 +1,7 @@
 'use client'
 
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react'
+import { usePathname } from 'next/navigation'
 
 export interface WorkPeriod {
   id: string
@@ -24,22 +25,35 @@ export function PeriodProvider({ children }: { children: React.ReactNode }) {
   const [activePeriodKey, setActivePeriodKey] = useState<string>('')
   const [availablePeriods, setAvailablePeriods] = useState<WorkPeriod[]>([])
   const [isLoadingPeriods, setIsLoadingPeriods] = useState(true)
+  const pathname = usePathname()
+  // true cuando la lista YA llegó bien: a partir de ahí no se vuelve a pedir.
+  const periodosCargadosRef = useRef(false)
 
   useEffect(() => {
     // 1. Establecer el mes natural por defecto (Fallback rápido de hidratación)
+    //    — solo si aún no hay uno elegido (este efecto ahora corre en cada
+    //    cambio de ruta y no debe pisar el mes que el usuario tenga puesto).
     const now = new Date()
     const currentKey = `${now.getFullYear()}_${(now.getMonth() + 1).toString().padStart(2, '0')}`
-    setActivePeriodKey(currentKey)
+    setActivePeriodKey(prev => prev || currentKey)
 
-    // 2. Fetch de periodos disponibles en la BD (Governing DB State)
+    // 2. Fetch de periodos disponibles en la BD (Governing DB State).
+    //    OJO (25-ago-2026): antes se pedía UNA sola vez al montar la app. Si ese
+    //    momento era la pantalla de login (sin sesión), /api/period devolvía 401,
+    //    la lista se quedaba VACÍA para siempre y el selector solo enseñaba
+    //    «Mes Actual (Generado)» — le pasaba a Cristina y al dueño en el móvil
+    //    (sesión caducada → login → navegación de cliente sin recargar). Ahora
+    //    se reintenta en cada cambio de ruta hasta que la lista llegue bien.
+    if (pathname === '/login' || periodosCargadosRef.current) return
     fetch('/api/period')
       .then(res => res.json())
       .then(data => {
         if (data.success && data.periods) {
+          periodosCargadosRef.current = true
           // Filtrar cualquier periodo trimestral (Q1, Q2...) para que no contamine el selector general
           const validPeriods = data.periods.filter((p: WorkPeriod) => !p.period_key.includes('_Q'))
           setAvailablePeriods(validPeriods)
-          
+
           // REGLA CORE: El periodo activo DEBE ser el que dice la Base de Datos.
           const activePeriod = validPeriods.find((p: WorkPeriod) => p.status === 'ACTIVE')
           if (activePeriod) {
@@ -49,7 +63,7 @@ export function PeriodProvider({ children }: { children: React.ReactNode }) {
       })
       .catch(err => console.error("Error fetching periods:", err))
       .finally(() => setIsLoadingPeriods(false))
-  }, [])
+  }, [pathname])
 
   return (
     <PeriodContext.Provider value={{ activePeriodKey, setActivePeriodKey, availablePeriods, isLoadingPeriods }}>

@@ -28,8 +28,11 @@ export default function LoginPage() {
       const data = await res.json()
       
       if (res.ok && data.success) {
-        // Redirigir al inicio en caso de éxito
-        router.push('/')
+        // Redirigir al inicio con RECARGA COMPLETA (25-ago-2026): con
+        // router.push la app seguía viva desde antes del login y todo lo que
+        // se cargó «en frío» sin sesión (la lista de meses del selector, p.
+        // ej.) se quedaba vacío hasta recargar a mano.
+        window.location.href = '/'
       } else {
         setError(data.error || 'Credenciales incorrectas')
       }
