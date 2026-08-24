@@ -11,7 +11,7 @@ import { getSaleCommission } from '@/lib/saleCommission'
 import { getEffectiveTiendaComerciales } from '@/lib/comercialRoster'
 import { can } from '@/lib/permissions'
 import { getDiasLaborablesRestantes } from '@/lib/trackingCalculations'
-import { loadTorneosConfig, DEFAULT_TORNEOS_CONFIG, concursoSaleValue, estadoConcurso, concursoJuegaEnMes, TorneosConfig } from '@/lib/torneosConfig'
+import { loadTorneosConfig, DEFAULT_TORNEOS_CONFIG, concursoSaleValue, estadoConcurso, concursoJuegaEnMes, repartoPorVenta, TorneosConfig } from '@/lib/torneosConfig'
 import {
   loadDashboardConfig,
   DEFAULT_DASHBOARD_CONFIG,
@@ -551,6 +551,19 @@ export default function DashboardPage() {
   const eurFmt = (v: number) => v.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
   const torneoColumns = (() => {
     return torneosConfig.concursos.map(c => {
+      // Modo EXTRA «X € por venta»: top por nº de ventas con lo ganado al lado.
+      if ((c.premioModo || 'podio') === 'porVenta') {
+        const items: { name: string; sale: any }[] = [];
+        ventasActivas.forEach(s => {
+          const v = String(s.vendedor || '').trim();
+          if (!v || v.toLowerCase() === 'marta') return;
+          items.push({ name: v, sale: s });
+        });
+        const rep = repartoPorVenta(items, c, catalogs);
+        const data = rep.filas.filter(f => f.ventas > 0)
+          .map(f => ({ name: f.name, value: f.ventas, etiqueta: `${f.ventas} · ${eurFmt(f.ganado)}` }));
+        return { concurso: c, isCurrency: false, data, fmt: (v: number) => String(v) };
+      }
       const isCurrency = c.metrica === 'importe' || c.metrica === 'comisiones';
       let entries: { name: string, value: number }[];
       if (c.metrica === 'comisiones') {
@@ -670,7 +683,7 @@ export default function DashboardPage() {
                       <FotoAvatar name={r.name} fontSize={13} />
                     </div>
                     <span style={{ flex: 1, fontSize: 12.5, fontWeight: 600, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</span>
-                    <span style={{ fontSize: 12.5, fontWeight: 800, color: '#0ea5e9', whiteSpace: 'nowrap' }}>{col.fmt(r.value)}</span>
+                    <span style={{ fontSize: 12.5, fontWeight: 800, color: '#0ea5e9', whiteSpace: 'nowrap' }}>{(r as any).etiqueta ?? col.fmt(r.value)}</span>
                   </div>
                 ))}
                 {col.data.length === 0 && (

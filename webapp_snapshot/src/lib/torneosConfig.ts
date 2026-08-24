@@ -23,6 +23,12 @@ export interface TorneoPremio {
 // se comporta como siempre (todas las ventas del mes visto).
 export type TorneoVentana = 'mes' | 'tramo'
 
+// Cómo se premia (petición del dueño, 24-ago-2026): 'podio' = los premios por
+// posición de siempre; 'porVenta' = un EXTRA del mes — cada venta que puntúa
+// paga X € al que la hizo, entre todos, y con un TOPE de bote opcional: al
+// llegar al tope no se paga más (las ventas se cobran por orden de fecha).
+export type TorneoPremioModo = 'podio' | 'porVenta'
+
 export interface Concurso {
   id: string
   nombre: string
@@ -32,6 +38,10 @@ export interface Concurso {
   fechaInicio?: string   // 'YYYY-MM-DD' — vacío = sin límite (concurso permanente)
   fechaFin?: string      // 'YYYY-MM-DD' — vacío = sin límite
   ventana?: TorneoVentana  // solo pinta algo si hay fechas; por defecto 'mes'
+  premioModo?: TorneoPremioModo  // por defecto 'podio'
+  importePorVenta?: number       // solo modo 'porVenta': € por venta
+  topeBote?: number              // solo modo 'porVenta': tope total (0 = sin tope)
+  notas?: string                 // texto pequeño bajo el título (condiciones en claro)
 }
 
 export interface TorneosConfig {
@@ -69,6 +79,10 @@ export function parseTorneosConfig(raw: any): TorneosConfig {
         fechaInicio: fechaOk(c.fechaInicio),
         fechaFin: fechaOk(c.fechaFin),
         ventana: c.ventana === 'tramo' ? 'tramo' as const : 'mes' as const,
+        premioModo: c.premioModo === 'porVenta' ? 'porVenta' as const : 'podio' as const,
+        importePorVenta: Number(c.importePorVenta) || 0,
+        topeBote: Number(c.topeBote) || 0,
+        notas: String(c.notas || ''),
       }))
       return { concursos }
     }
@@ -148,6 +162,50 @@ export function concursoSaleValue(sale: any, concurso: Concurso, catalogs?: Reco
   if (concurso.metrica === 'comisiones') return 0
   if (!matchesRule(sale, concurso.nombre, concurso.tipoVenta)) return 0
   return concurso.metrica === 'importe' ? (getValueForRule(sale, concurso.nombre, catalogs) || 0) : 1
+}
+
+// ── Modo «porVenta»: el reparto del EXTRA del mes ────────────────────────────
+// Cada venta que puntúa paga `importePorVenta` € al que la hizo. Si hay TOPE
+// de bote, las ventas cobran POR ORDEN DE FECHA (da igual de quién sean) hasta
+// agotarlo: al llegar al tope, las siguientes cuentan en el ranking pero ya no
+// cobran. Devuelve el ranking por Nº DE VENTAS con lo ganado por cada uno.
+export interface RepartoPorVenta {
+  filas: { name: string; ventas: number; ganado: number }[]
+  repartido: number       // € ya pagados entre todos
+  tope: number            // 0 = sin tope
+  agotado: boolean
+}
+
+export function repartoPorVenta(items: { name: string; sale: any }[], c: Concurso,
+                                catalogs?: Record<string, any[]>): RepartoPorVenta {
+  const rate = Number(c.importePorVenta) || 0
+  const tope = Number(c.topeBote) || 0
+  // Puntúa = mismo matching y misma ventana que el resto (métrica a 'count'
+  // para que concursoSaleValue devuelva 1/0, pase lo que ponga la config).
+  const cCount: Concurso = { ...c, metrica: 'count' }
+  const puntuan = items.filter(x => concursoSaleValue(x.sale, cCount, catalogs) > 0)
+  // Orden de cobro: por fecha de la venta (las sin fecha legible, al final).
+  puntuan.sort((a, b) => {
+    const fa = saleFechaISO(a.sale) || '9999-99-99'
+    const fb = saleFechaISO(b.sale) || '9999-99-99'
+    return fa < fb ? -1 : fa > fb ? 1 : 0
+  })
+  let restante = tope > 0 ? tope : Number.POSITIVE_INFINITY
+  const porNombre: Record<string, { ventas: number; ganado: number }> = {}
+  for (const { name, sale: _s } of puntuan) {
+    const st = porNombre[name] || (porNombre[name] = { ventas: 0, ganado: 0 })
+    st.ventas += 1
+    if (rate > 0 && restante >= rate) {
+      st.ganado += rate
+      restante -= rate
+    }
+  }
+  const filas = Object.entries(porNombre)
+    .map(([name, v]) => ({ name, ventas: v.ventas, ganado: v.ganado }))
+    .sort((a, b) => b.ventas - a.ventas || b.ganado - a.ganado)
+  const repartido = tope > 0 ? tope - (restante === Number.POSITIVE_INFINITY ? tope : restante)
+                             : filas.reduce((acc, f) => acc + f.ganado, 0)
+  return { filas, repartido, tope, agotado: tope > 0 && restante < rate }
 }
 
 export function fmtEur(v: number): string {

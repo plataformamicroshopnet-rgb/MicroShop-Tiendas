@@ -19,6 +19,10 @@ const nuevoConcurso = (): Concurso => ({
   fechaInicio: '',
   fechaFin: '',
   ventana: 'mes',
+  premioModo: 'podio',
+  importePorVenta: 0,
+  topeBote: 0,
+  notas: '',
 })
 
 // La configuración que el dueño guardó el 30/06/2026 a las 21:41 y que un
@@ -198,22 +202,63 @@ export default function ConfiguradorTorneosPage() {
               </div>
             </div>
 
-            {/* Premios */}
+            {/* Cómo se premia: podio de siempre, o EXTRA por venta con tope */}
             <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px dashed var(--border-color,#e2e8f0)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                 <Gift size={16} color="#eab308" />
-                <span style={{ fontWeight: 700, fontSize: 14 }}>Premios por posición</span>
-                <button onClick={() => addPremio(ci)} style={{ marginLeft: 'auto', background: 'none', border: '1px solid #0ea5e9', color: '#0ea5e9', borderRadius: 6, padding: '3px 8px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}><Plus size={14} /> Añadir premio</button>
+                <span style={{ fontWeight: 700, fontSize: 14 }}>Cómo se premia</span>
+                <select style={{ ...ipt, marginLeft: 8 }} value={c.premioModo || 'podio'}
+                        onChange={e => updateConcurso(ci, { premioModo: e.target.value as any })}>
+                  <option value="podio">🏆 Podio por posición (1º, 2º, 3º…)</option>
+                  <option value="porVenta">💶 X € por cada venta (extra del mes, con tope)</option>
+                </select>
+                {(c.premioModo || 'podio') === 'podio' && (
+                  <button onClick={() => addPremio(ci)} style={{ marginLeft: 'auto', background: 'none', border: '1px solid #0ea5e9', color: '#0ea5e9', borderRadius: 6, padding: '3px 8px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}><Plus size={14} /> Añadir premio</button>
+                )}
               </div>
-              {c.premios.length === 0 && <div style={{ fontSize: 12.5, color: 'var(--medium-gray,#94a3b8)' }}>Sin premios. Pulsa «Añadir premio» para premiar al 1º, 2º…</div>}
-              {c.premios.map((p, pi) => (
-                <div key={pi} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                  <span style={{ fontWeight: 800, width: 30 }}>{pi + 1}º</span>
-                  <input type="number" step="0.01" style={{ ...ipt, width: 110 }} value={p.importe || ''} placeholder="€" onChange={e => updatePremio(ci, pi, { importe: Number(e.target.value) })} />
-                  <input style={{ ...ipt, flex: 1 }} value={p.texto} placeholder="Texto del premio (ej. Cena, día libre…)" onChange={e => updatePremio(ci, pi, { texto: e.target.value })} />
-                  <button onClick={() => removePremio(ci, pi)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={15} /></button>
+
+              {(c.premioModo || 'podio') === 'podio' ? (
+                <>
+                  {c.premios.length === 0 && <div style={{ fontSize: 12.5, color: 'var(--medium-gray,#94a3b8)' }}>Sin premios. Pulsa «Añadir premio» para premiar al 1º, 2º…</div>}
+                  {c.premios.map((p, pi) => (
+                    <div key={pi} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                      <span style={{ fontWeight: 800, width: 30 }}>{pi + 1}º</span>
+                      <input type="number" step="0.01" style={{ ...ipt, width: 110 }} value={p.importe || ''} placeholder="€" onChange={e => updatePremio(ci, pi, { importe: Number(e.target.value) })} />
+                      <input style={{ ...ipt, flex: 1 }} value={p.texto} placeholder="Texto del premio (ej. Cena, día libre…)" onChange={e => updatePremio(ci, pi, { texto: e.target.value })} />
+                      <button onClick={() => removePremio(ci, pi)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={15} /></button>
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 14 }}>
+                  <div>
+                    <label style={{ fontSize: 12, color: 'var(--medium-gray,#64748b)', fontWeight: 600 }}>€ por cada venta</label>
+                    <input type="number" step="0.01" style={{ ...ipt, width: '100%', marginTop: 4 }}
+                           value={c.importePorVenta || ''} placeholder="ej. 5"
+                           onChange={e => updateConcurso(ci, { importePorVenta: Number(e.target.value) })} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 12, color: 'var(--medium-gray,#64748b)', fontWeight: 600 }}>Tope del bote (€, entre todos)</label>
+                    <input type="number" step="0.01" style={{ ...ipt, width: '100%', marginTop: 4 }}
+                           value={c.topeBote || ''} placeholder="vacío = sin tope"
+                           onChange={e => updateConcurso(ci, { topeBote: Number(e.target.value) })} />
+                  </div>
+                  <div style={{ gridColumn: '1 / -1', fontSize: 12, color: 'var(--medium-gray,#64748b)', lineHeight: 1.5 }}>
+                    Cada venta que puntúa paga <strong>{Number(c.importePorVenta) || 0} €</strong> al que la hizo.
+                    {Number(c.topeBote) > 0
+                      ? <> El bote es de <strong>{Number(c.topeBote)} €</strong> entre todos: las ventas cobran por orden de fecha y, al llegar al tope, las siguientes cuentan en el ranking pero ya no cobran.</>
+                      : <> Sin tope: todas las ventas que puntúen cobran.</>}
+                    &nbsp;El ranking sale por nº de ventas, con lo ganado por cada uno.
+                  </div>
                 </div>
-              ))}
+              )}
+
+              <div style={{ marginTop: 10 }}>
+                <label style={{ fontSize: 12, color: 'var(--medium-gray,#64748b)', fontWeight: 600 }}>Notas (texto pequeño bajo el título del ranking)</label>
+                <input style={{ ...ipt, width: '100%', marginTop: 4 }} value={c.notas || ''}
+                       placeholder="Ej.: Realizando entre todos en las fechas indicadas: solo del 01/07 al 31/07"
+                       onChange={e => updateConcurso(ci, { notas: e.target.value })} />
+              </div>
             </div>
           </div>
         ))}

@@ -9,7 +9,7 @@ import { usePeriod } from '@/components/PeriodProvider'
 import { renderDashboardData, isSolar360 } from '@/lib/salesUtils'
 import { getSaleCommission } from '@/lib/saleCommission'
 import { can } from '@/lib/permissions'
-import { loadTorneosConfig, DEFAULT_TORNEOS_CONFIG, concursoSaleValue, estadoConcurso, concursoJuegaEnMes, premioLabel, TorneosConfig } from '@/lib/torneosConfig'
+import { loadTorneosConfig, DEFAULT_TORNEOS_CONFIG, concursoSaleValue, estadoConcurso, concursoJuegaEnMes, premioLabel, repartoPorVenta, fmtEur, RepartoPorVenta, TorneosConfig } from '@/lib/torneosConfig'
 
 // Nombre de vendedor normalizado (minúsculas, sin acentos) para casar el mapa de
 // comisiones con el roster, igual que hace useComisionesData con los vendedores.
@@ -207,7 +207,20 @@ export default function TorneosVentasPage() {
   // Columnas dinámicas según el Configurador de Torneos (hasta 3)
   const COL_COLORS = ['#3b82f6', '#65a30d', '#f97316'];
   const COL_HEADER = ['header-blue', 'header-green', 'header-orange'];
-  const columns = config.concursos.map((c) => {
+  type Columna = { concurso: any; isCurrency: boolean; data: any[]; max: number; porVenta?: RepartoPorVenta };
+  const columns: Columna[] = config.concursos.map((c): Columna => {
+    // Modo EXTRA «X € por venta» (dueño, 24-ago-2026): ranking por nº de ventas
+    // con lo GANADO por cada uno; el bote (si hay tope) se reparte por orden de
+    // fecha de venta y al agotarse ya no se paga más.
+    if ((c.premioModo || 'podio') === 'porVenta') {
+      const items: { name: string; sale: any }[] = [];
+      validSellers.forEach(s => s.rawSales.filter(noAnulada).forEach((rs: any) => items.push({ name: s.name, sale: rs })));
+      const rep = repartoPorVenta(items, c, catalogs);
+      const conFila = new Set(rep.filas.map(f => f.name));
+      validSellers.forEach(s => { if (!conFila.has(s.name)) rep.filas.push({ name: s.name, ventas: 0, ganado: 0 }); });
+      const data = rep.filas.map((f, idx) => ({ pos: idx + 1, name: f.name, value: f.ventas, label: String(f.ventas) }));
+      return { concurso: c, isCurrency: false, data, max: Math.max(...data.map(d => d.value), 0), porVenta: rep as RepartoPorVenta };
+    }
     // Métrica 'comisiones': el ranking sale del mapa vendedor→€ (total de comisiones
     // del mes, receta de Liquidación/Rentabilidad). Solo compiten los mismos
     // comerciales que el resto de concursos (validSellers, sin Marta).
@@ -383,6 +396,17 @@ export default function TorneosVentasPage() {
                   <div style={{ textAlign: 'center', marginBottom: 6 }}>
                     <span style={{ background: e.color, color: '#fff', borderRadius: 999, padding: '2px 12px', fontSize: 12, fontWeight: 700 }}>{e.txt}</span>
                   </div>) : null })()}
+                {col.concurso.notas ? (
+                  <div style={{ textAlign: 'center', marginBottom: 6, fontSize: 12, color: '#64748b', lineHeight: 1.4 }}>{col.concurso.notas}</div>
+                ) : null}
+                {col.porVenta && concursoJuegaEnMes(col.concurso, _mesVisto.year, _mesVisto.month) ? (
+                  <div style={{ textAlign: 'center', marginBottom: 8, fontSize: 12.5, fontWeight: 700, color: col.porVenta.agotado ? '#b91c1c' : '#0f766e' }}>
+                    💶 {fmtEur(col.concurso.importePorVenta || 0)} por venta ·
+                    {col.porVenta.tope > 0
+                      ? <> bote {fmtEur(col.porVenta.repartido)} de {fmtEur(col.porVenta.tope)}{col.porVenta.agotado ? ' — ⛔ agotado, ya no se paga más' : ''}</>
+                      : <> repartido {fmtEur(col.porVenta.repartido)}</>}
+                  </div>
+                ) : null}
                 {!concursoJuegaEnMes(col.concurso, _mesVisto.year, _mesVisto.month) ? (
                   // El mes que se mira NO pisa las fechas del concurso: mejor decirlo
                   // claro que pintar un ranking a 0,00 € repartiendo medallas.
@@ -394,6 +418,41 @@ export default function TorneosVentasPage() {
                     &nbsp;y ahora estás viendo <strong>{_nombreMes(_mesVisto.month)} {_mesVisto.year}</strong>.
                     <div style={{ marginTop: 6 }}>Cambia el mes del programa (arriba a la derecha) para ver su ranking y sus ganadores.</div>
                   </div>
+                ) : col.porVenta ? (
+                // Tabla del EXTRA por venta: orden por nº de ventas + lo ganado por cada uno
+                <table className="torneo-table">
+                  <thead>
+                    <tr className={COL_HEADER[ci % COL_HEADER.length]}>
+                      <th style={{ width: '15%' }}>Posición</th>
+                      <th style={{ width: '25%' }}>Vendedor</th>
+                      <th style={{ width: '30%' }}>Ventas</th>
+                      <th style={{ width: '30%' }}>Ganado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {col.porVenta.filas.map((f, idx) => {
+                      const pos = idx + 1;
+                      const compite = f.ventas > 0;
+                      return (
+                        <tr key={f.name} className={`torneo-row ${compite ? getRowClass(pos) : 'row-normal'}`}>
+                          <td style={{ fontSize: compite && pos <= 3 ? '20px' : '14px' }}>{compite ? getMedal(pos) : pos}</td>
+                          <td style={{ textAlign: 'center' }}>
+                            <div style={{ width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', border: '2px solid rgba(0,0,0,0.05)', display: 'inline-block', verticalAlign: 'middle', margin: 'auto' }} title={f.name}>
+                              <img
+                                src={`/${f.name}.${['Vanesa', 'Lara', 'Nuria', 'Elena'].includes(f.name) ? 'jpeg' : 'jpg'}`}
+                                alt={f.name}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                              />
+                            </div>
+                          </td>
+                          <td style={{ fontWeight: 800 }}>{f.ventas}</td>
+                          <td style={{ fontWeight: 800, color: f.ganado > 0 ? '#0f766e' : '#cbd5e1' }}>{f.ganado > 0 ? fmtEur(f.ganado) : '—'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
                 ) : (
                 <table className="torneo-table">
                   <thead>
@@ -410,7 +469,7 @@ export default function TorneosVentasPage() {
                       // (con todos a cero se repartían los 100/75/50 por orden de
                       // lista — lo que vio el dueño el 24-ago).
                       const compite = row.value > 0;
-                      const premio = compite ? col.concurso.premios.find(p => p.pos === row.pos) : undefined;
+                      const premio = compite ? col.concurso.premios.find((p: any) => p.pos === row.pos) : undefined;
                       return (
                         <tr key={row.name} className={`torneo-row ${compite ? getRowClass(row.pos) : 'row-normal'}`}>
                           <td style={{ fontSize: compite && row.pos <= 3 ? '20px' : '14px' }}>{compite ? getMedal(row.pos) : row.pos}</td>
