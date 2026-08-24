@@ -4,6 +4,7 @@ import { computePanelComisionesTiendas } from '@/lib/panelComisionesTiendas'
 import { loadPanelInputs } from '@/lib/panelComisionesTiendasServer'
 import { tiendaDeComercial, norm } from '@/lib/comercialRoster'
 import { computeComisionJefeTiendas, jefePctKeysTodas, resolverJefePcts } from '@/lib/comisionJefeTiendas'
+import { parseTorneosConfig, torneoExtrasPorVendedor, TORNEOS_CONFIG_KEY } from '@/lib/torneosConfig'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMISIÓN POR OPERACIÓN de cada comercial para un mes (liquidación) — TIENDAS.
@@ -73,8 +74,12 @@ export async function POST(request: Request) {
     }
 
     // (3) EL MISMO motor que el Panel Comisiones (aplica él mismo los filtros
-    // Solar360 / reglas 'solar' / KPI [KPI] que hacía el hook).
-    const result = computePanelComisionesTiendas({ ...input, sales: ventas })
+    // Solar360 / reglas 'solar' / KPI [KPI] que hacía el hook). El EXTRA de los
+    // torneos «X € por venta» se calcula aquí con las ventas YA sin bajas: al
+    // re-verificar en el ERP, el bote se recalcula solo, como todo lo demás.
+    const torneosSetting = await prisma.appSetting.findUnique({ where: { key: TORNEOS_CONFIG_KEY } })
+    const torneoExtras = torneoExtrasPorVendedor(ventas, parseTorneosConfig(torneosSetting?.value), catalogs)
+    const result = computePanelComisionesTiendas({ ...input, sales: ventas, torneoExtras })
 
     // Tienda de cada comercial (para 'perfil'): panel de horarios del mes, con
     // fallback al mapa fijo heredado; Marta/O2 -> 'O2'.

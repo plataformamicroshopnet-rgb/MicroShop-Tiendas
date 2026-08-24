@@ -1,4 +1,6 @@
-import { matchesRule, getValueForRule } from '@/hooks/useComisionesData'
+// Import DIRECTO de la lib (no del hook): el hook va a importar este fichero
+// para los extras del torneo y con el import antiguo se formaba un ciclo.
+import { matchesRule, getValueForRule } from '@/lib/panelComisionesTiendas'
 
 // ─── Configurador de Torneos de Ventas ───────────────────────────────────────
 // Config GLOBAL (persiste de un mes a otro; se edita desde el configurador).
@@ -206,6 +208,48 @@ export function repartoPorVenta(items: { name: string; sale: any }[], c: Concurs
   const repartido = tope > 0 ? tope - (restante === Number.POSITIVE_INFINITY ? tope : restante)
                              : filas.reduce((acc, f) => acc + f.ganado, 0)
   return { filas, repartido, tope, agotado: tope > 0 && restante < rate }
+}
+
+// ── El EXTRA del torneo, camino de la NÓMINA (dueño, 24-ago-2026) ────────────
+// «Si se cumplen los parámetros de cobro, como cualquier otra venta»: lo ganado
+// en el modo porVenta entra en las comisiones del comercial como un bono más.
+// Devuelve, por vendedor, los conceptos a añadir. Mismo reparto que el ranking
+// (repartoPorVenta: fechas, tramo y tope por orden de fecha); anuladas fuera y
+// Marta fuera, igual que en el ranking. Lo consumen el hook del Panel y
+// /api/comisiones-liquidacion — la MISMA cifra en pantalla y en el ERP.
+export interface TorneoExtraConcepto { concepto: string; detalle: string; importe: number }
+
+export function torneoExtrasPorVendedor(
+  sales: any[], cfg: TorneosConfig, catalogs?: Record<string, any[]>,
+): Record<string, TorneoExtraConcepto[]> {
+  const out: Record<string, TorneoExtraConcepto[]> = {}
+  const norm = (v: any) => String(v || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim()
+  for (const c of cfg.concursos) {
+    if ((c.premioModo || 'podio') !== 'porVenta') continue
+    if (!(Number(c.importePorVenta) > 0)) continue
+    const items: { name: string; sale: any }[] = []
+    for (const s of sales) {
+      const vend = String(s.vendedor || '').trim()
+      if (!vend || norm(vend) === 'marta') continue
+      if (norm(s.anulado) === 'si' || norm(s.pendiente) === 'anulado') continue
+      items.push({ name: vend, sale: s })
+    }
+    const rep = repartoPorVenta(items, c, catalogs)
+    for (const f of rep.filas) {
+      if (f.ganado <= 0) continue
+      const rate = Number(c.importePorVenta) || 0
+      const cobradas = rate > 0 ? Math.round(f.ganado / rate) : f.ventas
+      ;(out[f.name] = out[f.name] || []).push({
+        concepto: c.nombre || 'Extra del torneo',
+        // Si el bote cortó, se dice claro: «1 de 2 venta(s)» — cobró 1, hizo 2.
+        detalle: (cobradas < f.ventas ? `${cobradas} de ${f.ventas}` : `${f.ventas}`)
+          + ` venta(s) × ${fmtEur(rate)}`
+          + (rep.tope > 0 ? ` · bote ${fmtEur(rep.tope)}` : ''),
+        importe: f.ganado,
+      })
+    }
+  }
+  return out
 }
 
 export function fmtEur(v: number): string {

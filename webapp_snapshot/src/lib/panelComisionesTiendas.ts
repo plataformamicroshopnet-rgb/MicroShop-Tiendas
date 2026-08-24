@@ -227,6 +227,13 @@ export interface PanelComisionesTiendasInput {
     catalogs?: Record<string, any[]>;
     // AppSetting fttr_discount_{periodKey}; por defecto 910 €/ud
     fttrDiscount?: number;
+    // EXTRAS de los torneos «X € por venta» (torneosConfig.torneoExtrasPorVendedor),
+    // por nombre de vendedor. Los calcula el LLAMADOR (hook / API liquidación) con
+    // las ventas YA filtradas (bajas excluidas incluidas) — así el recálculo del
+    // ERP los recalcula solos. OJO: van por carril propio, NUNCA dentro de
+    // virtualKpiExtras — ese array se persiste vía /api/extras/kpi-sync y el
+    // torneo se recalcula cada vez; persistirlo lo cobraría DOS veces.
+    torneoExtras?: Record<string, { concepto: string; detalle: string; importe: number }[]>;
 }
 
 const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
@@ -1429,6 +1436,11 @@ export function computePanelComisionesTiendas(input: PanelComisionesTiendasInput
         }, 0);
         totalExtras += virtualKpiExtras.reduce((acc, v) => acc + (v.sellerRewardAmount || 0), 0);
 
+        // EXTRA de los torneos «X € por venta» (dueño, 24-ago-2026): a la nómina
+        // como un bono más. Carril propio a propósito (ver el aviso del input).
+        const torneoExtrasSeller = (input.torneoExtras || {})[name] || [];
+        totalExtras += torneoExtrasSeller.reduce((acc, t) => acc + (t.importe || 0), 0);
+
         internalTotalComision += totalExtras;
 
         const extraGroupsMap: Record<string, { count: number, amount: number }> = {};
@@ -1443,6 +1455,11 @@ export function computePanelComisionesTiendas(input: PanelComisionesTiendasInput
         };
         processExtraList(sExtras);
         processExtraList(virtualKpiExtras);
+        torneoExtrasSeller.forEach(t => {
+            if (!extraGroupsMap[t.concepto]) extraGroupsMap[t.concepto] = { count: 0, amount: 0 };
+            extraGroupsMap[t.concepto].count++;
+            extraGroupsMap[t.concepto].amount += (t.importe || 0);
+        });
 
         const extraGroups = Object.keys(extraGroupsMap).map(k => ({
             name: k,
@@ -1469,6 +1486,14 @@ export function computePanelComisionesTiendas(input: PanelComisionesTiendasInput
                 detalle: ex.triggerSummary || '',
                 importe: ex.sellerRewardAmount || 0,
                 persistido: false,
+            });
+        });
+        torneoExtrasSeller.forEach(t => {
+            extrasConceptos.push({
+                concepto: t.concepto,
+                detalle: t.detalle,
+                importe: t.importe || 0,
+                persistido: false,   // se recalcula solo en cada verificación
             });
         });
 

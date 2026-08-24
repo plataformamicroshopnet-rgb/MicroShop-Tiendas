@@ -5,6 +5,7 @@ import { isSolar360 } from '@/lib/salesUtils';
 // src/lib/panelComisionesTiendas.ts (computePanelComisionesTiendas), la MISMA
 // lib que usa /api/comisiones-liquidacion server-side: fuente única del motor.
 import { computePanelComisionesTiendas } from '@/lib/panelComisionesTiendas';
+import { parseTorneosConfig, torneoExtrasPorVendedor, TorneosConfig } from '@/lib/torneosConfig';
 // matchProductFormula/matchTipoVenta viven en lib/ventaMatching y los helpers del
 // panel (parseSafeFloat, matchesRule, getValueForRule…) en lib/panelComisionesTiendas
 // (módulos PUROS usables en endpoints de servidor); se re-exportan aquí para no
@@ -29,6 +30,7 @@ export function useComisionesData(user?: any) {
 
     const [selectedSellerFilter, setSelectedSellerFilter] = useState<string | null>(null);
     const [fttrDiscount, setFttrDiscount] = useState<number>(910);
+    const [torneosCfg, setTorneosCfg] = useState<TorneosConfig>({ concursos: [] });
 
     useEffect(() => {
         if (!activePeriodKey) return;
@@ -42,9 +44,11 @@ export function useComisionesData(user?: any) {
             fetch(`/api/settings?key=o2_rules_v2_${activePeriodKey}`).then(res => res.json()).catch(() => ({ value: null })),
             fetch(`/api/territorial?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({ success: false, tiendas: [], o2: [] })),
             fetch('/api/catalogs').then(res => res.json()).catch(() => ({ success: false, catalogs: {} })),
-            fetch(`/api/settings?key=fttr_discount_${activePeriodKey}`).then(res => res.json()).catch(() => ({ value: null }))
+            fetch(`/api/settings?key=fttr_discount_${activePeriodKey}`).then(res => res.json()).catch(() => ({ value: null })),
+            // Torneos: para el EXTRA «X € por venta», que entra en la nómina
+            fetch('/api/settings?key=torneos_config').then(res => res.json()).catch(() => ({ value: null }))
         ])
-        .then(([data, condData, extrasData, rulesData, tiendasData, o2Data, territorialData, catalogsData, fttrDiscountData]) => {
+        .then(([data, condData, extrasData, rulesData, tiendasData, o2Data, territorialData, catalogsData, fttrDiscountData, torneosData]) => {
             if (data.success && data.logs) {
                 // Solar 360 fuera por completo (ni se cobra ni se paga): se excluye de ventas.
                 setAllSales((data.logs || []).filter((s: any) => !isSolar360(s)));
@@ -90,6 +94,7 @@ export function useComisionesData(user?: any) {
             } else {
                 setFttrDiscount(910);
             }
+            setTorneosCfg(parseTorneosConfig(torneosData && torneosData.value));
             setLoading(false);
         })
         .catch(err => {
@@ -118,6 +123,8 @@ export function useComisionesData(user?: any) {
         kpiRules: activeRules,
         catalogs,
         fttrDiscount,
+        // El EXTRA de los torneos «X € por venta», a la nómina como un bono más
+        torneoExtras: torneoExtrasPorVendedor(allSales, torneosCfg, catalogs),
     });
 
     // EFFECT: Envío subrepticio de extras KPI a base de datos para grabarlos eternamente
