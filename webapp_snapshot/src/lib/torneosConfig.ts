@@ -46,14 +46,49 @@ export interface Concurso {
   minIndividual?: number         // solo 'porVenta': ventas mínimas PROPIAS para cobrar (0 = sin mínimo)
   minGrupal?: number             // solo 'porVenta': ventas mínimas ENTRE TODOS — sin llegar, no cobra nadie
   notas?: string                 // nota extra A MANO; las condiciones salen solas (generaNotasConcurso)
+  tituloColor?: string           // color del nombre en el ranking ('' = el de siempre)
+  tituloSize?: number            // tamaño en px del nombre en el ranking (0 = el de siempre)
 }
 
 export interface TorneosConfig {
   concursos: Concurso[]
 }
 
-export const TORNEOS_CONFIG_KEY = 'torneos_config'
+export const TORNEOS_CONFIG_KEY = 'torneos_config'          // clave ANTIGUA (global)
 export const MAX_CONCURSOS = 3
+
+// ── CONFIG POR MES (24-ago-2026) ─────────────────────────────────────────────
+// La clave global arrastraba el último torneo a TODOS los meses (el dueño vio
+// su Convergente de agosto plantado en julio — y de paso, guardar agosto pisó
+// el torneo recuperado de julio). Desde hoy cada mes guarda LOS SUYOS en
+// torneos_config_{periodKey}. La clave global queda de RESPALDO solo para el
+// MES ACTUAL sin clave propia (migración suave: lo recién configurado sigue
+// funcionando hasta que se guarde una vez con el configurador nuevo).
+export const TORNEOS_CONFIG_KEY_MES = (periodKey: string) => `torneos_config_${periodKey}`
+
+export function periodKeyActual(): string {
+  const n = new Date()
+  return `${n.getFullYear()}_${String(n.getMonth() + 1).padStart(2, '0')}`
+}
+
+// Carga del MES: su clave; si no existe y es el mes actual, la global antigua.
+// Devuelve también de dónde salió, para que el configurador pueda avisar.
+export async function loadTorneosConfigMes(periodKey: string):
+    Promise<{ config: TorneosConfig; origen: 'mes' | 'global' | 'vacio' }> {
+  try {
+    const res = await fetch(`/api/settings?key=${TORNEOS_CONFIG_KEY_MES(periodKey)}`)
+    const data = await res.json()
+    if (data && data.value) return { config: parseTorneosConfig(data.value), origen: 'mes' }
+  } catch { /* sigue al respaldo */ }
+  if (periodKey === periodKeyActual()) {
+    try {
+      const res = await fetch(`/api/settings?key=${TORNEOS_CONFIG_KEY}`)
+      const data = await res.json()
+      if (data && data.value) return { config: parseTorneosConfig(data.value), origen: 'global' }
+    } catch { /* vacío */ }
+  }
+  return { config: { concursos: [] }, origen: 'vacio' }
+}
 
 // Config por defecto = los 3 concursos que había históricamente, para no perder nada
 export const DEFAULT_TORNEOS_CONFIG: TorneosConfig = {
@@ -89,6 +124,8 @@ export function parseTorneosConfig(raw: any): TorneosConfig {
         minIndividual: Math.max(0, Math.floor(Number(c.minIndividual) || 0)),
         minGrupal: Math.max(0, Math.floor(Number(c.minGrupal) || 0)),
         notas: String(c.notas || ''),
+        tituloColor: /^#[0-9a-fA-F]{3,8}$/.test(String(c.tituloColor || '')) ? String(c.tituloColor) : '',
+        tituloSize: Math.max(0, Math.min(40, Number(c.tituloSize) || 0)),
       }))
       return { concursos }
     }

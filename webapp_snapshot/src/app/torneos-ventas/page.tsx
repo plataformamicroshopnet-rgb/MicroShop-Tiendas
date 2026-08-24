@@ -9,7 +9,7 @@ import { usePeriod } from '@/components/PeriodProvider'
 import { renderDashboardData, isSolar360 } from '@/lib/salesUtils'
 import { getSaleCommission } from '@/lib/saleCommission'
 import { can } from '@/lib/permissions'
-import { loadTorneosConfig, DEFAULT_TORNEOS_CONFIG, concursoSaleValue, estadoConcurso, concursoJuegaEnMes, generaNotasConcurso, premioLabel, repartoPorVenta, fmtEur, RepartoPorVenta, TorneosConfig } from '@/lib/torneosConfig'
+import { loadTorneosConfigMes, concursoSaleValue, estadoConcurso, concursoJuegaEnMes, generaNotasConcurso, premioLabel, repartoPorVenta, fmtEur, RepartoPorVenta, TorneosConfig } from '@/lib/torneosConfig'
 
 // Nombre de vendedor normalizado (minúsculas, sin acentos) para casar el mapa de
 // comisiones con el roster, igual que hace useComisionesData con los vendedores.
@@ -70,7 +70,7 @@ const ChartBars = ({ data, maxValue, barColor }: { data: any[], maxValue: number
 export default function TorneosVentasPage() {
   const { sellerStats, loading, catalogs } = useComisionesData();
   const { activePeriodKey, availablePeriods } = usePeriod();
-  const [config, setConfig] = useState<TorneosConfig>(DEFAULT_TORNEOS_CONFIG);
+  const [config, setConfig] = useState<TorneosConfig>({ concursos: [] });
   const [user, setUser] = useState<any>(null);
 
   // ── Métrica 'comisiones': mapa vendedor(normalizado) → total de comisiones (€) del mes ──
@@ -81,9 +81,17 @@ export default function TorneosVentasPage() {
   const [comisionesListas, setComisionesListas] = useState(false);
 
   useEffect(() => {
-    loadTorneosConfig().then(setConfig);
     fetch('/api/auth/me').then(r => r.json()).then(d => setUser(d?.user ?? d)).catch(() => {});
   }, []);
+
+  // Config POR MES: cada mes conserva sus torneos (24-ago-2026). Al cambiar el
+  // mes del programa se recarga la config de ese mes.
+  useEffect(() => {
+    if (!activePeriodKey) return;
+    let cancelado = false;
+    loadTorneosConfigMes(activePeriodKey).then(r => { if (!cancelado) setConfig(r.config); });
+    return () => { cancelado = true; };
+  }, [activePeriodKey]);
 
   useEffect(() => {
     // Los fetches extra SOLO se hacen si algún concurso usa la métrica 'comisiones'.
@@ -392,6 +400,15 @@ export default function TorneosVentasPage() {
           <div className="grid-container" style={{ gridTemplateColumns: `repeat(${columns.length}, 1fr)` }}>
             {columns.map((col, ci) => (
               <div key={col.concurso.id}>
+                {/* Nombre del EXTRA con el estilo elegido en el configurador (el modo
+                    podio ya lo enseña en la cabecera de su tabla). */}
+                {col.porVenta ? (
+                  <div style={{ textAlign: 'center', marginBottom: 6, fontWeight: 800,
+                                fontSize: col.concurso.tituloSize || 15,
+                                color: col.concurso.tituloColor || '#334155' }}>
+                    {col.concurso.nombre}
+                  </div>
+                ) : null}
                 {(() => { const e = estadoConcurso(col.concurso); return e ? (
                   <div style={{ textAlign: 'center', marginBottom: 6 }}>
                     <span style={{ background: e.color, color: '#fff', borderRadius: 999, padding: '2px 12px', fontSize: 12, fontWeight: 700 }}>{e.txt}</span>
@@ -417,7 +434,9 @@ export default function TorneosVentasPage() {
                   // El mes que se mira NO pisa las fechas del concurso: mejor decirlo
                   // claro que pintar un ranking a 0,00 € repartiendo medallas.
                   <div style={{ padding: '26px 16px', textAlign: 'center', background: '#f1f5f9', borderRadius: 12, color: '#475569', fontSize: 13.5, lineHeight: 1.6 }}>
-                    <div style={{ fontWeight: 800, marginBottom: 4 }}>{col.concurso.nombre}</div>
+                    <div style={{ fontWeight: 800, marginBottom: 4,
+                                  fontSize: col.concurso.tituloSize || undefined,
+                                  color: col.concurso.tituloColor || undefined }}>{col.concurso.nombre}</div>
                     Este concurso juega
                     {col.concurso.fechaInicio ? ` del ${col.concurso.fechaInicio.slice(8, 10)}/${col.concurso.fechaInicio.slice(5, 7)}` : ''}
                     {col.concurso.fechaFin ? ` al ${col.concurso.fechaFin.slice(8, 10)}/${col.concurso.fechaFin.slice(5, 7)}` : ''}
@@ -474,7 +493,12 @@ export default function TorneosVentasPage() {
                       <th style={{ width: '15%' }}>Posición</th>
                       <th style={{ width: '30%' }}>Premio</th>
                       <th style={{ width: '25%' }}>Vendedor</th>
-                      <th style={{ width: '30%' }}>{col.concurso.nombre}{col.isCurrency ? ' €' : ''}</th>
+                      <th style={{ width: '30%',
+                                   color: col.concurso.tituloColor || undefined,
+                                   fontSize: col.concurso.tituloSize || undefined,
+                                   textTransform: col.concurso.tituloSize ? 'none' : undefined }}>
+                        {col.concurso.nombre}{col.isCurrency ? ' €' : ''}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>

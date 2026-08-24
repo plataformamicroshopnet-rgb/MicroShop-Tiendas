@@ -5,9 +5,10 @@ import { PageHeader } from '@/components/PageHeader'
 import { Trophy, Plus, Trash2, Save, Gift } from 'lucide-react'
 import ProductTreeSelector from '@/components/ProductTreeSelector'
 import { can } from '@/lib/permissions'
+import { usePeriod } from '@/components/PeriodProvider'
 import {
-  TorneosConfig, Concurso, TorneoPremio, MAX_CONCURSOS, TORNEOS_CONFIG_KEY,
-  DEFAULT_TORNEOS_CONFIG, loadTorneosConfig, generaNotasConcurso,
+  TorneosConfig, Concurso, TorneoPremio, MAX_CONCURSOS, TORNEOS_CONFIG_KEY_MES,
+  loadTorneosConfigMes, generaNotasConcurso,
 } from '@/lib/torneosConfig'
 
 const nuevoConcurso = (): Concurso => ({
@@ -23,6 +24,8 @@ const nuevoConcurso = (): Concurso => ({
   importePorVenta: 0,
   topeBote: 0,
   notas: '',
+  tituloColor: '',
+  tituloSize: 0,
 })
 
 // La configuración que el dueño guardó el 30/06/2026 a las 21:41 y que un
@@ -48,16 +51,35 @@ const CONFIG_RECUPERADA_20260630: Concurso[] = [
 ]
 
 export default function ConfiguradorTorneosPage() {
+  const { activePeriodKey } = usePeriod()
   const [user, setUser] = useState<any>(null)
   const [loaded, setLoaded] = useState(false)
-  const [config, setConfig] = useState<TorneosConfig>(DEFAULT_TORNEOS_CONFIG)
+  const [config, setConfig] = useState<TorneosConfig>({ concursos: [] })
+  const [origen, setOrigen] = useState<'mes' | 'global' | 'vacio'>('vacio')
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
 
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => setUser(d?.user ?? d)).catch(() => setUser(null))
-    loadTorneosConfig().then(c => { setConfig(c); setLoaded(true) })
   }, [])
+
+  // Cada MES guarda sus torneos (24-ago-2026): se carga el del mes activo del
+  // programa; si aún no tiene y es el mes en curso, la config antigua global
+  // aparece de semilla — al guardar queda fijada en ESTE mes para siempre.
+  useEffect(() => {
+    if (!activePeriodKey) return
+    setLoaded(false)
+    loadTorneosConfigMes(activePeriodKey).then(r => {
+      setConfig(r.config); setOrigen(r.origen); setLoaded(true)
+    })
+  }, [activePeriodKey])
+
+  const mesLabel = (() => {
+    const p = String(activePeriodKey || '').split('_')
+    const M = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio',
+               'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+    return p.length === 2 ? `${M[Number(p[1])] || p[1]} ${p[0]}` : String(activePeriodKey || '')
+  })()
 
   const autorizado = user && can(user, 'CARD_CONFIG_TORNEOS')
 
@@ -65,16 +87,16 @@ export default function ConfiguradorTorneosPage() {
     setConfig(c => ({ concursos: c.concursos.map((x, i) => i === idx ? { ...x, ...patch } : x) }))
   }
   const addConcurso = () => setConfig(c => c.concursos.length >= MAX_CONCURSOS ? c : ({ concursos: [...c.concursos, nuevoConcurso()] }))
-  // CANDADO (24-ago-2026): el dueño quitó «el torneo de agosto» sin saber que la
-  // config es GLOBAL y se quedó sin ninguno en ningún mes. Ahora se avisa claro.
+  // CANDADO (24-ago-2026): confirmación antes de quitar — con dinero por medio
+  // un clic alegre duele. Desde la config POR MES, quitar solo afecta al mes
+  // que se está configurando.
   const removeConcurso = (idx: number) => {
     const c = config.concursos[idx]
-    const tiene = c?.premios?.some(p => p.importe > 0)
-    const msg = `¿Quitar el concurso «${c?.nombre || 'sin nombre'}»?\n\n` +
-      'OJO: la configuración es GLOBAL — quitarlo lo quita de TODOS los meses ' +
-      '(no solo del que estás viendo).' +
-      (tiene ? '\n\nEste concurso tiene PREMIOS EN EUROS configurados.' : '') +
-      '\n\nSi solo quieres pararlo un tiempo, ponle fecha de fin en vez de quitarlo.'
+    const tiene = c?.premios?.some(p => p.importe > 0) || Number(c?.importePorVenta) > 0
+    const msg = `¿Quitar el concurso «${c?.nombre || 'sin nombre'}» de ${mesLabel}?` +
+      (tiene ? '\n\nOJO: este concurso tiene DINERO configurado.' : '') +
+      '\n\n(Solo se quita de este mes; los demás meses conservan los suyos. ' +
+      'Recuerda pulsar «Guardar configuración» para que el cambio quede.)'
     if (window.confirm(msg)) setConfig(cfg => ({ concursos: cfg.concursos.filter((_, i) => i !== idx) }))
   }
 
@@ -102,10 +124,11 @@ export default function ConfiguradorTorneosPage() {
       }
       const res = await fetch('/api/settings', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: TORNEOS_CONFIG_KEY, value: JSON.stringify(limpio) })
+        body: JSON.stringify({ key: TORNEOS_CONFIG_KEY_MES(activePeriodKey), value: JSON.stringify(limpio) })
       })
       const data = await res.json()
-      setMsg(data.success ? '✅ Guardado. Recarga el Dashboard para verlo.' : ('❌ ' + (data.error || 'Error')))
+      if (data.success) setOrigen('mes')
+      setMsg(data.success ? `✅ Guardado para ${mesLabel}. Recarga el Dashboard para verlo.` : ('❌ ' + (data.error || 'Error')))
     } catch {
       setMsg('❌ Error de conexión')
     } finally { setSaving(false) }
@@ -124,11 +147,18 @@ export default function ConfiguradorTorneosPage() {
         showBack
       />
 
-      <div style={{ marginTop: 12, padding: '10px 14px', background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.4)', borderRadius: 10, fontSize: 13, color: 'var(--light-text,#0f172a)' }}>
-        ⚠️ Esta configuración es <strong>global</strong>: vale para todos los meses a la vez.
-        Para un concurso de un periodo concreto, ponle <strong>fechas</strong> — quitar un
-        concurso lo quita de todas partes.
+      <div style={{ marginTop: 12, padding: '10px 14px', background: 'rgba(14,165,233,0.08)', border: '1px solid rgba(14,165,233,0.4)', borderRadius: 10, fontSize: 13, color: 'var(--light-text,#0f172a)' }}>
+        📅 Estás configurando los torneos de <strong>{mesLabel}</strong> — cada mes guarda
+        los suyos: lo que pongas el mes que viene NO borra los de este. Para verlos o
+        editarlos, cambia el mes del programa arriba a la derecha.
       </div>
+      {origen === 'global' && (
+        <div style={{ marginTop: 8, padding: '8px 14px', background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.4)', borderRadius: 10, fontSize: 12.5, color: 'var(--light-text,#0f172a)' }}>
+          ⚠️ Esto viene de la configuración <strong>antigua</strong> (la global que valía para
+          todos los meses). Pulsa <strong>«Guardar configuración»</strong> y quedará fijada en
+          {' '}{mesLabel} para siempre.
+        </div>
+      )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 18, marginTop: 16 }}>
         {config.concursos.map((c, ci) => (
@@ -141,7 +171,36 @@ export default function ConfiguradorTorneosPage() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 14, alignItems: 'start' }}>
               <div>
                 <label style={{ fontSize: 12, color: 'var(--medium-gray,#64748b)', fontWeight: 600 }}>Nombre del concurso</label>
-                <input style={{ ...ipt, width: '100%', marginTop: 4 }} value={c.nombre} placeholder="Ej: Seguros" onChange={e => updateConcurso(ci, { nombre: e.target.value })} />
+                <input style={{ ...ipt, width: '100%', marginTop: 4,
+                                color: c.tituloColor || undefined,
+                                fontSize: c.tituloSize ? Math.min(c.tituloSize, 22) : undefined,
+                                fontWeight: 700 }}
+                       value={c.nombre} placeholder="Ej: EXTRA del mes Altas BAF"
+                       onChange={e => updateConcurso(ci, { nombre: e.target.value })} />
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 6 }}>
+                  <label style={{ fontSize: 11, color: 'var(--medium-gray,#64748b)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
+                    Color
+                    <input type="color" value={c.tituloColor || '#64748b'}
+                           style={{ width: 30, height: 24, border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}
+                           onChange={e => updateConcurso(ci, { tituloColor: e.target.value })} />
+                  </label>
+                  <label style={{ fontSize: 11, color: 'var(--medium-gray,#64748b)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
+                    Tamaño
+                    <select style={{ ...ipt, padding: '2px 6px', fontSize: 11 }} value={c.tituloSize || 0}
+                            onChange={e => updateConcurso(ci, { tituloSize: Number(e.target.value) })}>
+                      <option value={0}>Normal</option>
+                      <option value={15}>Grande</option>
+                      <option value={19}>Muy grande</option>
+                      <option value={24}>Enorme</option>
+                    </select>
+                  </label>
+                  {(c.tituloColor || c.tituloSize) ? (
+                    <button onClick={() => updateConcurso(ci, { tituloColor: '', tituloSize: 0 })}
+                            style={{ background: 'none', border: 'none', color: 'var(--medium-gray,#94a3b8)', fontSize: 11, cursor: 'pointer', textDecoration: 'underline' }}>
+                      quitar estilo
+                    </button>
+                  ) : null}
+                </div>
               </div>
               <div>
                 {c.metrica === 'comisiones' ? (
@@ -299,9 +358,10 @@ export default function ConfiguradorTorneosPage() {
               </button>
               <div style={{ fontSize: 12, marginTop: 6 }}>
                 Carga en el editor los 2 concursos que había, con sus premios (100/75/50 €) y las
-                fechas 01/07 → 31/07 ya puestas: solo puntúan las ventas de julio y en agosto no
-                juega nada. Revísalos y pulsa «Guardar configuración». Para ver a los ganadores,
-                pon el programa en el mes de julio.
+                fechas 01/07 → 31/07 ya puestas. OJO: como ahora cada mes guarda los suyos,
+                <strong> pon primero el programa en JULIO</strong> (arriba a la derecha), pulsa este
+                botón y luego «Guardar configuración» — así queda guardado en julio, que es donde
+                se ven sus ganadores.
               </div>
             </div>
           </div>

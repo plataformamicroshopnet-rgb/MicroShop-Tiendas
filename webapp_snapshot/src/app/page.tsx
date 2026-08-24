@@ -11,7 +11,7 @@ import { getSaleCommission } from '@/lib/saleCommission'
 import { getEffectiveTiendaComerciales } from '@/lib/comercialRoster'
 import { can } from '@/lib/permissions'
 import { getDiasLaborablesRestantes } from '@/lib/trackingCalculations'
-import { loadTorneosConfig, DEFAULT_TORNEOS_CONFIG, concursoSaleValue, estadoConcurso, concursoJuegaEnMes, repartoPorVenta, TorneosConfig } from '@/lib/torneosConfig'
+import { loadTorneosConfigMes, concursoSaleValue, estadoConcurso, concursoJuegaEnMes, repartoPorVenta, TorneosConfig } from '@/lib/torneosConfig'
 import {
   loadDashboardConfig,
   DEFAULT_DASHBOARD_CONFIG,
@@ -105,7 +105,7 @@ export default function DashboardPage() {
   // Reglas del PRV Territorial (Entrada de Datos): de ahí salen los objetivos
   // POR TIENDA del mes, que es donde el usuario los teclea de verdad.
   const [territorialRules, setTerritorialRules] = useState<any[]>([])
-  const [torneosConfig, setTorneosConfig] = useState<TorneosConfig>(DEFAULT_TORNEOS_CONFIG)
+  const [torneosConfig, setTorneosConfig] = useState<TorneosConfig>({ concursos: [] })
   const [cfg, setCfg] = useState<DashboardConfig>(DEFAULT_DASHBOARD_CONFIG)
   const [catalogs, setCatalogs] = useState<Record<string, any[]>>({})
   const [comisionesBase, setComisionesBase] = useState<ComisionesBase | null>(null)
@@ -129,7 +129,8 @@ export default function DashboardPage() {
         fetch(`/api/sales?periodKey=${activePeriodKey}&dashboard=true`).then(res => res.json()).catch(() => ({ success: false, logs: [] })),
         fetch(`/api/tiendas-comisiones?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({ success: false, rules: [] })),
         fetch('/api/catalogs').then(res => res.json()).catch(() => ({ success: false, catalogs: {} })),
-        loadTorneosConfig().catch(() => DEFAULT_TORNEOS_CONFIG),
+        // Torneos POR MES: cada mes conserva los suyos (24-ago-2026).
+        loadTorneosConfigMes(activePeriodKey).then(r => r.config).catch(() => ({ concursos: [] } as TorneosConfig)),
         loadDashboardConfig().catch(() => DEFAULT_DASHBOARD_CONFIG),
         fetch(`/api/territorial?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({ success: false, tiendas: [] }))
       ]);
@@ -550,7 +551,20 @@ export default function DashboardPage() {
   // ── Torneos config-driven (mismo motor que la pantalla de Torneos + métrica 'comisiones') ──
   const eurFmt = (v: number) => v.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
   const torneoColumns = (() => {
+    // TODOS los comerciales de la plantilla salen en la carta, también a 0 €
+    // (dueño, 24-ago-2026): ver tu nombre a cero pica más que no salir.
+    const roster = new Set<string>();
+    Object.entries(getEffectiveTiendaComerciales(tiendaHours)).forEach(([tienda, noms]) => {
+      if (tienda === 'O2') return;
+      (noms as string[]).forEach(n => {
+        const v = String(n || '').trim();
+        if (v && v.toLowerCase() !== 'marta') roster.add(v);
+      });
+    });
     return torneosConfig.concursos.map(c => {
+      const juega = activePeriodObj
+        ? concursoJuegaEnMes(c, Number(activePeriodObj.year), Number(activePeriodObj.month))
+        : true;
       // Modo EXTRA «X € por venta»: top por nº de ventas con lo ganado al lado.
       if ((c.premioModo || 'podio') === 'porVenta') {
         const items: { name: string; sale: any }[] = [];
@@ -562,7 +576,10 @@ export default function DashboardPage() {
         const rep = repartoPorVenta(items, c, catalogs);
         // Con el mínimo de equipo sin llegar se enseña lo EN JUEGO (lo que se
         // puede perder), que motiva más que un 0,00 € (dueño, 24-ago-2026).
-        const data = rep.filas.filter(f => f.ventas > 0)
+        const conFila = new Set(rep.filas.map(f => f.name));
+        const filas = [...rep.filas];
+        if (juega) roster.forEach(n => { if (!conFila.has(n)) filas.push({ name: n, ventas: 0, ganado: 0, enJuego: 0, cumpleMin: !(Number(c.minIndividual) > 0) } as any); });
+        const data = (juega ? filas : filas.filter(f => f.ventas > 0))
           .map(f => ({ name: f.name, value: f.ventas,
                        etiqueta: `${f.ventas} · ${eurFmt(rep.grupalCumplido ? f.ganado : f.enJuego)}` }));
         return { concurso: c, isCurrency: false, data, fmt: (v: number) => String(v), porVenta: rep };
@@ -581,8 +598,12 @@ export default function DashboardPage() {
         });
         entries = Object.entries(byV).map(([name, value]) => ({ name, value }));
       }
+      if (juega) {
+        const con = new Set(entries.map(e => e.name));
+        roster.forEach(n => { if (!con.has(n)) entries.push({ name: n, value: 0 }); });
+      }
       const data = entries
-        .filter(x => x.value > 0)
+        .filter(x => juega || x.value > 0)
         .sort((a, b) => b.value - a.value);
       return { concurso: c, isCurrency, data, fmt: (v: number) => isCurrency ? eurFmt(v) : String(v) };
     });
@@ -655,13 +676,25 @@ export default function DashboardPage() {
             e.currentTarget.style.borderColor = 'rgba(14, 165, 233, 0.3)'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <div style={{ backgroundColor: '#0ea5e9', padding: '8px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Trophy size={20} color="#fff" />
             </div>
             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0ea5e9' }}>
               Torneos de Ventas <span style={{ color: 'var(--text-main)' }}>· Ranking</span>
             </h3>
+            {/* El chip «en juego del X al Y» va en ESTA fila, a la derecha del
+                título (dueño, 24-ago-2026), no dentro de cada columna. */}
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+              {torneoColumns.map(col => {
+                const e = estadoConcurso(col.concurso);
+                return e ? (
+                  <span key={col.concurso.id} style={{ background: e.color, color: '#fff', borderRadius: 999, padding: '2px 10px', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                    {torneoColumns.length > 1 ? `${col.concurso.nombre}: ${e.txt}` : e.txt}
+                  </span>
+                ) : null;
+              })}
+            </div>
           </div>
 
           {torneoColumns.length === 0 ? (
@@ -672,11 +705,11 @@ export default function DashboardPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '14px' }}>
             {torneoColumns.map((col) => (
               <div key={col.concurso.id}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8, textAlign: 'center', borderBottom: '2px solid rgba(14,165,233,0.2)', paddingBottom: 6 }}>{col.concurso.nombre}</div>
-                {(() => { const e = estadoConcurso(col.concurso); return e ? (
-                  <div style={{ textAlign: 'center', marginBottom: 6 }}>
-                    <span style={{ background: e.color, color: '#fff', borderRadius: 999, padding: '1px 9px', fontSize: 10.5, fontWeight: 700, whiteSpace: 'nowrap' }}>{e.txt}</span>
-                  </div>) : null })()}
+                <div style={{ fontSize: col.concurso.tituloSize || 11, fontWeight: 800,
+                              color: col.concurso.tituloColor || '#64748b',
+                              textTransform: col.concurso.tituloSize ? 'none' : 'uppercase',
+                              letterSpacing: col.concurso.tituloSize ? 0 : 0.5,
+                              marginBottom: 8, textAlign: 'center', borderBottom: '2px solid rgba(14,165,233,0.2)', paddingBottom: 6 }}>{col.concurso.nombre}</div>
                 {/* El porqué de un 0,00 €, también en la carta (el dueño se quedó
                     a ciegas: el mínimo de equipo bloqueaba y aquí no se decía). */}
                 {(col as any).porVenta ? (() => { const r = (col as any).porVenta; return (
@@ -688,9 +721,10 @@ export default function DashboardPage() {
                         ? <>bote {eurFmt(r.repartido)} de {eurFmt(r.tope)}{r.agotado ? ' — ⛔ agotado' : ''}</>
                         : <>repartido {eurFmt(r.repartido)}</>}
                   </div>) })() : null}
-                {col.data.slice(0, 5).map((r, i) => (
-                  <div key={r.name} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 6px', borderRadius: 8, background: i === 0 ? 'rgba(245,158,11,0.12)' : 'transparent', marginBottom: 3 }}>
-                    {['🥇', '🥈', '🥉'][i]
+                {col.data.map((r, i) => (
+                  <div key={r.name} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 6px', borderRadius: 8, background: i === 0 && r.value > 0 ? 'rgba(245,158,11,0.12)' : 'transparent', marginBottom: 3 }}>
+                    {/* A 0 no hay medallas: número gris hasta que puntúe. */}
+                    {r.value > 0 && ['🥇', '🥈', '🥉'][i]
                       ? <span style={{ fontSize: 14, width: 18, textAlign: 'center', display: 'inline-block' }}>{['🥇', '🥈', '🥉'][i]}</span>
                       : <span style={{ fontSize: 11, fontWeight: 800, color: '#94a3b8', width: 18, textAlign: 'center', display: 'inline-block' }}>{i + 1}º</span>}
                     <div style={{ width: 26, height: 26, borderRadius: '50%', overflow: 'hidden', background: '#0ea5e9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>

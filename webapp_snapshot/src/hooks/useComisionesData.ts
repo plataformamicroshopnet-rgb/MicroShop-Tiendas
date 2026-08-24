@@ -5,7 +5,7 @@ import { isSolar360 } from '@/lib/salesUtils';
 // src/lib/panelComisionesTiendas.ts (computePanelComisionesTiendas), la MISMA
 // lib que usa /api/comisiones-liquidacion server-side: fuente única del motor.
 import { computePanelComisionesTiendas } from '@/lib/panelComisionesTiendas';
-import { parseTorneosConfig, torneoExtrasPorVendedor, TorneosConfig } from '@/lib/torneosConfig';
+import { loadTorneosConfigMes, torneoExtrasPorVendedor, TorneosConfig } from '@/lib/torneosConfig';
 // matchProductFormula/matchTipoVenta viven en lib/ventaMatching y los helpers del
 // panel (parseSafeFloat, matchesRule, getValueForRule…) en lib/panelComisionesTiendas
 // (módulos PUROS usables en endpoints de servidor); se re-exportan aquí para no
@@ -45,8 +45,9 @@ export function useComisionesData(user?: any) {
             fetch(`/api/territorial?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({ success: false, tiendas: [], o2: [] })),
             fetch('/api/catalogs').then(res => res.json()).catch(() => ({ success: false, catalogs: {} })),
             fetch(`/api/settings?key=fttr_discount_${activePeriodKey}`).then(res => res.json()).catch(() => ({ value: null })),
-            // Torneos: para el EXTRA «X € por venta», que entra en la nómina
-            fetch('/api/settings?key=torneos_config').then(res => res.json()).catch(() => ({ value: null }))
+            // Torneos POR MES: para el EXTRA «X € por venta», que entra en la
+            // nómina — cada mes paga los torneos de SU mes.
+            loadTorneosConfigMes(activePeriodKey).catch(() => ({ config: { concursos: [] } as TorneosConfig, origen: 'vacio' as const }))
         ])
         .then(([data, condData, extrasData, rulesData, tiendasData, o2Data, territorialData, catalogsData, fttrDiscountData, torneosData]) => {
             if (data.success && data.logs) {
@@ -94,7 +95,7 @@ export function useComisionesData(user?: any) {
             } else {
                 setFttrDiscount(910);
             }
-            setTorneosCfg(parseTorneosConfig(torneosData && torneosData.value));
+            setTorneosCfg((torneosData && (torneosData as any).config) || { concursos: [] });
             setLoading(false);
         })
         .catch(err => {

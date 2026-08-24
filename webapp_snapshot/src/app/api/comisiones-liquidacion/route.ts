@@ -4,7 +4,7 @@ import { computePanelComisionesTiendas } from '@/lib/panelComisionesTiendas'
 import { loadPanelInputs } from '@/lib/panelComisionesTiendasServer'
 import { tiendaDeComercial, norm } from '@/lib/comercialRoster'
 import { computeComisionJefeTiendas, jefePctKeysTodas, resolverJefePcts } from '@/lib/comisionJefeTiendas'
-import { parseTorneosConfig, torneoExtrasPorVendedor, TORNEOS_CONFIG_KEY } from '@/lib/torneosConfig'
+import { parseTorneosConfig, torneoExtrasPorVendedor, TORNEOS_CONFIG_KEY, TORNEOS_CONFIG_KEY_MES, periodKeyActual } from '@/lib/torneosConfig'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMISIÓN POR OPERACIÓN de cada comercial para un mes (liquidación) — TIENDAS.
@@ -77,7 +77,13 @@ export async function POST(request: Request) {
     // Solar360 / reglas 'solar' / KPI [KPI] que hacía el hook). El EXTRA de los
     // torneos «X € por venta» se calcula aquí con las ventas YA sin bajas: al
     // re-verificar en el ERP, el bote se recalcula solo, como todo lo demás.
-    const torneosSetting = await prisma.appSetting.findUnique({ where: { key: TORNEOS_CONFIG_KEY } })
+    // Torneos POR MES (24-ago-2026): cada mes liquida los torneos de SU mes.
+    // La clave global antigua solo vale como puente para el mes en curso,
+    // hasta que el dueño guarde una vez desde el configurador.
+    let torneosSetting = await prisma.appSetting.findUnique({ where: { key: TORNEOS_CONFIG_KEY_MES(mes) } })
+    if (!torneosSetting && mes === periodKeyActual()) {
+      torneosSetting = await prisma.appSetting.findUnique({ where: { key: TORNEOS_CONFIG_KEY } })
+    }
     const torneoExtras = torneoExtrasPorVendedor(ventas, parseTorneosConfig(torneosSetting?.value), catalogs)
     const result = computePanelComisionesTiendas({ ...input, sales: ventas, torneoExtras })
 
