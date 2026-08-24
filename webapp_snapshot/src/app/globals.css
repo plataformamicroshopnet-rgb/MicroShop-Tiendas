@@ -536,3 +536,17 @@ button, input, select, textarea {
   .dash-grid-2 { grid-template-columns: 1fr; }
   .dash-grid-kpi { grid-template-columns: 1fr; }
 }
+
+/* Carta de Torneos con UN solo concurso: la lista completa de comerciales en
+   2 columnas (1º-4º a la izquierda, 5º-8º a la derecha); una sola tira era
+   demasiado larga. En pantallas estrechas vuelve a una columna. */
+.torneo-filas-2col {
+  columns: 2;
+  column-gap: 18px;
+}
+.torneo-filas-2col > div {
+  break-inside: avoid;
+}
+@media (max-width: 640px) {
+  .torneo-filas-2col { columns: 1; }
+}

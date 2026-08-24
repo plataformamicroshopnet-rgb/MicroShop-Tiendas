@@ -721,6 +721,10 @@ export default function DashboardPage() {
                         ? <>bote {eurFmt(r.repartido)} de {eurFmt(r.tope)}{r.agotado ? ' — ⛔ agotado' : ''}</>
                         : <>repartido {eurFmt(r.repartido)}</>}
                   </div>) })() : null}
+                {/* Con UN solo concurso la carta es ancha: la lista va en 2
+                    columnas (1º-4º izquierda, 5º-8º derecha). Con 2-3 concursos
+                    cada uno ya tiene su columna estrecha y se queda en una tira. */}
+                <div className={torneoColumns.length === 1 && col.data.length > 4 ? 'torneo-filas-2col' : undefined}>
                 {col.data.map((r, i) => (
                   <div key={r.name} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 6px', borderRadius: 8, background: i === 0 && r.value > 0 ? 'rgba(245,158,11,0.12)' : 'transparent', marginBottom: 3 }}>
                     {/* A 0 no hay medallas: número gris hasta que puntúe. */}
@@ -734,6 +738,7 @@ export default function DashboardPage() {
                     <span style={{ fontSize: 12.5, fontWeight: 800, color: '#0ea5e9', whiteSpace: 'nowrap' }}>{(r as any).etiqueta ?? col.fmt(r.value)}</span>
                   </div>
                 ))}
+                </div>
                 {col.data.length === 0 && (
                   activePeriodObj && !concursoJuegaEnMes(col.concurso, Number(activePeriodObj.year), Number(activePeriodObj.month))
                     ? <div style={{ fontSize: 11.5, color: 'var(--medium-gray)', textAlign: 'center', padding: 8, lineHeight: 1.5 }}>
