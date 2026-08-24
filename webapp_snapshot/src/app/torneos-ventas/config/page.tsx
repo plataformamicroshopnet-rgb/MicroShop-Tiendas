@@ -7,7 +7,7 @@ import ProductTreeSelector from '@/components/ProductTreeSelector'
 import { can } from '@/lib/permissions'
 import {
   TorneosConfig, Concurso, TorneoPremio, MAX_CONCURSOS, TORNEOS_CONFIG_KEY,
-  DEFAULT_TORNEOS_CONFIG, loadTorneosConfig,
+  DEFAULT_TORNEOS_CONFIG, loadTorneosConfig, generaNotasConcurso,
 } from '@/lib/torneosConfig'
 
 const nuevoConcurso = (): Concurso => ({
@@ -243,21 +243,41 @@ export default function ConfiguradorTorneosPage() {
                            value={c.topeBote || ''} placeholder="vacío = sin tope"
                            onChange={e => updateConcurso(ci, { topeBote: Number(e.target.value) })} />
                   </div>
+                  <div>
+                    <label style={{ fontSize: 12, color: 'var(--medium-gray,#64748b)', fontWeight: 600 }}>Mínimo individual (ventas)</label>
+                    <input type="number" step="1" style={{ ...ipt, width: '100%', marginTop: 4 }}
+                           value={c.minIndividual || ''} placeholder="vacío = sin mínimo"
+                           onChange={e => updateConcurso(ci, { minIndividual: Number(e.target.value) })} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 12, color: 'var(--medium-gray,#64748b)', fontWeight: 600 }}>Mínimo de equipo (ventas entre todos)</label>
+                    <input type="number" step="1" style={{ ...ipt, width: '100%', marginTop: 4 }}
+                           value={c.minGrupal || ''} placeholder="vacío = sin mínimo"
+                           onChange={e => updateConcurso(ci, { minGrupal: Number(e.target.value) })} />
+                  </div>
                   <div style={{ gridColumn: '1 / -1', fontSize: 12, color: 'var(--medium-gray,#64748b)', lineHeight: 1.5 }}>
-                    Cada venta que puntúa paga <strong>{Number(c.importePorVenta) || 0} €</strong> al que la hizo.
-                    {Number(c.topeBote) > 0
-                      ? <> El bote es de <strong>{Number(c.topeBote)} €</strong> entre todos: las ventas cobran por orden de fecha y, al llegar al tope, las siguientes cuentan en el ranking pero ya no cobran.</>
-                      : <> Sin tope: todas las ventas que puntúen cobran.</>}
-                    &nbsp;El ranking sale por nº de ventas, con lo ganado por cada uno.
+                    Sin llegar al <strong>mínimo de equipo</strong> no cobra nadie; sin llegar al
+                    <strong> mínimo individual</strong>, ese comercial no cobra (sus ventas cuentan en
+                    el ranking pero no gastan bote). El bote se reparte por orden de fecha de venta.
                   </div>
                 </div>
               )}
 
               <div style={{ marginTop: 10 }}>
-                <label style={{ fontSize: 12, color: 'var(--medium-gray,#64748b)', fontWeight: 600 }}>Notas (texto pequeño bajo el título del ranking)</label>
+                <label style={{ fontSize: 12, color: 'var(--medium-gray,#64748b)', fontWeight: 600 }}>Nota extra a mano (opcional — las condiciones salen solas)</label>
                 <input style={{ ...ipt, width: '100%', marginTop: 4 }} value={c.notas || ''}
-                       placeholder="Ej.: Realizando entre todos en las fechas indicadas: solo del 01/07 al 31/07"
+                       placeholder="Ej.: ¡Ánimo, que este mes lo bordamos!"
                        onChange={e => updateConcurso(ci, { notas: e.target.value })} />
+                {/* Vista previa del texto AUTOMÁTICO que saldrá bajo el título del
+                    ranking — escrito desde las condiciones, como el «OJO» de las
+                    palancas: lo que se lee es exactamente lo que se paga. */}
+                {(() => { const n = generaNotasConcurso(c); return n ? (
+                  <div style={{ marginTop: 8, padding: '7px 10px', borderRadius: 8, fontSize: 12,
+                                background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.35)',
+                                color: '#92400E', lineHeight: 1.45 }}>
+                    <strong>Así saldrá bajo el título:</strong> {n}
+                  </div>
+                ) : null })()}
               </div>
             </div>
           </div>

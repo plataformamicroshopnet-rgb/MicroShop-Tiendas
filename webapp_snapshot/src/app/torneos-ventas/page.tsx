@@ -9,7 +9,7 @@ import { usePeriod } from '@/components/PeriodProvider'
 import { renderDashboardData, isSolar360 } from '@/lib/salesUtils'
 import { getSaleCommission } from '@/lib/saleCommission'
 import { can } from '@/lib/permissions'
-import { loadTorneosConfig, DEFAULT_TORNEOS_CONFIG, concursoSaleValue, estadoConcurso, concursoJuegaEnMes, premioLabel, repartoPorVenta, fmtEur, RepartoPorVenta, TorneosConfig } from '@/lib/torneosConfig'
+import { loadTorneosConfig, DEFAULT_TORNEOS_CONFIG, concursoSaleValue, estadoConcurso, concursoJuegaEnMes, generaNotasConcurso, premioLabel, repartoPorVenta, fmtEur, RepartoPorVenta, TorneosConfig } from '@/lib/torneosConfig'
 
 // Nombre de vendedor normalizado (minúsculas, sin acentos) para casar el mapa de
 // comisiones con el roster, igual que hace useComisionesData con los vendedores.
@@ -217,7 +217,7 @@ export default function TorneosVentasPage() {
       validSellers.forEach(s => s.rawSales.filter(noAnulada).forEach((rs: any) => items.push({ name: s.name, sale: rs })));
       const rep = repartoPorVenta(items, c, catalogs);
       const conFila = new Set(rep.filas.map(f => f.name));
-      validSellers.forEach(s => { if (!conFila.has(s.name)) rep.filas.push({ name: s.name, ventas: 0, ganado: 0 }); });
+      validSellers.forEach(s => { if (!conFila.has(s.name)) rep.filas.push({ name: s.name, ventas: 0, ganado: 0, cumpleMin: !(Number(c.minIndividual) > 0) }); });
       const data = rep.filas.map((f, idx) => ({ pos: idx + 1, name: f.name, value: f.ventas, label: String(f.ventas) }));
       return { concurso: c, isCurrency: false, data, max: Math.max(...data.map(d => d.value), 0), porVenta: rep as RepartoPorVenta };
     }
@@ -396,15 +396,20 @@ export default function TorneosVentasPage() {
                   <div style={{ textAlign: 'center', marginBottom: 6 }}>
                     <span style={{ background: e.color, color: '#fff', borderRadius: 999, padding: '2px 12px', fontSize: 12, fontWeight: 700 }}>{e.txt}</span>
                   </div>) : null })()}
-                {col.concurso.notas ? (
-                  <div style={{ textAlign: 'center', marginBottom: 6, fontSize: 12, color: '#64748b', lineHeight: 1.4 }}>{col.concurso.notas}</div>
-                ) : null}
+                {/* Las notas se escriben SOLAS desde las condiciones del concurso */}
+                {(() => { const n = generaNotasConcurso(col.concurso); return n ? (
+                  <div style={{ textAlign: 'center', marginBottom: 6, fontSize: 12, color: '#64748b', lineHeight: 1.4 }}>{n}</div>
+                ) : null })()}
                 {col.porVenta && concursoJuegaEnMes(col.concurso, _mesVisto.year, _mesVisto.month) ? (
-                  <div style={{ textAlign: 'center', marginBottom: 8, fontSize: 12.5, fontWeight: 700, color: col.porVenta.agotado ? '#b91c1c' : '#0f766e' }}>
-                    💶 {fmtEur(col.concurso.importePorVenta || 0)} por venta ·
-                    {col.porVenta.tope > 0
-                      ? <> bote {fmtEur(col.porVenta.repartido)} de {fmtEur(col.porVenta.tope)}{col.porVenta.agotado ? ' — ⛔ agotado, ya no se paga más' : ''}</>
-                      : <> repartido {fmtEur(col.porVenta.repartido)}</>}
+                  <div style={{ textAlign: 'center', marginBottom: 8, fontSize: 12.5, fontWeight: 700, color: !col.porVenta.grupalCumplido ? '#b45309' : col.porVenta.agotado ? '#b91c1c' : '#0f766e' }}>
+                    {!col.porVenta.grupalCumplido ? (
+                      <>⚠️ Mínimo de equipo: {col.porVenta.minGrupal} ventas — lleváis {col.porVenta.teamVentas}. Sin llegar, no se paga.</>
+                    ) : (
+                      <>💶 {fmtEur(col.concurso.importePorVenta || 0)} por venta ·
+                      {col.porVenta.tope > 0
+                        ? <> bote {fmtEur(col.porVenta.repartido)} de {fmtEur(col.porVenta.tope)}{col.porVenta.agotado ? ' — ⛔ agotado, ya no se paga más' : ''}</>
+                        : <> repartido {fmtEur(col.porVenta.repartido)}</>}</>
+                    )}
                   </div>
                 ) : null}
                 {!concursoJuegaEnMes(col.concurso, _mesVisto.year, _mesVisto.month) ? (
@@ -447,7 +452,10 @@ export default function TorneosVentasPage() {
                             </div>
                           </td>
                           <td style={{ fontWeight: 800 }}>{f.ventas}</td>
-                          <td style={{ fontWeight: 800, color: f.ganado > 0 ? '#0f766e' : '#cbd5e1' }}>{f.ganado > 0 ? fmtEur(f.ganado) : '—'}</td>
+                          <td style={{ fontWeight: 800, color: f.ganado > 0 ? '#0f766e' : '#cbd5e1', fontSize: f.ganado > 0 ? undefined : 12 }}>
+                            {f.ganado > 0 ? fmtEur(f.ganado)
+                              : (f.ventas > 0 && !f.cumpleMin && col.porVenta ? `mín. ${col.porVenta.minIndividual}` : '—')}
+                          </td>
                         </tr>
                       );
                     })}
