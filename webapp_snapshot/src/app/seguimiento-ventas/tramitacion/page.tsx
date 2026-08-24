@@ -459,9 +459,12 @@ export default function TramitacionPage() {
             const tram = vs.filter(isPending).length;
             return { name, total: vs.length, tram, fin: vs.length - tram };
         }).sort((a, b) => b.total - a.total);
-        // Semanas del comercial elegido: bloques de lunes a domingo, de la más
-        // reciente a la más antigua, y dentro las ventas también descendentes.
-        let semanas: { titulo: string; desde: number; ventas: any[] }[] = [];
+        // Semanas del comercial elegido: bloques de lunes a domingo → dentro,
+        // DÍAS → y dentro del día, TIPOS de venta. Todo de lo más reciente a lo
+        // más antiguo (petición del dueño, 24-ago-2026).
+        type Tipo = { producto: string; ventas: any[] };
+        type Dia = { titulo: string; desde: number; n: number; tipos: Tipo[] };
+        let semanas: { titulo: string; desde: number; n: number; dias: Dia[] }[] = [];
         if (comercialSel && porComercial[comercialSel]) {
             const bloques: Record<string, any[]> = {};
             const sinFecha: any[] = [];
@@ -474,16 +477,42 @@ export default function TramitacionPage() {
                 (bloques[key] = bloques[key] || []).push(s);
             });
             const dd = (x: Date) => `${String(x.getDate()).padStart(2, '0')}/${String(x.getMonth() + 1).padStart(2, '0')}`;
+            const DIA_NOMBRE = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+            const agruparTipos = (vs: any[]): Tipo[] => {
+                const porTipo: Record<string, any[]> = {};
+                vs.forEach(s => {
+                    const t = String(s.producto || '—').trim() || '—';
+                    (porTipo[t] = porTipo[t] || []).push(s);
+                });
+                // Los tipos con más ventas primero; a igualdad, alfabético.
+                return Object.entries(porTipo)
+                    .map(([producto, ventas]) => ({ producto, ventas }))
+                    .sort((a, b) => b.ventas.length - a.ventas.length || a.producto.localeCompare(b.producto));
+            };
             semanas = Object.entries(bloques).map(([key, vs]) => {
                 const [y, m, day] = key.split('-').map(Number);
                 const lunes = new Date(y, m - 1, day);
                 const domingo = new Date(lunes); domingo.setDate(lunes.getDate() + 6);
-                return {
-                    titulo: `Semana del ${dd(lunes)} al ${dd(domingo)}`, desde: lunes.getTime(),
-                    ventas: [...vs].sort((a, b) => (parseFecha(b.fecha)?.getTime() || 0) - (parseFecha(a.fecha)?.getTime() || 0)),
-                };
+                // Días de la semana con ventas, del más reciente al más antiguo
+                const porDia: Record<string, any[]> = {};
+                vs.forEach(s => {
+                    const d = parseFecha(s.fecha)!;
+                    const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                    (porDia[k] = porDia[k] || []).push(s);
+                });
+                const dias: Dia[] = Object.entries(porDia).map(([k, dvs]) => {
+                    const [dy, dm, dday] = k.split('-').map(Number);
+                    const fecha = new Date(dy, dm - 1, dday);
+                    return { titulo: `${DIA_NOMBRE[fecha.getDay()]} ${dd(fecha)}`, desde: fecha.getTime(),
+                             n: dvs.length, tipos: agruparTipos(dvs) };
+                }).sort((a, b) => b.desde - a.desde);
+                return { titulo: `Semana del ${dd(lunes)} al ${dd(domingo)}`, desde: lunes.getTime(),
+                         n: vs.length, dias };
             }).sort((a, b) => b.desde - a.desde);
-            if (sinFecha.length) semanas.push({ titulo: 'Sin fecha legible', desde: 0, ventas: sinFecha });
+            if (sinFecha.length) {
+                semanas.push({ titulo: 'Sin fecha legible', desde: 0, n: sinFecha.length,
+                               dias: [{ titulo: '—', desde: 0, n: sinFecha.length, tipos: agruparTipos(sinFecha) }] });
+            }
         }
         return { comerciales, semanas };
     })();
@@ -864,7 +893,7 @@ export default function TramitacionPage() {
                                         <div style={{ fontSize: 12, marginTop: 7, color: 'var(--medium-gray)' }}>
                                             <span style={{ color: '#16a34a', fontWeight: 700 }}>{c.fin} finalizadas</span>
                                             {' · '}
-                                            <span style={{ color: '#ec4899', fontWeight: 700 }}>{c.tram} en tramitación</span>
+                                            <span style={{ color: c.tram > 0 ? '#dc2626' : 'var(--medium-gray)', fontWeight: 700 }}>{c.tram} pendientes</span>
                                         </div>
                                     </div>
                                 ))}
@@ -875,25 +904,41 @@ export default function TramitacionPage() {
                         analisis.semanas.length === 0
                             ? <div style={{ fontSize: 13.5, color: 'var(--medium-gray)', padding: '10px 4px' }}>Este comercial no tiene ventas este mes.</div>
                             : analisis.semanas.map(sem => (
-                                <div key={sem.titulo} style={{ marginBottom: 14 }}>
-                                    <div style={{ background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.25)', borderRadius: 8, padding: '6px 12px', fontWeight: 800, fontSize: 13, color: 'var(--light-text)', marginBottom: 6 }}>
-                                        📅 {sem.titulo} <span style={{ fontWeight: 600, color: 'var(--medium-gray)' }}>· {sem.ventas.length} venta(s)</span>
+                                <div key={sem.titulo} style={{ marginBottom: 16 }}>
+                                    <div style={{ background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.25)', borderRadius: 8, padding: '6px 12px', fontWeight: 800, fontSize: 13, color: 'var(--light-text)', marginBottom: 8 }}>
+                                        📅 {sem.titulo} <span style={{ fontWeight: 600, color: 'var(--medium-gray)' }}>· {sem.n} venta(s)</span>
                                     </div>
-                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
-                                        <tbody>
-                                            {sem.ventas.map((s: any, i: number) => (
-                                                <tr key={i} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                                                    <td style={{ padding: '6px 8px', width: 90, color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{s.fecha || '—'}</td>
-                                                    <td style={{ padding: '6px 8px', fontWeight: 600, color: 'var(--light-text)' }}>{s.producto || '—'}</td>
-                                                    <td style={{ padding: '6px 8px', width: 130, textAlign: 'right' }}>
-                                                        {isPending(s)
-                                                            ? <span style={{ background: '#ec4899', color: '#fff', borderRadius: 999, padding: '2px 10px', fontSize: 11, fontWeight: 700 }}>en tramitación</span>
-                                                            : <span style={{ background: '#16a34a', color: '#fff', borderRadius: 999, padding: '2px 10px', fontSize: 11, fontWeight: 700 }}>finalizada</span>}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                    {sem.dias.map(dia => (
+                                        <div key={dia.titulo} style={{ margin: '0 0 10px 10px' }}>
+                                            <div style={{ fontWeight: 800, fontSize: 12.5, color: 'var(--light-text)', padding: '4px 8px', background: 'var(--bg-app)', borderRadius: 6, display: 'inline-block', marginBottom: 4 }}>
+                                                {dia.titulo} <span style={{ fontWeight: 600, color: 'var(--medium-gray)' }}>· {dia.n} venta(s)</span>
+                                            </div>
+                                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
+                                                <tbody>
+                                                    {dia.tipos.map(tipo => {
+                                                        const tram = tipo.ventas.filter(isPending).length;
+                                                        return (
+                                                            <tr key={tipo.producto} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                                                                <td style={{ padding: '5px 8px', fontWeight: 600, color: tram > 0 ? '#dc2626' : 'var(--light-text)' }}>
+                                                                    {tipo.producto}
+                                                                    {tipo.ventas.length > 1 && <span style={{ fontWeight: 800, color: '#0ea5e9' }}> ×{tipo.ventas.length}</span>}
+                                                                </td>
+                                                                <td style={{ padding: '5px 8px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                                                    {/* Un chip por venta: verde finalizada, ROJO pendiente
+                                                                        (petición del dueño: que se diferencien a golpe de vista) */}
+                                                                    {tipo.ventas.map((s: any, i: number) => (
+                                                                        isPending(s)
+                                                                            ? <span key={i} style={{ background: '#dc2626', color: '#fff', borderRadius: 999, padding: '2px 10px', fontSize: 11, fontWeight: 700, marginLeft: 4 }}>en tramitación</span>
+                                                                            : <span key={i} style={{ background: '#16a34a', color: '#fff', borderRadius: 999, padding: '2px 10px', fontSize: 11, fontWeight: 700, marginLeft: 4 }}>finalizada</span>
+                                                                    ))}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    ))}
                                 </div>
                               ))
                     )}

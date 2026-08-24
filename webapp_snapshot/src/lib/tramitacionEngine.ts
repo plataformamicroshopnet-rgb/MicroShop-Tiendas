@@ -3,7 +3,13 @@ import { getEffectiveTiendaComerciales } from './comercialRoster';
 export const STORE_NAMES = ["Auxiliadora 45", "Correhuela", "Villamayor", "Béjar", "O2"];
 
 export const isPending = (sale: any) => {
-    return sale.pendiente === 'Sí' || sale.pendiente === 'Pendiente';
+    // OJO: la base guarda 'Si' SIN acento (166 filas reales contra 0 con 'Sí').
+    // La versión vieja solo casaba 'Sí'/'Pendiente' y el modo análisis le sacó
+    // los colores (Carmen con 3 en tramitación salía a 0 — dueño, 24-ago-2026).
+    // El conteo de la tabla (countRuleSales) ya normalizaba por su cuenta; ahora
+    // TODOS pasan por aquí con la misma vara.
+    const p = String(sale.pendiente || '').toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+    return p === 'si' || p === 'pendiente';
 };
 
 export const isValidSale = (sale: any) => {
