@@ -11,7 +11,7 @@ import { getSaleCommission } from '@/lib/saleCommission'
 import { getEffectiveTiendaComerciales } from '@/lib/comercialRoster'
 import { can } from '@/lib/permissions'
 import { getDiasLaborablesRestantes } from '@/lib/trackingCalculations'
-import { loadTorneosConfig, DEFAULT_TORNEOS_CONFIG, concursoSaleValue, TorneosConfig } from '@/lib/torneosConfig'
+import { loadTorneosConfig, DEFAULT_TORNEOS_CONFIG, concursoSaleValue, estadoConcurso, TorneosConfig } from '@/lib/torneosConfig'
 import {
   loadDashboardConfig,
   DEFAULT_DASHBOARD_CONFIG,
@@ -657,6 +657,10 @@ export default function DashboardPage() {
             {torneoColumns.map((col) => (
               <div key={col.concurso.id}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8, textAlign: 'center', borderBottom: '2px solid rgba(14,165,233,0.2)', paddingBottom: 6 }}>{col.concurso.nombre}</div>
+                {(() => { const e = estadoConcurso(col.concurso); return e ? (
+                  <div style={{ textAlign: 'center', marginBottom: 6 }}>
+                    <span style={{ background: e.color, color: '#fff', borderRadius: 999, padding: '1px 9px', fontSize: 10.5, fontWeight: 700, whiteSpace: 'nowrap' }}>{e.txt}</span>
+                  </div>) : null })()}
                 {col.data.slice(0, 5).map((r, i) => (
                   <div key={r.name} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 6px', borderRadius: 8, background: i === 0 ? 'rgba(245,158,11,0.12)' : 'transparent', marginBottom: 3 }}>
                     {['🥇', '🥈', '🥉'][i]

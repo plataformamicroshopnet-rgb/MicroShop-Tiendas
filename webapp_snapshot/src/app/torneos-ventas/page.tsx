@@ -9,7 +9,7 @@ import { usePeriod } from '@/components/PeriodProvider'
 import { renderDashboardData, isSolar360 } from '@/lib/salesUtils'
 import { getSaleCommission } from '@/lib/saleCommission'
 import { can } from '@/lib/permissions'
-import { loadTorneosConfig, DEFAULT_TORNEOS_CONFIG, concursoSaleValue, premioLabel, TorneosConfig } from '@/lib/torneosConfig'
+import { loadTorneosConfig, DEFAULT_TORNEOS_CONFIG, concursoSaleValue, estadoConcurso, premioLabel, TorneosConfig } from '@/lib/torneosConfig'
 
 // Nombre de vendedor normalizado (minúsculas, sin acentos) para casar el mapa de
 // comisiones con el roster, igual que hace useComisionesData con los vendedores.
@@ -372,6 +372,10 @@ export default function TorneosVentasPage() {
           <div className="grid-container" style={{ gridTemplateColumns: `repeat(${columns.length}, 1fr)` }}>
             {columns.map((col, ci) => (
               <div key={col.concurso.id}>
+                {(() => { const e = estadoConcurso(col.concurso); return e ? (
+                  <div style={{ textAlign: 'center', marginBottom: 6 }}>
+                    <span style={{ background: e.color, color: '#fff', borderRadius: 999, padding: '2px 12px', fontSize: 12, fontWeight: 700 }}>{e.txt}</span>
+                  </div>) : null })()}
                 <table className="torneo-table">
                   <thead>
                     <tr className={COL_HEADER[ci % COL_HEADER.length]}>
