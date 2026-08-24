@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { PageHeader } from '@/components/PageHeader'
-import { Building2, RefreshCw, UploadCloud, X, ClipboardPaste } from 'lucide-react'
+import { Building2, RefreshCw, UploadCloud, X, ClipboardPaste, Search } from 'lucide-react'
 import { usePeriod } from '@/components/PeriodProvider'
-import { calculateTramitacion } from '@/lib/tramitacionEngine'
+import { calculateTramitacion, isValidSale, isPending, isSellerInStore } from '@/lib/tramitacionEngine'
+import { getEffectiveTiendaComerciales } from '@/lib/comercialRoster'
 
 const getWorkingDaysInMonth = (year: number, month: number) => {
     let days = 0;
@@ -53,6 +54,15 @@ export default function TramitacionPage() {
     const [pasteContent, setPasteContent] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // ── MODO ANÁLISIS (dueño, 24-ago-2026): tienda → comerciales → semanas ──
+    // La tabla de arriba NO se toca (orden expresa): esto vive debajo, y solo
+    // con el modo encendido los nombres de tienda se vuelven pulsables.
+    const [modoAnalisis, setModoAnalisis] = useState(false);
+    const [tiendaSel, setTiendaSel] = useState<string | null>(null);
+    const [comercialSel, setComercialSel] = useState<string | null>(null);
+    const [rawSales, setRawSales] = useState<any[]>([]);
+    const [hoursAll, setHoursAll] = useState<any[]>([]);
+
     const loadData = async () => {
         if (!activePeriodKey) return;
         setLoading(true);
@@ -95,6 +105,8 @@ export default function TramitacionPage() {
             );
             
             setDataRows(calculated);
+            setRawSales(sData.logs || []);
+            setHoursAll(tData.hours || []);
         } catch(e) {
             console.error("Error loading tramitacion data", e);
         } finally {
@@ -423,6 +435,59 @@ export default function TramitacionPage() {
         }
     };
 
+    // ── Los datos del modo análisis (mismo universo que la tabla: isValidSale
+    //    del motor, plantilla de tiendas del panel de Horarios) ──
+    const parseFecha = (f: any): Date | null => {
+        const p = String(f || '').split('/');
+        if (p.length === 3) {
+            const d = new Date(+p[2], +p[1] - 1, +p[0]);
+            return isNaN(d.getTime()) ? null : d;
+        }
+        return null;
+    };
+    const analisis = (() => {
+        if (!modoAnalisis || !tiendaSel) return null;
+        const mapa = getEffectiveTiendaComerciales(hoursAll);
+        const sellers = mapa[tiendaSel] || [];
+        const ventasTienda = rawSales.filter(s => isValidSale(s) && isSellerInStore(s.vendedor, sellers));
+        const porComercial: Record<string, any[]> = {};
+        ventasTienda.forEach(s => {
+            const v = String(s.vendedor || '').trim() || '—';
+            (porComercial[v] = porComercial[v] || []).push(s);
+        });
+        const comerciales = Object.entries(porComercial).map(([name, vs]) => {
+            const tram = vs.filter(isPending).length;
+            return { name, total: vs.length, tram, fin: vs.length - tram };
+        }).sort((a, b) => b.total - a.total);
+        // Semanas del comercial elegido: bloques de lunes a domingo, de la más
+        // reciente a la más antigua, y dentro las ventas también descendentes.
+        let semanas: { titulo: string; desde: number; ventas: any[] }[] = [];
+        if (comercialSel && porComercial[comercialSel]) {
+            const bloques: Record<string, any[]> = {};
+            const sinFecha: any[] = [];
+            porComercial[comercialSel].forEach(s => {
+                const d = parseFecha(s.fecha);
+                if (!d) { sinFecha.push(s); return; }
+                const lunes = new Date(d);
+                lunes.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+                const key = `${lunes.getFullYear()}-${String(lunes.getMonth() + 1).padStart(2, '0')}-${String(lunes.getDate()).padStart(2, '0')}`;
+                (bloques[key] = bloques[key] || []).push(s);
+            });
+            const dd = (x: Date) => `${String(x.getDate()).padStart(2, '0')}/${String(x.getMonth() + 1).padStart(2, '0')}`;
+            semanas = Object.entries(bloques).map(([key, vs]) => {
+                const [y, m, day] = key.split('-').map(Number);
+                const lunes = new Date(y, m - 1, day);
+                const domingo = new Date(lunes); domingo.setDate(lunes.getDate() + 6);
+                return {
+                    titulo: `Semana del ${dd(lunes)} al ${dd(domingo)}`, desde: lunes.getTime(),
+                    ventas: [...vs].sort((a, b) => (parseFecha(b.fecha)?.getTime() || 0) - (parseFecha(a.fecha)?.getTime() || 0)),
+                };
+            }).sort((a, b) => b.desde - a.desde);
+            if (sinFecha.length) semanas.push({ titulo: 'Sin fecha legible', desde: 0, ventas: sinFecha });
+        }
+        return { comerciales, semanas };
+    })();
+
     return (
         <div style={{ padding: '8px 12px', backgroundColor: 'var(--bg-app)', minHeight: '100vh', paddingBottom: 80 }}>
             <PageHeader 
@@ -432,7 +497,22 @@ export default function TramitacionPage() {
                 backFallback="/seguimiento-ventas"
                 headerActions={
                     <div style={{ display: 'flex', gap: '8px' }}>
-                        <button 
+                        <button
+                            onClick={() => { setModoAnalisis(m => !m); setTiendaSel(null); setComercialSel(null); }}
+                            title="Pulsa una tienda de la tabla para ver sus ventas por comercial"
+                            style={{
+                                background: modoAnalisis ? '#7c3aed' : 'transparent',
+                                border: modoAnalisis ? 'none' : '1px solid #7c3aed', borderRadius: 8,
+                                padding: '6px 12px', color: modoAnalisis ? '#fff' : '#7c3aed',
+                                display: 'flex', alignItems: 'center', gap: 6,
+                                fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
+                                boxShadow: modoAnalisis ? '0 4px 12px rgba(124, 58, 237, 0.3)' : 'none'
+                            }}
+                        >
+                            <Search size={16} />
+                            {modoAnalisis ? 'Modo análisis: ON' : 'Modo análisis'}
+                        </button>
+                        <button
                             onClick={() => setShowPasteModal(true)}
                             style={{
                                 background: 'var(--mercedes-cyan)', border: 'none', borderRadius: 8,
@@ -524,7 +604,12 @@ export default function TramitacionPage() {
                     <tbody>
                         {movistarRows.map((r, i) => (
                             <tr key={r.store} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: i % 2 === 0 ? 'var(--bg-card)' : 'rgba(0,0,0,0.01)' }}>
-                                <td style={{ padding: '8px 4px', fontWeight: 600, color: 'var(--light-text)', borderRight: '1px solid var(--border-color)' }}>{r.store}</td>
+                                <td style={{ padding: '8px 4px', fontWeight: 600, borderRight: '1px solid var(--border-color)',
+                                             color: modoAnalisis ? 'var(--mercedes-cyan)' : 'var(--light-text)',
+                                             cursor: modoAnalisis ? 'pointer' : undefined,
+                                             textDecoration: modoAnalisis ? 'underline' : undefined, textUnderlineOffset: 3 }}
+                                    title={modoAnalisis ? 'Ver las ventas de esta tienda por comercial' : undefined}
+                                    onClick={() => { if (modoAnalisis) { setTiendaSel(r.store); setComercialSel(null); } }}>{r.store}</td>
                                 <td style={{ padding: '8px 2px', textAlign: 'center', color: 'var(--medium-gray)', borderRight: '1px solid var(--border-color)' }}>{r.pers}</td>
                                 <td style={{ padding: '8px 2px', textAlign: 'center', fontWeight: 700, borderRight: '2px solid var(--border-color)' }}>{r.altasTotales}</td>
 
@@ -688,7 +773,12 @@ export default function TramitacionPage() {
                                 </tr>
                                 {o2Rows.map((r, i) => (
                                     <tr key={r.store}>
-                                        <td style={{ backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', padding: '8px 4px', fontWeight: 600, color: 'var(--light-text)', borderRight: '1px solid var(--border-color)' }}>{r.store}</td>
+                                        <td style={{ backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', padding: '8px 4px', fontWeight: 600, borderRight: '1px solid var(--border-color)',
+                                                     color: modoAnalisis ? 'var(--mercedes-cyan)' : 'var(--light-text)',
+                                                     cursor: modoAnalisis ? 'pointer' : undefined,
+                                                     textDecoration: modoAnalisis ? 'underline' : undefined, textUnderlineOffset: 3 }}
+                                            title={modoAnalisis ? 'Ver las ventas de esta tienda por comercial' : undefined}
+                                            onClick={() => { if (modoAnalisis) { setTiendaSel(r.store); setComercialSel(null); } }}>{r.store}</td>
                                         <td style={{ backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', padding: '8px 2px', textAlign: 'center', color: 'var(--medium-gray)', borderRight: '1px solid var(--border-color)' }}>{r.pers}</td>
                                         <td style={{ backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', padding: '8px 2px', textAlign: 'center', fontWeight: 700, borderRight: '2px solid var(--border-color)' }}>{r.altasTotales}</td>
 
@@ -730,6 +820,85 @@ export default function TramitacionPage() {
                     </tbody>
                 </table>
             </div>
+
+            {/* ── MODO ANÁLISIS: tienda → comerciales → semanas (la tabla no se toca) ── */}
+            {modoAnalisis && (
+                <div style={{ marginTop: 16, background: 'var(--bg-card)', borderRadius: 16, border: '1px solid #7c3aed', padding: 18, boxShadow: '0 4px 24px rgba(124,58,237,0.08)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+                        <Search size={18} color="#7c3aed" />
+                        <span style={{ fontWeight: 800, fontSize: 15, color: 'var(--light-text)' }}>Modo análisis</span>
+                        {tiendaSel && (
+                            <>
+                                <button onClick={() => { setTiendaSel(null); setComercialSel(null); }}
+                                        style={{ background: 'none', border: '1px solid var(--border-color)', borderRadius: 999, padding: '3px 10px', fontSize: 12, cursor: 'pointer', color: 'var(--medium-gray)' }}>← tiendas</button>
+                                <span style={{ background: '#7c3aed', color: '#fff', borderRadius: 999, padding: '3px 12px', fontSize: 12.5, fontWeight: 700 }}>🏬 {tiendaSel}</span>
+                            </>
+                        )}
+                        {comercialSel && (
+                            <>
+                                <button onClick={() => setComercialSel(null)}
+                                        style={{ background: 'none', border: '1px solid var(--border-color)', borderRadius: 999, padding: '3px 10px', fontSize: 12, cursor: 'pointer', color: 'var(--medium-gray)' }}>← comerciales</button>
+                                <span style={{ background: '#0ea5e9', color: '#fff', borderRadius: 999, padding: '3px 12px', fontSize: 12.5, fontWeight: 700 }}>👤 {comercialSel}</span>
+                            </>
+                        )}
+                    </div>
+
+                    {!tiendaSel && (
+                        <div style={{ fontSize: 13.5, color: 'var(--medium-gray)', padding: '10px 4px' }}>
+                            Pulsa el <strong>nombre de una tienda</strong> en la tabla de arriba para ver sus ventas repartidas por comercial.
+                        </div>
+                    )}
+
+                    {analisis && !comercialSel && (
+                        analisis.comerciales.length === 0
+                            ? <div style={{ fontSize: 13.5, color: 'var(--medium-gray)', padding: '10px 4px' }}>Esta tienda no tiene ventas este mes.</div>
+                            : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 12 }}>
+                                {analisis.comerciales.map(c => (
+                                    <div key={c.name} style={{ border: '1px solid var(--border-color)', borderRadius: 12, padding: '12px 14px', textAlign: 'center' }}>
+                                        <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--light-text)', marginBottom: 6 }}>{c.name}</div>
+                                        <button onClick={() => setComercialSel(c.name)}
+                                                title="Ver sus ventas por semanas"
+                                                style={{ background: 'rgba(14,165,233,0.1)', color: '#0ea5e9', border: '1.5px solid #0ea5e9', borderRadius: 12, padding: '6px 18px', fontSize: 22, fontWeight: 800, cursor: 'pointer' }}>
+                                            {c.total}
+                                        </button>
+                                        <div style={{ fontSize: 12, marginTop: 7, color: 'var(--medium-gray)' }}>
+                                            <span style={{ color: '#16a34a', fontWeight: 700 }}>{c.fin} finalizadas</span>
+                                            {' · '}
+                                            <span style={{ color: '#ec4899', fontWeight: 700 }}>{c.tram} en tramitación</span>
+                                        </div>
+                                    </div>
+                                ))}
+                              </div>
+                    )}
+
+                    {analisis && comercialSel && (
+                        analisis.semanas.length === 0
+                            ? <div style={{ fontSize: 13.5, color: 'var(--medium-gray)', padding: '10px 4px' }}>Este comercial no tiene ventas este mes.</div>
+                            : analisis.semanas.map(sem => (
+                                <div key={sem.titulo} style={{ marginBottom: 14 }}>
+                                    <div style={{ background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.25)', borderRadius: 8, padding: '6px 12px', fontWeight: 800, fontSize: 13, color: 'var(--light-text)', marginBottom: 6 }}>
+                                        📅 {sem.titulo} <span style={{ fontWeight: 600, color: 'var(--medium-gray)' }}>· {sem.ventas.length} venta(s)</span>
+                                    </div>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
+                                        <tbody>
+                                            {sem.ventas.map((s: any, i: number) => (
+                                                <tr key={i} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                                                    <td style={{ padding: '6px 8px', width: 90, color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{s.fecha || '—'}</td>
+                                                    <td style={{ padding: '6px 8px', fontWeight: 600, color: 'var(--light-text)' }}>{s.producto || '—'}</td>
+                                                    <td style={{ padding: '6px 8px', width: 130, textAlign: 'right' }}>
+                                                        {isPending(s)
+                                                            ? <span style={{ background: '#ec4899', color: '#fff', borderRadius: 999, padding: '2px 10px', fontSize: 11, fontWeight: 700 }}>en tramitación</span>
+                                                            : <span style={{ background: '#16a34a', color: '#fff', borderRadius: 999, padding: '2px 10px', fontSize: 11, fontWeight: 700 }}>finalizada</span>}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                              ))
+                    )}
+                </div>
+            )}
 
             {/* PASTE MODAL */}
             {showPasteModal && (

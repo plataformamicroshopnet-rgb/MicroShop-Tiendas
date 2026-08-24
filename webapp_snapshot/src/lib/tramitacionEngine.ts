@@ -2,11 +2,11 @@ import { getEffectiveTiendaComerciales } from './comercialRoster';
 
 export const STORE_NAMES = ["Auxiliadora 45", "Correhuela", "Villamayor", "Béjar", "O2"];
 
-const isPending = (sale: any) => {
+export const isPending = (sale: any) => {
     return sale.pendiente === 'Sí' || sale.pendiente === 'Pendiente';
 };
 
-const isValidSale = (sale: any) => {
+export const isValidSale = (sale: any) => {
     return sale.anulado !== 'Si' && sale.anulado !== 'Sí' && sale.pendiente !== 'Anulado';
 };
 
@@ -221,7 +221,7 @@ const calculateStoreRuleObj = (rule: any, sellers: string[], hoursList: any[]) =
     return sum;
 };
 
-const isSellerInStore = (sellerName: string, storeSellers: string[]) => {
+export const isSellerInStore = (sellerName: string, storeSellers: string[]) => {
     const normSeller = String(sellerName || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
     return storeSellers.some(s => {
         const normS = s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
