@@ -11,7 +11,7 @@ import { getSaleCommission } from '@/lib/saleCommission'
 import { getEffectiveTiendaComerciales } from '@/lib/comercialRoster'
 import { can } from '@/lib/permissions'
 import { getDiasLaborablesRestantes } from '@/lib/trackingCalculations'
-import { loadTorneosConfig, DEFAULT_TORNEOS_CONFIG, concursoSaleValue, estadoConcurso, TorneosConfig } from '@/lib/torneosConfig'
+import { loadTorneosConfig, DEFAULT_TORNEOS_CONFIG, concursoSaleValue, estadoConcurso, concursoJuegaEnMes, TorneosConfig } from '@/lib/torneosConfig'
 import {
   loadDashboardConfig,
   DEFAULT_DASHBOARD_CONFIG,
@@ -673,7 +673,13 @@ export default function DashboardPage() {
                     <span style={{ fontSize: 12.5, fontWeight: 800, color: '#0ea5e9', whiteSpace: 'nowrap' }}>{col.fmt(r.value)}</span>
                   </div>
                 ))}
-                {col.data.length === 0 && <div style={{ fontSize: 12, color: 'var(--medium-gray)', textAlign: 'center', padding: 8 }}>Sin datos</div>}
+                {col.data.length === 0 && (
+                  activePeriodObj && !concursoJuegaEnMes(col.concurso, Number(activePeriodObj.year), Number(activePeriodObj.month))
+                    ? <div style={{ fontSize: 11.5, color: 'var(--medium-gray)', textAlign: 'center', padding: 8, lineHeight: 1.5 }}>
+                        Juega en otro mes — cambia el mes del programa para ver su ranking.
+                      </div>
+                    : <div style={{ fontSize: 12, color: 'var(--medium-gray)', textAlign: 'center', padding: 8 }}>Sin datos</div>
+                )}
               </div>
             ))}
           </div>

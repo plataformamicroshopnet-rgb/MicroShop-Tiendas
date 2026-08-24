@@ -14,7 +14,11 @@ interface Props {
 // el catálogo. Se exportan porque el constructor de condicionantes también los
 // ofrece (el mínimo por tienda se pide sobre un Tipo de Venta, no sobre una regla:
 // «Dispositivos» existe aquí y no como regla, que es «Dispositivos + Seguros»).
-export const TIPOS_DE_VENTA = ["Alta BAF Total", "Alta BAF Convergente", "Dispositivos", "Seguro", "Swap", "MPA", "FTTR", "ARPU", "Repo Fútbol"]
+// «Dispositivos + Seguros» es ficha de primera en el matching (matchTipoVenta la
+// entiende desde siempre: cat rent|seguro) pero NO estaba en esta lista, así que
+// el selector la pintaba como «Fórmula Libre (Antigua)» y parecía que no había
+// nada elegido (torneo del dueño, 24-ago-2026). Añadida como opción normal.
+export const TIPOS_DE_VENTA = ["Alta BAF Total", "Alta BAF Convergente", "Dispositivos", "Seguro", "Dispositivos + Seguros", "Swap", "MPA", "FTTR", "ARPU", "Repo Fútbol"]
 
 export default function ProductTreeSelector({ value, onChange, disabled, placeholder = "Seleccionar..." }: Props) {
   const [isOpen, setIsOpen] = useState(false)

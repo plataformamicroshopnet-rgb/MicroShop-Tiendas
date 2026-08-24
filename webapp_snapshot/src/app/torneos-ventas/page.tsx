@@ -9,7 +9,7 @@ import { usePeriod } from '@/components/PeriodProvider'
 import { renderDashboardData, isSolar360 } from '@/lib/salesUtils'
 import { getSaleCommission } from '@/lib/saleCommission'
 import { can } from '@/lib/permissions'
-import { loadTorneosConfig, DEFAULT_TORNEOS_CONFIG, concursoSaleValue, estadoConcurso, premioLabel, TorneosConfig } from '@/lib/torneosConfig'
+import { loadTorneosConfig, DEFAULT_TORNEOS_CONFIG, concursoSaleValue, estadoConcurso, concursoJuegaEnMes, premioLabel, TorneosConfig } from '@/lib/torneosConfig'
 
 // Nombre de vendedor normalizado (minúsculas, sin acentos) para casar el mapa de
 // comisiones con el roster, igual que hace useComisionesData con los vendedores.
@@ -197,6 +197,13 @@ export default function TorneosVentasPage() {
     }));
   };
 
+  // El mes que se está MIRANDO (para saber si cada concurso le toca o no)
+  const _periodObj = availablePeriods.find(p => p.period_key === activePeriodKey);
+  const _mesVisto = _periodObj ? { year: Number(_periodObj.year), month: Number(_periodObj.month) }
+                               : { year: new Date().getFullYear(), month: new Date().getMonth() + 1 };
+  const _nombreMes = (m: number) => ['', 'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio',
+                                     'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'][m] || '';
+
   // Columnas dinámicas según el Configurador de Torneos (hasta 3)
   const COL_COLORS = ['#3b82f6', '#65a30d', '#f97316'];
   const COL_HEADER = ['header-blue', 'header-green', 'header-orange'];
@@ -376,6 +383,18 @@ export default function TorneosVentasPage() {
                   <div style={{ textAlign: 'center', marginBottom: 6 }}>
                     <span style={{ background: e.color, color: '#fff', borderRadius: 999, padding: '2px 12px', fontSize: 12, fontWeight: 700 }}>{e.txt}</span>
                   </div>) : null })()}
+                {!concursoJuegaEnMes(col.concurso, _mesVisto.year, _mesVisto.month) ? (
+                  // El mes que se mira NO pisa las fechas del concurso: mejor decirlo
+                  // claro que pintar un ranking a 0,00 € repartiendo medallas.
+                  <div style={{ padding: '26px 16px', textAlign: 'center', background: '#f1f5f9', borderRadius: 12, color: '#475569', fontSize: 13.5, lineHeight: 1.6 }}>
+                    <div style={{ fontWeight: 800, marginBottom: 4 }}>{col.concurso.nombre}</div>
+                    Este concurso juega
+                    {col.concurso.fechaInicio ? ` del ${col.concurso.fechaInicio.slice(8, 10)}/${col.concurso.fechaInicio.slice(5, 7)}` : ''}
+                    {col.concurso.fechaFin ? ` al ${col.concurso.fechaFin.slice(8, 10)}/${col.concurso.fechaFin.slice(5, 7)}` : ''}
+                    &nbsp;y ahora estás viendo <strong>{_nombreMes(_mesVisto.month)} {_mesVisto.year}</strong>.
+                    <div style={{ marginTop: 6 }}>Cambia el mes del programa (arriba a la derecha) para ver su ranking y sus ganadores.</div>
+                  </div>
+                ) : (
                 <table className="torneo-table">
                   <thead>
                     <tr className={COL_HEADER[ci % COL_HEADER.length]}>
@@ -387,10 +406,14 @@ export default function TorneosVentasPage() {
                   </thead>
                   <tbody>
                     {col.data.map(row => {
-                      const premio = col.concurso.premios.find(p => p.pos === row.pos);
+                      // Sin puntos no hay podio: a 0 no se dan medallas ni premios
+                      // (con todos a cero se repartían los 100/75/50 por orden de
+                      // lista — lo que vio el dueño el 24-ago).
+                      const compite = row.value > 0;
+                      const premio = compite ? col.concurso.premios.find(p => p.pos === row.pos) : undefined;
                       return (
-                        <tr key={row.name} className={`torneo-row ${getRowClass(row.pos)}`}>
-                          <td style={{ fontSize: row.pos <= 3 ? '20px' : '14px' }}>{getMedal(row.pos)}</td>
+                        <tr key={row.name} className={`torneo-row ${compite ? getRowClass(row.pos) : 'row-normal'}`}>
+                          <td style={{ fontSize: compite && row.pos <= 3 ? '20px' : '14px' }}>{compite ? getMedal(row.pos) : row.pos}</td>
                           <td style={{ fontSize: 12.5, fontWeight: 700, color: premio ? '#0f766e' : '#cbd5e1' }}>
                             {premio ? premioLabel(premio) : '—'}
                           </td>
@@ -410,14 +433,17 @@ export default function TorneosVentasPage() {
                     })}
                   </tbody>
                 </table>
+                )}
               </div>
             ))}
           </div>
 
-          {/* GRÁFICOS */}
+          {/* GRÁFICOS (solo de los concursos que juegan en el mes visto) */}
           <div className="grid-container" style={{ marginTop: 2, gridTemplateColumns: `repeat(${columns.length}, 1fr)` }}>
             {columns.map((col, ci) => (
-              <ChartBars key={col.concurso.id} data={col.data} maxValue={col.max} barColor={COL_COLORS[ci % COL_COLORS.length]} />
+              concursoJuegaEnMes(col.concurso, _mesVisto.year, _mesVisto.month)
+                ? <ChartBars key={col.concurso.id} data={col.data} maxValue={col.max} barColor={COL_COLORS[ci % COL_COLORS.length]} />
+                : <div key={col.concurso.id} />
             ))}
           </div>
           </>

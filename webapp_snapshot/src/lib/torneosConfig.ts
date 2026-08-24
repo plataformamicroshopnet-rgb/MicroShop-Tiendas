@@ -109,6 +109,20 @@ export function ventaEnVentana(sale: any, c: Concurso): boolean {
   return true
 }
 
+// ¿El concurso tiene algo que ver con el MES que se está mirando? Sin fechas,
+// siempre. Con fechas, solo si [inicio, fin] pisa algún día de ese mes — si no,
+// el ranking de ese mes NO debe pintarse (saldría todo a 0,00 € repartiendo
+// medallas entre empatados a cero, que fue lo que vio el dueño el 24-ago).
+export function concursoJuegaEnMes(c: Concurso, year: number, month: number): boolean {
+  if (!c.fechaInicio && !c.fechaFin) return true
+  const mm = String(month).padStart(2, '0')
+  const mesIni = `${year}-${mm}-01`
+  const mesFin = `${year}-${mm}-31`
+  if (c.fechaFin && c.fechaFin < mesIni) return false
+  if (c.fechaInicio && c.fechaInicio > mesFin) return false
+  return true
+}
+
 // Estado del concurso HOY, para el chip del ranking: null = permanente (sin chip).
 export function estadoConcurso(c: Concurso, hoyISO?: string): { txt: string; color: string } | null {
   if (!c.fechaInicio && !c.fechaFin) return null
