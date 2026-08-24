@@ -562,7 +562,7 @@ export default function DashboardPage() {
         const rep = repartoPorVenta(items, c, catalogs);
         const data = rep.filas.filter(f => f.ventas > 0)
           .map(f => ({ name: f.name, value: f.ventas, etiqueta: `${f.ventas} · ${eurFmt(f.ganado)}` }));
-        return { concurso: c, isCurrency: false, data, fmt: (v: number) => String(v) };
+        return { concurso: c, isCurrency: false, data, fmt: (v: number) => String(v), porVenta: rep };
       }
       const isCurrency = c.metrica === 'importe' || c.metrica === 'comisiones';
       let entries: { name: string, value: number }[];
@@ -674,6 +674,17 @@ export default function DashboardPage() {
                   <div style={{ textAlign: 'center', marginBottom: 6 }}>
                     <span style={{ background: e.color, color: '#fff', borderRadius: 999, padding: '1px 9px', fontSize: 10.5, fontWeight: 700, whiteSpace: 'nowrap' }}>{e.txt}</span>
                   </div>) : null })()}
+                {/* El porqué de un 0,00 €, también en la carta (el dueño se quedó
+                    a ciegas: el mínimo de equipo bloqueaba y aquí no se decía). */}
+                {(col as any).porVenta ? (() => { const r = (col as any).porVenta; return (
+                  <div style={{ textAlign: 'center', marginBottom: 6, fontSize: 10.5, fontWeight: 700,
+                                color: !r.grupalCumplido ? '#b45309' : r.agotado ? '#b91c1c' : '#0f766e', lineHeight: 1.4 }}>
+                    {!r.grupalCumplido
+                      ? <>⚠️ mínimo de equipo {r.minGrupal} — lleváis {r.teamVentas}; sin llegar, no se paga</>
+                      : r.tope > 0
+                        ? <>bote {eurFmt(r.repartido)} de {eurFmt(r.tope)}{r.agotado ? ' — ⛔ agotado' : ''}</>
+                        : <>repartido {eurFmt(r.repartido)}</>}
+                  </div>) })() : null}
                 {col.data.slice(0, 5).map((r, i) => (
                   <div key={r.name} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 6px', borderRadius: 8, background: i === 0 ? 'rgba(245,158,11,0.12)' : 'transparent', marginBottom: 3 }}>
                     {['🥇', '🥈', '🥉'][i]
