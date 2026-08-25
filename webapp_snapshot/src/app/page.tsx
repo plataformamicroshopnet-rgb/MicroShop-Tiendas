@@ -454,10 +454,14 @@ export default function DashboardPage() {
     // «Faltan» y el reto diario persiguen el SIGUIENTE objetivo sin cumplir;
     // con todos hechos, se queda en el último (el techo).
     const siguiente = objetivos.find(o => llevamos < o.obj) || objetivos[objetivos.length - 1] || null;
+    // …y el que viene DETRÁS del perseguido, para el sello de abajo (dueño,
+    // 26-ago-2026: «Faltan 34 para el 2º» en vez del % repetido).
+    const idxSig = siguiente ? objetivos.indexOf(siguiente) : -1;
+    const posterior = idxSig >= 0 ? (objetivos[idxSig + 1] || null) : null;
     const target = siguiente ? siguiente.obj : 0;
     const faltan = Math.max(0, target - llevamos);
     const progressPct = target > 0 ? Math.min(100, (llevamos / target) * 100) : 0;
-    return { kpi: k, llevamos, objetivos, siguiente, target, faltan, progressPct };
+    return { kpi: k, llevamos, objetivos, siguiente, posterior, target, faltan, progressPct };
   });
 
   // Detalle al pulsar una tarjeta del Termómetro: las operaciones que suman en
@@ -887,6 +891,17 @@ export default function DashboardPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontSize: '12px', color: 'var(--medium-gray)', fontWeight: 600 }}>
                   <span>Llevamos: <strong style={{ color: 'var(--text-main)' }}>{kpiFmt(k.llevamos, k.kpi.metrica)}</strong></span>
                   {k.target > 0 ? (() => {
+                    // Con un objetivo por detrás del perseguido, el sello dice lo que
+                    // falta para ESE («Faltan 34 para el 2º»); si ya se persigue el
+                    // último, el % de siempre.
+                    if (k.posterior) {
+                      const est = pctBadge((k.llevamos / k.posterior.obj) * 100)
+                      return (
+                        <span style={{ fontSize: 11.5, fontWeight: 800, color: est.color, background: est.background, padding: '1px 8px', borderRadius: '10px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                          Faltan {kpiFmt(Math.max(0, k.posterior.obj - k.llevamos), k.kpi.metrica)} para el {k.posterior.tramo}º
+                        </span>
+                      )
+                    }
                     const pctReal = (k.llevamos / k.target) * 100
                     const est = pctBadge(pctReal)
                     return (
