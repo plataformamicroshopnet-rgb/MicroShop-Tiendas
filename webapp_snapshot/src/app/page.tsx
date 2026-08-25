@@ -392,7 +392,11 @@ export default function DashboardPage() {
   // suma de los objetivos POR TIENDA (o el global si la fila es global). Es la
   // fuente que el usuario mantiene cada mes — antes el Termómetro no la miraba
   // y enseñaba el de la regla de comisiones (caso FTTR: 1 en vez de 9).
-  const objetivoTerritorial = (k: DashKpi): number => {
+  // Tramo pedido (dueño, 26-ago-2026): el termómetro persigue el objetivo del
+  // TRAMO que pide Movistar (el 2º por defecto); si ese mes la palanca no tiene
+  // ese tramo, se cae al anterior. Devuelve también QUÉ tramo acabó usando,
+  // para decirlo en la tarjeta.
+  const objetivoTerritorial = (k: DashKpi, tramo: number): { obj: number; tramo: number } => {
     const nom = String(k.nombre || '').toLowerCase().trim();
     const tipo = String(k.tipoVenta || '').toLowerCase().trim();
     const fila = territorialRules.find(r => {
@@ -400,15 +404,33 @@ export default function DashboardPage() {
       if (!tv) return false;
       return tv === nom || tv === tipo || nom.includes(tv) || tv.includes(nom);
     });
-    if (!fila) return 0;
+    if (!fila) return { obj: 0, tramo: 0 };
     const num = (v: any) => {
       const n = parseFloat(String(v ?? '').replace(/[^\d,.-]/g, '').replace(',', '.'));
       return Number.isFinite(n) ? n : 0;
     };
-    if (String(fila.obj1Type) === 'per_store') {
-      return Object.values(fila.obj1Stores || {}).reduce((a: number, v: any) => a + num(v), 0);
+    const deTramo = (n: number): number => {
+      if (String((fila as any)[`obj${n}Type`]) === 'per_store') {
+        return Object.values((fila as any)[`obj${n}Stores`] || {}).reduce((a: number, v: any) => a + num(v), 0);
+      }
+      return num((fila as any)[`obj${n}Global`]);
+    };
+    for (let n = Math.min(3, Math.max(1, tramo)); n >= 1; n--) {
+      const o = deTramo(n);
+      if (o > 0) return { obj: o, tramo: n };
     }
-    return num(fila.obj1Global);
+    return { obj: 0, tramo: 0 };
+  };
+
+  // El mismo baile con la regla de comisiones del mes (obj del 1º/2º/3º tramo).
+  const objetivoRegla = (rule: any, tramo: number): { obj: number; tramo: number } => {
+    if (!rule) return { obj: 0, tramo: 0 };
+    const campos = ['', 'objPrimerTramo', 'objSegundoTramo', 'objTercerTramo'];
+    for (let n = Math.min(3, Math.max(1, tramo)); n >= 1; n--) {
+      const o = Number(rule[campos[n]]) || 0;
+      if (o > 0) return { obj: o, tramo: n };
+    }
+    return { obj: 0, tramo: 0 };
   };
 
   const kpiData = cfg.kpis.map(k => {
@@ -425,15 +447,16 @@ export default function DashboardPage() {
     // cogía el respaldo de 50.000 € contra un objetivo real de 1.100 €).
     const esArpu = String(k.nombre || '').trim().toLowerCase().startsWith('arpu');
     const rule = ruleFor(k.nombre) || (esArpu ? ruleFor('ARPU') : undefined);
-    const objTerr = esUnidades ? objetivoTerritorial(k) : 0;
+    const tramoPedido = k.tramoObjetivo || 2;
+    const terr = esUnidades ? objetivoTerritorial(k, tramoPedido) : { obj: 0, tramo: 0 };
+    const deRegla = objetivoRegla(rule, tramoPedido);
     const target = k.objetivo > 0
       ? k.objetivo
-      : (objTerr
-        || (rule && rule.objPrimerTramo ? Number(rule.objPrimerTramo) : 0)
-        || OBJETIVO_FALLBACKS[k.nombre] || 0);
+      : (terr.obj || deRegla.obj || OBJETIVO_FALLBACKS[k.nombre] || 0);
+    const tramoUsado = k.objetivo > 0 ? 0 : (terr.obj ? terr.tramo : (deRegla.obj ? deRegla.tramo : 0));
     const faltan = Math.max(0, target - llevamos);
     const progressPct = target > 0 ? Math.min(100, (llevamos / target) * 100) : 0;
-    return { kpi: k, llevamos, target, faltan, progressPct };
+    return { kpi: k, llevamos, target, faltan, progressPct, tramoUsado };
   });
 
   // Detalle al pulsar una tarjeta del Termómetro: las operaciones que suman en
@@ -856,7 +879,7 @@ export default function DashboardPage() {
                     )
                   })()}
                   <span>{k.target > 0
-                    ? `Objetivo: ${kpiFmt(k.target, k.kpi.metrica)}`
+                    ? `Objetivo: ${kpiFmt(k.target, k.kpi.metrica)}${(k as any).tramoUsado >= 2 ? ` · ${(k as any).tramoUsado}º objetivo` : ''}`
                     : 'Objetivo: — (ponlo en Entrada de Datos o en Configurar Dashboard)'}</span>
                 </div>
               </div>

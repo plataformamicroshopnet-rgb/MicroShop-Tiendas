@@ -40,7 +40,7 @@ const delBtn: React.CSSProperties = {
 
 const uid = (prefix: string) => prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
 
-const nuevoKpi = (): DashKpi => ({ id: uid('k'), nombre: '', tipoVenta: '', metrica: 'count', objetivo: 0 })
+const nuevoKpi = (): DashKpi => ({ id: uid('k'), nombre: '', tipoVenta: '', metrica: 'count', objetivo: 0, tramoObjetivo: 2 })
 const nuevaMedalla = (): DashMedalla => ({ id: uid('m'), emoji: '🏅', nombre: '', tipoVenta: '', metrica: 'count' })
 
 // ─── Editor de un bloque (nombre + tipo de venta + métrica) ─────────────────
@@ -386,8 +386,21 @@ export default function ConfigDashboardPage() {
                     onChange={e => updateKpi(ki, { objetivo: Number(e.target.value) || 0 })}
                   />
                   <div style={{ fontSize: 11.5, color: 'var(--medium-gray)', marginTop: 4 }}>
-                    0 = automático: usa el objetivo de la regla del mes con este mismo nombre
-                    (y si ese mes no hay regla, el objetivo histórico del KPI).
+                    0 = automático: usa el objetivo del mes (Entrada de Datos o la regla con este
+                    mismo nombre), del tramo elegido aquí abajo.
+                  </div>
+                </div>
+                <div style={{ marginTop: 10, maxWidth: 280 }}>
+                  <label style={lbl}>🎯 Tramo del objetivo (en automático)</label>
+                  <select style={ipt} value={k.tramoObjetivo || 2}
+                          onChange={e => updateKpi(ki, { tramoObjetivo: Number(e.target.value) as 1 | 2 | 3 })}>
+                    <option value={1}>1º objetivo (el 100%)</option>
+                    <option value={2}>2º objetivo (lo que pide Movistar)</option>
+                    <option value={3}>3º objetivo (si la palanca lo tiene)</option>
+                  </select>
+                  <div style={{ fontSize: 11.5, color: 'var(--medium-gray)', marginTop: 4 }}>
+                    El termómetro persigue ese tramo del mes; si la palanca no lo tiene, baja al
+                    anterior. Cada mes se adapta solo a los objetivos nuevos.
                   </div>
                 </div>
               </div>
