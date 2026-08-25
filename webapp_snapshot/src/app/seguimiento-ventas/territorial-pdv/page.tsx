@@ -446,16 +446,27 @@ export default function TerritorialPdvPage() {
                     {displayObj}
                   </td>
                   
-                  {/* Tramos */}
-                  <td style={{ padding: '9px 12px', textAlign: 'center', color: row.tramoAplicado.includes('Tramo 1') ? '#34c759' : 'var(--text-muted)', fontWeight: row.tramoAplicado.includes('Tramo 1') ? 700 : 400 }}>
-                    {row.t1Raw}
-                  </td>
-                  <td style={{ padding: '9px 12px', textAlign: 'center', color: row.tramoAplicado.includes('Tramo 2') ? '#34c759' : 'var(--text-muted)', fontWeight: row.tramoAplicado.includes('Tramo 2') ? 700 : 400 }}>
-                    {row.t2Raw}
-                  </td>
-                  <td style={{ padding: '9px 12px', textAlign: 'center', color: row.tramoAplicado.includes('Tramo 3') ? '#34c759' : 'var(--text-muted)', fontWeight: row.tramoAplicado.includes('Tramo 3') ? 700 : 400 }}>
-                    {row.t3Raw}
-                  </td>
+                  {/* Tramos: la tarifa y, debajo, LO QUE SE COBRARÍA al llegar
+                      (dueño, 27-ago: «así sé lo que podría cobrar en cada tramo»).
+                      Verde = tramo ya alcanzado. */}
+                  {[1, 2, 3].map(k => {
+                    const alcanzado = row.tramoAplicado.includes(`Tramo ${k}`)
+                    const raw = k === 1 ? row.t1Raw : k === 2 ? row.t2Raw : row.t3Raw
+                    const pot = (row as any)[`potencial${k}`]
+                    return (
+                      <td key={k} style={{ padding: '9px 12px', textAlign: 'center',
+                                           color: alcanzado ? '#34c759' : 'var(--text-muted)',
+                                           fontWeight: alcanzado ? 700 : 400 }}>
+                        <div style={{ fontSize: '10.5px' }}>{raw}</div>
+                        {pot !== null && pot !== undefined && pot > 0.004 && (
+                          <div style={{ fontWeight: 800, fontSize: '12.5px',
+                                        color: alcanzado ? '#34c759' : 'var(--text-main)' }}>
+                            {Math.round(pot).toLocaleString('es-ES')} €
+                          </div>
+                        )}
+                      </td>
+                    )
+                  })}
                   <td style={{ padding: '9px 12px', textAlign: 'center', color: row.tramoAplicado.includes('Bonif') ? '#34c759' : 'var(--text-muted)', fontWeight: row.tramoAplicado.includes('Bonif') ? 700 : 400 }}>
                     {row.bonifRaw}
                   </td>
@@ -487,6 +498,39 @@ export default function TerritorialPdvPage() {
                 </tr>
               )
             })}
+
+            {/* LO QUE HABRÍA EN JUEGO EN CADA ESCENARIO: si TODAS las palancas
+                llegaran al tramo K (las que no tienen tramo K pagan su tramo más
+                alto definido). Los % van sobre la base de hoy. */}
+            {(() => {
+              const escenario = (k: number) => calculatedRows.reduce((acc: number, r: any) => {
+                for (let j = k; j >= 1; j--) {
+                  const pv = r[`potencial${j}`]
+                  if (pv !== null && pv !== undefined && pv > 0.004) return acc + pv
+                }
+                return acc
+              }, 0)
+              const e1 = escenario(1), e2 = escenario(2), e3 = escenario(3)
+              return (
+                <tr style={{ backgroundColor: 'rgba(52,199,89,0.05)', fontSize: '11.5px' }}>
+                  <td colSpan={3} style={{ padding: '8px 12px', color: 'var(--text-muted)', fontWeight: 700 }}>
+                    💡 Si todo llegara al tramo…
+                  </td>
+                  <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 800, color: 'var(--text-main)' }}>
+                    {Math.round(e1).toLocaleString('es-ES')} €
+                  </td>
+                  <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 800, color: 'var(--text-main)' }}>
+                    {Math.round(e2).toLocaleString('es-ES')} €
+                  </td>
+                  <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 800, color: 'var(--text-main)' }}>
+                    {Math.round(e3).toLocaleString('es-ES')} €
+                  </td>
+                  <td colSpan={4} style={{ padding: '8px 12px', color: 'var(--text-muted)', fontSize: '10.5px' }}>
+                    Los tramos en % van sobre las ventas de hoy: esa cifra crece según vendéis.
+                  </td>
+                </tr>
+              )
+            })()}
 
             {/* FILA DE TOTALES */}
             <tr style={{ 
