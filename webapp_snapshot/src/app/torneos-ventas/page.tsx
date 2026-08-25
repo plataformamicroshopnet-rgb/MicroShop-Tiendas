@@ -440,6 +440,8 @@ export default function TorneosVentasPage() {
                     Este concurso juega
                     {col.concurso.fechaInicio ? ` del ${col.concurso.fechaInicio.slice(8, 10)}/${col.concurso.fechaInicio.slice(5, 7)}` : ''}
                     {col.concurso.fechaFin ? ` al ${col.concurso.fechaFin.slice(8, 10)}/${col.concurso.fechaFin.slice(5, 7)}` : ''}
+                    {col.concurso.fechaInicio2 ? ` y del ${col.concurso.fechaInicio2.slice(8, 10)}/${col.concurso.fechaInicio2.slice(5, 7)}` : ''}
+                    {col.concurso.fechaFin2 ? ` al ${col.concurso.fechaFin2.slice(8, 10)}/${col.concurso.fechaFin2.slice(5, 7)}` : ''}
                     &nbsp;y ahora estás viendo <strong>{_nombreMes(_mesVisto.month)} {_mesVisto.year}</strong>.
                     <div style={{ marginTop: 6 }}>Cambia el mes del programa (arriba a la derecha) para ver su ranking y sus ganadores.</div>
                   </div>

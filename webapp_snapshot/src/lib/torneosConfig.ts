@@ -39,6 +39,8 @@ export interface Concurso {
   premios: TorneoPremio[]
   fechaInicio?: string   // 'YYYY-MM-DD' — vacío = sin límite (concurso permanente)
   fechaFin?: string      // 'YYYY-MM-DD' — vacío = sin límite
+  fechaInicio2?: string  // 2º TRAMO (opcional, dueño 25-ago-2026): el concurso
+  fechaFin2?: string     //   descansa y VUELVE a jugar entre estas fechas
   ventana?: TorneoVentana  // solo pinta algo si hay fechas; por defecto 'mes'
   premioModo?: TorneoPremioModo  // por defecto 'podio'
   importePorVenta?: number       // solo modo 'porVenta': € por venta
@@ -119,6 +121,8 @@ export function parseTorneosConfig(raw: any): TorneosConfig {
         })).filter((p: any) => p.pos > 0) : [],
         fechaInicio: fechaOk(c.fechaInicio),
         fechaFin: fechaOk(c.fechaFin),
+        fechaInicio2: fechaOk(c.fechaInicio2),
+        fechaFin2: fechaOk(c.fechaFin2),
         ventana: c.ventana === 'tramo' ? 'tramo' as const : 'mes' as const,
         premioModo: c.premioModo === 'porVenta' ? 'porVenta' as const : 'podio' as const,
         importePorVenta: Number(c.importePorVenta) || 0,
@@ -155,17 +159,26 @@ export function saleFechaISO(sale: any): string {
   return ''
 }
 
+// Los tramos de juego del concurso (0, 1 o 2), ordenados por fecha. El 2º
+// tramo (dueño, 25-ago-2026) comparte TODO con el 1º — mismo ranking y mismo
+// bote —: el concurso simplemente descansa entre uno y otro y vuelve a jugar.
+export function tramosDelConcurso(c: Concurso): { ini: string; fin: string }[] {
+  const ts: { ini: string; fin: string }[] = []
+  if (c.fechaInicio || c.fechaFin) ts.push({ ini: c.fechaInicio || '', fin: c.fechaFin || '' })
+  if (c.fechaInicio2 || c.fechaFin2) ts.push({ ini: c.fechaInicio2 || '', fin: c.fechaFin2 || '' })
+  return ts.sort((a, b) => ((a.ini || a.fin) < (b.ini || b.fin) ? -1 : 1))
+}
+
 // ¿Esta venta entra en la ventana del concurso? Sin fechas → siempre. Con
-// fechas y ventana 'tramo' → solo si su fecha cae dentro. Con ventana 'mes'
-// las fechas NO filtran ventas (solo dicen cuándo juega el concurso).
+// fechas y ventana 'tramo' → solo si su fecha cae dentro de ALGÚN tramo. Con
+// ventana 'mes' las fechas NO filtran ventas (solo dicen cuándo juega).
 export function ventaEnVentana(sale: any, c: Concurso): boolean {
   if (c.ventana !== 'tramo') return true
-  if (!c.fechaInicio && !c.fechaFin) return true
+  const tramos = tramosDelConcurso(c)
+  if (tramos.length === 0) return true
   const f = saleFechaISO(sale)
   if (!f) return false                       // sin fecha legible no puede competir en un tramo
-  if (c.fechaInicio && f < c.fechaInicio) return false
-  if (c.fechaFin && f > c.fechaFin) return false
-  return true
+  return tramos.some(t => !(t.ini && f < t.ini) && !(t.fin && f > t.fin))
 }
 
 // ¿El concurso tiene algo que ver con el MES que se está mirando? Sin fechas,
@@ -173,26 +186,37 @@ export function ventaEnVentana(sale: any, c: Concurso): boolean {
 // el ranking de ese mes NO debe pintarse (saldría todo a 0,00 € repartiendo
 // medallas entre empatados a cero, que fue lo que vio el dueño el 24-ago).
 export function concursoJuegaEnMes(c: Concurso, year: number, month: number): boolean {
-  if (!c.fechaInicio && !c.fechaFin) return true
+  const tramos = tramosDelConcurso(c)
+  if (tramos.length === 0) return true
   const mm = String(month).padStart(2, '0')
   const mesIni = `${year}-${mm}-01`
   const mesFin = `${year}-${mm}-31`
-  if (c.fechaFin && c.fechaFin < mesIni) return false
-  if (c.fechaInicio && c.fechaInicio > mesFin) return false
-  return true
+  return tramos.some(t => !(t.fin && t.fin < mesIni) && !(t.ini && t.ini > mesFin))
 }
 
 // Estado del concurso HOY, para el chip del ranking: null = permanente (sin chip).
 export function estadoConcurso(c: Concurso, hoyISO?: string): { txt: string; color: string } | null {
-  if (!c.fechaInicio && !c.fechaFin) return null
+  const tramos = tramosDelConcurso(c)
+  if (tramos.length === 0) return null
   const hoy = hoyISO || new Date().toISOString().slice(0, 10)
   const d = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`
-  if (c.fechaInicio && hoy < c.fechaInicio) return { txt: `⏳ empieza el ${d(c.fechaInicio)}`, color: '#64748b' }
-  if (c.fechaFin && hoy > c.fechaFin) return { txt: `🏁 finalizado el ${d(c.fechaFin)}`, color: '#7c3aed' }
-  const partes = []
-  if (c.fechaInicio) partes.push(`desde el ${d(c.fechaInicio)}`)
-  if (c.fechaFin) partes.push(`hasta el ${d(c.fechaFin)}`)
-  return { txt: `🟢 en juego ${partes.join(' ')}`, color: '#16a34a' }
+  for (let i = 0; i < tramos.length; i++) {
+    const t = tramos[i]
+    if (t.ini && hoy < t.ini) {
+      // aún no llega este tramo: antes del 1º «empieza», entre tramos «descansa»
+      return i === 0 ? { txt: `⏳ empieza el ${d(t.ini)}`, color: '#64748b' }
+                     : { txt: `⏳ descansando — vuelve el ${d(t.ini)}`, color: '#64748b' }
+    }
+    if (!t.fin || hoy <= t.fin) {
+      const partes = []
+      if (t.ini) partes.push(`desde el ${d(t.ini)}`)
+      if (t.fin) partes.push(`hasta el ${d(t.fin)}`)
+      const sig = tramos[i + 1]
+      const vuelta = sig && sig.ini ? ` · vuelve el ${d(sig.ini)}` : ''
+      return { txt: `🟢 en juego ${partes.join(' ')}${vuelta}`, color: '#16a34a' }
+    }
+  }
+  return { txt: `🏁 finalizado el ${d(tramos[tramos.length - 1].fin)}`, color: '#7c3aed' }
 }
 
 // Aportación de UNA venta a UN concurso (0 si no cuenta; 1 si métrica nº; € si métrica importe).
@@ -285,10 +309,14 @@ export function repartoPorVenta(items: { name: string; sale: any }[], c: Concurs
 export function generaNotasConcurso(c: Concurso): string {
   const partes: string[] = []
   const d = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`
-  if (c.fechaInicio || c.fechaFin) {
+  const tramos = tramosDelConcurso(c)
+  if (tramos.length > 0) {
     let f = 'Juega'
-    if (c.fechaInicio) f += ` del ${d(c.fechaInicio)}`
-    if (c.fechaFin) f += ` al ${d(c.fechaFin)}`
+    tramos.forEach((t, i) => {
+      if (i > 0) f += ' y'
+      if (t.ini) f += ` del ${d(t.ini)}`
+      if (t.fin) f += ` al ${d(t.fin)}`
+    })
     f += c.ventana === 'tramo' ? ' — solo cuentan las ventas de esas fechas'
                                : ' — cuentan todas las ventas del mes'
     partes.push(f + '.')

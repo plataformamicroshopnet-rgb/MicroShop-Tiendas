@@ -19,6 +19,8 @@ const nuevoConcurso = (): Concurso => ({
   premios: [],
   fechaInicio: '',
   fechaFin: '',
+  fechaInicio2: '',
+  fechaFin2: '',
   ventana: 'mes',
   premioModo: 'podio',
   importePorVenta: 0,
@@ -248,6 +250,25 @@ export default function ConfiguradorTorneosPage() {
                     <option value="mes">Todas las del mes (retroactivo)</option>
                     <option value="tramo">Solo las del tramo de fechas</option>
                   </select>
+                </div>
+              </div>
+              {/* 2º TRAMO (opcional, dueño 25-ago-2026): el concurso descansa y
+                  vuelve a jugar — MISMO ranking y MISMO bote, sin crear otro. */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 14, alignItems: 'end', marginTop: 10 }}>
+                <div>
+                  <label style={{ fontSize: 12, color: 'var(--medium-gray,#64748b)', fontWeight: 600 }}>2º tramo — vuelve a jugar (opcional)</label>
+                  <input type="date" style={{ ...ipt, width: '100%', marginTop: 4 }} value={c.fechaInicio2 || ''}
+                         onChange={e => updateConcurso(ci, { fechaInicio2: e.target.value })} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, color: 'var(--medium-gray,#64748b)', fontWeight: 600 }}>2º tramo — termina</label>
+                  <input type="date" style={{ ...ipt, width: '100%', marginTop: 4 }} value={c.fechaFin2 || ''}
+                         onChange={e => updateConcurso(ci, { fechaFin2: e.target.value })} />
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--medium-gray,#64748b)', lineHeight: 1.5, paddingBottom: 6 }}>
+                  {(c.fechaInicio2 || c.fechaFin2)
+                    ? 'El concurso descansa entre los dos tramos y vuelve con el MISMO ranking y el mismo bote.'
+                    : 'Déjalo vacío si el concurso juega de un tirón.'}
                 </div>
               </div>
               <div style={{ fontSize: 12, color: 'var(--medium-gray,#64748b)', marginTop: 8, lineHeight: 1.5 }}>
