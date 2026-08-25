@@ -23,14 +23,11 @@ export interface DashBloqueTipos {
 
 export interface DashKpi extends DashBloqueTipos {
   id: string
-  /** Objetivo mensual. 0 = AUTOMÁTICO: se toma del mes (PRV Territorial o
-   *  regla de comisiones con este mismo nombre), del tramo elegido abajo. */
+  /** Objetivo mensual. 0 = AUTOMÁTICO: la home enseña UN MEDIDOR POR TRAMO
+   *  del mes (1º/2º/3º del PRV Territorial o de la regla homónima — dueño,
+   *  26-ago-2026: «uno del 100% y otro del 115%»). Con un número aquí, un
+   *  solo medidor con este objetivo. */
   objetivo: number
-  /** En automático, TRAMO del objetivo del mes que persigue el termómetro
-   *  (dueño, 26-ago-2026: «adaptarlas a los porcentajes que pide Movistar»).
-   *  2 = el 2º objetivo (por defecto); si el mes no tiene ese tramo, se cae
-   *  al anterior. Con objetivo tecleado a mano, este campo no pinta nada. */
-  tramoObjetivo?: 1 | 2 | 3
 }
 export interface DashMedalla extends DashBloqueTipos { id: string; emoji: string }
 
@@ -126,11 +123,6 @@ export function parseDashboardConfig(raw: any): DashboardConfig {
         ...parseBloque(k, d.kpis[Math.min(i, d.kpis.length - 1)]),
         id: String(k?.id || `k${i + 1}`),
         objetivo: Math.max(0, Number(k?.objetivo) || 0),
-        // sin guardar = 2º objetivo (lo que pide Movistar); 1 y 3 se respetan
-        tramoObjetivo: ((): 1 | 2 | 3 => {
-          const t = Math.floor(Number(k?.tramoObjetivo) || 0)
-          return t === 1 || t === 3 ? t : 2
-        })(),
       }))
       .filter((k: DashKpi) => k.nombre)
     const medallas = (Array.isArray(obj.medallas) ? obj.medallas : d.medallas)

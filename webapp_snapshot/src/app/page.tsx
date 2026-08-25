@@ -392,45 +392,48 @@ export default function DashboardPage() {
   // suma de los objetivos POR TIENDA (o el global si la fila es global). Es la
   // fuente que el usuario mantiene cada mes — antes el Termómetro no la miraba
   // y enseñaba el de la regla de comisiones (caso FTTR: 1 en vez de 9).
-  // Tramo pedido (dueño, 26-ago-2026): el termómetro persigue el objetivo del
-  // TRAMO que pide Movistar (el 2º por defecto); si ese mes la palanca no tiene
-  // ese tramo, se cae al anterior. Devuelve también QUÉ tramo acabó usando,
-  // para decirlo en la tarjeta.
-  const objetivoTerritorial = (k: DashKpi, tramo: number): { obj: number; tramo: number } => {
+  // DOS MEDIDORES (dueño, 26-ago-2026: «uno del 100% y otro del 115%»): cada
+  // palanca enseña un medidor POR OBJETIVO del mes (1º, 2º y 3º si existe),
+  // leídos de UNA sola fuente — el PRV Territorial si define el 1º, y si no la
+  // regla de comisiones — para no mezclar escalas distintas de tramos.
+  const filaTerritorial = (k: DashKpi) => {
     const nom = String(k.nombre || '').toLowerCase().trim();
     const tipo = String(k.tipoVenta || '').toLowerCase().trim();
-    const fila = territorialRules.find(r => {
+    return territorialRules.find(r => {
       const tv = String(r?.tipoVenta || '').toLowerCase().trim();
       if (!tv) return false;
       return tv === nom || tv === tipo || nom.includes(tv) || tv.includes(nom);
     });
-    if (!fila) return { obj: 0, tramo: 0 };
-    const num = (v: any) => {
-      const n = parseFloat(String(v ?? '').replace(/[^\d,.-]/g, '').replace(',', '.'));
-      return Number.isFinite(n) ? n : 0;
-    };
-    const deTramo = (n: number): number => {
-      if (String((fila as any)[`obj${n}Type`]) === 'per_store') {
-        return Object.values((fila as any)[`obj${n}Stores`] || {}).reduce((a: number, v: any) => a + num(v), 0);
-      }
-      return num((fila as any)[`obj${n}Global`]);
-    };
-    for (let n = Math.min(3, Math.max(1, tramo)); n >= 1; n--) {
-      const o = deTramo(n);
-      if (o > 0) return { obj: o, tramo: n };
-    }
-    return { obj: 0, tramo: 0 };
   };
-
-  // El mismo baile con la regla de comisiones del mes (obj del 1º/2º/3º tramo).
-  const objetivoRegla = (rule: any, tramo: number): { obj: number; tramo: number } => {
-    if (!rule) return { obj: 0, tramo: 0 };
-    const campos = ['', 'objPrimerTramo', 'objSegundoTramo', 'objTercerTramo'];
-    for (let n = Math.min(3, Math.max(1, tramo)); n >= 1; n--) {
-      const o = Number(rule[campos[n]]) || 0;
-      if (o > 0) return { obj: o, tramo: n };
+  const numTerr = (v: any) => {
+    const n = parseFloat(String(v ?? '').replace(/[^\d,.-]/g, '').replace(',', '.'));
+    return Number.isFinite(n) ? n : 0;
+  };
+  const objTerritorialN = (fila: any, n: number): number => {
+    if (!fila) return 0;
+    if (String(fila[`obj${n}Type`]) === 'per_store') {
+      return Object.values(fila[`obj${n}Stores`] || {}).reduce((a: number, v: any) => a + numTerr(v), 0);
     }
-    return { obj: 0, tramo: 0 };
+    return numTerr(fila[`obj${n}Global`]);
+  };
+  const objReglaN = (rule: any, n: number): number =>
+    Number(rule?.[['', 'objPrimerTramo', 'objSegundoTramo', 'objTercerTramo'][n]]) || 0;
+
+  // Los objetivos del KPI, de menor a mayor y sin repetidos (MPA trae 8/8).
+  // tramo 0 = objetivo tecleado a mano o respaldo histórico (sin ordinal).
+  const objetivosDelKpi = (k: DashKpi, esUnidades: boolean, rule: any): { tramo: number; obj: number }[] => {
+    if (k.objetivo > 0) return [{ tramo: 0, obj: k.objetivo }];
+    const fila = esUnidades ? filaTerritorial(k) : null;
+    const lee = (fila && objTerritorialN(fila, 1) > 0)
+      ? (n: number) => objTerritorialN(fila, n)
+      : (n: number) => objReglaN(rule, n);
+    const lista = [1, 2, 3]
+      .map(n => ({ tramo: n, obj: lee(n) }))
+      .filter(x => x.obj > 0)
+      .filter((x, i, a) => i === 0 || x.obj !== a[i - 1].obj);
+    if (lista.length > 0) return lista;
+    const fb = OBJETIVO_FALLBACKS[k.nombre] || 0;
+    return fb > 0 ? [{ tramo: 0, obj: fb }] : [];
   };
 
   const kpiData = cfg.kpis.map(k => {
@@ -447,16 +450,14 @@ export default function DashboardPage() {
     // cogía el respaldo de 50.000 € contra un objetivo real de 1.100 €).
     const esArpu = String(k.nombre || '').trim().toLowerCase().startsWith('arpu');
     const rule = ruleFor(k.nombre) || (esArpu ? ruleFor('ARPU') : undefined);
-    const tramoPedido = k.tramoObjetivo || 2;
-    const terr = esUnidades ? objetivoTerritorial(k, tramoPedido) : { obj: 0, tramo: 0 };
-    const deRegla = objetivoRegla(rule, tramoPedido);
-    const target = k.objetivo > 0
-      ? k.objetivo
-      : (terr.obj || deRegla.obj || OBJETIVO_FALLBACKS[k.nombre] || 0);
-    const tramoUsado = k.objetivo > 0 ? 0 : (terr.obj ? terr.tramo : (deRegla.obj ? deRegla.tramo : 0));
+    const objetivos = objetivosDelKpi(k, esUnidades, rule);
+    // «Faltan» y el reto diario persiguen el SIGUIENTE objetivo sin cumplir;
+    // con todos hechos, se queda en el último (el techo).
+    const siguiente = objetivos.find(o => llevamos < o.obj) || objetivos[objetivos.length - 1] || null;
+    const target = siguiente ? siguiente.obj : 0;
     const faltan = Math.max(0, target - llevamos);
     const progressPct = target > 0 ? Math.min(100, (llevamos / target) * 100) : 0;
-    return { kpi: k, llevamos, target, faltan, progressPct, tramoUsado };
+    return { kpi: k, llevamos, objetivos, siguiente, target, faltan, progressPct };
   });
 
   // Detalle al pulsar una tarjeta del Termómetro: las operaciones que suman en
@@ -842,7 +843,7 @@ export default function DashboardPage() {
                     esPrincipal ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                         <span style={{ fontSize: '12px', fontWeight: 700, color: pal.faltanCol, background: pal.faltanBg, padding: '2px 8px', borderRadius: '12px' }}>
-                          Faltan {kpiFmt(k.faltan, k.kpi.metrica)}
+                          Faltan {kpiFmt(k.faltan, k.kpi.metrica)}{k.siguiente && k.siguiente.tramo > 0 ? ` para el ${k.siguiente.tramo}º` : ''}
                         </span>
                         {diasLaborablesRestantes > 0 && (
                           <span style={{ fontSize: 11.5, fontWeight: 600, color: '#d97706' }}>
@@ -853,7 +854,7 @@ export default function DashboardPage() {
                       </div>
                     ) : (
                       <span style={{ fontSize: '12px', fontWeight: 700, color: pal.faltanCol, background: pal.faltanBg, padding: '2px 8px', borderRadius: '12px' }}>
-                        Faltan {kpiFmt(k.faltan, k.kpi.metrica)}
+                        Faltan {kpiFmt(k.faltan, k.kpi.metrica)}{k.siguiente && k.siguiente.tramo > 0 ? ` para el ${k.siguiente.tramo}º` : ''}
                       </span>
                     )
                   ) : (
@@ -862,25 +863,40 @@ export default function DashboardPage() {
                     </span>
                   )}
                 </div>
-                {k.target > 0 && (
-                  <div style={{ width: '100%', height: '8px', background: 'var(--border-strong)', borderRadius: '4px', overflow: 'hidden', marginBottom: 4 }}>
-                    <div style={{ width: `${k.progressPct}%`, height: '100%', background: pal.grad, borderRadius: '4px' }} />
+                {/* UN MEDIDOR POR OBJETIVO (dueño, 26-ago-2026): el del 100%
+                    y el del 115% — y el 3º donde la palanca lo tenga. */}
+                {k.objetivos.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 6 }}>
+                    {k.objetivos.map(o => {
+                      const pct = Math.min(100, (k.llevamos / o.obj) * 100);
+                      const hecho = k.llevamos >= o.obj;
+                      return (
+                        <div key={o.tramo}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 11, fontWeight: 700, color: hecho ? '#10b981' : 'var(--medium-gray)', marginBottom: 2 }}>
+                            <span>{o.tramo > 0 ? `${o.tramo}º objetivo` : 'Objetivo'} · {kpiFmt(o.obj, k.kpi.metrica)}</span>
+                            <span>{hecho ? '✓ logrado' : `${Math.round((k.llevamos / o.obj) * 100)}%`}</span>
+                          </div>
+                          <div style={{ width: '100%', height: 7, background: 'var(--border-strong)', borderRadius: 4, overflow: 'hidden' }}>
+                            <div style={{ width: `${pct}%`, height: '100%', background: hecho ? '#10b981' : pal.grad, borderRadius: 4 }} />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontSize: '12px', color: 'var(--medium-gray)', fontWeight: 600 }}>
                   <span>Llevamos: <strong style={{ color: 'var(--text-main)' }}>{kpiFmt(k.llevamos, k.kpi.metrica)}</strong></span>
-                  {k.target > 0 && (() => {
+                  {k.target > 0 ? (() => {
                     const pctReal = (k.llevamos / k.target) * 100
                     const est = pctBadge(pctReal)
                     return (
                       <span style={{ fontSize: 11.5, fontWeight: 800, color: est.color, background: est.background, padding: '1px 8px', borderRadius: '10px', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                        {Math.round(pctReal)}% del objetivo
+                        {Math.round(pctReal)}%{k.siguiente && k.siguiente.tramo > 0 ? ` del ${k.siguiente.tramo}º objetivo` : ' del objetivo'}
                       </span>
                     )
-                  })()}
-                  <span>{k.target > 0
-                    ? `Objetivo: ${kpiFmt(k.target, k.kpi.metrica)}${(k as any).tramoUsado >= 2 ? ` · ${(k as any).tramoUsado}º objetivo` : ''}`
-                    : 'Objetivo: — (ponlo en Entrada de Datos o en Configurar Dashboard)'}</span>
+                  })() : (
+                    <span>Objetivo: — (ponlo en Entrada de Datos o en Configurar Dashboard)</span>
+                  )}
                 </div>
               </div>
             );
