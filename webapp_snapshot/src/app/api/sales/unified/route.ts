@@ -145,11 +145,18 @@ export async function POST(request: Request) {
             return !isNaN(imp) && imp > 0;
          });
          
-         if (hasInvalidSuscripcion) {
+         // Puerta para el caso legítimo (dueño, 27-ago-2026, cliente real con
+         // traslado ajeno a la suscripción): mismo circuito que el aviso de
+         // duplicados — 409 con la bandera, el formulario pregunta con todas
+         // las letras y solo entra si se confirma. La red de seguridad de hoy
+         // (cotejo de la Revisión + re-verificación N+3) destapa sola las que
+         // Telefónica al final no pague.
+         if (hasInvalidSuscripcion && !data.confirmarAntifraude) {
             return NextResponse.json({ 
               success: false, 
-              error: 'Antifraude: No se puede comisionar una Suscripción TV a este NIF porque ha realizado un Traslado miMovistar (hoy o en los próximos 20 días).' 
-            }, { status: 400 });
+              antifraude: true,
+              error: 'Antifraude: este NIF tiene un Traslado miMovistar de los últimos 20 días y Telefónica suele NO pagar la Suscripción TV/Repo que lo acompaña.' 
+            }, { status: 409 });
          }
        }
     }

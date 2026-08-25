@@ -820,26 +820,37 @@ export default function NuevaVentaPage() {
     }
 
     try {
-      let res = await fetch('/api/sales/unified', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, periodKey: activePeriodKey, codigo: selectedTienda })
-      })
-
-      let data = await res.json()
-
-      // Posible duplicado: el servidor avisa (409) y el comercial decide
-      if (res.status === 409 && data.duplicado) {
-        if (!window.confirm(data.error + '\n\nPulsa Aceptar SOLO si es una venta nueva de verdad.')) {
-          setLoading(false)
-          return
-        }
+      // Los avisos con decisión (antifraude de traslados, posible duplicado)
+      // vuelven como 409 con su bandera: se pregunta, y si el comercial acepta
+      // se reintenta ACUMULANDO las confirmaciones (pueden encadenarse los dos).
+      const confirmaciones: any = {}
+      let res: Response = null as any
+      let data: any = null
+      for (let intento = 0; intento < 3; intento++) {
         res = await fetch('/api/sales/unified', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...formData, periodKey: activePeriodKey, codigo: selectedTienda, confirmarDuplicado: true })
+          body: JSON.stringify({ ...formData, periodKey: activePeriodKey, codigo: selectedTienda, ...confirmaciones })
         })
         data = await res.json()
+        if (res.status !== 409) break
+        if (data.antifraude && !confirmaciones.confirmarAntifraude) {
+          if (!window.confirm('⚠️ AVISO ANTIFRAUDE\n\n' + data.error +
+              '\n\nSi la tramitas y Telefónica no la paga, saldrá como impago en la Revisión de ese mes.' +
+              '\n\nPulsa Aceptar SOLO si estás seguro de que es una operación real que Telefónica va a liquidar.')) {
+            setLoading(false)
+            return
+          }
+          confirmaciones.confirmarAntifraude = true
+        } else if (data.duplicado && !confirmaciones.confirmarDuplicado) {
+          if (!window.confirm(data.error + '\n\nPulsa Aceptar SOLO si es una venta nueva de verdad.')) {
+            setLoading(false)
+            return
+          }
+          confirmaciones.confirmarDuplicado = true
+        } else {
+          break
+        }
       }
 
       if (res.ok && data.success) {
