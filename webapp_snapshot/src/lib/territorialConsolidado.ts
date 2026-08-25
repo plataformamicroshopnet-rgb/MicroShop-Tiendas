@@ -256,9 +256,20 @@ export function computeTerritorialRows(input: TerritorialInput): any[] {
 
     // ── LO QUE COBRARÍA EN CADA TRAMO (dueño, 27-ago-2026: «así sé lo que
     // podría cobrar en cada tramo»). Hipótesis: el tramo se alcanza en las 4
-    // tiendas. Los tramos planos pagan su importe POR TIENDA (Fútbol 300 € × 4);
-    // los de % se aplican sobre la base DE HOY (comisiones € con el
-    // condicionante, unidades sin él) — esa base crece según se vende. ──
+    // tiendas. Los tramos planos pagan su importe POR TIENDA (Fútbol 300 € × 4).
+    // Los de % se calculan SIEMPRE sobre el OBJETIVO de su tramo, nunca sobre
+    // lo vendido hoy (corrección del dueño, 27-ago). Con el condicionante
+    // baseComision (objetivo en unidades, base en comisiones €) se proyecta
+    // con la comisión media por unidad de hoy × el objetivo. ──
+    const objetivoTramo = (k: number): number => {
+      const tipo = (terrRule as any)[`obj${k}Type`]
+      if (tipo === 'per_store') {
+        return TIENDAS_FISICAS.reduce((a, st) =>
+          a + parseNumber((terrRule as any)[`obj${k}Stores`]?.[st] || '0'), 0)
+      }
+      return parseNumber((terrRule as any)[`obj${k}Global`])
+    }
+    const comTotal = perStoreCom.reduce((a, b) => a + b, 0)
     const potencialTramo = (k: number): number | null => {
       const raw = (terrRule as any)[`importe${k}`]
       const txt = String(raw ?? '').trim()
@@ -266,12 +277,18 @@ export function computeTerritorialRows(input: TerritorialInput): any[] {
       const num = parseNumber(raw)
       if (!(num > 0)) return null
       if (!String(raw).includes('%')) return num * TIENDAS_FISICAS.length
-      const base = terrRule.baseComision ? perStoreCom.reduce((a, b) => a + b, 0) : salesTot
-      return base * (num / 100)
+      // SIEMPRE sobre el OBJETIVO del tramo («lo quiero sobre el objetivo que
+      // me marcan, en esta y todas las palancas» — dueño, 27-ago-2026).
+      const objK = objetivoTramo(k)
+      if (!(objK > 0)) return null
+      if (terrRule.baseComision) {
+        // objetivo en unidades, base en comisiones €: comisión media de hoy × objetivo
+        const media = ventasBase > 0 ? comTotal / ventasBase : 0
+        return media * objK * (num / 100)
+      }
+      // objetivo y base en la misma unidad (€ en Dispositivos, uds en el resto)
+      return objK * (num / 100)
     }
-    const potencial1 = potencialTramo(1)
-    const potencial2 = potencialTramo(2)
-    const potencial3 = potencialTramo(3)
 
     // Base de comisiones (€) y unidades de la palanca, SIEMPRE con O2 excluido (su
     // territorial es aparte). Se exponen para reusar fuera del territorial — p. ej.
@@ -280,6 +297,10 @@ export function computeTerritorialRows(input: TerritorialInput): any[] {
     const comisionBase = perStoreData.reduce((acc, d) =>
       acc + d.logs.filter(_notO2).reduce((a: number, s: any) => a + getSaleCommission(s, ctx), 0), 0)
     const ventasBase = perStoreData.reduce((acc, d) => acc + d.logs.filter(_notO2).length, 0)
+
+    const potencial1 = potencialTramo(1)
+    const potencial2 = potencialTramo(2)
+    const potencial3 = potencialTramo(3)
 
     // Objetivo/tramo para mostrar (objetivo global de tramo 1; en per_store no hay global).
     const obj1Target = terrRule.obj1Type === 'global' ? parseNumber(terrRule.obj1Global) : 0

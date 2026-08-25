@@ -526,7 +526,7 @@ export default function TerritorialPdvPage() {
                     {Math.round(e3).toLocaleString('es-ES')} €
                   </td>
                   <td colSpan={4} style={{ padding: '8px 12px', color: 'var(--text-muted)', fontSize: '10.5px' }}>
-                    Los tramos en % van sobre las ventas de hoy: esa cifra crece según vendéis.
+                    Los € de los tramos en % están calculados sobre el OBJETIVO de cada tramo.
                   </td>
                 </tr>
               )
