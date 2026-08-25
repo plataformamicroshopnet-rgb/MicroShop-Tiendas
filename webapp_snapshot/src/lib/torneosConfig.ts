@@ -49,6 +49,9 @@ export interface Concurso {
   minGrupal?: number             // solo 'porVenta': ventas mínimas ENTRE TODOS — sin llegar, no cobra nadie
   objetivo2Grupal?: number       // solo 'porVenta' (dueño, 25-ago-2026): 2º OBJETIVO de equipo (ventas)
   importePorVenta2?: number      //   al llegar, TODAS las ventas pasan a pagarse a este importe (retroactivo)
+  palancaRef?: string            // objetivos en % (dueño, 26-ago-2026): regla de comisiones de referencia
+  minGrupalPct?: number          //   mínimo de equipo como % del 1º objetivo de esa palanca (100 = entero)
+  objetivo2Pct?: number          //   2º objetivo como % del mismo objetivo (ej. 115)
   notas?: string                 // nota extra A MANO; las condiciones salen solas (generaNotasConcurso)
   tituloColor?: string           // color del nombre en el ranking ('' = el de siempre)
   tituloSize?: number            // tamaño en px del nombre en el ranking (0 = el de siempre)
@@ -133,6 +136,9 @@ export function parseTorneosConfig(raw: any): TorneosConfig {
         minGrupal: Math.max(0, Math.floor(Number(c.minGrupal) || 0)),
         objetivo2Grupal: Math.max(0, Math.floor(Number(c.objetivo2Grupal) || 0)),
         importePorVenta2: Number(c.importePorVenta2) || 0,
+        palancaRef: String(c.palancaRef || '').trim(),
+        minGrupalPct: Math.max(0, Number(c.minGrupalPct) || 0),
+        objetivo2Pct: Math.max(0, Number(c.objetivo2Pct) || 0),
         notas: String(c.notas || ''),
         tituloColor: /^#[0-9a-fA-F]{3,8}$/.test(String(c.tituloColor || '')) ? String(c.tituloColor) : '',
         tituloSize: Math.max(0, Math.min(40, Number(c.tituloSize) || 0)),
@@ -237,6 +243,42 @@ export function concursoSaleValue(sale: any, concurso: Concurso, catalogs?: Reco
   return concurso.metrica === 'importe' ? (getValueForRule(sale, concurso.nombre, catalogs) || 0) : 1
 }
 
+// ── OBJETIVOS EN % DEL OBJETIVO DE LA PALANCA (dueño, 26-ago-2026) ──────────
+// «Llegar al 100%» = el PRIMER objetivo de la palanca de comisiones del mes,
+// entero (Convergente: 67 → el 115% son 77). Así el torneo sigue solo a los
+// objetivos cuando cambian de mes — y como el equipo se mide con las MISMAS
+// ventas que la palanca, las bajas que excluye la liquidación bajan el marcador
+// y el torneo se re-evalúa igual que las comisiones. El configurador guarda
+// TAMBIÉN las unidades resueltas: si aquí no llegan reglas, valen esas.
+const normTxt = (v: any) => String(v || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim()
+
+export function reglaDeReferencia(c: Concurso, reglas: any[]): any | null {
+  if (!Array.isArray(reglas) || reglas.length === 0) return null
+  const ref = normTxt(c.palancaRef)
+  if (ref) {
+    const porNombre = reglas.find(r => normTxt(r?.nombre) === ref)
+    if (porNombre) return porNombre
+  }
+  const tipo = normTxt(c.tipoVenta)
+  if (!tipo) return null
+  return reglas.find(r => normTxt(r?.nombre) === tipo)
+      || reglas.find(r => normTxt(r?.productosCuentan) === tipo)
+      || null
+}
+
+export function resolverObjetivosTorneo(c: Concurso, reglas: any[]): Concurso {
+  const minPct = Number(c.minGrupalPct) || 0
+  const obj2Pct = Number(c.objetivo2Pct) || 0
+  if (minPct <= 0 && obj2Pct <= 0) return c
+  const regla = reglaDeReferencia(c, reglas)
+  const obj1 = regla ? (parseFloat(String(regla.objPrimerTramo ?? '').replace(',', '.')) || 0) : 0
+  if (!(obj1 > 0)) return c        // sin la palanca a mano: valen las unidades guardadas
+  const out = { ...c }
+  if (minPct > 0) out.minGrupal = Math.round(obj1 * minPct / 100)
+  if (obj2Pct > 0) out.objetivo2Grupal = Math.round(obj1 * obj2Pct / 100)
+  return out
+}
+
 // ── Modo «porVenta»: el reparto del EXTRA del mes ────────────────────────────
 // Cada venta que puntúa paga `importePorVenta` € al que la hizo. Si hay TOPE
 // de bote, las ventas cobran POR ORDEN DE FECHA (da igual de quién sean) hasta
@@ -339,9 +381,12 @@ export function generaNotasConcurso(c: Concurso): string {
   if ((c.premioModo || 'podio') === 'porVenta') {
     if (Number(c.importePorVenta) > 0) partes.push(`Se paga ${fmtEur(Number(c.importePorVenta))} por venta realizada.`)
     if (Number(c.importePorVenta2) > 0 && Number(c.objetivo2Grupal) > 0)
-      partes.push(`🎯 Al llegar el equipo a ${c.objetivo2Grupal} venta(s), TODAS pasan a ${fmtEur(Number(c.importePorVenta2))} por venta.`)
+      partes.push(`🎯 Al llegar el equipo a ${c.objetivo2Grupal} venta(s)`
+        + (Number(c.objetivo2Pct) > 0 ? ` (el ${c.objetivo2Pct}% del objetivo${c.palancaRef ? ' de ' + c.palancaRef : ''})` : '')
+        + `, TODAS pasan a ${fmtEur(Number(c.importePorVenta2))} por venta.`)
     if (Number(c.minIndividual) > 0) partes.push(`Mínimo individual: ${c.minIndividual} venta(s) para cobrar.`)
-    if (Number(c.minGrupal) > 0) partes.push(`Mínimo de equipo: ${c.minGrupal} venta(s) entre todos.`)
+    if (Number(c.minGrupal) > 0) partes.push(`Mínimo de equipo: ${c.minGrupal} venta(s) entre todos`
+      + (Number(c.minGrupalPct) > 0 ? ` (el ${c.minGrupalPct}% del objetivo${c.palancaRef ? ' de ' + c.palancaRef : ''})` : '') + '.')
     if (Number(c.topeBote) > 0) partes.push(`Bote máximo: ${fmtEur(Number(c.topeBote))} entre todos, por orden de venta.`)
   }
   if (c.notas) partes.push(String(c.notas))
@@ -358,11 +403,12 @@ export function generaNotasConcurso(c: Concurso): string {
 export interface TorneoExtraConcepto { concepto: string; detalle: string; importe: number }
 
 export function torneoExtrasPorVendedor(
-  sales: any[], cfg: TorneosConfig, catalogs?: Record<string, any[]>,
+  sales: any[], cfg: TorneosConfig, catalogs?: Record<string, any[]>, reglas?: any[],
 ): Record<string, TorneoExtraConcepto[]> {
   const out: Record<string, TorneoExtraConcepto[]> = {}
   const norm = (v: any) => String(v || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim()
-  for (const c of cfg.concursos) {
+  for (const cRaw of cfg.concursos) {
+    const c = reglas && reglas.length ? resolverObjetivosTorneo(cRaw, reglas) : cRaw
     if ((c.premioModo || 'podio') !== 'porVenta') continue
     if (!(Number(c.importePorVenta) > 0)) continue
     const items: { name: string; sale: any }[] = []

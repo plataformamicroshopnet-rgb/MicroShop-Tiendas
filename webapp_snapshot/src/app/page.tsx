@@ -11,7 +11,7 @@ import { getSaleCommission } from '@/lib/saleCommission'
 import { getEffectiveTiendaComerciales } from '@/lib/comercialRoster'
 import { can } from '@/lib/permissions'
 import { getDiasLaborablesRestantes } from '@/lib/trackingCalculations'
-import { loadTorneosConfigMes, concursoSaleValue, estadoConcurso, concursoJuegaEnMes, repartoPorVenta, TorneosConfig } from '@/lib/torneosConfig'
+import { loadTorneosConfigMes, concursoSaleValue, estadoConcurso, concursoJuegaEnMes, repartoPorVenta, resolverObjetivosTorneo, TorneosConfig } from '@/lib/torneosConfig'
 import {
   loadDashboardConfig,
   DEFAULT_DASHBOARD_CONFIG,
@@ -573,7 +573,8 @@ export default function DashboardPage() {
           if (!v || v.toLowerCase() === 'marta') return;
           items.push({ name: v, sale: s });
         });
-        const rep = repartoPorVenta(items, c, catalogs);
+        // objetivos en % del objetivo de la palanca: resueltos con las reglas del mes
+        const rep = repartoPorVenta(items, resolverObjetivosTorneo(c, tiendaRules), catalogs);
         // Con el mínimo de equipo sin llegar se enseña lo EN JUEGO (lo que se
         // puede perder), que motiva más que un 0,00 € (dueño, 24-ago-2026).
         const conFila = new Set(rep.filas.map(f => f.name));

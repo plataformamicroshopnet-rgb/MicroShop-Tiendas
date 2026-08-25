@@ -125,7 +125,7 @@ export function useComisionesData(user?: any) {
         catalogs,
         fttrDiscount,
         // El EXTRA de los torneos «X € por venta», a la nómina como un bono más
-        torneoExtras: torneoExtrasPorVendedor(allSales, torneosCfg, catalogs),
+        torneoExtras: torneoExtrasPorVendedor(allSales, torneosCfg, catalogs, tiendaRules),
     });
 
     // EFFECT: Envío subrepticio de extras KPI a base de datos para grabarlos eternamente

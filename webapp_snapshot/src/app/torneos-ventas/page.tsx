@@ -9,7 +9,7 @@ import { usePeriod } from '@/components/PeriodProvider'
 import { renderDashboardData, isSolar360 } from '@/lib/salesUtils'
 import { getSaleCommission } from '@/lib/saleCommission'
 import { can } from '@/lib/permissions'
-import { loadTorneosConfigMes, concursoSaleValue, estadoConcurso, concursoJuegaEnMes, generaNotasConcurso, premioLabel, repartoPorVenta, fmtEur, RepartoPorVenta, TorneosConfig } from '@/lib/torneosConfig'
+import { loadTorneosConfigMes, concursoSaleValue, estadoConcurso, concursoJuegaEnMes, generaNotasConcurso, premioLabel, repartoPorVenta, resolverObjetivosTorneo, fmtEur, RepartoPorVenta, TorneosConfig } from '@/lib/torneosConfig'
 
 // Nombre de vendedor normalizado (minúsculas, sin acentos) para casar el mapa de
 // comisiones con el roster, igual que hace useComisionesData con los vendedores.
@@ -68,7 +68,7 @@ const ChartBars = ({ data, maxValue, barColor }: { data: any[], maxValue: number
 }
 
 export default function TorneosVentasPage() {
-  const { sellerStats, loading, catalogs } = useComisionesData();
+  const { sellerStats, loading, catalogs, tiendaRules } = useComisionesData();
   const { activePeriodKey, availablePeriods } = usePeriod();
   const [config, setConfig] = useState<TorneosConfig>({ concursos: [] });
   const [user, setUser] = useState<any>(null);
@@ -223,7 +223,8 @@ export default function TorneosVentasPage() {
     if ((c.premioModo || 'podio') === 'porVenta') {
       const items: { name: string; sale: any }[] = [];
       validSellers.forEach(s => s.rawSales.filter(noAnulada).forEach((rs: any) => items.push({ name: s.name, sale: rs })));
-      const rep = repartoPorVenta(items, c, catalogs);
+      // objetivos en % del objetivo de la palanca: resueltos con las reglas del mes
+      const rep = repartoPorVenta(items, resolverObjetivosTorneo(c, tiendaRules), catalogs);
       const conFila = new Set(rep.filas.map(f => f.name));
       validSellers.forEach(s => { if (!conFila.has(s.name)) rep.filas.push({ name: s.name, ventas: 0, ganado: 0, enJuego: 0, cumpleMin: !(Number(c.minIndividual) > 0) }); });
       const data = rep.filas.map((f, idx) => ({ pos: idx + 1, name: f.name, value: f.ventas, label: String(f.ventas) }));

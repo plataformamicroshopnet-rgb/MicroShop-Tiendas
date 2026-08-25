@@ -84,7 +84,7 @@ export async function POST(request: Request) {
     if (!torneosSetting && mes === periodKeyActual()) {
       torneosSetting = await prisma.appSetting.findUnique({ where: { key: TORNEOS_CONFIG_KEY } })
     }
-    const torneoExtras = torneoExtrasPorVendedor(ventas, parseTorneosConfig(torneosSetting?.value), catalogs)
+    const torneoExtras = torneoExtrasPorVendedor(ventas, parseTorneosConfig(torneosSetting?.value), catalogs, input.tiendaRules)
     const result = computePanelComisionesTiendas({ ...input, sales: ventas, torneoExtras })
 
     // Tienda de cada comercial (para 'perfil'): panel de horarios del mes, con

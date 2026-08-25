@@ -8,8 +8,7 @@ import { can } from '@/lib/permissions'
 import { usePeriod } from '@/components/PeriodProvider'
 import {
   TorneosConfig, Concurso, TorneoPremio, MAX_CONCURSOS, TORNEOS_CONFIG_KEY_MES,
-  loadTorneosConfigMes, generaNotasConcurso,
-} from '@/lib/torneosConfig'
+  loadTorneosConfigMes, generaNotasConcurso, resolverObjetivosTorneo, reglaDeReferencia } from '@/lib/torneosConfig'
 
 const nuevoConcurso = (): Concurso => ({
   id: 'c' + Date.now(),
@@ -27,6 +26,9 @@ const nuevoConcurso = (): Concurso => ({
   topeBote: 0,
   objetivo2Grupal: 0,
   importePorVenta2: 0,
+  palancaRef: '',
+  minGrupalPct: 0,
+  objetivo2Pct: 0,
   notas: '',
   tituloColor: '',
   tituloSize: 0,
@@ -61,6 +63,8 @@ export default function ConfiguradorTorneosPage() {
   const [config, setConfig] = useState<TorneosConfig>({ concursos: [] })
   const [origen, setOrigen] = useState<'mes' | 'global' | 'vacio'>('vacio')
   const [saving, setSaving] = useState(false)
+  // Reglas de comisiones del mes: para los objetivos en % («llegar al 100%»)
+  const [reglasMes, setReglasMes] = useState<any[]>([])
   const [msg, setMsg] = useState('')
 
   useEffect(() => {
@@ -72,10 +76,21 @@ export default function ConfiguradorTorneosPage() {
   // aparece de semilla — al guardar queda fijada en ESTE mes para siempre.
   useEffect(() => {
     if (!activePeriodKey) return
+    // El periodo llega en DOS pasos (primero el mes de calendario, luego el
+    // activo del programa): si la respuesta del periodo viejo aterriza la
+    // última, PISA a la buena y el editor sale vacío. Candado de efecto vivo.
+    let vivo = true
+    // Reglas del mes para los objetivos en % — AQUÍ y no en el montaje: al
+    // montar, activePeriodKey aún está vacío (mismo gotcha que el PeriodProvider).
+    fetch(`/api/tiendas-comisiones?periodKey=${activePeriodKey}`).then(r => r.json())
+      .then(d => { if (vivo) setReglasMes((d?.rules || []).filter((r: any) => !String(r.nombre || '').toLowerCase().includes('solar'))) })
+      .catch(() => { if (vivo) setReglasMes([]) })
     setLoaded(false)
     loadTorneosConfigMes(activePeriodKey).then(r => {
+      if (!vivo) return
       setConfig(r.config); setOrigen(r.origen); setLoaded(true)
     })
+    return () => { vivo = false }
   }, [activePeriodKey])
 
   const mesLabel = (() => {
@@ -123,7 +138,10 @@ export default function ConfiguradorTorneosPage() {
       // así que no se le exige tipoVenta para guardarse.
       const limpio: TorneosConfig = {
         concursos: config.concursos.filter(c => c.nombre.trim() && (c.metrica === 'comisiones' || c.tipoVenta.trim())).map(c => ({
-          ...c, premios: c.premios.map((p, i) => ({ ...p, pos: i + 1, importe: Number(p.importe) || 0 }))
+          // los % se fijan también en unidades al guardar (red de seguridad si
+          // en algún sitio no llegan las reglas del mes)
+          ...resolverObjetivosTorneo(c, reglasMes),
+          premios: c.premios.map((p, i) => ({ ...p, pos: i + 1, importe: Number(p.importe) || 0 }))
         }))
       }
       const res = await fetch('/api/settings', {
@@ -131,7 +149,7 @@ export default function ConfiguradorTorneosPage() {
         body: JSON.stringify({ key: TORNEOS_CONFIG_KEY_MES(activePeriodKey), value: JSON.stringify(limpio) })
       })
       const data = await res.json()
-      if (data.success) setOrigen('mes')
+      if (data.success) { setOrigen('mes'); setConfig(limpio) }  // el editor con las unidades ya fijadas
       setMsg(data.success ? `✅ Guardado para ${mesLabel}. Recarga el Dashboard para verlo.` : ('❌ ' + (data.error || 'Error')))
     } catch {
       setMsg('❌ Error de conexión')
@@ -350,6 +368,51 @@ export default function ConfiguradorTorneosPage() {
                     <input type="number" step="0.01" style={{ ...ipt, width: '100%', marginTop: 4 }}
                            value={c.importePorVenta2 || ''} placeholder="ej. 10 (doblar los 5)"
                            onChange={e => updateConcurso(ci, { importePorVenta2: Number(e.target.value) })} />
+                  </div>
+                  {/* OBJETIVOS EN % (dueño, 26-ago-2026): «llegar al 100%» = el 1º objetivo
+                      de la palanca del mes. Se guardan también resueltos en unidades. */}
+                  <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 14, background: 'rgba(14,165,233,0.06)', border: '1px dashed rgba(14,165,233,0.4)', borderRadius: 10, padding: '10px 12px' }}>
+                    <div>
+                      <label style={{ fontSize: 12, color: 'var(--medium-gray,#64748b)', fontWeight: 600 }}>🧭 En % del objetivo de la palanca (opcional)</label>
+                      <select style={{ ...ipt, width: '100%', marginTop: 4 }} value={c.palancaRef || ''}
+                              onChange={e => updateConcurso(ci, { palancaRef: e.target.value })}>
+                        <option value="">— la que casa con el Tipo de Venta —</option>
+                        {reglasMes.map((r: any) => (
+                          <option key={r.id || r.nombre} value={r.nombre}>{r.nombre} (obj. {r.objPrimerTramo})</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 12, color: 'var(--medium-gray,#64748b)', fontWeight: 600 }}>Mínimo de equipo en %</label>
+                      <input type="number" step="1" style={{ ...ipt, width: '100%', marginTop: 4 }}
+                             value={c.minGrupalPct || ''} placeholder="ej. 100"
+                             onChange={e => updateConcurso(ci, { minGrupalPct: Number(e.target.value) })} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 12, color: 'var(--medium-gray,#64748b)', fontWeight: 600 }}>2º objetivo en %</label>
+                      <input type="number" step="1" style={{ ...ipt, width: '100%', marginTop: 4 }}
+                             value={c.objetivo2Pct || ''} placeholder="ej. 115"
+                             onChange={e => updateConcurso(ci, { objetivo2Pct: Number(e.target.value) })} />
+                    </div>
+                    {(Number(c.minGrupalPct) > 0 || Number(c.objetivo2Pct) > 0) && (() => {
+                      const regla = reglaDeReferencia(c, reglasMes)
+                      if (!regla) return <div style={{ gridColumn: '1 / -1', fontSize: 12.5, color: '#b45309', fontWeight: 600 }}>⚠️ No encuentro la palanca de referencia en las reglas de {mesLabel}: elígela en el desplegable.</div>
+                      const res = resolverObjetivosTorneo(c, reglasMes)
+                      const cambioMin = Number(c.minGrupalPct) > 0 && Number(c.minGrupal) > 0 && res.minGrupal !== c.minGrupal
+                      const cambioObj = Number(c.objetivo2Pct) > 0 && Number(c.objetivo2Grupal) > 0 && res.objetivo2Grupal !== c.objetivo2Grupal
+                      return (
+                        <div style={{ gridColumn: '1 / -1', fontSize: 12.5, lineHeight: 1.5 }}>
+                          <span style={{ color: '#0f766e', fontWeight: 700 }}>
+                            Con «{regla.nombre}» (objetivo {regla.objPrimerTramo}):
+                            {Number(c.minGrupalPct) > 0 ? ` mínimo = ${res.minGrupal} ventas` : ''}
+                            {Number(c.objetivo2Pct) > 0 ? ` · 2º objetivo = ${res.objetivo2Grupal} ventas` : ''}.
+                          </span>
+                          {(cambioMin || cambioObj) && (
+                            <span style={{ color: '#b45309', fontWeight: 700 }}> ⚠️ El objetivo de la palanca ha cambiado desde el último guardado — pulsa Guardar para fijar los números nuevos.</span>
+                          )}
+                        </div>
+                      )
+                    })()}
                   </div>
                   <div style={{ gridColumn: '1 / -1', fontSize: 12, color: 'var(--medium-gray,#64748b)', lineHeight: 1.5 }}>
                     Sin llegar al <strong>mínimo de equipo</strong> no cobra nadie; sin llegar al
