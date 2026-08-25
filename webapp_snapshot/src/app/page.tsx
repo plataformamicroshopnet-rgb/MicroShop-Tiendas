@@ -764,8 +764,104 @@ export default function DashboardPage() {
       </div>
 
 
-      {/* FILA 3: MEDALLAS Y MVP */}
-      <div className="dash-grid-2" style={{ marginBottom: '24px' }}>
+      {/* FILA 2: TERMÓMETRO + MEDALLAS, en la misma fila (dueño, 25-ago-2026) */}
+      <div className="dash-grid-termo" style={{ marginBottom: '16px' }}>
+        {/* TERMÓMETRO DIARIO DE LA EMPRESA */}
+        <div style={{
+          background: 'var(--bg-card)',
+          borderRadius: 16,
+          padding: '12px',
+          border: '1px solid var(--border-strong)',
+          boxShadow: '0 4px 14px -5px rgba(0,0,0,0.05)',
+          height: '100%' // misma altura que la Vitrina, su pareja de fila
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+            <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '10px', borderRadius: '12px' }}>
+              <Flame size={24} color="#ef4444" />
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: 'var(--text-main)' }}>Termómetro Diario de la Empresa</h3>
+              <p style={{ margin: 0, fontSize: '14px', color: 'var(--medium-gray)', fontWeight: 500 }}>Seguimiento en vivo de los {kpiData.length} KPIs críticos para llegar al objetivo del mes.</p>
+            </div>
+          </div>
+
+          {kpiData.length === 0 ? (
+            <div style={{ fontSize: 13, color: 'var(--medium-gray)', textAlign: 'center', padding: '20px 8px' }}>
+              No hay KPIs configurados.
+            </div>
+          ) : (
+          <div className="dash-grid-kpi">
+            {kpiData.map((k, i) => {
+              const Icono = KPI_ICONS[i % KPI_ICONS.length];
+              const pal = KPI_COLORS[i % KPI_COLORS.length];
+              const esPrincipal = i === 0; // el primer KPI del config ocupa la fila completa arriba
+              return (
+                <div
+                  key={k.kpi.id}
+                  onClick={() => abrirKpi(k.kpi)}
+                  title={k.kpi.metrica === 'comisiones' ? undefined : 'Ver las operaciones que cuentan en este KPI'}
+                  style={{ background: 'var(--bg-body)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border-light)', cursor: k.kpi.metrica === 'comisiones' ? 'default' : 'pointer', ...(esPrincipal ? { gridColumn: '1 / -1' as const, order: -1 } : {}) }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Icono size={18} color={pal.color} />
+                      <span title={descBloque(k.kpi)} style={{ fontWeight: 700, color: 'var(--text-main)' }}>{k.kpi.nombre}</span>
+                    </div>
+                    {k.target <= 0 ? (
+                      <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#b45309', background: 'rgba(245, 158, 11, 0.16)', padding: '2px 8px', borderRadius: '12px' }}>
+                        Sin objetivo este mes
+                      </span>
+                    ) : k.faltan > 0 ? (
+                      esPrincipal ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 700, color: pal.faltanCol, background: pal.faltanBg, padding: '2px 8px', borderRadius: '12px' }}>
+                            Faltan {kpiFmt(k.faltan, k.kpi.metrica)}
+                          </span>
+                          {diasLaborablesRestantes > 0 && (
+                            <span style={{ fontSize: 11.5, fontWeight: 600, color: '#d97706' }}>
+                              💪 ≈ {fmtReto(retoDiarioComercial, k.kpi.metrica)}/día por comercial · {fmtReto(retoDiarioEquipo, k.kpi.metrica)}/día entre todos
+                              <span style={{ color: 'var(--medium-gray)', fontWeight: 500 }}> ({diasLaborablesRestantes} días lab. · {nComercialesTiendas} comerciales)</span>
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: '12px', fontWeight: 700, color: pal.faltanCol, background: pal.faltanBg, padding: '2px 8px', borderRadius: '12px' }}>
+                          Faltan {kpiFmt(k.faltan, k.kpi.metrica)}
+                        </span>
+                      )
+                    ) : (
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
+                        ¡Logrado!
+                      </span>
+                    )}
+                  </div>
+                  {k.target > 0 && (
+                    <div style={{ width: '100%', height: '8px', background: 'var(--border-strong)', borderRadius: '4px', overflow: 'hidden', marginBottom: 4 }}>
+                      <div style={{ width: `${k.progressPct}%`, height: '100%', background: pal.grad, borderRadius: '4px' }} />
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontSize: '12px', color: 'var(--medium-gray)', fontWeight: 600 }}>
+                    <span>Llevamos: <strong style={{ color: 'var(--text-main)' }}>{kpiFmt(k.llevamos, k.kpi.metrica)}</strong></span>
+                    {k.target > 0 && (() => {
+                      const pctReal = (k.llevamos / k.target) * 100
+                      const est = pctBadge(pctReal)
+                      return (
+                        <span style={{ fontSize: 11.5, fontWeight: 800, color: est.color, background: est.background, padding: '1px 8px', borderRadius: '10px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                          {Math.round(pctReal)}% del objetivo
+                        </span>
+                      )
+                    })()}
+                    <span>{k.target > 0
+                      ? `Objetivo: ${kpiFmt(k.target, k.kpi.metrica)}`
+                      : 'Objetivo: — (ponlo en Entrada de Datos o en Configurar Dashboard)'}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          )}
+        </div>
+
         {/* VITRINA DE LOGROS (Estilo PlayStation) */}
         <div style={{
           background: 'var(--bg-card)',
@@ -828,190 +924,90 @@ export default function DashboardPage() {
           </div>
           )}
         </div>
-
-
-
       </div>
 
-      {/* TERMÓMETRO DIARIO DE LA EMPRESA */}
+      {/* EL MVP ROTATIVO */}
       <div style={{
         background: 'var(--bg-card)',
         borderRadius: 16,
         padding: '12px',
         border: '1px solid var(--border-strong)',
         boxShadow: '0 4px 14px -5px rgba(0,0,0,0.05)',
-        marginBottom: '16px'
+        display: 'flex',
+        flexDirection: 'column',
+        position: 'relative',
+        overflow: 'hidden'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-          <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '10px', borderRadius: '12px' }}>
-            <Flame size={24} color="#ef4444" />
+        {/* Subtle background glow */}
+        <div style={{ position: 'absolute', bottom: -50, right: -50, width: 150, height: 150, background: 'radial-gradient(circle, rgba(236, 72, 153, 0.15) 0%, rgba(236, 72, 153, 0) 70%)', borderRadius: '50%' }} />
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+          <div style={{ backgroundColor: 'rgba(236, 72, 153, 0.1)', padding: '10px', borderRadius: '12px' }}>
+            <Crown size={24} color="#ec4899" />
           </div>
           <div>
-            <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: 'var(--text-main)' }}>Termómetro Diario de la Empresa</h3>
-            <p style={{ margin: 0, fontSize: '14px', color: 'var(--medium-gray)', fontWeight: 500 }}>Seguimiento en vivo de los {kpiData.length} KPIs críticos para llegar al objetivo del mes.</p>
+            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'var(--text-main)' }}>Destacados y Nominados MVP</h3>
+            <p style={{ margin: 0, fontSize: '13px', color: 'var(--medium-gray)', fontWeight: 500 }}>
+              {cfg.mvpAmbito !== 'HOY'
+                ? 'Rendimiento y Liderazgo del Mes'
+                : mvpInfo.todosHoy
+                  ? 'Rendimiento y Liderazgo Hoy'
+                  : mvpInfo.ningunoHoy
+                    ? 'Rendimiento y Liderazgo del Mes'
+                    : 'Rendimiento Hoy · sin ventas hoy, manda el Mes'}
+            </p>
           </div>
         </div>
 
-        {kpiData.length === 0 ? (
-          <div style={{ fontSize: 13, color: 'var(--medium-gray)', textAlign: 'center', padding: '20px 8px' }}>
-            No hay KPIs configurados.
-          </div>
-        ) : (
-        <div className="dash-grid-kpi">
-          {kpiData.map((k, i) => {
-            const Icono = KPI_ICONS[i % KPI_ICONS.length];
-            const pal = KPI_COLORS[i % KPI_COLORS.length];
-            const esPrincipal = i === 0; // el primer KPI del config ocupa la fila completa arriba
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1, justifyContent: 'center' }}>
+          {mvpRows.map((row, ri) => {
+            const size = row.principal ? 40 : 36;
             return (
-              <div
-                key={k.kpi.id}
-                onClick={() => abrirKpi(k.kpi)}
-                title={k.kpi.metrica === 'comisiones' ? undefined : 'Ver las operaciones que cuentan en este KPI'}
-                style={{ background: 'var(--bg-body)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border-light)', cursor: k.kpi.metrica === 'comisiones' ? 'default' : 'pointer', ...(esPrincipal ? { gridColumn: '1 / -1' as const, order: -1 } : {}) }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Icono size={18} color={pal.color} />
-                    <span title={descBloque(k.kpi)} style={{ fontWeight: 700, color: 'var(--text-main)' }}>{k.kpi.nombre}</span>
-                  </div>
-                  {k.target <= 0 ? (
-                    <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#b45309', background: 'rgba(245, 158, 11, 0.16)', padding: '2px 8px', borderRadius: '12px' }}>
-                      Sin objetivo este mes
-                    </span>
-                  ) : k.faltan > 0 ? (
-                    esPrincipal ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                        <span style={{ fontSize: '12px', fontWeight: 700, color: pal.faltanCol, background: pal.faltanBg, padding: '2px 8px', borderRadius: '12px' }}>
-                          Faltan {kpiFmt(k.faltan, k.kpi.metrica)}
-                        </span>
-                        {diasLaborablesRestantes > 0 && (
-                          <span style={{ fontSize: 11.5, fontWeight: 600, color: '#d97706' }}>
-                            💪 ≈ {fmtReto(retoDiarioComercial, k.kpi.metrica)}/día por comercial · {fmtReto(retoDiarioEquipo, k.kpi.metrica)}/día entre todos
-                            <span style={{ color: 'var(--medium-gray)', fontWeight: 500 }}> ({diasLaborablesRestantes} días lab. · {nComercialesTiendas} comerciales)</span>
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <span style={{ fontSize: '12px', fontWeight: 700, color: pal.faltanCol, background: pal.faltanBg, padding: '2px 8px', borderRadius: '12px' }}>
-                        Faltan {kpiFmt(k.faltan, k.kpi.metrica)}
-                      </span>
-                    )
+              <div key={ri} style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--bg-body)', padding: '10px 12px', borderRadius: '12px', border: `1px solid ${row.border}` }}>
+                <div style={{
+                  width: size, height: size, borderRadius: '50%',
+                  boxShadow: row.principal ? '0 4px 10px rgba(219, 39, 119, 0.3)' : `0 2px 6px ${row.border}`,
+                  border: `2px solid ${row.color}`,
+                  overflow: 'hidden', flexShrink: 0,
+                  background: row.grad,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  {row.res.name !== 'Nadie' ? (
+                    <FotoAvatar name={row.res.name} fontSize={row.principal ? 16 : 14} />
                   ) : (
-                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>
-                      ¡Logrado!
-                    </span>
+                    <row.Icon size={row.principal ? 20 : 16} color="#fff" />
                   )}
                 </div>
-                {k.target > 0 && (
-                  <div style={{ width: '100%', height: '8px', background: 'var(--border-strong)', borderRadius: '4px', overflow: 'hidden', marginBottom: 4 }}>
-                    <div style={{ width: `${k.progressPct}%`, height: '100%', background: pal.grad, borderRadius: '4px' }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h4 style={{ margin: 0, fontSize: row.principal ? '15px' : '14px', fontWeight: 800, color: 'var(--text-main)' }}>{row.res.name}</h4>
+                    <span title={descBloque(row.b)} style={{ fontSize: row.principal ? '11px' : '10px', fontWeight: 700, color: row.color, background: `${row.color}1a`, padding: row.principal ? '2px 8px' : '2px 6px', borderRadius: row.principal ? '10px' : '8px' }}>{row.label}</span>
                   </div>
-                )}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontSize: '12px', color: 'var(--medium-gray)', fontWeight: 600 }}>
-                  <span>Llevamos: <strong style={{ color: 'var(--text-main)' }}>{kpiFmt(k.llevamos, k.kpi.metrica)}</strong></span>
-                  {k.target > 0 && (() => {
-                    const pctReal = (k.llevamos / k.target) * 100
-                    const est = pctBadge(pctReal)
-                    return (
-                      <span style={{ fontSize: 11.5, fontWeight: 800, color: est.color, background: est.background, padding: '1px 8px', borderRadius: '10px', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                        {Math.round(pctReal)}% del objetivo
-                      </span>
-                    )
-                  })()}
-                  <span>{k.target > 0
-                    ? `Objetivo: ${kpiFmt(k.target, k.kpi.metrica)}`
-                    : 'Objetivo: — (ponlo en Entrada de Datos o en Configurar Dashboard)'}</span>
+                  <div style={{ fontSize: row.principal ? '12px' : '11px', color: 'var(--medium-gray)', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                    <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: row.dot }}></span>
+                    {row.res.name !== 'Nadie' ? (
+                      <>
+                        {row.lead} <strong style={{ color: 'var(--text-main)' }}>{valorMvp(row.res.total, row.b)}</strong>
+                        {cfg.mvpAmbito === 'HOY' && (
+                          <span style={{ fontSize: '10.5px', color: 'var(--medium-gray)', fontWeight: 600 }}>
+                            · {row.res.esHoy ? 'hoy' : 'mes'}
+                          </span>
+                        )}
+                        {row.res.pendingCount > 0 && (
+                          <span style={{ fontSize: '11px', color: '#d97706', marginLeft: '6px', fontWeight: 700, backgroundColor: 'rgba(217, 119, 6, 0.1)', padding: '1px 6px', borderRadius: '4px' }}>
+                            ({row.res.pendingCount} pendientes)
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <span>Esperando ventas...</span>
+                    )}
+                  </div>
                 </div>
               </div>
             );
           })}
         </div>
-        )}
-
-        {/* EL MVP ROTATIVO */}
-        <div style={{
-          background: 'var(--bg-card)',
-          borderRadius: 16,
-          padding: '12px',
-          border: '1px solid var(--border-strong)',
-          boxShadow: '0 4px 14px -5px rgba(0,0,0,0.05)',
-          display: 'flex',
-          flexDirection: 'column',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          {/* Subtle background glow */}
-          <div style={{ position: 'absolute', bottom: -50, right: -50, width: 150, height: 150, background: 'radial-gradient(circle, rgba(236, 72, 153, 0.15) 0%, rgba(236, 72, 153, 0) 70%)', borderRadius: '50%' }} />
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-            <div style={{ backgroundColor: 'rgba(236, 72, 153, 0.1)', padding: '10px', borderRadius: '12px' }}>
-              <Crown size={24} color="#ec4899" />
-            </div>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'var(--text-main)' }}>Destacados y Nominados MVP</h3>
-              <p style={{ margin: 0, fontSize: '13px', color: 'var(--medium-gray)', fontWeight: 500 }}>
-                {cfg.mvpAmbito !== 'HOY'
-                  ? 'Rendimiento y Liderazgo del Mes'
-                  : mvpInfo.todosHoy
-                    ? 'Rendimiento y Liderazgo Hoy'
-                    : mvpInfo.ningunoHoy
-                      ? 'Rendimiento y Liderazgo del Mes'
-                      : 'Rendimiento Hoy · sin ventas hoy, manda el Mes'}
-              </p>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1, justifyContent: 'center' }}>
-            {mvpRows.map((row, ri) => {
-              const size = row.principal ? 40 : 36;
-              return (
-                <div key={ri} style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--bg-body)', padding: '10px 12px', borderRadius: '12px', border: `1px solid ${row.border}` }}>
-                  <div style={{
-                    width: size, height: size, borderRadius: '50%',
-                    boxShadow: row.principal ? '0 4px 10px rgba(219, 39, 119, 0.3)' : `0 2px 6px ${row.border}`,
-                    border: `2px solid ${row.color}`,
-                    overflow: 'hidden', flexShrink: 0,
-                    background: row.grad,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center'
-                  }}>
-                    {row.res.name !== 'Nadie' ? (
-                      <FotoAvatar name={row.res.name} fontSize={row.principal ? 16 : 14} />
-                    ) : (
-                      <row.Icon size={row.principal ? 20 : 16} color="#fff" />
-                    )}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <h4 style={{ margin: 0, fontSize: row.principal ? '15px' : '14px', fontWeight: 800, color: 'var(--text-main)' }}>{row.res.name}</h4>
-                      <span title={descBloque(row.b)} style={{ fontSize: row.principal ? '11px' : '10px', fontWeight: 700, color: row.color, background: `${row.color}1a`, padding: row.principal ? '2px 8px' : '2px 6px', borderRadius: row.principal ? '10px' : '8px' }}>{row.label}</span>
-                    </div>
-                    <div style={{ fontSize: row.principal ? '12px' : '11px', color: 'var(--medium-gray)', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                      <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: row.dot }}></span>
-                      {row.res.name !== 'Nadie' ? (
-                        <>
-                          {row.lead} <strong style={{ color: 'var(--text-main)' }}>{valorMvp(row.res.total, row.b)}</strong>
-                          {cfg.mvpAmbito === 'HOY' && (
-                            <span style={{ fontSize: '10.5px', color: 'var(--medium-gray)', fontWeight: 600 }}>
-                              · {row.res.esHoy ? 'hoy' : 'mes'}
-                            </span>
-                          )}
-                          {row.res.pendingCount > 0 && (
-                            <span style={{ fontSize: '11px', color: '#d97706', marginLeft: '6px', fontWeight: 700, backgroundColor: 'rgba(217, 119, 6, 0.1)', padding: '1px 6px', borderRadius: '4px' }}>
-                              ({row.res.pendingCount} pendientes)
-                            </span>
-                          )}
-                        </>
-                      ) : (
-                        <span>Esperando ventas...</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
       </div>
 
       {/* DETALLE DE UN KPI DEL TERMÓMETRO: operaciones que cuentan, SIN comisiones */}
