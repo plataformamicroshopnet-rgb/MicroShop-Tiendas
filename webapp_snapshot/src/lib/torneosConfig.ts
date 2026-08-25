@@ -55,7 +55,9 @@ export interface TorneosConfig {
 }
 
 export const TORNEOS_CONFIG_KEY = 'torneos_config'          // clave ANTIGUA (global)
-export const MAX_CONCURSOS = 3
+// De 3 a 6 (27-ago-2026): el dueño quiere fomentar los EXTRAs por venta y el
+// Dashboard estrena segunda carta de Torneos (concursos 4-6).
+export const MAX_CONCURSOS = 6
 
 // ── CONFIG POR MES (24-ago-2026) ─────────────────────────────────────────────
 // La clave global arrastraba el último torneo a TODOS los meses (el dueño vio

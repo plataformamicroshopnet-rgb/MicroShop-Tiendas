@@ -628,35 +628,7 @@ export default function DashboardPage() {
 
   if (loading && allSales.length === 0) return <div style={{ padding: 20 }}>Cargando datos del Dashboard...</div>
 
-  return (
-    <div style={{ padding: 20 }}>
-      {/* La rueda dentada va SIN TEXTO y con la misma forma que el calendario de
-          al lado: los dos son botones redondos de 40 px con su icono de 18.
-          Antes era una pastilla con «⚙ Configurar Dashboard» escrito, que junto
-          al interruptor de día/noche y al calendario dejaba la cabecera
-          apretada y le comía sitio al título. El icono es de lucide como el
-          resto: el ⚙ anterior era un carácter de texto y salía distinto en cada
-          sistema. */}
-      <PageHeader
-        title={<>Dashboard <span className="text-cyan">Tiempo Real</span></>}
-        subtitle="Sincronizado directamente con las celdas del Excel central."
-        showTheme={true}
-        showBack={false}
-        headerActions={canConfig ? (
-          <button
-            type="button"
-            onClick={() => router.push('/config-dashboard')}
-            title="Configurar los bloques del Dashboard"
-            className="boton-icono-cabecera"
-          >
-            <Settings size={18} />
-          </button>
-        ) : undefined}
-      />
-
-
-      {/* FILA 1: TORNEOS Y VITRINA DE MEDALLAS */}
-      <div className="dash-grid-2" style={{ marginBottom: '16px' }}>
+  const cartaTorneos = (cols: typeof torneoColumns, titulo: React.ReactNode, vacio: React.ReactNode) => (
         <Link href="/torneos-ventas" style={{ textDecoration: 'none', display: 'block', marginBottom: '0', outline: 'none' }}>
         <div
           style={{
@@ -681,29 +653,29 @@ export default function DashboardPage() {
               <Trophy size={20} color="#fff" />
             </div>
             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0ea5e9' }}>
-              Torneos de Ventas <span style={{ color: 'var(--text-main)' }}>· Ranking</span>
+              {titulo}
             </h3>
             {/* El chip «en juego del X al Y» va en ESTA fila, a la derecha del
                 título (dueño, 24-ago-2026), no dentro de cada columna. */}
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-              {torneoColumns.map(col => {
+              {cols.map(col => {
                 const e = estadoConcurso(col.concurso);
                 return e ? (
                   <span key={col.concurso.id} style={{ background: e.color, color: '#fff', borderRadius: 999, padding: '2px 10px', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>
-                    {torneoColumns.length > 1 ? `${col.concurso.nombre}: ${e.txt}` : e.txt}
+                    {cols.length > 1 ? `${col.concurso.nombre}: ${e.txt}` : e.txt}
                   </span>
                 ) : null;
               })}
             </div>
           </div>
 
-          {torneoColumns.length === 0 ? (
+          {cols.length === 0 ? (
             <div style={{ fontSize: 13, color: 'var(--medium-gray)', textAlign: 'center', padding: '20px 8px' }}>
-              No hay torneos configurados.
+              {vacio}
             </div>
           ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '14px' }}>
-            {torneoColumns.map((col) => (
+            {cols.map((col) => (
               <div key={col.concurso.id}>
                 <div style={{ fontSize: col.concurso.tituloSize || 11, fontWeight: 800,
                               color: col.concurso.tituloColor || '#64748b',
@@ -724,7 +696,7 @@ export default function DashboardPage() {
                 {/* Con UN solo concurso la carta es ancha: la lista va en 2
                     columnas (1º-4º izquierda, 5º-8º derecha). Con 2-3 concursos
                     cada uno ya tiene su columna estrecha y se queda en una tira. */}
-                <div className={torneoColumns.length === 1 && col.data.length > 4 ? 'torneo-filas-2col' : undefined}>
+                <div className={cols.length === 1 && col.data.length > 4 ? 'torneo-filas-2col' : undefined}>
                 {col.data.map((r, i) => (
                   <div key={r.name} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 6px', borderRadius: 8, background: i === 0 && r.value > 0 ? 'rgba(245,158,11,0.12)' : 'transparent', marginBottom: 3 }}>
                     {/* A 0 no hay medallas: número gris hasta que puntúe. */}
@@ -752,6 +724,48 @@ export default function DashboardPage() {
           )}
         </div>
       </Link>
+  );
+
+  return (
+    <div style={{ padding: 20 }}>
+      {/* La rueda dentada va SIN TEXTO y con la misma forma que el calendario de
+          al lado: los dos son botones redondos de 40 px con su icono de 18.
+          Antes era una pastilla con «⚙ Configurar Dashboard» escrito, que junto
+          al interruptor de día/noche y al calendario dejaba la cabecera
+          apretada y le comía sitio al título. El icono es de lucide como el
+          resto: el ⚙ anterior era un carácter de texto y salía distinto en cada
+          sistema. */}
+      <PageHeader
+        title={<>Dashboard <span className="text-cyan">Tiempo Real</span></>}
+        subtitle="Sincronizado directamente con las celdas del Excel central."
+        showTheme={true}
+        showBack={false}
+        headerActions={canConfig ? (
+          <button
+            type="button"
+            onClick={() => router.push('/config-dashboard')}
+            title="Configurar los bloques del Dashboard"
+            className="boton-icono-cabecera"
+          >
+            <Settings size={18} />
+          </button>
+        ) : undefined}
+      />
+
+
+      {/* FILA 1: DOS CARTAS DE TORNEOS (1-3 y 4-6) */}
+      <div className="dash-grid-2" style={{ marginBottom: '16px' }}>
+        {cartaTorneos(torneoColumns.slice(0, 3),
+          <>Torneos de Ventas <span style={{ color: 'var(--text-main)' }}>· Ranking</span></>,
+          <>No hay torneos configurados.</>)}
+        {cartaTorneos(torneoColumns.slice(3, 6),
+          <>Más Torneos <span style={{ color: 'var(--text-main)' }}>· EXTRAs</span></>,
+          <>🏆 Hueco libre para más torneos o EXTRAs (hasta 3 más).<br/>Crea el siguiente en el configurador — ¡los EXTRAs por venta están funcionando!</>)}
+      </div>
+
+
+      {/* FILA 3: MEDALLAS Y MVP */}
+      <div className="dash-grid-2" style={{ marginBottom: '24px' }}>
         {/* VITRINA DE LOGROS (Estilo PlayStation) */}
         <div style={{
           background: 'var(--bg-card)',
@@ -913,68 +927,6 @@ export default function DashboardPage() {
           })}
         </div>
         )}
-      </div>
-
-      {/* FILA 3: CUENTA KMS Y MVP */}
-      <div className="dash-grid-2" style={{ marginBottom: '24px' }}>
-        {/* CUENTA KILÓMETROS DEL SALTO DE TRAMO */}
-        <div style={{
-          background: 'var(--bg-card)',
-          borderRadius: 16,
-          padding: '12px',
-          border: '1px solid var(--border-strong)',
-          boxShadow: '0 4px 14px -5px rgba(0,0,0,0.05)',
-          display: 'flex',
-          flexDirection: 'column',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          {/* Subtle background glow */}
-          <div style={{ position: 'absolute', top: -50, right: -50, width: 150, height: 150, background: 'radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0) 70%)', borderRadius: '50%' }} />
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-            <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '10px', borderRadius: '12px' }}>
-              <Target size={24} color="#10b981" />
-            </div>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'var(--text-main)' }}>Cuenta Kilómetros</h3>
-              <p title={descBloque(cfg.carrera)} style={{ margin: 0, fontSize: '13px', color: 'var(--medium-gray)', fontWeight: 500 }}>
-                Carrera hacia {cfg.carrera.nombre}
-              </p>
-            </div>
-          </div>
-
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 14, alignItems: 'center', alignContent: 'center', justifyContent: 'center' }}>
-            {(carreraData.length === 0 || carreraData[0].value === 0) ? (
-              <p style={{ margin: 'auto', fontSize: 14, color: 'var(--medium-gray)', textAlign: 'center' }}>Aún no hay ventas de {cfg.carrera.nombre} este mes.</p>
-            ) : carreraData.slice(0, 6).map((r, i) => {
-              const lider = carreraData[0].value;
-              const faltan = lider - r.value;
-              const esImporte = cfg.carrera.metrica === 'importe' || cfg.carrera.metrica === 'comisiones';
-              return (
-                <div key={r.name} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, width: esImporte ? 92 : 78 }}>
-                  <div style={{ position: 'relative', width: 50, height: 50, flexShrink: 0 }}>
-                    <div style={{ width: 50, height: 50, borderRadius: '50%', overflow: 'hidden', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', border: i === 0 ? '2px solid #f59e0b' : '2px solid transparent' }}>
-                      <FotoAvatar name={r.name} fontSize={13} />
-                    </div>
-                    {i === 0 && <span style={{ position: 'absolute', top: -7, right: -5, fontSize: 15 }}>🏆</span>}
-                  </div>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-main)', maxWidth: esImporte ? 92 : 78, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</span>
-                  <span style={{ fontSize: esImporte ? 13 : 20, fontWeight: 900, color: '#10b981', lineHeight: esImporte ? 1.2 : 1, whiteSpace: 'nowrap' }}>{fmtValor(r.value, cfg.carrera.metrica)}</span>
-                  <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--medium-gray)', whiteSpace: 'nowrap' }}>{i === 0 ? 'Líder' : (faltan > 0 ? `faltan ${fmtValor(faltan, cfg.carrera.metrica)}` : 'empatado')}</span>
-                  <div style={{ width: '100%', height: 6, background: 'var(--bg-input)', borderRadius: 3, overflow: 'hidden' }}>
-                    <div style={{ width: `${lider > 0 ? (r.value / lider) * 100 : 0}%`, height: '100%', background: 'linear-gradient(90deg, #10b981 0%, #34d399 100%)', borderRadius: 3 }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-
-
-
-
 
         {/* EL MVP ROTATIVO */}
         <div style={{

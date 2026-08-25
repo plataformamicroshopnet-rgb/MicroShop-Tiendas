@@ -397,7 +397,7 @@ export default function TorneosVentasPage() {
           ) : (
           <>
           {/* TABLAS */}
-          <div className="grid-container" style={{ gridTemplateColumns: `repeat(${columns.length}, 1fr)` }}>
+          <div className="grid-container" style={{ gridTemplateColumns: `repeat(${Math.min(columns.length, 3)}, 1fr)` }}>
             {columns.map((col, ci) => (
               <div key={col.concurso.id}>
                 {/* Nombre del EXTRA con el estilo elegido en el configurador (el modo
@@ -536,7 +536,7 @@ export default function TorneosVentasPage() {
           </div>
 
           {/* GRÁFICOS (solo de los concursos que juegan en el mes visto) */}
-          <div className="grid-container" style={{ marginTop: 2, gridTemplateColumns: `repeat(${columns.length}, 1fr)` }}>
+          <div className="grid-container" style={{ marginTop: 2, gridTemplateColumns: `repeat(${Math.min(columns.length, 3)}, 1fr)` }}>
             {columns.map((col, ci) => (
               concursoJuegaEnMes(col.concurso, _mesVisto.year, _mesVisto.month)
                 ? <ChartBars key={col.concurso.id} data={col.data} maxValue={col.max} barColor={COL_COLORS[ci % COL_COLORS.length]} />
