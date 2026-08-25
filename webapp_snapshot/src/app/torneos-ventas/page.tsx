@@ -423,11 +423,14 @@ export default function TorneosVentasPage() {
                       <>⚠️ Mínimo de equipo: {col.porVenta.minGrupal} ventas — lleváis {col.porVenta.teamVentas}
                       {col.porVenta.enJuegoTotal > 0 ? <> · <span style={{ color: '#b45309' }}>{fmtEur(col.porVenta.enJuegoTotal)} en juego</span></> : null}</>
                     ) : (
-                      <>💶 {fmtEur(col.concurso.importePorVenta || 0)} por venta ·
+                      <>💶 {fmtEur(col.porVenta.rateActual)} por venta{col.porVenta.objetivo2Cumplido ? ' (🎯 ¡2º objetivo!)' : ''} ·
                       {col.porVenta.tope > 0
                         ? <> bote {fmtEur(col.porVenta.repartido)} de {fmtEur(col.porVenta.tope)}{col.porVenta.agotado ? ' — ⛔ agotado, ya no se paga más' : ''}</>
                         : <> repartido {fmtEur(col.porVenta.repartido)}</>}</>
                     )}
+                    {col.porVenta.objetivo2Grupal > 0 && !col.porVenta.objetivo2Cumplido ? (
+                      <> · 🎯 a {fmtEur(col.porVenta.importePorVenta2)} por venta si el equipo llega a {col.porVenta.objetivo2Grupal}</>
+                    ) : null}
                   </div>
                 ) : null}
                 {!concursoJuegaEnMes(col.concurso, _mesVisto.year, _mesVisto.month) ? (

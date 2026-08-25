@@ -47,6 +47,8 @@ export interface Concurso {
   topeBote?: number              // solo modo 'porVenta': tope total (0 = sin tope)
   minIndividual?: number         // solo 'porVenta': ventas mínimas PROPIAS para cobrar (0 = sin mínimo)
   minGrupal?: number             // solo 'porVenta': ventas mínimas ENTRE TODOS — sin llegar, no cobra nadie
+  objetivo2Grupal?: number       // solo 'porVenta' (dueño, 25-ago-2026): 2º OBJETIVO de equipo (ventas)
+  importePorVenta2?: number      //   al llegar, TODAS las ventas pasan a pagarse a este importe (retroactivo)
   notas?: string                 // nota extra A MANO; las condiciones salen solas (generaNotasConcurso)
   tituloColor?: string           // color del nombre en el ranking ('' = el de siempre)
   tituloSize?: number            // tamaño en px del nombre en el ranking (0 = el de siempre)
@@ -129,6 +131,8 @@ export function parseTorneosConfig(raw: any): TorneosConfig {
         topeBote: Number(c.topeBote) || 0,
         minIndividual: Math.max(0, Math.floor(Number(c.minIndividual) || 0)),
         minGrupal: Math.max(0, Math.floor(Number(c.minGrupal) || 0)),
+        objetivo2Grupal: Math.max(0, Math.floor(Number(c.objetivo2Grupal) || 0)),
+        importePorVenta2: Number(c.importePorVenta2) || 0,
         notas: String(c.notas || ''),
         tituloColor: /^#[0-9a-fA-F]{3,8}$/.test(String(c.tituloColor || '')) ? String(c.tituloColor) : '',
         tituloSize: Math.max(0, Math.min(40, Number(c.tituloSize) || 0)),
@@ -252,11 +256,14 @@ export interface RepartoPorVenta {
   minIndividual: number   // 0 = sin mínimo
   minGrupal: number       // 0 = sin mínimo
   grupalCumplido: boolean // con mínimo grupal sin llegar, NO cobra nadie
+  rateActual: number          // € por venta que SE ESTÁ pagando (el 2º importe si el equipo llegó)
+  objetivo2Grupal: number     // 0 = sin 2º objetivo
+  importePorVenta2: number
+  objetivo2Cumplido: boolean  // al cumplirse, TODAS las ventas pasan al 2º importe
 }
 
 export function repartoPorVenta(items: { name: string; sale: any }[], c: Concurso,
                                 catalogs?: Record<string, any[]>): RepartoPorVenta {
-  const rate = Number(c.importePorVenta) || 0
   const tope = Number(c.topeBote) || 0
   const minInd = Math.max(0, Math.floor(Number(c.minIndividual) || 0))
   const minGrp = Math.max(0, Math.floor(Number(c.minGrupal) || 0))
@@ -277,6 +284,13 @@ export function repartoPorVenta(items: { name: string; sale: any }[], c: Concurs
   puntuan.forEach(({ name }) => { conteo[name] = (conteo[name] || 0) + 1 })
   const teamVentas = puntuan.length
   const grupalCumplido = teamVentas >= minGrp
+  // 2º OBJETIVO del premio (dueño, 25-ago-2026): al llegar el equipo a esas
+  // ventas, TODAS las que puntúan pasan al 2º importe — retroactivo, igual que
+  // los tramos de las palancas (ej.: de 5 € a 10 € por venta).
+  const obj2 = Math.max(0, Math.floor(Number(c.objetivo2Grupal) || 0))
+  const rate2 = Number(c.importePorVenta2) || 0
+  const objetivo2Cumplido = obj2 > 0 && rate2 > 0 && teamVentas >= obj2
+  const rate = objetivo2Cumplido ? rate2 : (Number(c.importePorVenta) || 0)
   // El reparto se calcula COMO SI el mínimo de equipo estuviera cumplido
   // (mismos bote, orden de fecha y mínimo individual): eso es lo «en juego».
   // El pago REAL solo existe cuando el grupal llega — hasta entonces, 0.
@@ -299,7 +313,8 @@ export function repartoPorVenta(items: { name: string; sale: any }[], c: Concurs
   const enJuegoTotal = filas.reduce((acc, f) => acc + f.enJuego, 0)
   const repartido = grupalCumplido ? enJuegoTotal : 0
   return { filas, repartido, enJuegoTotal, tope, agotado: tope > 0 && restante < rate,
-           teamVentas, minIndividual: minInd, minGrupal: minGrp, grupalCumplido }
+           teamVentas, minIndividual: minInd, minGrupal: minGrp, grupalCumplido,
+           rateActual: rate, objetivo2Grupal: obj2, importePorVenta2: rate2, objetivo2Cumplido }
 }
 
 // ── Las NOTAS del concurso se escriben SOLAS desde sus condiciones ──────────
@@ -323,6 +338,8 @@ export function generaNotasConcurso(c: Concurso): string {
   }
   if ((c.premioModo || 'podio') === 'porVenta') {
     if (Number(c.importePorVenta) > 0) partes.push(`Se paga ${fmtEur(Number(c.importePorVenta))} por venta realizada.`)
+    if (Number(c.importePorVenta2) > 0 && Number(c.objetivo2Grupal) > 0)
+      partes.push(`🎯 Al llegar el equipo a ${c.objetivo2Grupal} venta(s), TODAS pasan a ${fmtEur(Number(c.importePorVenta2))} por venta.`)
     if (Number(c.minIndividual) > 0) partes.push(`Mínimo individual: ${c.minIndividual} venta(s) para cobrar.`)
     if (Number(c.minGrupal) > 0) partes.push(`Mínimo de equipo: ${c.minGrupal} venta(s) entre todos.`)
     if (Number(c.topeBote) > 0) partes.push(`Bote máximo: ${fmtEur(Number(c.topeBote))} entre todos, por orden de venta.`)
@@ -358,13 +375,14 @@ export function torneoExtrasPorVendedor(
     const rep = repartoPorVenta(items, c, catalogs)
     for (const f of rep.filas) {
       if (f.ganado <= 0) continue
-      const rate = Number(c.importePorVenta) || 0
+      const rate = rep.rateActual || 0
       const cobradas = rate > 0 ? Math.round(f.ganado / rate) : f.ventas
       ;(out[f.name] = out[f.name] || []).push({
         concepto: c.nombre || 'Extra del torneo',
         // Si el bote cortó, se dice claro: «1 de 2 venta(s)» — cobró 1, hizo 2.
         detalle: (cobradas < f.ventas ? `${cobradas} de ${f.ventas}` : `${f.ventas}`)
           + ` venta(s) × ${fmtEur(rate)}`
+          + (rep.objetivo2Cumplido ? ' · 🎯 2º objetivo' : '')
           + (rep.tope > 0 ? ` · bote ${fmtEur(rep.tope)}` : ''),
         importe: f.ganado,
       })

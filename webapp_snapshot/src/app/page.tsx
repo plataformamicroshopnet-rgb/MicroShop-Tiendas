@@ -692,6 +692,9 @@ export default function DashboardPage() {
                       : r.tope > 0
                         ? <>bote {eurFmt(r.repartido)} de {eurFmt(r.tope)}{r.agotado ? ' — ⛔ agotado' : ''}</>
                         : <>repartido {eurFmt(r.repartido)}</>}
+                    {r.objetivo2Grupal > 0 ? (r.objetivo2Cumplido
+                      ? <> · 🎯 ¡2º objetivo! todas a {eurFmt(r.importePorVenta2)}</>
+                      : <> · 🎯 a {eurFmt(r.importePorVenta2)}/venta si llegáis a {r.objetivo2Grupal}</>) : null}
                   </div>) })() : null}
                 {/* Con UN solo concurso la carta es ancha: la lista va en 2
                     columnas (1º-4º izquierda, 5º-8º derecha). Con 2-3 concursos

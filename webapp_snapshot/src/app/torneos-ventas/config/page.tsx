@@ -25,6 +25,8 @@ const nuevoConcurso = (): Concurso => ({
   premioModo: 'podio',
   importePorVenta: 0,
   topeBote: 0,
+  objetivo2Grupal: 0,
+  importePorVenta2: 0,
   notas: '',
   tituloColor: '',
   tituloSize: 0,
@@ -335,10 +337,29 @@ export default function ConfiguradorTorneosPage() {
                            value={c.minGrupal || ''} placeholder="vacío = sin mínimo"
                            onChange={e => updateConcurso(ci, { minGrupal: Number(e.target.value) })} />
                   </div>
+                  {/* 2º OBJETIVO del premio (dueño, 25-ago-2026): al llegar el equipo,
+                      TODAS las ventas pasan al 2º importe — como los tramos de las palancas. */}
+                  <div>
+                    <label style={{ fontSize: 12, color: 'var(--medium-gray,#64748b)', fontWeight: 600 }}>🎯 2º objetivo del equipo (ventas)</label>
+                    <input type="number" step="1" style={{ ...ipt, width: '100%', marginTop: 4 }}
+                           value={c.objetivo2Grupal || ''} placeholder="vacío = sin 2º objetivo"
+                           onChange={e => updateConcurso(ci, { objetivo2Grupal: Number(e.target.value) })} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 12, color: 'var(--medium-gray,#64748b)', fontWeight: 600 }}>€ por venta en el 2º objetivo</label>
+                    <input type="number" step="0.01" style={{ ...ipt, width: '100%', marginTop: 4 }}
+                           value={c.importePorVenta2 || ''} placeholder="ej. 10 (doblar los 5)"
+                           onChange={e => updateConcurso(ci, { importePorVenta2: Number(e.target.value) })} />
+                  </div>
                   <div style={{ gridColumn: '1 / -1', fontSize: 12, color: 'var(--medium-gray,#64748b)', lineHeight: 1.5 }}>
                     Sin llegar al <strong>mínimo de equipo</strong> no cobra nadie; sin llegar al
                     <strong> mínimo individual</strong>, ese comercial no cobra (sus ventas cuentan en
                     el ranking pero no gastan bote). El bote se reparte por orden de fecha de venta.
+                    {(Number(c.objetivo2Grupal) > 0 || Number(c.importePorVenta2) > 0) && (
+                      <> Con el <strong>🎯 2º objetivo</strong>: al llegar el equipo a esas ventas,
+                      TODAS las que puntúan pasan a pagarse al importe nuevo — también las ya hechas
+                      (ej.: de 5 € a 10 €).</>
+                    )}
                   </div>
                 </div>
               )}
