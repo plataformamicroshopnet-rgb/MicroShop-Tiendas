@@ -234,6 +234,11 @@ export interface PanelComisionesTiendasInput {
     // virtualKpiExtras — ese array se persiste vía /api/extras/kpi-sync y el
     // torneo se recalcula cada vez; persistirlo lo cobraría DOS veces.
     torneoExtras?: Record<string, { concepto: string; detalle: string; importe: number }[]>;
+    // Lo que el torneo tiene EN JUEGO y aún NO se cobra (mínimo de equipo sin
+    // alcanzar). SOLO para pintarlo en la tabla: no suma a totalExtras, no entra
+    // en extrasConceptos y no viaja al ERP — si sumara, pagaría de más.
+    torneoEnJuego?: Record<string, { concepto: string; ventas: number; cobrables: number; rate: number;
+                                     enJuego: number; teamVentas: number; minGrupal: number; faltan: number }[]>;
 }
 
 const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
@@ -1438,7 +1443,22 @@ export function computePanelComisionesTiendas(input: PanelComisionesTiendasInput
 
         // EXTRA de los torneos «X € por venta» (dueño, 24-ago-2026): a la nómina
         // como un bono más. Carril propio a propósito (ver el aviso del input).
-        const torneoExtrasSeller = (input.torneoExtras || {})[name] || [];
+        // Lookup por nombre: exacto y, si no casa, normalizado (mayúsculas/acentos).
+        // Era el único sitio del panel que comparaba nombres en crudo: un 'ELENA'
+        // en la venta contra 'Elena' del roster dejaba el dinero calculado pero
+        // invisible. El resto del panel ya casa vendedores normalizando.
+        const buscaPorNombre = <T,>(mapa: Record<string, T[]> | undefined): T[] => {
+            if (!mapa) return [];
+            const objetivo = normNombre(name);
+            // TODAS las claves que son esta persona, no la primera: con dos
+            // grafías del mismo nombre, quedarse con una perdía el resto del
+            // dinero en silencio (y la fila parecía completa).
+            return Object.keys(mapa)
+                .filter(k => normNombre(k) === objetivo)
+                .flatMap(k => mapa[k]);
+        };
+        const torneoExtrasSeller = buscaPorNombre(input.torneoExtras);
+        const torneoEnJuegoSeller = buscaPorNombre(input.torneoEnJuego);
         totalExtras += torneoExtrasSeller.reduce((acc, t) => acc + (t.importe || 0), 0);
 
         internalTotalComision += totalExtras;
@@ -1526,6 +1546,9 @@ export function computePanelComisionesTiendas(input: PanelComisionesTiendasInput
             rawExtras: [...sExtras, ...virtualKpiExtras],
             virtualKpiExtras, // Exporting to emit later
             extraGroups,
+            // Dinero del torneo pendiente del mínimo de equipo: se pinta aparte y
+            // NO está sumado en totalExtras (ver el input torneoEnJuego).
+            torneoEnJuego: torneoEnJuegoSeller,
             groupIsConsolidado,
             groupTopeMotivo,
             activeTeamGroupCounts,

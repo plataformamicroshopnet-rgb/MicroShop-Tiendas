@@ -1074,6 +1074,29 @@ export default function ComisionesDashboardPage() {
                                                     </td>
                                                 </tr>
                                             )})}
+                                            {/* EN JUEGO: el torneo aún no llega al mínimo de
+                                                equipo (dueño, 26-ago-2026: «no veo el dinero de
+                                                los torneos»). Ámbar y con el «no cobrado» bien
+                                                claro — NO suma a la comisión de la fila total. */}
+                                            {s.torneoEnJuego && s.torneoEnJuego.length > 0 && s.torneoEnJuego.map((tj: any, idx: number) => (
+                                                <tr key={`enjuego-${idx}`} style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: '#fffbeb', color: '#92400e' }}>
+                                                    <td style={{ padding: '8px 10px', fontSize: 12.5, fontWeight: 700 }}>
+                                                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                            <Trophy size={10} color="#d97706" /> {tj.concepto}
+                                                        </span>
+                                                    </td>
+                                                    <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 13.5, fontWeight: 400, color: '#b45309' }}>
+                                                        {tj.cobrables < tj.ventas ? `${tj.cobrables} de ${tj.ventas}` : tj.ventas}
+                                                    </td>
+                                                    <td colSpan={10} style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12, color: '#b45309', fontWeight: 600 }}>
+                                                        ⚠️ En juego — faltan {tj.faltan} venta(s) del equipo para cobrarlo
+                                                        (lleváis {tj.teamVentas} de {tj.minGrupal})
+                                                    </td>
+                                                    <td style={{ padding: '8px 10px', textAlign: 'right', fontSize: 13.5, fontWeight: 800, color: '#b45309', whiteSpace: 'nowrap' }}>
+                                                        {tj.enJuego.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                                                    </td>
+                                                </tr>
+                                            ))}
                                         </tbody>
                                     </table>
                                     </div>

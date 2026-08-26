@@ -402,10 +402,27 @@ export function generaNotasConcurso(c: Concurso): string {
 // /api/comisiones-liquidacion — la MISMA cifra en pantalla y en el ERP.
 export interface TorneoExtraConcepto { concepto: string; detalle: string; importe: number }
 
+// El nombre del vendedor viene TECLEADO (el Registro de Operaciones lo deja
+// libre): 'ELENA' y 'Elena' son la misma persona, pero agrupando en crudo se
+// partían su mínimo individual, su turno en el bote y su fila. Se canoniza a la
+// PRIMERA grafía vista, así una persona = una sola cuenta.
+export function canonizaVendedores(sales: any[]): (v: any) => string {
+  const n = (v: any) => String(v || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+  const primera: Record<string, string> = {}
+  for (const s of sales) {
+    const bruto = String(s?.vendedor || '').trim()
+    if (!bruto) continue
+    const k = n(bruto)
+    if (!primera[k]) primera[k] = bruto
+  }
+  return (v: any) => primera[n(v)] || String(v || '').trim()
+}
+
 export function torneoExtrasPorVendedor(
   sales: any[], cfg: TorneosConfig, catalogs?: Record<string, any[]>, reglas?: any[],
 ): Record<string, TorneoExtraConcepto[]> {
   const out: Record<string, TorneoExtraConcepto[]> = {}
+  const canon = canonizaVendedores(sales)
   const norm = (v: any) => String(v || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim()
   for (const cRaw of cfg.concursos) {
     const c = reglas && reglas.length ? resolverObjetivosTorneo(cRaw, reglas) : cRaw
@@ -416,7 +433,7 @@ export function torneoExtrasPorVendedor(
       const vend = String(s.vendedor || '').trim()
       if (!vend || norm(vend) === 'marta') continue
       if (norm(s.anulado) === 'si' || norm(s.pendiente) === 'anulado') continue
-      items.push({ name: vend, sale: s })
+      items.push({ name: canon(vend), sale: s })
     }
     const rep = repartoPorVenta(items, c, catalogs)
     for (const f of rep.filas) {
@@ -431,6 +448,87 @@ export function torneoExtrasPorVendedor(
           + (rep.objetivo2Cumplido ? ' · 🎯 2º objetivo' : '')
           + (rep.tope > 0 ? ` · bote ${fmtEur(rep.tope)}` : ''),
         importe: f.ganado,
+      })
+    }
+  }
+  return out
+}
+
+// ── LO QUE ESTÁ EN JUEGO (dueño, 26-ago-2026) ────────────────────────────────
+// La tabla de Comisiones se quedaba MUDA mientras el torneo no llega al mínimo
+// de equipo: sin cobro no hay concepto (torneoExtrasPorVendedor salta las filas
+// con ganado 0) y el comercial no veía lo que se juega. Esta hermana emite ESE
+// dinero pendiente — y SOLO ese: en cuanto el equipo llega, el importe pasa a
+// cobrarse por el carril normal y aquí ya no sale nada, para no contarlo dos
+// veces. NUNCA suma a totalExtras ni viaja al ERP: es información en pantalla.
+export interface TorneoEnJuegoConcepto {
+  concepto: string      // nombre del torneo
+  ventas: number        // ventas suyas que puntúan
+  cobrables: number     // de esas, las que caben en el bote (puede ser menos)
+  rate: number          // € por venta que se estarían pagando
+  enJuego: number       // € que llevaría si el equipo llega al mínimo
+  teamVentas: number    // ventas del equipo dentro de la ventana
+  minGrupal: number     // mínimo de equipo que falta por alcanzar
+  faltan: number        // minGrupal - teamVentas
+}
+
+/** Opciones del carril «en juego»: `mesVisto`/`hoyISO` evitan prometer dinero de
+ *  un torneo que ya terminó; `rosterNombres` limita el equipo a la plantilla del
+ *  mes, el mismo universo que enseña la pantalla de Torneos. */
+export interface TorneoEnJuegoOpciones {
+  mesVisto?: string
+  hoyISO?: string
+  rosterNombres?: string[]
+}
+
+export function torneoEnJuegoPorVendedor(
+  sales: any[], cfg: TorneosConfig, catalogs?: Record<string, any[]>, reglas?: any[],
+  opciones?: TorneoEnJuegoOpciones,
+): Record<string, TorneoEnJuegoConcepto[]> {
+  const out: Record<string, TorneoEnJuegoConcepto[]> = {}
+  const norm = (v: any) => String(v || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+  const canon = canonizaVendedores(sales)
+  const hoy = opciones?.hoyISO || new Date().toISOString().slice(0, 10)
+  // Un mes ya cerrado no admite ventas nuevas: lo que no se ganó, no se gana.
+  if (opciones?.mesVisto && opciones.mesVisto < periodKeyActual()) return out
+  const roster = opciones?.rosterNombres && opciones.rosterNombres.length
+    ? new Set(opciones.rosterNombres.map(norm))
+    : null
+  for (const cRaw of cfg.concursos) {
+    const c = reglas && reglas.length ? resolverObjetivosTorneo(cRaw, reglas) : cRaw
+    if ((c.premioModo || 'podio') !== 'porVenta') continue
+    if (!(Number(c.importePorVenta) > 0)) continue
+    // Torneo con la ventana ya cerrada: nadie puede sumar una venta más, así que
+    // no hay nada «en juego» (la pantalla de Torneos lo marca 🏁 finalizado).
+    const est = estadoConcurso(c, hoy)
+    if (est && est.txt.startsWith('🏁')) continue
+    const items: { name: string; sale: any }[] = []
+    for (const s of sales) {
+      const vend = String(s.vendedor || '').trim()
+      if (!vend || norm(vend) === 'marta') continue
+      if (roster && !roster.has(norm(vend))) continue
+      if (norm(s.anulado) === 'si' || norm(s.pendiente) === 'anulado') continue
+      items.push({ name: canon(vend), sale: s })
+    }
+    const rep = repartoPorVenta(items, c, catalogs)
+    // Solo mientras el mínimo de equipo NO se ha alcanzado: con él cumplido, el
+    // dinero ya sale como cobrado en la fila de extras de siempre.
+    if (rep.grupalCumplido) continue
+    for (const f of rep.filas) {
+      if (f.enJuego <= 0) continue
+      const rate = rep.rateActual || 0
+      // Con tope de bote no todas sus ventas llevan dinero: se dice cuántas
+      // caben, igual que hace la fila ya cobrada («3 de 5 venta(s)»).
+      const cobrables = rate > 0 ? Math.round(f.enJuego / rate) : f.ventas
+      ;(out[f.name] = out[f.name] || []).push({
+        concepto: c.nombre || 'Extra del torneo',
+        ventas: f.ventas,
+        cobrables,
+        rate,
+        enJuego: f.enJuego,
+        teamVentas: rep.teamVentas,
+        minGrupal: rep.minGrupal,
+        faltan: Math.max(0, rep.minGrupal - rep.teamVentas),
       })
     }
   }

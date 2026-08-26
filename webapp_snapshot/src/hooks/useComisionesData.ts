@@ -5,7 +5,8 @@ import { isSolar360 } from '@/lib/salesUtils';
 // src/lib/panelComisionesTiendas.ts (computePanelComisionesTiendas), la MISMA
 // lib que usa /api/comisiones-liquidacion server-side: fuente única del motor.
 import { computePanelComisionesTiendas } from '@/lib/panelComisionesTiendas';
-import { loadTorneosConfigMes, torneoExtrasPorVendedor, TorneosConfig } from '@/lib/torneosConfig';
+import { loadTorneosConfigMes, torneoExtrasPorVendedor, torneoEnJuegoPorVendedor, TorneosConfig } from '@/lib/torneosConfig';
+import { getEffectiveSellers } from '@/lib/comercialRoster';
 // matchProductFormula/matchTipoVenta viven en lib/ventaMatching y los helpers del
 // panel (parseSafeFloat, matchesRule, getValueForRule…) en lib/panelComisionesTiendas
 // (módulos PUROS usables en endpoints de servidor); se re-exportan aquí para no
@@ -126,6 +127,13 @@ export function useComisionesData(user?: any) {
         fttrDiscount,
         // El EXTRA de los torneos «X € por venta», a la nómina como un bono más
         torneoExtras: torneoExtrasPorVendedor(allSales, torneosCfg, catalogs, tiendaRules),
+        // …y lo que aún no se cobra, para que la tabla no esté muda mientras
+        // el equipo va camino del mínimo (no suma a la comisión).
+        torneoEnJuego: torneoEnJuegoPorVendedor(allSales, torneosCfg, catalogs, tiendaRules, {
+            mesVisto: activePeriodKey,
+            // el mismo equipo que cuenta la pantalla de Torneos: la plantilla del mes
+            rosterNombres: getEffectiveSellers(tiendaHours, o2Hours),
+        }),
     });
 
     // EFFECT: Envío subrepticio de extras KPI a base de datos para grabarlos eternamente
