@@ -641,6 +641,19 @@ function OperationsContent() {
   const grupoFilter = searchParams.get('grupo')
 
   const canEdit = canEditMacro(user, 'MODULE_TIENDAS') || can(user, 'EDIT_SALES') || can(user, 'MODULE_CRISTINA') || can(user, 'MODULE_BACK_OFFICE');
+  // CAMBIAR EL «PRODUCTO» DE UNA VENTA (dueño, 26-ago-2026: faltaban las PROMO
+  // VODAFONE y PROMO DIGI y el equipo tipificó con la más parecida). En MESES
+  // PASADOS solo quien lleva el seguimiento (Gabriel) o Administración; en el mes
+  // en curso, cualquiera que ya pueda editar sus operaciones.
+  const mesEnCurso = (() => {
+    const n = new Date()
+    return `${n.getFullYear()}_${String(n.getMonth() + 1).padStart(2, '0')}`
+  })()
+  const esMesEnCurso = !activePeriodKey || activePeriodKey === mesEnCurso
+  const puedeCambiarProducto = canEdit && (esMesEnCurso
+    || canView(user, 'MODULE_JEFE_TIENDAS')      // Gabriel y el jefe de ventas
+    || can(user, 'MODULE_CRISTINA')
+    || canEditMacro(user, 'MODULE_TIENDAS'))
   const canCancel = canEditMacro(user, 'MODULE_TIENDAS') || can(user, 'CANCEL_SALES') || can(user, 'MODULE_CRISTINA') || can(user, 'MODULE_BACK_OFFICE');
   const isAdmin = user?.role === 'ADMIN';
 
@@ -653,7 +666,7 @@ function OperationsContent() {
       fetch(`/api/objetivos?periodKey=${activePeriodKey}&strictPeriod=1`).then(res => res.json()).catch(() => ({ success: true, objetivos: { Pyme: {}, Captador: {} } })),
       fetch(`/api/importes-pyme?periodKey=${activePeriodKey}&strictPeriod=1`).then(res => res.json()).catch(() => ({})),
       fetch(`/api/importes-plus?periodKey=${activePeriodKey}&strictPeriod=1`).then(res => res.json()).catch(() => ({})),
-      fetch(`/api/catalogs?_t=${Date.now()}`).then(res => res.json()).catch(() => ({})),
+      fetch(`/api/catalogs?periodKey=${activePeriodKey}&strictPeriod=1&_t=${Date.now()}`).then(res => res.json()).catch(() => ({})),
       fetch(`/api/extras/assignments?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({})),
       fetch(`/api/territorial?periodKey=${activePeriodKey}`).then(res => res.json()).catch(() => ({ success: true, o2: [], tiendas: [] })),
       fetch(`/api/movilfree/sales`).then(res => res.json()).catch(() => ([])),
@@ -708,6 +721,76 @@ function OperationsContent() {
     setEditForm({ ...sale })
   }
 
+  // ── CAMBIAR EL PRODUCTO DE UNA VENTA YA GRABADA ────────────────────────────
+  // Las tarifas salen del catálogo DE ESE MES y el importe se calcula con la
+  // MISMA cuenta que Nueva Venta (comisión × multiplicador; el multiplicador a 0
+  // vale 1). El servidor lo vuelve a calcular al guardar con las mismas pistas
+  // de gama/promoción, así que pantalla y BD no pueden separarse.
+  const precioFila = (categoria: string, fila: any): number | null => {
+    const num = (v: any) => {
+      const n = Number(String(v ?? '').replace(',', '.'))
+      return isNaN(n) ? null : n
+    }
+    const cat = String(categoria || '')
+    if (cat === 'miMovistar' || cat === 'Resto BAF' || cat === 'Traslado miMovistar') {
+      const base = num(fila.comision)
+      const mult = num(fila.comisionConCoste)
+      return base === null ? null : base * (mult && mult > 0 ? mult : 1)
+    }
+    if (cat === 'Suscripciones TV' || cat === 'Repos UP') {
+      const base = num(fila.comision)
+      const mult = num(fila.comisionConCoste)
+      return base === null ? null : base * (mult && mult > 0 ? mult : 1)
+    }
+    if (['O2', 'Seguro', 'Prepago', 'Varios', 'Accesorios'].includes(cat)) return num(fila.comision)
+    if (['Ti', 'TMA', 'Micro', 'Rent'].includes(cat)) return num(fila.anual) ?? num(fila.mensual)
+    return num(fila.anual) ?? num(fila.mensual) ?? num(fila.comision)
+  }
+
+  const opcionesProducto = (sale: any) => {
+    const palanca = sale.detalle === 'Traslado miMovistar' ? 'miMovistar' : String(sale.detalle || '')
+    const filas = (catalogs as any)[palanca] || []
+    return filas.map((f: any, i: number) => {
+      const partes = [f.subcategoria, f.gama, String(f.producto || '').replace(/\n/g, ' · ')]
+        .map((x: any) => String(x || '').trim()).filter(Boolean)
+      const precio = precioFila(palanca, f)
+      return {
+        clave: String(i),
+        fila: f,
+        palanca,
+        etiqueta: partes.join(' · ') + (precio !== null ? `  —  ${precio.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : ''),
+      }
+    }).sort((a: any, b: any) => a.etiqueta.localeCompare(b.etiqueta, 'es'))
+  }
+
+  const elegirProducto = (sale: any, clave: string) => {
+    if (!clave) {   // volver al producto original
+      setEditForm((prev: any) => ({ ...prev, __filaCatalogo: '', producto: sale.producto,
+        importe: sale.cuota, catalogoSubcategoria: undefined, catalogoGama: undefined }))
+      return
+    }
+    const op = opcionesProducto(sale).find((o: any) => o.clave === clave)
+    if (!op) return
+    const precio = precioFila(op.palanca, op.fila)
+    // El sello de la promoción se guarda en Anotaciones: la venta no tiene
+    // columna para la gama, y así queda por escrito qué promo se aplicó (mismo
+    // patrón que la promo «−14 € sin Paquete Movistar Plus» del alta).
+    const sello = [op.fila.subcategoria, op.fila.gama].map((x: any) => String(x || '').trim()).filter(Boolean).join(' · ')
+    const previas = String(sale.anotaciones || '').trim()
+    const anotaciones = sello && !previas.includes(sello)
+      ? [previas, `Retipificada: ${sello}`].filter(Boolean).join(' · ')
+      : previas
+    setEditForm((prev: any) => ({
+      ...prev,
+      __filaCatalogo: clave,
+      producto: op.fila.producto,
+      catalogoSubcategoria: op.fila.subcategoria || '',
+      catalogoGama: op.fila.gama || '',
+      importe: precio !== null ? String(precio) : prev.importe,
+      anotaciones,
+    }))
+  }
+
   const handleEditChange = (field: string, value: string) => {
     setEditForm((prev: any) => ({ ...prev, [field]: value }))
   }
@@ -718,7 +801,7 @@ function OperationsContent() {
       const res = await fetch('/api/sales', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: editingId, updates: editForm })
+        body: JSON.stringify({ id: editingId, updates: (() => { const { __filaCatalogo, ...limpio } = editForm; return limpio })() })
       })
       const data = await res.json()
       if (data.success) {
@@ -1448,7 +1531,19 @@ function OperationsContent() {
                     <td style={{ padding: '4px 6px' }}>
                       {sale.detalle === 'Rent' && sale.origenStock === 'LOGISTICO' && <span title="Envío logístico: no descontó stock de tienda">🚚 </span>}
                       {sale.detalle === 'Rent' && sale.origenStock === 'TIENDA' && <span title="Salió del stock de la tienda">🏬 </span>}
-                      {sale.producto}
+                      {editingId === sale.id && puedeCambiarProducto ? (
+                        <select
+                          value={editForm.__filaCatalogo ?? ''}
+                          onChange={e => elegirProducto(sale, e.target.value)}
+                          style={{ maxWidth: 260, padding: 4, fontSize: 11 }}
+                          title="Cambiar el producto: el importe se recalcula con la tarifa de este mes"
+                        >
+                          <option value="">— {String(sale.producto || '').replace(/\n/g, ' · ') || 'sin producto'} (actual) —</option>
+                          {opcionesProducto(sale).map((o: any) => (
+                            <option key={o.clave} value={o.clave}>{o.etiqueta}</option>
+                          ))}
+                        </select>
+                      ) : sale.producto}
                     </td>
                     <td style={{ padding: '4px 6px' }}>
                        {editingId === sale.id ? <input value={editForm.nombreCliente} onChange={e => handleEditChange('nombreCliente', e.target.value)} style={{ width: 80, padding: 4 }} /> : (sale.nombreCliente || '-')}

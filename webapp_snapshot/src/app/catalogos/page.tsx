@@ -483,6 +483,44 @@ export default function CatalogosPage() {
     }
   }
 
+  // TRAER PROMOCIONES DE OTRO MES (dueño, 26-ago-2026): añade al mes que se está
+  // viendo las filas que le falten de otro mes, SIN borrar nada — por eso funciona
+  // también en un mes cerrado, donde el guardado normal está prohibido.
+  const traerPromosDeOtroMes = async () => {
+    const desde = window.prompt(`Traer productos AL periodo ${activePeriodKey}.
+
+¿De qué mes los copio? (formato 2026_08)`, '2026_08')
+    if (!desde) return
+    const contiene = window.prompt('¿Qué filas? Escribe una palabra que aparezca en ellas (vacío = TODAS las de la pestaña). Ejemplo: PROMO', 'PROMO')
+    if (contiene === null) return
+    setLoading(true)
+    try {
+      const cuerpo = { desde, hacia: activePeriodKey, categoria: activeTab, contiene, aplicar: false }
+      const prev = await fetch('/api/catalogs/copiar-promos', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cuerpo),
+      }).then(r => r.json())
+      if (!prev.success) { alert('❌ ' + (prev.error || 'No se pudo consultar')); return }
+      if (prev.copiaria === 0) { alert(`No hay nada que traer: las ${prev.yaExistian} fila(s) que encajan ya están en ${activePeriodKey}.`); return }
+      const muestra = (prev.detalle || []).filter((d: any) => d.nueva).slice(0, 12)
+        .map((d: any) => `· ${[d.subcategoria, d.gama, String(d.producto || '').split('\n').join(' ')].filter(Boolean).join(' · ')}`).join('\n')
+      const ok = window.confirm(`Se copiarán ${prev.copiaria} fila(s) de ${desde} a ${activePeriodKey}`
+        + (prev.yaExistian ? ` (${prev.yaExistian} ya estaban y no se tocan)` : '')
+        + `:\n\n${muestra}${prev.copiaria > 12 ? '\n…' : ''}\n\nNo se borra ni se cambia nada de lo que ya hay. ¿Adelante?`)
+      if (!ok) return
+      const res = await fetch('/api/catalogs/copiar-promos', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...cuerpo, aplicar: true }),
+      }).then(r => r.json())
+      if (res.success) {
+        alert(`✅ Copiadas ${res.copiadas} fila(s) a ${activePeriodKey}.`)
+        window.location.reload()
+      } else {
+        alert('❌ ' + (res.error || 'Error al copiar'))
+      }
+    } catch {
+      alert('❌ Error de conexión')
+    } finally { setLoading(false) }
+  }
+
   const handleCloneFromPrevious = async () => {
       if (isHistoric || !previousPeriod) return
       if (!window.confirm(`¿Seguro que quieres clonar todo el catálogo desde el periodo ${previousPeriod.period_key}?`)) return
@@ -1235,6 +1273,16 @@ export default function CatalogosPage() {
                 Estado: {activePeriodObj?.status || 'SIN REGISTRO'} {isHistoric && '(Bloqueado por Archivo Histórico)'}
               </p>
             </div>
+            {isProductTab && (
+              <button
+                onClick={traerPromosDeOtroMes}
+                title="Copia a este mes las filas que le falten de otro mes (no borra ni cambia nada de lo que ya hay)"
+                style={{ marginLeft: 'auto', padding: '10px 16px', borderRadius: 10, fontWeight: 700, cursor: 'pointer',
+                         background: 'transparent', color: 'var(--mercedes-cyan)', border: '1px solid var(--mercedes-cyan)' }}
+              >
+                ⤵️ Traer productos de otro mes
+              </button>
+            )}
           </div>
 
           {/* ZONA DE BOTONES DE IMPORTACIÓN/CLONACIÓN EN EMPTY STATE */}

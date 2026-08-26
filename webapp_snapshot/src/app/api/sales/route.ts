@@ -300,11 +300,23 @@ export async function PATCH(request: Request) {
           // sin anuncios» están en «Suscripciones TV» y en «Repos (Arpu)»— podía
           // engancharse a la fila equivocada y traer el precio de la otra.
           const palancaVenta = String(existingSale.detalle || existingSale.sheet || '').trim();
+          // PISTAS DEL DESPLEGABLE (26-ago-2026): en miMovistar el MISMO nombre de
+          // producto vive en varias gamas y promociones («Movistar Plus + Fútbol +
+          // Netflix Estándar» está en PROMO DIGI Max a 51 € y en PROMO VODAFONE MAX
+          // a 71 €). La venta no guarda gama ni subcategoría, así que la pantalla
+          // manda cuál eligió el usuario para que aquí se coja la fila BUENA. No se
+          // guardan en la venta: solo mandan sobre el precio.
+          const pistaSub = updates.catalogoSubcategoria !== undefined
+            ? String(updates.catalogoSubcategoria || '').trim() : ''
+          const pistaGama = updates.catalogoGama !== undefined
+            ? String(updates.catalogoGama || '').trim() : ''
           const matchingCatalogs = await prisma.productCatalog.findMany({
              where: {
                  periodId: effectivePeriodId,
                  producto: { equals: effectiveProducto }, // Exact match for base price
-                 ...(palancaVenta ? { categoria: palancaVenta } : {})
+                 ...(palancaVenta ? { categoria: palancaVenta } : {}),
+                 ...(pistaSub ? { subcategoria: pistaSub } : {}),
+                 ...(pistaGama ? { gama: pistaGama } : {}),
              }
           });
 
@@ -334,10 +346,23 @@ export async function PATCH(request: Request) {
              const esIncrementoArpu = String(effectiveProducto).toLowerCase()
                .normalize('NFD').replace(/[̀-ͯ]/g, '').includes('incremento de arpu')
                || esRepoArpuManual(effectiveProducto)
+             // miMovistar / Resto BAF / Traslado: MISMA cuenta que el alta
+             // (nueva-venta/page.tsx) — comisión × multiplicador, con el
+             // multiplicador a 0 valiendo 1. Sin esta rama, cambiar el producto de
+             // una miMovistar dejaba la cuota VIEJA: el nombre cambiaba y el dinero
+             // no, que es justo lo que pasó con las PROMO VODAFONE/DIGI.
+             // OJO: solo al cambiar el PRODUCTO. Si solo se corrige la fecha, la
+             // cuota de una miMovistar se queda como está (es lo que hacía hasta
+             // hoy): tocar una fecha no puede mover el dinero de una venta.
+             const esBaf = prodChanged && (pal === 'mimovistar' || pal === 'resto baf' || pal === 'traslado mimovistar')
              const multiplica = !esIncrementoArpu && (pal === 'suscripciones tv' || pal === 'repos up')
              const planas = ['o2', 'seguro', 'prepago', 'varios', 'accesorios']
              let nuevoPrecio: number | null = null
-             if (targetCatalog.anual) {
+             if (esBaf) {
+               const base = num(targetCatalog.comision)
+               const mult = num((targetCatalog as any).comisionConCoste)
+               if (base !== null) nuevoPrecio = base * (mult && mult > 0 ? mult : 1)
+             } else if (targetCatalog.anual) {
                nuevoPrecio = num(targetCatalog.anual)
              } else if (multiplica) {
                const base = num(targetCatalog.comision)
@@ -349,9 +374,18 @@ export async function PATCH(request: Request) {
              // Si no se sabe de dónde sacar el precio, se deja el que ya tenía.
              // Nunca se escribe null: una venta sin importe no se ve venir.
              if (nuevoPrecio !== null) updateData.cuota = nuevoPrecio;
-             // Si targetCatalog informa de una categoría (grupo), reescribimos el grupo también
+             // EL GRUPO, COMO EN EL ALTA. Aquí se escribía el nombre de la palanca
+             // ('miMovistar'), cuando el alta escribe su GRUPO ('BAF'): cambiar el
+             // producto de una venta la dejaba con un grupo que no existe en ninguna
+             // otra. Mismo mapeo que resolveGrupo de api/sales/unified.
              if (targetCatalog.categoria) {
-                 updateData.grupo = targetCatalog.categoria;
+                 const c = String(targetCatalog.categoria)
+                 const GRUPO: Record<string, string> = {
+                   'Ti': 'TI', 'Contratos Móvil': 'TI', 'TMA': 'TMA', 'Micro': 'MIC', 'MIC': 'MIC',
+                   'miMovistar': 'BAF', 'Resto BAF': 'BAF', 'Traslado miMovistar': 'BAF',
+                   'Rent': 'REN', 'Seguro': 'REN', 'O2': 'ALTA', 'Accesorios': 'ACC',
+                 }
+                 updateData.grupo = GRUPO[c] || existingSale.grupo || c;
              }
           }
        }
