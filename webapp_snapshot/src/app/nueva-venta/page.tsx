@@ -1377,7 +1377,10 @@ export default function NuevaVentaPage() {
                     {/* COLUMNA 3: ESTADO Y FINANZAS */}
                     <div style={{ flex: '1', minWidth: '250px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <div style={{ backgroundColor: '#B8D5F6', borderRadius: '8px', padding: '8px', display: 'block' }}>
-                        <label style={{ fontSize: 13, color: '#1B3D6A', display: 'block', marginBottom: 4 }}>Cuota Total</label>
+                        {/* Un solo nombre en toda la pantalla para el valor de la venta
+                            (dueño, 27-ago-2026). Antes cada palanca lo llamaba de una
+                            forma: «Cuota Total», «Comisión», «Importe». */}
+                        <label style={{ fontSize: 13, color: '#1B3D6A', display: 'block', marginBottom: 4 }}>Puntos X (Venta)</label>
                         <div style={{ position: 'relative' }}>
                           <input type="number" step="0.01" className="form-input" value={prod.importe !== '' && prod.importe !== undefined ? Number(prod.importe).toFixed(2) : ''} onChange={e => handleProductChange(index, 'importe', e.target.value)} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A', fontWeight: 'bold', width: '100%', paddingRight: 24 }} />
                           <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: '#1B3D6A', fontSize: 13, pointerEvents: 'none' }}>€</span>
@@ -2000,7 +2003,7 @@ export default function NuevaVentaPage() {
                             de la tarifa del catálogo y escribirla a mano se saltaría el
                             multiplicador. Editarla sigue siendo cosa del Admin. */}
                         <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label className="form-label" style={{ color: '#555' }}>{usaIncrementoArpu(prod) ? 'Comisión (la calcula el programa)' : ((prod.categoria === 'O2' || prod.categoria === 'Suscripciones TV' || prod.categoria === 'Prepago' || prod.categoria === 'Varios' || prod.categoria === 'Accesorios' || prod.categoria === 'Repos' || prod.categoria === 'Repos UP' || prod.categoria === 'Seguro') ? 'Comisión' : 'Importe')}</label>
+                          <label className="form-label" style={{ color: '#555' }}>{usaIncrementoArpu(prod) ? 'Puntos X (Venta) — los calcula el programa' : 'Puntos X (Venta)'}</label>
                           <div style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
                             <input 
                               type="number" 
