@@ -8,8 +8,6 @@ import { CODIGOS_TRAMITACION } from '@/lib/constants'
 import { getEffectiveTiendaComerciales, getEffectiveSellers } from '@/lib/comercialRoster'
 import { isVentaWithinDates, esRepoArpuManual, importeRepoArpu, factorRepoArpu, REPO_ARPU_CORTE, PALANCA_REPOS } from '@/lib/salesUtils'
 import { useGuard } from '@/hooks/useGuard'
-import { paquetesDeGama, paquetesDeProducto, filaDelConjunto, desgloseConjunto,
-         precioFila, normPaquete } from '@/lib/paquetesMiMovistar'
 import { usePeriod } from '@/components/PeriodProvider'
 
 export default function NuevaVentaPage() {
@@ -308,52 +306,12 @@ export default function NuevaVentaPage() {
     }
   }
 
-  // ── UNA VENTA, UN BLOQUE (dueño, 26-ago-2026) ──────────────────────────────
-  // Telefónica paga el alta y sus paquetes como UNA sola operación, así que aquí
-  // se marcan los paquetes y el programa busca en el catálogo la fila del
-  // conjunto: de ahí salen el tramo (BV/MV/AV), el nombre y el precio OFICIAL.
-  // Ojo: el precio NO es la suma de las partes — al añadir paquetes el alta sube
-  // de tramo, y el catálogo ya lo tiene contemplado.
-  // La promo «sin el Paquete Movistar Plus» (−14 €) SOLO existe en los tramos AV
-  // y MV. Una única función lo decide, y la usan igual el cálculo y la casilla:
-  // si se separan, la casilla desaparece de la pantalla con la bandera puesta y
-  // sigue restando 14 € que nadie ve (lo cazó la revisión).
+
+  // La promo «sin el Paquete Movistar Plus» (−14 €) solo existe en los tramos AV
+  // y MV: una única función lo decide, y la usan igual el cálculo y la casilla.
   const promoSinPlusAplica = (prod: any) =>
     prod.categoria === 'miMovistar'
     && ['AV', 'MV'].includes(String(prod.subcategoria || '').toUpperCase().trim())
-
-  const alternaPaquete = (index: number, paquete: string) => {
-    setFormData((prev: any) => {
-      const arr = [...prev.productos]
-      const prod: any = { ...arr[index] }
-      const cat = prod.categoria === 'Traslado miMovistar' ? 'miMovistar' : prod.categoria
-      const catalogo = (catalogs as any)[cat] || []
-      const actuales = paquetesDeProducto(prod.producto)
-      const yaEsta = actuales.some((x: string) => normPaquete(x) === normPaquete(paquete))
-      const nuevos = yaEsta
-        ? actuales.filter((x: string) => normPaquete(x) !== normPaquete(paquete))
-        : [...actuales, paquete]
-      const fechaEs = String(prev.fechaVenta || '').split('-').reverse().join('/')
-      const fila: any = filaDelConjunto(catalogo, prod.gama, nuevos, fechaEs)
-      if (fila) {
-        prod.producto = String(fila.producto || '')
-        prod.subcategoria = String(fila.subcategoria || '')
-        // Si el conjunto baja de tramo (p. ej. a BV al quitar un paquete), la
-        // casilla de la promo desaparece de la pantalla: la bandera se apaga con
-        // ella. Si no, seguiría descontando 14 € invisibles en cada clic.
-        if (!promoSinPlusAplica(prod)) prod.descuentoSinPlus = false
-        let imp = precioFila(fila)
-        if (promoSinPlusAplica(prod) && prod.descuentoSinPlus) imp = Math.max(0, imp - 14)
-        prod.importe = String(imp)
-      } else {
-        // combinación que este mes no está en el catálogo: se dice, no se inventa
-        prod.producto = nuevos.join('\n')
-        prod.importe = ''
-      }
-      arr[index] = prod
-      return { ...prev, productos: arr }
-    })
-  }
 
   const handleProductChange = (index: number, field: string, value: any) => {
     setFormData((prev: any) => {
@@ -1322,90 +1280,6 @@ export default function NuevaVentaPage() {
                         <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: '#333' }}>DETALLES DEL PAQUETE</h4>
                       </div>
 
-                      {/* ── ¿QUÉ SE LLEVA EL CLIENTE? (dueño, 26-ago-2026) ──────────────
-                          Todo lo que entra en el momento de la venta es UN bloque: se
-                          marcan los paquetes y el catálogo pone el tramo y el precio. */}
-                      {prod.gama && ['miMovistar', 'Traslado miMovistar'].includes(prod.categoria)
-                        && !String(prod.subcategoria || '').toUpperCase().startsWith('PROMO')
-                        && (() => {
-                        const catMM = catalogs[prod.categoria === 'Traslado miMovistar' ? 'miMovistar' : prod.categoria] || []
-                        const disponibles = paquetesDeGama(catMM as any, prod.gama)
-                        if (disponibles.length === 0) return null
-                        const marcados = paquetesDeProducto(prod.producto)
-                        const esta = (n: string) => marcados.some((x: string) => normPaquete(x) === normPaquete(n))
-                        const d: any = desgloseConjunto(catMM as any, prod.gama, marcados,
-                          String(formData.fechaVenta || '').split('-').reverse().join('/'))
-                        return (
-                          <div style={{ border: '2px dashed #00ADEF', borderRadius: 9, padding: 10,
-                                        background: 'rgba(0,173,239,0.05)', marginBottom: 6 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
-                              <span style={{ fontSize: 12.5, fontWeight: 800, color: '#0A6EA8' }}>
-                                ¿Qué se lleva el cliente en esta venta?
-                              </span>
-                              <span style={{ fontSize: 10.5, color: '#0A6EA8', opacity: .8 }}>
-                                todo junto = una sola operación
-                              </span>
-                            </div>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                              {disponibles.map((p: any) => {
-                                const on = esta(p.nombre)
-                                return (
-                                  <button type="button" key={p.nombre}
-                                    onClick={() => alternaPaquete(index, p.nombre)}
-                                    style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer',
-                                             background: on ? '#E8F5E9' : '#FFFFFF',
-                                             border: `1.5px solid ${on ? '#2E7D32' : '#90CAF9'}`,
-                                             color: on ? '#1B5E20' : '#1B3D6A',
-                                             borderRadius: 99, padding: '5px 11px', fontSize: 12.5, fontWeight: 600 }}>
-                                    <span style={{ width: 13, height: 13, borderRadius: 3, flexShrink: 0,
-                                                   border: `1.5px solid ${on ? '#2E7D32' : '#7AA7D4'}`,
-                                                   background: on ? '#2E7D32' : 'transparent', color: '#fff',
-                                                   fontSize: 10, lineHeight: '11px', textAlign: 'center' }}>{on ? '✓' : ''}</span>
-                                    {String(p.nombre).replace(/\n/g, ' ')}
-                                    {p.suma !== null && <span style={{ opacity: .6, fontWeight: 500 }}>+{p.suma}</span>}
-                                  </button>
-                                )
-                              })}
-                            </div>
-                            {marcados.length > 0 && d.total !== null && (
-                              <div style={{ background: '#E8F5E9', border: '1px solid #A5D6A7', borderRadius: 8,
-                                            padding: '9px 11px', marginTop: 9 }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: '#1B5E20', fontWeight: 600 }}>
-                                  <span>Alta {String(prod.gama).replace('miMovistar ', '')}</span>
-                                  <span>{d.baseComision ?? '—'}</span>
-                                </div>
-                                {d.lineas.map((l: any) => (
-                                  <div key={l.nombre} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: '#1B5E20' }}>
-                                    <span>+ {String(l.nombre).replace(/\n/g, ' ')}</span>
-                                    <span>{l.suma !== null ? l.suma : '—'}</span>
-                                  </div>
-                                ))}
-                                <div style={{ borderTop: '1px solid #A5D6A7', margin: '6px 0' }} />
-                                <div style={{ fontSize: 11.5, color: '#2E7D32', fontStyle: 'italic' }}>
-                                  tramo {d.tramo} (×{d.multiplicador}) — el tramo lo pone el conjunto
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
-                                              fontWeight: 800, color: '#1B5E20', fontSize: 18, marginTop: 3 }}>
-                                  <span>TOTAL DE LA VENTA</span>
-                                  {/* el MISMO número que se guarda (con la promo −14 € ya aplicada) */}
-                                  <span>{Number(prod.importe !== '' && prod.importe !== undefined ? prod.importe : d.total)
-                                    .toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span>
-                                </div>
-                                {promoSinPlusAplica(prod) && prod.descuentoSinPlus && (
-                                  <div style={{ fontSize: 11, color: '#8D6E00' }}>incluye −14 € de la promo sin Paquete Movistar Plus</div>
-                                )}
-                              </div>
-                            )}
-                            {marcados.length > 0 && d.total === null && (
-                              <div style={{ background: '#FFF8E1', border: '1px solid #FFE082', borderRadius: 7,
-                                            padding: '7px 10px', fontSize: 11.5, color: '#8D6E00', marginTop: 9 }}>
-                                ⚠️ Esta combinación no está en el catálogo de este mes, así que no tiene precio.
-                                Quita algún paquete o pide que la den de alta en Catálogos.
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })()}
 
                       <div>
                         <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>Producto</label>
