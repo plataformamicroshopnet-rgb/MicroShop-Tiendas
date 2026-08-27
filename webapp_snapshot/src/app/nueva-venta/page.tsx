@@ -319,14 +319,21 @@ export default function NuevaVentaPage() {
   // misma. Telefónica paga el conjunto, así que se suman las comisiones y se
   // aplica el multiplicador DEL ALTA (un Disney que por su cuenta iría a ×1,5,
   // dentro de un miMovistar cobra a ×2). La promo de los 14 € va la última.
+  /** A céntimos. El ×1,5 de los tramos BV sobre un repo de 10,49 € da tres
+   *  decimales, y sin esto la pantalla enseñaba uno y la base guardaba otro. */
+  const aCentimos = (n: number) => Math.round(n * 100) / 100
+
   const importeMiMovistar = (prod: any, comisionBase: number, mult: number) => {
-    const sumaRepos = (prod.repoAnadidos || [])
-      .reduce((a: number, r: any) => a + (Number(r.comision) || 0), 0)
-    let imp = (comisionBase + sumaRepos) * (mult === 0 ? 1 : mult)
+    // CADA PIEZA CON SU MULTIPLICADOR, Y LUEGO SE SUMAN (dueño, 27-ago-2026).
+    // Es como lo cuenta él y como calcula el catálogo cada fila: la comisión por el
+    // multiplicador, redondeado a céntimos. Sumar primero y multiplicar después da
+    // el mismo dinero salvo por un céntimo suelto, y ese céntimo era justo el que
+    // no le cuadraba al repasarlo a mano: 100,50 + 15,74 son 116,24, no 116,23.
+    const m = (mult === 0 ? 1 : mult)
+    let imp = aCentimos(comisionBase * m)
+    for (const r of (prod.repoAnadidos || [])) imp += aCentimos((Number(r.comision) || 0) * m)
     if (prod.categoria === 'miMovistar' && prod.descuentoSinPlus) imp = Math.max(0, imp - 14)
-    // A céntimos: el ×1,5 de los tramos BV sobre un repo de 10,99 € da tres
-    // decimales, y la pantalla enseñaba uno y la base guardaba otro.
-    return Math.round(imp * 100) / 100
+    return aCentimos(imp)
   }
 
   // Cambiar de categoría, de tramo o de tipo re-tarifica la línea entera: lo que
@@ -1003,9 +1010,13 @@ export default function NuevaVentaPage() {
         const eur = (n: number) => n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
         const base = Number(String(p.comisionAlta || 0).replace(',', '.')) || 0
         const mult = Number(String(p.multAlta || 1).replace(',', '.')) || 1
-        rastroConjunta.push('Venta conjunta: ' + String(p.producto).split('\n').join(' + ')
-          + ' ' + eur(base) + ' € + ' + extras.map((r: any) => r.producto + ' ' + eur(Number(r.comision) || 0) + ' €').join(' + ')
-          + ' = ×' + String(mult).replace('.', ',') + ' → ' + eur(Number(p.importe) || 0) + ' €')
+        const cent = (n: number) => Math.round(n * 100) / 100
+        const xM = String(mult).replace('.', ',')
+        rastroConjunta.push('Venta conjunta: '
+          + String(p.producto).split('\n').join(' + ') + ' ' + eur(base) + '×' + xM + ' = ' + eur(cent(base * mult)) + ' €'
+          + extras.map((r: any) => ' + ' + r.producto + ' ' + eur(Number(r.comision) || 0) + '×' + xM
+              + ' = ' + eur(cent((Number(r.comision) || 0) * mult)) + ' €').join('')
+          + ' → ' + eur(Number(p.importe) || 0) + ' €')
         return limpio
       })
       const anotacionesConRastro = rastroConjunta.length
@@ -1623,37 +1634,30 @@ export default function NuevaVentaPage() {
                               const num = (v: any) => Number(String(v ?? '').replace(',', '.')) || 0
                               const base = num(prod.comisionAlta)
                               const mult = num(prod.multAlta) || 1
-                              const suma = base + puestos.reduce((a: number, r: any) => a + num(r.comision), 0)
+                              const xM = String(mult).replace('.', ',')
                               const conPromo = prod.categoria === 'miMovistar' && prod.descuentoSinPlus
                               const fila = { display: 'flex', alignItems: 'center', gap: 8, fontSize: 13,
-                                             color: '#4A148C', padding: '2px 0' }
+                                             color: '#4A148C', padding: '3px 0' }
+                              const cuenta = { fontSize: 11.5, color: '#7B1FA2', whiteSpace: 'nowrap' as const }
                               return (
                               <div style={{ marginTop: 8, background: '#F3E5F5', borderRadius: 6, padding: '8px 10px' }}>
                                 <div style={fila}>
                                   <span style={{ flex: 1 }}>{String(prod.producto || '').split('\n').join(' · ')}</span>
-                                  <span>{eur(base)} €</span>
+                                  <span style={cuenta}>{eur(base)} × {xM}</span>
+                                  <span style={{ fontWeight: 600 }}>{eur(aCentimos(base * mult))} €</span>
                                   <span style={{ width: 15 }} />
                                 </div>
                                 {puestos.map((r: any, i: number) => (
                                   <div key={i} style={fila}>
                                     <span style={{ flex: 1 }}>➕ {r.producto}</span>
-                                    <span>{eur(num(r.comision))} €</span>
+                                    <span style={cuenta}>{eur(num(r.comision))} × {xM}</span>
+                                    <span style={{ fontWeight: 600 }}>{eur(aCentimos(num(r.comision) * mult))} €</span>
                                     <button type="button" onClick={() => quitaRepoDelAlta(index, i)}
                                       title="Quitar de la venta"
                                       style={{ border: 'none', background: 'transparent', color: '#B71C1C',
                                                cursor: 'pointer', fontWeight: 'bold', fontSize: 15, width: 15, padding: 0 }}>×</button>
                                   </div>
                                 ))}
-                                <div style={{ ...fila, borderTop: '1px solid #CE93D8', marginTop: 5, paddingTop: 5 }}>
-                                  <span style={{ flex: 1 }}>Suma de comisiones</span>
-                                  <span>{eur(suma)} €</span>
-                                  <span style={{ width: 15 }} />
-                                </div>
-                                <div style={{ ...fila, color: '#6A1B9A', fontWeight: 'bold' }}>
-                                  <span style={{ flex: 1 }}>× {String(mult).replace('.', ',')} &nbsp;<span style={{ fontWeight: 'normal', fontSize: 11.5 }}>(el multiplicador del paquete, también para lo añadido)</span></span>
-                                  <span>{eur(suma * mult)} €</span>
-                                  <span style={{ width: 15 }} />
-                                </div>
                                 {conPromo && (
                                   <div style={{ ...fila, color: '#E65100' }}>
                                     <span style={{ flex: 1 }}>Promoción sin el Paquete Movistar Plus</span>
