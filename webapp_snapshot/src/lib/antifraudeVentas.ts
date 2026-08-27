@@ -90,6 +90,11 @@ export interface AvisoAntifraude {
   clave: string        // para la confirmación (confirmarX)
   titulo: string
   texto: string
+  /** true = no hay confirmación que valga: la venta no se guarda. Se reserva para
+   *  lo que NO puede ser correcto de ninguna manera. Las demás reglas avisan y
+   *  dejan seguir, porque tienen casos buenos y molestarlos cuesta más que el
+   *  fraude que evitan. */
+  bloquea?: boolean
 }
 
 // ── REGLA 1 — «ESO YA VA DENTRO DEL ALTA» ───────────────────────────────────
@@ -136,11 +141,17 @@ export function reglaYaVaDentro(
         return {
           clave: 'confirmarYaVaDentro',
           titulo: 'Eso ya va dentro del alta',
+          bloquea: true,
           texto: `El alta de este cliente ya lleva ${que} dentro («${String(alta.producto).split('\n').join(' · ')}»`
                + ((alta as any).fecha ? `, del ${(alta as any).fecha}` : '') + `), `
                + `y además estás grabando «${String(suelta.producto).replace(/\n/g, ' · ')}» por separado. `
-               + `Así se cobra dos veces lo mismo.\n\n`
-               + `Si el cliente YA tenía su fibra de antes y ahora le subes el servicio, esto es correcto: sigue adelante.`,
+               + `Eso es cobrar dos veces lo mismo, y Telefónica no lo paga.\n\n`
+               + `· Si el cliente se lleva el paquete y el servicio en la MISMA venta: quita la línea `
+               + `suelta, porque ${que} ya va dentro del alta.\n`
+               + `· Si el cliente YA tenía su fibra de antes: entonces esta venta no lleva alta. `
+               + `Quita el alta y deja solo el repo.\n\n`
+               + `Y si de verdad SUBE de nivel (de Champions a Fútbol Total, o de Netflix con anuncios `
+               + `a Estándar), elige ese producto: ese sí se puede.`,
         }
       }
     }

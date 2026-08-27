@@ -1055,6 +1055,13 @@ export default function NuevaVentaPage() {
         })
         data = await res.json()
         if (res.status !== 409) break
+        if (data.bloqueoAntifraude) {
+          // No hay «Aceptar»: esto no se guarda. Se enseña arriba, donde el
+          // comercial ya mira los errores, y con el título delante.
+          setError('⛔ ' + (data.titulo || 'No se puede guardar') + ' — ' + data.error)
+          setLoading(false)
+          return
+        }
         if (data.antifraude && !confirmaciones.confirmarAntifraude) {
           if (!window.confirm('⚠️ AVISO ANTIFRAUDE\n\n' + data.error +
               '\n\nSi la tramitas y Telefónica no la paga, saldrá como impago en la Revisión de ese mes.' +

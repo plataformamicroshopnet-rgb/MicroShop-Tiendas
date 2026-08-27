@@ -260,6 +260,16 @@ export async function POST(request: Request) {
         ]
         for (const aviso of avisos) {
           if (!aviso) continue
+          // Lo que PROHÍBE no se puede confirmar: se devuelve sin `clave`, así que
+          // la pantalla no ofrece ningún «Aceptar» y la venta no se guarda. El
+          // dueño lo pidió el 27-ago tras ver que se podía dar dos veces Movistar+
+          // al mismo NIF pulsando Aceptar en el aviso.
+          if (aviso.bloquea) {
+            return NextResponse.json({
+              success: false, bloqueoAntifraude: true,
+              titulo: aviso.titulo, error: aviso.texto,
+            }, { status: 409 })
+          }
           if ((data as any)[aviso.clave]) continue     // ya lo confirmó
           return NextResponse.json({
             success: false, avisoAntifraude: true, clave: aviso.clave,
