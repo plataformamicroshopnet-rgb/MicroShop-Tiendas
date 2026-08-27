@@ -884,7 +884,7 @@ export default function NuevaVentaPage() {
       const confirmaciones: any = {}
       let res: Response = null as any
       let data: any = null
-      for (let intento = 0; intento < 3; intento++) {
+      for (let intento = 0; intento < 6; intento++) {
         res = await fetch('/api/sales/unified', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -900,12 +900,15 @@ export default function NuevaVentaPage() {
             return
           }
           confirmaciones.confirmarAntifraude = true
-        } else if (data.duplicado && !confirmaciones.confirmarDuplicado) {
-          if (!window.confirm(data.error + '\n\nPulsa Aceptar SOLO si es una venta nueva de verdad.')) {
+        } else if (data.avisoAntifraude && data.clave && !confirmaciones[data.clave]) {
+          // Los avisos de la política nueva: se dice qué pasa y qué hacer, y
+          // quien acepta queda registrado con su nombre.
+          if (!window.confirm('⚠️ ' + (data.titulo || 'Revisa esta venta') + '\n\n' + data.error +
+              '\n\nSi aceptas, queda registrado con tu nombre. Si no lo tienes claro, pregunta antes de guardar.')) {
             setLoading(false)
             return
           }
-          confirmaciones.confirmarDuplicado = true
+          confirmaciones[data.clave] = true
         } else {
           break
         }

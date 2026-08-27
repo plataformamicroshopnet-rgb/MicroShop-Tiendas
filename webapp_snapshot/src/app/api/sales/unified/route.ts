@@ -5,6 +5,8 @@ import { mesYaPagadoN3, fechaPagoN3, nombreMes } from '@/lib/nominaN3'
 import { PrismaClient } from '@prisma/client'
 import { runExtrasEngine } from '@/lib/extrasEngine'
 import { randomUUID } from 'crypto'
+import { reglaYaVaDentro, reglaMismoServicio, reglaPedidoDeOtroCliente,
+         reglaLineaRepetida, AvisoAntifraude } from '@/lib/antifraudeVentas'
 import { esRepoArpuManual, importeRepoArpu, rastroRepoArpu } from '@/lib/salesUtils'
 
 const prisma = new PrismaClient()
@@ -216,27 +218,66 @@ export async function POST(request: Request) {
       where: { month: fechaVentaDate.getMonth() + 1, year: fechaVentaDate.getFullYear() }
     })
 
-    // ── AVISO DE POSIBLE DUPLICADO (mismo NIF + producto, ±7 días) ──────
-    if (!data.confirmarDuplicado) {
-      for (const prod of data.productos) {
-        if (!prod.producto) continue
-        const previas = await prisma.sale.findMany({
-          where: { nif: data.nif.toUpperCase(), producto: prod.producto },
-          select: { fecha: true, anulado: true, pendiente: true }
+    // ── POLÍTICA ANTIFRAUDE (27-ago-2026) ───────────────────────────────
+    // Sustituye al aviso de duplicado de siempre, que exigía que el producto se
+    // llamara EXACTAMENTE igual y solo miraba la base de datos: de las 12
+    // operaciones que la auditoría confirmó cobrando dos veces, no vio 11.
+    // Estas cuatro reglas se midieron ANTES contra junio-agosto: 40 avisos en
+    // tres meses (13 al mes en toda la cadena) y ni una operación buena
+    // molestada. Todas AVISAN; ninguna bloquea.
+    {
+      const lineas = data.productos
+        .filter((p: any) => String(p.producto || '').trim())
+        .map((p: any) => ({ categoria: p.categoria, producto: p.producto, numeroPedido: p.numeroPedido,
+                            sinPaquetePlus: !!p.descuentoSinPlus }))
+
+      if (lineas.length > 0) {
+        const previasCliente = await prisma.sale.findMany({
+          where: { nif: data.nif.toUpperCase() },
+          select: { producto: true, detalle: true, sheet: true, fecha: true, codigo: true, vendedor: true,
+                    numeroPedido: true, anulado: true, pendiente: true, sustituida: true,
+                    sustituyeA: true, anotaciones: true },
         })
-        const hayDup = previas.some(p => {
-          if (String(p.anulado || '').toLowerCase().startsWith('s') || String(p.pendiente || '') === 'Anulado') return false
-          const partes = String(p.fecha || '').split('/')
-          if (partes.length !== 3) return false
-          const f = new Date(Number(partes[2]), Number(partes[1]) - 1, Number(partes[0]))
-          return !isNaN(f.getTime()) && Math.abs(f.getTime() - fechaVentaDate.getTime()) <= 7 * 86400000
-        })
-        if (hayDup) {
+        const pedidos = lineas.map((l: any) => String(l.numeroPedido || '').trim()).filter(Boolean)
+        const previasPedido = pedidos.length
+          ? await prisma.sale.findMany({
+              where: { numeroPedido: { in: pedidos }, NOT: { nif: data.nif.toUpperCase() } },
+              select: { numeroPedido: true, nif: true, nombreCliente: true, fecha: true,
+                        anulado: true, pendiente: true, sustituida: true },
+            })
+          : []
+
+        const avisos: (AvisoAntifraude | null)[] = [
+          reglaYaVaDentro(lineas, previasCliente as any, fechaVentaDate, 30),
+          reglaMismoServicio(lineas, previasCliente as any, fechaVentaDate, 30),
+          reglaLineaRepetida(lineas, previasCliente as any),
+          reglaPedidoDeOtroCliente(lineas, data.nif, previasPedido as any),
+        ]
+        for (const aviso of avisos) {
+          if (!aviso) continue
+          if ((data as any)[aviso.clave]) continue     // ya lo confirmó
           return NextResponse.json({
-            success: false,
-            duplicado: true,
-            error: `Ya existe una venta de este NIF con el mismo producto (${prod.producto}) en los últimos 7 días — ¿seguro que no está repetida?`
+            success: false, avisoAntifraude: true, clave: aviso.clave,
+            titulo: aviso.titulo, error: aviso.texto,
           }, { status: 409 })
+        }
+
+        // RASTRO: si venía alguna confirmación, queda escrito quién la aceptó.
+        const confirmadas = ['confirmarYaVaDentro', 'confirmarMismoServicioVenta',
+                             'confirmarMismoServicioHistorico', 'confirmarLineaRepetida',
+                             'confirmarPedido', 'confirmarAntifraude']
+          .filter(k => (data as any)[k])
+        if (confirmadas.length > 0) {
+          try {
+            await prisma.userActivity.create({
+              data: {
+                userId: session.user.id, username: session.user.username, role: session.user.role,
+                path: '/nueva-venta', action: 'ANTIFRAUDE_CONFIRMADO', device: 'DESKTOP',
+                errorDetails: `${confirmadas.join(', ')} · NIF ${String(data.nif).toUpperCase()}`
+                  + ` · ${data.productos.filter((p: any) => p.producto).map((p: any) => String(p.producto).split('\n')[0]).join(' | ')}`,
+              },
+            })
+          } catch { /* el rastro nunca puede impedir una venta */ }
         }
       }
     }
