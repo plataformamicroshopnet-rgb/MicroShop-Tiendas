@@ -1735,13 +1735,37 @@ export default function NuevaVentaPage() {
 
                     {/* COLUMNA 3: ESTADO Y FINANZAS */}
                     <div style={{ flex: '1', minWidth: '250px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div style={{ backgroundColor: '#B8D5F6', borderRadius: '8px', padding: '8px', display: isAdmin ? 'block' : 'none' }}>
-                        <label style={{ fontSize: 13, color: '#1B3D6A', display: 'block', marginBottom: 4 }}>Comisión X (Venta)</label>
-                        <div style={{ position: 'relative' }}>
-                          <input type="number" step="0.01" className="form-input" readOnly value={prod.importe !== '' && prod.importe !== undefined ? Number(prod.importe).toFixed(2) : ''} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A', fontWeight: 'bold', width: '100%', paddingRight: 24 }} />
-                          <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: '#1B3D6A', fontSize: 13, pointerEvents: 'none' }}>€</span>
-                        </div>
-                      </div>
+                      {/* PUNTOS X (VENTA) Y PAGO DEL CLIENTE (dueño, 27-ago-2026).
+                          Vuelven a verlo TODOS los comerciales, no solo el Admin. Y se
+                          separan las dos cifras, que son cosas distintas:
+                            · Pago del Cliente = lo que suma el recibo del cliente, las
+                              comisiones del catálogo tal cual, sin multiplicar.
+                            · Puntos X (Venta) = esa suma con el multiplicador del tramo
+                              aplicado, que es lo que puntúa la venta.
+                          En el ejemplo del dueño: 67,00 + 10,49 = 77,49 € de pago del
+                          cliente, y ×1,5 → 116,24 puntos. */}
+                      {(() => {
+                        const num = (v: any) => Number(String(v ?? '').replace(',', '.')) || 0
+                        const pagoCliente = num(prod.comisionAlta)
+                          + (prod.repoAnadidos || []).reduce((a: number, r: any) => a + num(r.comision), 0)
+                        const eur2 = (n: number) => n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                        return (
+                          <div style={{ backgroundColor: '#B8D5F6', borderRadius: '8px', padding: '8px' }}>
+                            <label style={{ fontSize: 13, color: '#1B3D6A', display: 'block', marginBottom: 4 }}>Puntos X (Venta)</label>
+                            <div style={{ position: 'relative' }}>
+                              <input type="number" step="0.01" className="form-input" readOnly value={prod.importe !== '' && prod.importe !== undefined ? Number(prod.importe).toFixed(2) : ''} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A', fontWeight: 'bold', width: '100%', paddingRight: 24 }} />
+                              <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: '#1B3D6A', fontSize: 13, pointerEvents: 'none' }}>€</span>
+                            </div>
+                            {pagoCliente > 0 && (
+                              <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid #8FB8E8',
+                                            display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                                <span style={{ fontSize: 13, color: '#1B3D6A' }}>Pago del Cliente</span>
+                                <span style={{ fontSize: 15, fontWeight: 'bold', color: '#1B3D6A' }}>{eur2(pagoCliente)} €</span>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })()}
 
                       <div style={{ backgroundColor: '#FFFFFF', borderRadius: '8px', padding: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', flex: 1 }}>
                         <h5 style={{ margin: '0 0 6px 0', fontSize: '13px', fontWeight: 'bold', color: '#333' }}>Estado</h5>
@@ -1963,8 +1987,12 @@ export default function NuevaVentaPage() {
                           </div>
                         )
                       })()}
-                      <div style={{ display: 'grid', gridTemplateColumns: (isAdmin && prod.categoria === 'Seguro') ? '1fr 1fr 1fr' : ((isAdmin || prod.categoria === 'Seguro') ? '1fr 1fr' : '1fr'), gap: '6px' }}>
-                        <div className="form-group" style={{ marginBottom: 0, display: isAdmin ? 'block' : 'none' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: prod.categoria === 'Seguro' ? '1fr 1fr 1fr' : '1fr 1fr', gap: '6px' }}>
+                        {/* El comercial vuelve a VER lo que puntúa su venta (el dueño se lo
+                            había quitado hace tiempo), pero no puede cambiarlo: la cifra sale
+                            de la tarifa del catálogo y escribirla a mano se saltaría el
+                            multiplicador. Editarla sigue siendo cosa del Admin. */}
+                        <div className="form-group" style={{ marginBottom: 0 }}>
                           <label className="form-label" style={{ color: '#555' }}>{usaIncrementoArpu(prod) ? 'Comisión (la calcula el programa)' : ((prod.categoria === 'O2' || prod.categoria === 'Suscripciones TV' || prod.categoria === 'Prepago' || prod.categoria === 'Varios' || prod.categoria === 'Accesorios' || prod.categoria === 'Repos' || prod.categoria === 'Repos UP' || prod.categoria === 'Seguro') ? 'Comisión' : 'Importe')}</label>
                           <div style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
                             <input 
@@ -1975,9 +2003,10 @@ export default function NuevaVentaPage() {
                               // cuenta ya hecha y no se puede escribir. Un Admin ve las dos
                               // casillas y, escribiendo en esta, se saltaba el multiplicador
                               // SIN AVISO (una venta de 55 € que debía cobrar 110).
-                              readOnly={usaIncrementoArpu(prod)}
-                              title={usaIncrementoArpu(prod) ? 'Sale del incremento de ARPU × su multiplicador' : undefined}
-                              style={{ backgroundColor: usaIncrementoArpu(prod) ? '#ECEFF1' : '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A', fontWeight: 'bold', width: '100%', paddingRight: 24, cursor: usaIncrementoArpu(prod) ? 'not-allowed' : 'auto' }}
+                              readOnly={usaIncrementoArpu(prod) || !isAdmin}
+                              title={usaIncrementoArpu(prod) ? 'Sale del incremento de ARPU × su multiplicador'
+                                     : (!isAdmin ? 'Sale de la tarifa del catálogo' : undefined)}
+                              style={{ backgroundColor: (usaIncrementoArpu(prod) || !isAdmin) ? '#ECEFF1' : '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A', fontWeight: 'bold', width: '100%', paddingRight: 24, cursor: (usaIncrementoArpu(prod) || !isAdmin) ? 'not-allowed' : 'auto' }}
                               value={prod.importe !== '' && prod.importe !== undefined ? Number(prod.importe).toFixed(2) : ''}
                               onChange={e => handleProductChange(index, 'importe', e.target.value)}
                             />
