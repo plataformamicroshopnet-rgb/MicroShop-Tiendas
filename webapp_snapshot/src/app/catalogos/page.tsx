@@ -121,6 +121,18 @@ const numEs = (v: any, siVacio = 0) => {
   return isNaN(n) ? siVacio : n
 }
 
+// Un importe pegado desde Excel en castellano: «1.234,56 €» → «1234.56». Vivía
+// dentro de handleBulkImport; ahora lo comparte con el pegado en meses cerrados.
+const parseSpanishNumber = (str: string) => {
+  let clean = String(str ?? '').replace(/[^0-9.,-]/g, '')
+  if (clean.includes('.') && clean.includes(',')) {
+    clean = clean.replace(/\./g, '').replace(',', '.')
+  } else if (clean.includes(',')) {
+    clean = clean.replace(',', '.')
+  }
+  return clean || '0'
+}
+
 const getTabStyle = (cat: string, isActive: boolean) => {
   // Rojo claro para las retiradas: se ven de un vistazo y se sabe que están para
   // eliminarse. El borde gana al border:'none' del botón porque el spread de
@@ -518,6 +530,77 @@ export default function CatalogosPage() {
     }
   }
 
+  // AÑADIR TARIFAS A UN MES CERRADO (dueño, 27-ago-2026).
+  //
+  // Un mes que ya está cerrado no se puede guardar (el guardado normal borra y
+  // reescribe la parrilla entera, y encima el API lo rechaza). Pero a veces hace
+  // falta añadirle una tarifa que nunca tuvo: pasó con las PROMO DIGI y VODAFONE,
+  // que había que dar de alta en junio y julio para poder re-tipificar las ventas
+  // mal grabadas, y cada mes tenía las suyas, distintas de las de agosto.
+  //
+  // Esto solo AÑADE lo que falta. No borra, no pisa y no duplica: una fila que ya
+  // esté (misma categoría, producto, gama y subcategoría) se salta.
+  const anadirTarifasAMesCerrado = async () => {
+    const ejemplo = activeTab === 'miMovistar' || activeTab === 'Resto BAF' || activeTab === 'Traslado miMovistar'
+      ? 'PROMO DIGI\tmiMovistar  Max\tMovistar Plus + Fútbol\t45,00\t2,00'
+      : 'Categoría\tNombre del producto\tComisión\tMultiplicador'
+    const texto = window.prompt(
+      'AÑADIR TARIFAS AL MES ' + activePeriodKey + ' — pestaña «' + etiquetaCat(activeTab) + '».\n\n'
+      + 'Pega las filas desde Excel, una por línea. Solo se AÑADE lo que falte: no se '
+      + 'borra ni se cambia nada de lo que ya hay.\n\n'
+      + 'Formato (el mismo de «Importar Lista»):\n' + ejemplo, '')
+    if (!texto || !texto.trim()) return
+
+    const filas = texto.split(/[\r\n]+/).map(l => l.split('\t').map(c => c.trim()))
+      .filter(p => p.length >= 2 && (p[0] || p[1]))
+      .map(p => {
+        const conGama = activeTab === 'miMovistar' || activeTab === 'Resto BAF' || activeTab === 'Traslado miMovistar'
+        if (conGama) {
+          // Categoría | Tipo (gama) | Producto | Comisión | Multiplicador
+          return { categoria: activeTab, subcategoria: p[0] || '', gama: p[1] || '',
+                   // Sin producto es la línea «sin TV»: en agosto se guarda así.
+                   producto: p[2] || 'SIN TV',
+                   comision: parseSpanishNumber(p[3] || '0'),
+                   comisionConCoste: parseSpanishNumber(p[4] || '1,00') }
+        }
+        // Categoría | Producto | Comisión | Multiplicador
+        return { categoria: activeTab, subcategoria: p[0] || '', gama: '', producto: p[1] || '',
+                 comision: parseSpanishNumber(p[2] || '0'),
+                 comisionConCoste: parseSpanishNumber(p[3] || '1,00') }
+      })
+    if (filas.length === 0) { alert('No he entendido ninguna fila. Revisa el formato.'); return }
+
+    setLoading(true)
+    try {
+      const cuerpo: any = { hacia: activePeriodKey, filas, aplicar: false }
+      const prev = await fetch('/api/catalogs/copiar-promos', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cuerpo),
+      }).then(r => r.json())
+      if (!prev.success) { alert('❌ ' + (prev.error || 'No se pudo consultar')); return }
+      if (prev.copiaria === 0) {
+        alert('No hay nada que añadir: las ' + prev.yaExistian + ' fila(s) ya están en ' + activePeriodKey + '.')
+        return
+      }
+      const muestra = (prev.detalle || []).filter((d: any) => d.nueva).slice(0, 15)
+        .map((d: any) => '· ' + [d.subcategoria, d.gama, String(d.producto || '').split('\n').join(' ')]
+             .filter(Boolean).join(' · ') + '   ' + d.comision + ' × ' + d.comisionConCoste).join('\n')
+      if (!window.confirm('Se AÑADIRÁN ' + prev.copiaria + ' fila(s) a ' + activePeriodKey
+          + (prev.yaExistian ? ' (' + prev.yaExistian + ' ya estaban y no se tocan)' : '')
+          + ':\n\n' + muestra + '\n\nNo se borra ni se cambia nada de lo que ya hay. ¿Adelante?')) return
+      const res = await fetch('/api/catalogs/copiar-promos', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...cuerpo, aplicar: true }),
+      }).then(r => r.json())
+      if (res.success) {
+        alert('✅ Añadidas ' + res.copiadas + ' fila(s) a ' + activePeriodKey + '.')
+        window.location.reload()
+      } else {
+        alert('❌ ' + (res.error || 'Error al añadir'))
+      }
+    } catch {
+      alert('❌ Error de conexión')
+    } finally { setLoading(false) }
+  }
+
   // TRAER PROMOCIONES DE OTRO MES (dueño, 26-ago-2026): añade al mes que se está
   // viendo las filas que le falten de otro mes, SIN borrar nada — por eso funciona
   // también en un mes cerrado, donde el guardado normal está prohibido.
@@ -784,16 +867,6 @@ export default function CatalogosPage() {
 
     const lines = normalizedText.split('\n').filter(l => l.trim().length > 0)
     
-    const parseSpanishNumber = (str: string) => {
-      let clean = str.replace(/[^0-9.,-]/g, '')
-      if (clean.includes('.') && clean.includes(',')) {
-        clean = clean.replace(/\./g, '').replace(',', '.')
-      } else if (clean.includes(',')) {
-        clean = clean.replace(',', '.')
-      }
-      return clean || '0'
-    }
-
     const excelData: any[] = []
     lines.forEach((line) => {
       const parts = line.split('\t').map(p => p.trim().replace(/___NEWLINE___/g, '\n'))
@@ -1471,14 +1544,26 @@ export default function CatalogosPage() {
               </p>
             </div>
             {isProductTab && (
-              <button
-                onClick={traerPromosDeOtroMes}
-                title="Copia a este mes las filas que le falten de otro mes (no borra ni cambia nada de lo que ya hay)"
-                style={{ marginLeft: 'auto', padding: '10px 16px', borderRadius: 10, fontWeight: 700, cursor: 'pointer',
-                         background: 'transparent', color: 'var(--mercedes-cyan)', border: '1px solid var(--mercedes-cyan)' }}
-              >
-                ⤵️ Traer productos de otro mes
-              </button>
+              <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button
+                  onClick={traerPromosDeOtroMes}
+                  title="Copia a este mes las filas que le falten de otro mes (no borra ni cambia nada de lo que ya hay)"
+                  style={{ padding: '10px 16px', borderRadius: 10, fontWeight: 700, cursor: 'pointer',
+                           background: 'transparent', color: 'var(--mercedes-cyan)', border: '1px solid var(--mercedes-cyan)' }}
+                >
+                  ⤵️ Traer productos de otro mes
+                </button>
+                {/* Pegar tarifas que no existen en ningún otro mes. Es la única forma
+                    de añadir algo a un mes ya cerrado, y solo AÑADE. */}
+                <button
+                  onClick={anadirTarifasAMesCerrado}
+                  title="Pega tarifas nuevas y las AÑADE a este mes, aunque esté cerrado. No borra ni cambia nada de lo que ya hay."
+                  style={{ padding: '10px 16px', borderRadius: 10, fontWeight: 700, cursor: 'pointer',
+                           background: 'transparent', color: 'var(--mercedes-cyan)', border: '1px solid var(--mercedes-cyan)' }}
+                >
+                  ➕ Añadir tarifas {isHistoric ? '(mes cerrado)' : ''}
+                </button>
+              </div>
             )}
           </div>
 

@@ -651,9 +651,15 @@ function OperationsContent() {
   })()
   const esMesEnCurso = !activePeriodKey || activePeriodKey === mesEnCurso
   const puedeCambiarProducto = canEdit && (esMesEnCurso
-    || canView(user, 'MODULE_JEFE_TIENDAS')      // Gabriel y el jefe de ventas
+    || can(user, 'MODULE_BACK_OFFICE')           // Back Office: Gabriel y Cris
+    || canView(user, 'MODULE_JEFE_TIENDAS')      // el jefe de ventas
     || can(user, 'MODULE_CRISTINA')
     || canEditMacro(user, 'MODULE_TIENDAS'))
+  // Back Office entra por derecho propio: el rol «BACK OFFICE» (Cris) NO lleva el
+  // hub de Seguimiento, así que podía editar una venta de un mes pasado pero no
+  // cambiarle el Producto — y arreglar operaciones mal tipificadas es exactamente
+  // su trabajo. Gabriel nunca estuvo bloqueado: es COMERCIAL con el hub de
+  // Seguimiento entre sus permisos.
   const canCancel = canEditMacro(user, 'MODULE_TIENDAS') || can(user, 'CANCEL_SALES') || can(user, 'MODULE_CRISTINA') || can(user, 'MODULE_BACK_OFFICE');
   const isAdmin = user?.role === 'ADMIN';
 
