@@ -346,10 +346,14 @@ export default function NuevaVentaPage() {
     return t.includes('repo up destino futbol') && t.includes('futbol total')
   }
 
+  // El repo que está esperando respuesta a «¿el cliente ya estaba en planta?».
+  // Guarda en qué línea va y qué fila del catálogo se eligió.
+  const [repoPendiente, setRepoPendiente] = useState<any>(null)
+
   // ── AÑADIR UN REPO (ARPU) A UN ALTA (dueño, 27-ago-2026) ────────────────────
   // Si el cliente YA está en planta no es una venta conjunta: es un repo de
   // verdad, y va en su propia línea con su propio precio.
-  const anadeRepoAlAlta = (index: number, fila: any) => {
+  const preguntaPorElRepo = (index: number, fila: any) => {
     const numero = (v: any) => {
       const n = Number(String(v == null ? '' : v).replace(',', '.'))
       return isNaN(n) ? 0 : n
@@ -371,11 +375,25 @@ export default function NuevaVentaPage() {
       return
     }
 
-    const enPlanta = window.confirm(PREGUNTA_PLANTA
-      + '\n\n[ Aceptar = SÍ, ya está en planta ]   [ Cancelar = NO, es un alta nueva ]')
+    // La pregunta va a la propia pantalla, no a una ventana del navegador: en un
+    // «confirm», Aceptar era SÍ y Cancelar era NO, y a Aceptar se le da sin leer.
+    // El resultado fue una venta partida en dos líneas cuando tenía que ser una.
+    setRepoPendiente({ index, fila, paso: 'planta' })
+  }
 
-    if (!enPlanta && !window.confirm(AVISO_BAJA_TV
-        + '\n\n[ Aceptar = SÍ, han pasado ]   [ Cancelar = no lo sé / no han pasado ]')) return
+  // Ya contestada la pregunta: se añade donde toca.
+  const resuelveRepo = (enPlanta: boolean) => {
+    const p = repoPendiente
+    if (!p) return
+    setRepoPendiente(null)
+    const { index, fila } = p
+    const numero = (v: any) => {
+      const n = Number(String(v == null ? '' : v).replace(',', '.'))
+      return isNaN(n) ? 0 : n
+    }
+    const prodActual = formData.productos[index] || {}
+    const esTraslado = prodActual.categoria === 'Traslado miMovistar'
+      || String(prodActual.producto || '').toLowerCase().includes('traslado')
     // La regla de siempre: en un traslado Telefónica no abona lo que se añade.
     if (esTraslado
         && !window.confirm('Cualquier Suscripción en Traslado no cuenta, quiere continuar, Si o No')) return
@@ -429,6 +447,9 @@ export default function NuevaVentaPage() {
   }
 
   const handleProductChange = (index: number, field: string, value: any) => {
+    // Cambiar de paquete, tramo o tipo re-tarifica la línea: la pregunta que
+    // estuviera abierta ya no viene a cuento.
+    if (['categoria', 'subcategoria', 'gama', 'producto', 'fabricante'].includes(field)) setRepoPendiente(null)
     setFormData((prev: any) => {
       let newProducts = [...prev.productos]
       
@@ -1511,7 +1532,7 @@ export default function NuevaVentaPage() {
                               onChange={e => {
                                 const fila = repos.find((r: any) => String(r.producto) === e.target.value)
                                 e.target.value = ''
-                                if (fila) anadeRepoAlAlta(index, fila)
+                                if (fila) preguntaPorElRepo(index, fila)
                               }}
                               style={{ backgroundColor: '#F3E5F5', border: '1px solid #CE93D8', color: '#4A148C' }}>
                               <option value="">Selecciona un Repo (Arpu)…</option>
@@ -1523,6 +1544,69 @@ export default function NuevaVentaPage() {
                                 </option>
                               ))}
                             </select>
+                            {/* ── LA PREGUNTA, EN LA PANTALLA ─────────────────────────
+                                Dos botones que se leen, en vez de un Aceptar/Cancelar del
+                                navegador donde nadie sabe cuál es cuál. */}
+                            {repoPendiente && repoPendiente.index === index && (
+                              <div style={{ marginTop: 10, background: '#FFF8E1', border: '2px solid #FFB300',
+                                            borderRadius: 8, padding: '12px 14px' }}>
+                                <div style={{ fontSize: 13.5, fontWeight: 'bold', color: '#5D4037', marginBottom: 4 }}>
+                                  ➕ {String(repoPendiente.fila?.producto || '')}
+                                </div>
+                                {repoPendiente.paso === 'planta' ? (
+                                  <>
+                                    <div style={{ fontSize: 14, color: '#4E342E', marginBottom: 10, lineHeight: 1.45 }}>
+                                      ¿Este cliente <b>ya era cliente de Movistar</b> antes de esta venta?
+                                    </div>
+                                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                      <button type="button"
+                                        onClick={() => setRepoPendiente({ ...repoPendiente, paso: 'baja' })}
+                                        style={{ flex: '1 1 220px', padding: '10px 12px', borderRadius: 7, border: 'none',
+                                                 background: '#2E7D32', color: '#fff', fontWeight: 'bold', fontSize: 13.5,
+                                                 cursor: 'pointer', textAlign: 'left', lineHeight: 1.35 }}>
+                                        NO, es un alta nueva<br />
+                                        <span style={{ fontWeight: 'normal', fontSize: 12 }}>Entra DENTRO del alta: una sola venta, importes sumados</span>
+                                      </button>
+                                      <button type="button"
+                                        onClick={() => resuelveRepo(true)}
+                                        style={{ flex: '1 1 220px', padding: '10px 12px', borderRadius: 7, border: 'none',
+                                                 background: '#6A1B9A', color: '#fff', fontWeight: 'bold', fontSize: 13.5,
+                                                 cursor: 'pointer', textAlign: 'left', lineHeight: 1.35 }}>
+                                        SÍ, ya estaba en planta<br />
+                                        <span style={{ fontWeight: 'normal', fontSize: 12 }}>Va en su PROPIA línea de Repos (Arpu), con su precio</span>
+                                      </button>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <>
+                                    <div style={{ fontSize: 13.5, color: '#4E342E', marginBottom: 10, lineHeight: 1.45 }}>
+                                      Si este cliente tuvo antes un paquete de TV, tienen que haber pasado
+                                      <b> 3 meses y 20 días</b> desde la baja para que Telefónica lo pague
+                                      (miMovistar se cobra a N+2). <b>¿Han pasado?</b>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                      <button type="button" onClick={() => resuelveRepo(false)}
+                                        style={{ flex: '1 1 180px', padding: '10px 12px', borderRadius: 7, border: 'none',
+                                                 background: '#2E7D32', color: '#fff', fontWeight: 'bold', fontSize: 13.5, cursor: 'pointer' }}>
+                                        Sí, han pasado — añádelo
+                                      </button>
+                                      <button type="button" onClick={() => setRepoPendiente(null)}
+                                        style={{ flex: '1 1 180px', padding: '10px 12px', borderRadius: 7,
+                                                 border: '1px solid #BCAAA4', background: '#fff', color: '#5D4037',
+                                                 fontWeight: 'bold', fontSize: 13.5, cursor: 'pointer' }}>
+                                        No lo sé — no lo añado
+                                      </button>
+                                    </div>
+                                  </>
+                                )}
+                                <button type="button" onClick={() => setRepoPendiente(null)}
+                                  style={{ marginTop: 8, border: 'none', background: 'transparent', color: '#795548',
+                                           fontSize: 12.5, cursor: 'pointer', padding: 0, textDecoration: 'underline' }}>
+                                  Cancelar
+                                </button>
+                              </div>
+                            )}
+
                             {puestos.length > 0 && (
                               <div style={{ marginTop: 8, background: '#F3E5F5', borderRadius: 6, padding: '8px 10px' }}>
                                 {puestos.map((r: any, i: number) => (
