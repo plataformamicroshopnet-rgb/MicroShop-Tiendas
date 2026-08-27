@@ -94,7 +94,34 @@ const CATEGORIES = ['Ti', 'Rent', 'Seguro', 'O2', 'miMovistar', 'Suscripciones T
 // Las dos pestañas que se rellenan igual: Comisión × Multiplicador = Comisión X.
 const esTipoComisionPorMultiplicador = (c: string) => c === 'Suscripciones TV' || c === CAT_REPOS
 
+// PALANCAS RETIRADAS (ago-2026). Sus productos viven ahora en «Repos (Arpu)» y ya
+// no se pueden elegir al grabar una venta (ver el desplegable de Tipo de Venta en
+// nueva-venta/page.tsx). Se quedan SOLO para poder consultar el histórico: lo que
+// se cargue aquí se guarda, pero no lo usa ninguna venta nueva. El dueño perdió
+// una tarifa así, cargándola en «Suscripciones TV» sin que nada se lo advirtiera.
+const CATS_RETIRADAS: string[] = ['Suscripciones TV', 'Repos']
+
+// El nombre de la pestaña TAL CUAL se ve. Un solo sitio: antes había dos copias
+// (la del botón y la de los avisos de guardado) y ya habían divergido.
+const etiquetaCat = (c: string) =>
+   c === 'Ti' ? 'Contratos Móvil'
+ : c === 'O2' ? 'O2 MovilFree'
+ : c === 'Repos' ? 'Arpu (Repos) — histórico'
+ : c === CAT_REPOS ? 'Repos (Arpu)'
+ : c === 'Suscripciones TV' ? 'Suscripciones TV — histórico'
+ : c
+
 const getTabStyle = (cat: string, isActive: boolean) => {
+  // Rojo claro para las retiradas: se ven de un vistazo y se sabe que están para
+  // eliminarse. El borde gana al border:'none' del botón porque el spread de
+  // getTabStyle va después; no reordenar.
+  if (CATS_RETIRADAS.includes(cat)) {
+    return {
+      backgroundColor: isActive ? '#B91C1C' : '#FEE2E2',
+      color: isActive ? '#FFFFFF' : '#991B1B',
+      border: '1px solid #FCA5A5'
+    }
+  }
   return {
     backgroundColor: isActive ? 'var(--mercedes-cyan)' : '#e0f2fe',
     color: isActive ? '#FFFFFF' : '#000000'
@@ -303,10 +330,8 @@ export default function CatalogosPage() {
        if (mo < 1 || mo > 12 || d < 1 || d > 31) return undefined
        return `${String(d).padStart(2, '0')}/${String(mo).padStart(2, '0')}/${y}`
     }
-    // Nombre de pestaña TAL CUAL se ve en pantalla (la clave interna 'Ti' se
-    // muestra como «Contratos Móvil», etc.) — para que el aviso sea seguible.
-    const nombrePestana = (c: string) =>
-       c === 'Ti' ? 'Contratos Móvil' : c === 'O2' ? 'O2 MovilFree' : c === 'Repos' ? 'Arpu (Repos) — histórico' : c === CAT_REPOS ? 'Repos (Arpu)' : c
+    // El nombre de pestaña sale de etiquetaCat (arriba del fichero): un solo sitio.
+    const nombrePestana = etiquetaCat
     for (const [cat, items] of Object.entries(exportCatalogs)) {
        // Categorías heredadas SIN pestaña (p.ej. 'Fija y Móvil' de datos
        // antiguos): el usuario no puede verlas ni corregirlas, así que una
@@ -702,6 +727,15 @@ export default function CatalogosPage() {
   }
 
   const handleBulkImport = () => {
+    // El fallo real de ago-2026: se pegó una tarifa nueva en «Suscripciones TV»,
+    // que está retirada, y se quedó en el limbo sin que nada lo dijera.
+    if (CATS_RETIRADAS.includes(activeTab) && !window.confirm(
+        '⚠️ «' + etiquetaCat(activeTab) + '» es una palanca RETIRADA.\n\n'
+        + 'Lo que pegues aquí se guarda, pero NO lo usa ninguna venta nueva: al grabar '
+        + 'una venta esta palanca ya no se puede elegir.\n\n'
+        + 'Las tarifas nuevas van en la pestaña «Repos (Arpu)».\n\n'
+        + '¿Pegar aquí de todos modos?')) return
+
     if (!bulkText.trim()) return
 
     // Preprocesar el texto para unificar saltos de línea dentro de comillas (típico de celdas multilínea en Excel)
@@ -1229,10 +1263,8 @@ export default function CatalogosPage() {
           { cat: 'Seguro', tip: 'Catálogo de seguros para dispositivos. Introduce la categoría, cuota y comisión.' },
           { cat: 'O2', tip: 'Catálogo de productos y tarifas de O2. Introduce la categoría, nombre y comisión.' },
           { cat: 'miMovistar', tip: 'Catálogo de paquetes miMovistar. Configura categorías, tipos, productos multilínea y su estructura de comisiones por multiplicador.' },
-          { cat: 'Suscripciones TV', tip: 'Catálogo de suscripciones de televisión. Introduce la categoría, nombre, comisión y fechas.' },
           { cat: 'Varios', tip: 'Catálogo de productos varios (alarmas, migraciones, etc). Introduce categoría, nombre, cuota total y comisión.' },
-          { cat: 'Repos', tip: 'Catálogo VIEJO de Reposiciones (incremento de ARPU de BAF/miMovistar). Se conserva por el histórico; lo nuevo va en la pestaña Repos.' },
-          { cat: CAT_REPOS, tip: 'Catálogo de Repos (Arpu). Se rellena igual que Suscripciones TV: comisión × multiplicador = comisión X. Aquí van las suscripciones y los repos de fútbol con su precio de verdad.' },
+          { cat: CAT_REPOS, tip: 'Catálogo de Repos (Arpu). Se rellena igual que miMovistar: comisión × multiplicador = comisión X. Aquí van las suscripciones de TV, los repos y el de fútbol, cada uno con su precio de verdad.' },
           { cat: 'Resto BAF', tip: 'Catálogo para Resto BAF. Estructura idéntica a miMovistar.' },
           { cat: 'Accesorios', tip: 'Catálogo de accesorios (fundas, protectores, cargadores, etc). Introduce categoría, nombre, cuota total y comisión.' },
 
@@ -1240,7 +1272,7 @@ export default function CatalogosPage() {
           { cat: 'Comisiones O2 MovilFree', tip: 'Configuración del motor matemático de comisiones y bonos específicos para O2 y MovilFree.' },
           { cat: 'PRV Territorial Movistar y O2', tip: 'Configuración y cálculo automático de tramos y comisiones territoriales.' },
         ] as const).map(({ cat, tip }) => (
-          <TooltipBox key={cat} title={cat} content={tip} position="bottom">
+          <TooltipBox key={cat} title={etiquetaCat(cat)} content={tip} position="bottom">
             <button
               onClick={() => { setActiveTab(cat); setSearch('') }}
               style={{
@@ -1254,11 +1286,65 @@ export default function CatalogosPage() {
                 transition: 'all 0.2s ease'
               }}
             >
-              {cat === 'Ti' ? 'Contratos Móvil' : cat === 'Repos' ? 'Arpu (Repos) — histórico' : cat === CAT_REPOS ? 'Repos (Arpu)' : cat}
+              {etiquetaCat(cat)}
+            </button>
+          </TooltipBox>
+        ))}
+
+        {/* ── LAS RETIRADAS, APARTE ──────────────────────────────────────────
+            En su propia fila y en rojo claro, detrás de un rótulo, para que se
+            vea de un vistazo que están ahí solo de paso. */}
+        <div style={{ flexBasis: '100%', height: 0 }} />
+        <span style={{
+          alignSelf: 'center', display: 'inline-flex', alignItems: 'center', gap: 6,
+          backgroundColor: '#FEE2E2', color: '#991B1B', border: '1px solid #FCA5A5',
+          borderRadius: 999, padding: '4px 12px', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap'
+        }}>
+          <AlertCircle size={13} /> Históricos — para eliminar
+        </span>
+        {([
+          { cat: 'Suscripciones TV', tip: 'HISTÓRICO — palanca RETIRADA en agosto de 2026. Sus productos viven ahora en «Repos (Arpu)». Lo que cargues aquí NO lo usa ninguna venta nueva: se conserva solo para consultar el histórico.' },
+          { cat: 'Repos', tip: 'HISTÓRICO — palanca RETIRADA en agosto de 2026 (los repos por incremento de ARPU de BAF/miMovistar). Lo nuevo va en «Repos (Arpu)». Se conserva solo para consultar el histórico.' },
+        ] as const).map(({ cat, tip }) => (
+          <TooltipBox key={cat} title={etiquetaCat(cat)} content={tip} position="bottom">
+            <button
+              onClick={() => { setActiveTab(cat); setSearch('') }}
+              style={{
+                padding: '10px 20px',
+                borderRadius: 8,
+                cursor: 'pointer',
+                fontWeight: 600,
+                fontSize: 14,
+                ...getTabStyle(cat, activeTab === cat),
+                transition: 'all 0.2s ease'
+              }}
+            >
+              {etiquetaCat(cat)}
             </button>
           </TooltipBox>
         ))}
       </div>
+
+      {/* El aviso va FUERA de isProductTab a propósito: así también se ve en un
+          mes cerrado, donde el banner gris del candado ocupa el otro sitio y son
+          dos cosas distintas (mes cerrado ≠ palanca retirada). */}
+      {CATS_RETIRADAS.includes(activeTab) && (
+        <div style={{
+          marginBottom: 20, padding: '14px 18px', borderRadius: 12,
+          display: 'flex', alignItems: 'center', gap: 12,
+          background: '#FEE2E2', border: '1px solid #FCA5A5', color: '#991B1B'
+        }}>
+          <AlertCircle size={20} />
+          <div>
+            <strong style={{ fontSize: 15 }}>PALANCA RETIRADA (agosto de 2026) — solo histórico</strong>
+            <p style={{ margin: '4px 0 0 0', fontSize: 13, lineHeight: 1.5 }}>
+              Esta pestaña ya no se puede elegir al grabar una venta. Las tarifas que cargues aquí
+              se guardan, pero <strong>no las usa nadie</strong>. Lo nuevo va en «Repos (Arpu)».
+              Se conserva para consultar el histórico y se eliminará dentro de unos meses.
+            </p>
+          </div>
+        </div>
+      )}
 
       {isProductTab && (
         <>
