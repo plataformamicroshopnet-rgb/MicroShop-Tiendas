@@ -983,8 +983,14 @@ export default function NuevaVentaPage() {
       // producto) y el importe ya viene sumado de la pantalla.
       const CON_REPOS_DENTRO = ['miMovistar', 'Traslado miMovistar']
       const rastroConjunta: string[] = []
+      const HEREDAN_TELEFONO = ['miMovistar', 'Traslado miMovistar', 'Resto BAF']
       const productosAGuardar = formData.productos.map((p: any) => {
         const limpio: any = { ...p }
+        // El teléfono del paquete ya no se teclea abajo: se hereda del cliente. El
+        // fijo primero, que es el de la fibra; si no hay, el móvil.
+        if (!String(limpio.telf || '').trim() && HEREDAN_TELEFONO.includes(p.categoria)) {
+          limpio.telf = String(formData.telefonoFijo || formData.telefonoMovil || '').trim()
+        }
         delete limpio.repoAnadidos; delete limpio.comisionAlta; delete limpio.multAlta
         const extras: any[] = p.repoAnadidos || []
         if (!extras.length || !CON_REPOS_DENTRO.includes(p.categoria)) return limpio
@@ -999,7 +1005,7 @@ export default function NuevaVentaPage() {
         const mult = Number(String(p.multAlta || 1).replace(',', '.')) || 1
         rastroConjunta.push('Venta conjunta: ' + String(p.producto).split('\n').join(' + ')
           + ' ' + eur(base) + ' € + ' + extras.map((r: any) => r.producto + ' ' + eur(Number(r.comision) || 0) + ' €').join(' + ')
-          + ' = ×' + mult + ' → ' + eur(Number(p.importe) || 0) + ' €')
+          + ' = ×' + String(mult).replace('.', ',') + ' → ' + eur(Number(p.importe) || 0) + ' €')
         return limpio
       })
       const anotacionesConRastro = rastroConjunta.length
@@ -1607,27 +1613,63 @@ export default function NuevaVentaPage() {
                               </div>
                             )}
 
-                            {puestos.length > 0 && (
+                            {puestos.length > 0 && (() => {
+                              // La cuenta a la vista: Telefónica paga el conjunto, así que se
+                              // suman las COMISIONES y al final se aplica UNA vez el
+                              // multiplicador del alta. Enseñarlo así evita la duda de si el
+                              // añadido lleva el ×1,5 o el ×2: lo lleva, el mismo que el paquete.
+                              const eur = (n: number) => Number(n || 0).toLocaleString('es-ES',
+                                { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                              const num = (v: any) => Number(String(v ?? '').replace(',', '.')) || 0
+                              const base = num(prod.comisionAlta)
+                              const mult = num(prod.multAlta) || 1
+                              const suma = base + puestos.reduce((a: number, r: any) => a + num(r.comision), 0)
+                              const conPromo = prod.categoria === 'miMovistar' && prod.descuentoSinPlus
+                              const fila = { display: 'flex', alignItems: 'center', gap: 8, fontSize: 13,
+                                             color: '#4A148C', padding: '2px 0' }
+                              return (
                               <div style={{ marginTop: 8, background: '#F3E5F5', borderRadius: 6, padding: '8px 10px' }}>
+                                <div style={fila}>
+                                  <span style={{ flex: 1 }}>{String(prod.producto || '').split('\n').join(' · ')}</span>
+                                  <span>{eur(base)} €</span>
+                                  <span style={{ width: 15 }} />
+                                </div>
                                 {puestos.map((r: any, i: number) => (
-                                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8,
-                                                        fontSize: 13, color: '#4A148C', padding: '2px 0' }}>
+                                  <div key={i} style={fila}>
                                     <span style={{ flex: 1 }}>➕ {r.producto}</span>
-                                    <span>{Number(r.comision || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span>
+                                    <span>{eur(num(r.comision))} €</span>
                                     <button type="button" onClick={() => quitaRepoDelAlta(index, i)}
                                       title="Quitar de la venta"
                                       style={{ border: 'none', background: 'transparent', color: '#B71C1C',
-                                               cursor: 'pointer', fontWeight: 'bold', fontSize: 15 }}>×</button>
+                                               cursor: 'pointer', fontWeight: 'bold', fontSize: 15, width: 15, padding: 0 }}>×</button>
                                   </div>
                                 ))}
-                                <div style={{ borderTop: '1px solid #CE93D8', marginTop: 6, paddingTop: 6,
+                                <div style={{ ...fila, borderTop: '1px solid #CE93D8', marginTop: 5, paddingTop: 5 }}>
+                                  <span style={{ flex: 1 }}>Suma de comisiones</span>
+                                  <span>{eur(suma)} €</span>
+                                  <span style={{ width: 15 }} />
+                                </div>
+                                <div style={{ ...fila, color: '#6A1B9A', fontWeight: 'bold' }}>
+                                  <span style={{ flex: 1 }}>× {String(mult).replace('.', ',')} &nbsp;<span style={{ fontWeight: 'normal', fontSize: 11.5 }}>(el multiplicador del paquete, también para lo añadido)</span></span>
+                                  <span>{eur(suma * mult)} €</span>
+                                  <span style={{ width: 15 }} />
+                                </div>
+                                {conPromo && (
+                                  <div style={{ ...fila, color: '#E65100' }}>
+                                    <span style={{ flex: 1 }}>Promoción sin el Paquete Movistar Plus</span>
+                                    <span>− 14,00 €</span>
+                                    <span style={{ width: 15 }} />
+                                  </div>
+                                )}
+                                <div style={{ borderTop: '2px solid #CE93D8', marginTop: 5, paddingTop: 6,
                                               display: 'flex', justifyContent: 'space-between',
-                                              fontWeight: 'bold', color: '#4A148C' }}>
+                                              fontWeight: 'bold', fontSize: 14, color: '#4A148C' }}>
                                   <span>UNA SOLA VENTA · total</span>
-                                  <span>{Number(prod.importe || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span>
+                                  <span>{eur(Number(prod.importe || 0))} €</span>
                                 </div>
                               </div>
-                            )}
+                              )
+                            })()}
                           </div>
                         )
                       })()}
@@ -1636,8 +1678,15 @@ export default function NuevaVentaPage() {
 
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
                         <div>
-                          <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>Teléfono (Nº Fijo / Móvil)</label>
-                          <input type="text" className="form-input" maxLength={9} value={prod.telf} onChange={e => handleProductChange(index, 'telf', e.target.value)} required style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
+                          <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>
+                            Teléfono (Nº Fijo / Móvil) <span style={{ color: '#888', fontWeight: 'normal' }}>— si lo dejas vacío se coge el del cliente</span>
+                          </label>
+                          {/* Ya no es obligatorio: en un paquete la venta es UNA línea y el
+                              teléfono del cliente está arriba, en la cabecera. Si esta casilla
+                              queda vacía, al guardar se hereda de allí (primero el fijo, que es
+                              el de la fibra; si no hay, el móvil), así que el cruce con
+                              Telefónica no pierde su llave. */}
+                          <input type="text" className="form-input" maxLength={9} value={prod.telf} onChange={e => handleProductChange(index, 'telf', e.target.value)} placeholder={formData.telefonoFijo || formData.telefonoMovil || ''} style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
                         </div>
                         <div>
                           <label style={{ fontSize: 13, display: 'block', marginBottom: 4, color: '#555' }}>Nº Pedido Telefónica/Movistar 🔑</label>
