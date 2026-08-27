@@ -111,6 +111,16 @@ const etiquetaCat = (c: string) =>
  : c === 'Suscripciones TV' ? 'Suscripciones TV — histórico'
  : c
 
+// Un número escrito a la española: «14,99» es lo que sale de pegar desde Excel con
+// la configuración de aquí, y Number() lo convierte en NaN. Pasaba de verdad: una
+// fila del catálogo de agosto tenía la comisión con coma y la columna «Comisión X»
+// enseñaba NaN, aunque el precio sí se aplicaba bien en Nueva Venta.
+const numEs = (v: any, siVacio = 0) => {
+  if (v === null || v === undefined || String(v).trim() === '') return siVacio
+  const n = Number(String(v).replace(',', '.'))
+  return isNaN(n) ? siVacio : n
+}
+
 const getTabStyle = (cat: string, isActive: boolean) => {
   // Rojo claro para las retiradas: se ven de un vistazo y se sabe que están para
   // eliminarse. El borde gana al border:'none' del botón porque el spread de
@@ -441,11 +451,11 @@ export default function CatalogosPage() {
         // 4) Corrección de operaciones: la venta guarda una foto del precio al
         // teclearla (cuota / prima del seguro), así que cambiar el catálogo no
         // corrige lo ya tecleado. Se ofrece recalcular las ventas del periodo
-        // (Rent y Seguros) para que su importe siga la vigencia que cubre la
+        // (Rent, Seguros y Repos (Arpu)) para que su importe siga la vigencia que cubre la
         // fecha de cada venta.
         const reprice = window.confirm(
           '✅ Catálogo del periodo guardado correctamente.\n\n' +
-          '¿Quieres CORREGIR ahora las operaciones ya tecleadas de este periodo (Rent y Seguros) ' +
+          '¿Quieres CORREGIR ahora las operaciones ya tecleadas de este periodo (Rent, Seguros y Repos (Arpu)) ' +
           'para que su importe siga las vigencias nuevas según la fecha de cada venta?')
         if (reprice) {
           try {
@@ -1776,7 +1786,7 @@ export default function CatalogosPage() {
                               <input 
                                 type="text" 
                                 disabled
-                                value={(Number(item.comision || 0) * Number(item.comisionConCoste || 1)).toFixed(2)}
+                                value={(numEs(item.comision) * numEs(item.comisionConCoste, 1)).toFixed(2)}
                                 className="form-input"
                                 style={{ width: 110, color: 'var(--mercedes-cyan)', fontWeight: 'bold', backgroundColor: 'transparent', border: 'none', paddingRight: 24 }}
                               />
