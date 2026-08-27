@@ -19,7 +19,11 @@
 // como pregunta al comercial y no como candado automático.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { norm } from './antifraudeVentas'
+// Copia del normalizador de antifraudeVentas a propósito: ese fichero importa de
+// este, y hacerlo en los dos sentidos deja un bucle de imports. Son tres líneas.
+const norm = (v: any) =>
+  String(v || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ').trim()
 
 /** Las familias de servicio y su ESCALERA. Un repo de la misma familia solo se
  *  permite si su peldaño es más alto que el que ya lleva el alta. */
@@ -107,6 +111,29 @@ export function puedeAnadirse(productoAlta: any, productoRepo: any): Veredicto {
     }
   }
   return { permitido: true, motivo: '' }
+}
+
+/**
+ * TODAS las familias por las que este repo no cabe en este alta (puedeAnadirse
+ * corta en la primera; aquí hacen falta todas para poder perdonar alguna, como
+ * el Movistar+ de las altas con la promo «sin el Paquete Movistar Plus»).
+ */
+export function familiasBloqueadas(productoAlta: any, productoRepo: any): string[] {
+  const enAlta = nivelesDe(productoAlta)
+  const enRepo = nivelesDe(productoRepo)
+  return Object.keys(enRepo).filter(clave => {
+    const yaTiene = enAlta[clave]
+    return !!yaTiene && enRepo[clave] <= yaTiene
+  })
+}
+
+/** ¿Estos dos textos comparten familia? Da igual el nivel: dos cosas de la misma
+ *  familia en la MISMA venta siempre están de más (Champions y La Liga, o
+ *  Champions y Fútbol Total, son el mismo sitio del recibo del cliente). */
+export function familiasComunes(unTexto: any, otroTexto: any): string[] {
+  const a = nivelesDe(unTexto)
+  const b = nivelesDe(otroTexto)
+  return Object.keys(a).filter(clave => clave in b)
 }
 
 /** La misma pregunta, para una lista de repos: útil para pintar el desplegable

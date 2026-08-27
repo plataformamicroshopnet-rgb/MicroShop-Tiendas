@@ -24,6 +24,8 @@ export const norm = (v: any) =>
   String(v || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
     .replace(/\s+/g, ' ').trim()
 
+import { familiasBloqueadas, familiasComunes, etiquetaFamilia } from './reposCompatibles'
+
 /** Los SERVICIOS que puede llevar una venta, se llamen como se llamen. Es la
  *  pieza clave: «Futbol Total PROMO Repo Up Destino Fútbol», «Futbol Total
  *  PROMO» y «Repo Up Destino Fútbol» son el MISMO servicio con tres nombres. */
@@ -119,15 +121,18 @@ export function reglaYaVaDentro(
   const sueltas = lineas.filter(l => esPalancaSuelta(l.categoria) && String(l.producto || '').trim())
   if (altas.length === 0 || sueltas.length === 0) return null
   for (const alta of altas) {
-    let dentro = serviciosDe(alta.producto)
-    // Con la promo «sin el Paquete Movistar Plus» el alta se llama «Movistar+…»
-    // pero ese paquete NO va dentro: ahí el Movistar+ suelto es correcto.
-    if ((alta as any).sinPaquetePlus) dentro = dentro.filter(x => x !== 'movistarplus')
-    if (dentro.length === 0) continue
     for (const suelta of sueltas) {
-      const repetidos = serviciosDe(suelta.producto).filter(s => dentro.includes(s))
+      // La MISMA escalera que usa el desplegable de Nueva Venta: no basta con que
+      // el servicio se repita, tiene que NO subir de nivel. Así el Champions
+      // suelto sobre un alta con Fútbol Total sí avisa (antes no: eran «servicios»
+      // distintos), y en cambio subir de Netflix con anuncios a Premium no
+      // molesta, porque eso sí es un repo de verdad.
+      let repetidos = familiasBloqueadas(alta.producto, suelta.producto)
+      // Con la promo «sin el Paquete Movistar Plus» el alta se llama «Movistar+…»
+      // pero ese paquete NO va dentro: ahí el Movistar+ suelto es correcto.
+      if ((alta as any).sinPaquetePlus) repetidos = repetidos.filter(x => x !== 'movistarplus')
       if (repetidos.length > 0) {
-        const que = repetidos.map(etiquetaServicio).join(' y ')
+        const que = repetidos.map(etiquetaFamilia).join(' y ')
         return {
           clave: 'confirmarYaVaDentro',
           titulo: 'Eso ya va dentro del alta',
@@ -156,19 +161,29 @@ export function reglaMismoServicio(
   const sueltas = lineas.filter(l => esPalancaSuelta(l.categoria) && String(l.producto || '').trim())
   if (sueltas.length === 0) return null
 
-  // (a) dentro de la propia venta: el mismo servicio dos veces
-  const vistos = new Map<string, string>()
-  for (const l of sueltas) {
-    for (const s of serviciosDe(l.producto)) {
-      if (vistos.has(s)) {
+  // (a) dentro de la propia venta: dos cosas de la MISMA FAMILIA. Por familia y no
+  // por servicio, que es lo que pidió el dueño: «no se pueden dar a la vez tres de
+  // los productos». Champions y La Liga son dos nombres del mismo sitio del recibo.
+  for (let i = 0; i < sueltas.length; i++) {
+    for (let j = i + 1; j < sueltas.length; j++) {
+      // Los DOS criterios, unidos: la familia pilla Champions contra La Liga, y la
+      // lista de servicios de siempre sigue pillando dos Disney o dos Motor, que
+      // no forman escalera y quedarían fuera del primero.
+      const porFamilia = familiasComunes(sueltas[i].producto, sueltas[j].producto).map(etiquetaFamilia)
+      const otrosServicios = serviciosDe(sueltas[j].producto)
+      const porServicio = serviciosDe(sueltas[i].producto)
+        .filter(x => otrosServicios.includes(x)).map(etiquetaServicio)
+      const comunes = [...new Set([...porFamilia, ...porServicio])]
+      if (comunes.length > 0) {
         return {
           clave: 'confirmarMismoServicioVenta',
-          titulo: 'Dos veces el mismo servicio',
-          texto: `En esta misma venta estás grabando ${etiquetaServicio(s)} dos veces `
-               + `(«${vistos.get(s)}» y «${String(l.producto).replace(/\n/g, ' · ')}»).`,
+          titulo: 'Dos veces lo mismo en la misma venta',
+          texto: `En esta misma venta estás grabando ${comunes.join(' y ')} dos veces `
+               + `(«${String(sueltas[i].producto).replace(/\n/g, ' · ')}» y `
+               + `«${String(sueltas[j].producto).replace(/\n/g, ' · ')}»).\n\n`
+               + `Solo se puede dar uno: el cliente no puede tener los dos a la vez.`,
         }
       }
-      vistos.set(s, String(l.producto).replace(/\n/g, ' · '))
     }
   }
 
