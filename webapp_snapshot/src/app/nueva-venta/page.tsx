@@ -419,7 +419,12 @@ export default function NuevaVentaPage() {
           isSuscTraslado: esTraslado,
           importe: esTraslado ? '0'
             : String(Math.round(numero(fila.comision) * (mult === 0 ? 1 : mult) * 100) / 100),
-          telf: prod.telf || '', noCliente: prod.noCliente || '', pendiente: 'No', imei: '',
+          // El fijo del cliente, que es lo que pide esta palanca («Teléfono Fijo
+          // Obligatorio») y la llave con la que cruza con Telefónica. Sin esto la
+          // línea nacía vacía y en rojo, justo después de decirle al comercial que
+          // ya no hacía falta teclear el teléfono. Nunca el móvil: aquí no vale.
+          telf: prod.telf || formData.telefonoFijo || '',
+          noCliente: prod.noCliente || '', pendiente: 'No', imei: '',
           numeroPedido: '', rentConCoste: '', origenStock: '', seguro: '', seguroImporte: 0,
           fabricante: '', subcategoria: '', gama: '', isLibre: false, isSwap: false,
         })
@@ -456,7 +461,19 @@ export default function NuevaVentaPage() {
   const handleProductChange = (index: number, field: string, value: any) => {
     // Cambiar de paquete, tramo o tipo re-tarifica la línea: la pregunta que
     // estuviera abierta ya no viene a cuento.
-    if (['categoria', 'subcategoria', 'gama', 'producto', 'fabricante'].includes(field)) setRepoPendiente(null)
+    if (['categoria', 'subcategoria', 'gama', 'producto', 'fabricante'].includes(field)) {
+      setRepoPendiente(null)
+      // Y lo que se hubiera añadido se va con ella. Al cambiar de Producto el importe
+      // se recalcula solo y queda con pinta de correcto pero SIN los repos dentro: la
+      // venta se guardaba por menos de lo que vale sin que nadie lo notara. Se avisa
+      // nombrándolos, que es lo único que hace que se vea.
+      const puestos = ((formData.productos[index] as any)?.repoAnadidos || []) as any[]
+      if (puestos.length > 0 && !window.confirm(
+          'Vas a cambiar el paquete, así que se quitarán ' + puestos.length
+          + (puestos.length === 1 ? ' repo añadido' : ' repos añadidos') + ':\n\n'
+          + puestos.map((r: any) => '· ' + r.producto).join('\n') + '\n\n'
+          + 'Habrá que volver a añadirlos con la tarifa del paquete nuevo. ¿Sigo?')) return
+    }
     setFormData((prev: any) => {
       let newProducts = [...prev.productos]
       
@@ -930,6 +947,10 @@ export default function NuevaVentaPage() {
 
 
   const removeProductRow = (index: number) => {
+    // Al borrar una línea, las de abajo suben un puesto. Si quedaba una pregunta
+    // abierta, el panel se seguiría viendo pero sobre OTRO producto, y el repo se
+    // sumaría a un alta que no es la suya.
+    setRepoPendiente(null)
     setFormData((prev: any) => {
       const newProducts = [...prev.productos]
       newProducts.splice(index, 1)
@@ -1534,11 +1555,24 @@ export default function NuevaVentaPage() {
                           const ya = porNombre.get(clave)
                           if (!ya || isVentaWithinDates(fechaEs, r.validFrom, r.validTo)) porNombre.set(clave, r)
                         }
+                        const puestos: any[] = prod.repoAnadidos || []
+                        // Se compara contra el paquete Y contra lo que ya se ha añadido en
+                        // esta misma venta. Sin esto, el mismo Netflix se podía meter dos
+                        // veces, y «La Liga» detrás de «Champions» pasaba también: son el
+                        // mismo sitio del recibo del cliente y el importe salía inflado.
+                        const yaCubierto = [String(prod.producto || ''),
+                                            ...puestos.map((r: any) => String(r.producto || ''))].join('\n')
                         const repos = [...porNombre.values()]
-                          .map((r: any) => ({ ...r, v: puedeAnadirse(prod.producto, r.producto) }))
+                          .map((r: any) => {
+                            const porElPaquete = puedeAnadirse(prod.producto, r.producto)
+                            const conTodo = puedeAnadirse(yaCubierto, r.producto)
+                            return { ...r, v: conTodo,
+                                     // para decir la verdad en el desplegable: no es lo mismo
+                                     // «ya lo lleva el paquete» que «ya lo has añadido tú»
+                                     porAnadido: porElPaquete.permitido && !conTodo.permitido }
+                          })
                           .sort((a: any, b: any) => String(a.producto).localeCompare(String(b.producto), 'es'))
                         if (!repos.length) return null
-                        const puestos: any[] = prod.repoAnadidos || []
                         return (
                           <div style={{ border: '2px dashed #7B1FA2', borderRadius: 8, padding: 10,
                                         background: 'rgba(123,31,162,0.05)', marginTop: 8 }}>
@@ -1557,7 +1591,7 @@ export default function NuevaVentaPage() {
                                 <option key={ir} value={String(r.producto)}
                                         disabled={!r.v.permitido} title={r.v.motivo}>
                                   {r.v.permitido ? '' : '⛔ '}{String(r.producto)}
-                                  {r.v.permitido ? '' : ' — ya lo lleva el paquete'}
+                                  {r.v.permitido ? '' : (r.porAnadido ? ' — ya lo has añadido' : ' — ya lo lleva el paquete')}
                                 </option>
                               ))}
                             </select>
