@@ -121,8 +121,13 @@ export async function POST(request: Request) {
     // Antifraude de traslados: desde ago-2026 las suscripciones de TV se teclean
     // en la palanca nueva «Repos (Arpu)», así que mirar solo 'Suscripciones TV'
     // dejaba pasar la suscripción de un NIF con traslado reciente.
+    // Y desde ago-2026 tambien se pueden plegar DENTRO de un alta miMovistar: la
+    // linea es entonces de categoria 'miMovistar', asi que sin mirar reposDentro
+    // el traslado reciente pasaba de largo.
     const esPalancaTV = (c: any) => c === 'Suscripciones TV' || c === 'Repos UP'
-    const hasSuscripcionTV = data.productos.some((p: any) => esPalancaTV(p.categoria) && p.producto !== '');
+    const hasSuscripcionTV = data.productos.some((p: any) =>
+      (esPalancaTV(p.categoria) && p.producto !== '')
+      || (Array.isArray(p.reposDentro) && p.reposDentro.length > 0));
     
     if (hasSuscripcionTV && data.nif) {
        const hasTrasladoInPayload = data.productos.some((p: any) => 

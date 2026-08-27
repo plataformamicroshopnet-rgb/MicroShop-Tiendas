@@ -763,7 +763,18 @@ function OperationsContent() {
     }).sort((a: any, b: any) => a.etiqueta.localeCompare(b.etiqueta, 'es'))
   }
 
+  // Una venta CONJUNTA (un alta con productos añadidos en el mismo momento) tiene
+  // un concepto de varias líneas y un importe que suma las comisiones de todas.
+  // El desplegable de retipificar solo ofrece filas sueltas del catálogo, así que
+  // elegir una borraría los añadidos y bajaría la cuota sin decir nada.
+  const esVentaConjunta = (sale: any) =>
+    String(sale?.anotaciones || '').includes('Venta conjunta:')
+
   const elegirProducto = (sale: any, clave: string) => {
+    if (clave && esVentaConjunta(sale)
+        && !window.confirm('OJO: esta venta lleva productos añadidos en la misma operación'
+             + ' (mira las Anotaciones). Si cambias el Producto se quedan fuera y el importe'
+             + ' baja a la tarifa del paquete solo.\n\n¿Seguro que quieres retipificarla?')) return
     if (!clave) {   // volver al producto original
       setEditForm((prev: any) => ({ ...prev, __filaCatalogo: '', producto: sale.producto,
         importe: sale.cuota, catalogoSubcategoria: undefined, catalogoGama: undefined }))

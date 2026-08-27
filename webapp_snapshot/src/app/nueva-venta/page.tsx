@@ -8,6 +8,7 @@ import { CODIGOS_TRAMITACION } from '@/lib/constants'
 import { getEffectiveTiendaComerciales, getEffectiveSellers } from '@/lib/comercialRoster'
 import { isVentaWithinDates, esRepoArpuManual, importeRepoArpu, factorRepoArpu, REPO_ARPU_CORTE, PALANCA_REPOS } from '@/lib/salesUtils'
 import { useGuard } from '@/hooks/useGuard'
+import { puedeAnadirse, PREGUNTA_PLANTA, AVISO_BAJA_TV } from '@/lib/reposCompatibles'
 import { usePeriod } from '@/components/PeriodProvider'
 
 export default function NuevaVentaPage() {
@@ -313,6 +314,120 @@ export default function NuevaVentaPage() {
     prod.categoria === 'miMovistar'
     && ['AV', 'MV'].includes(String(prod.subcategoria || '').toUpperCase().trim())
 
+  // ── EL IMPORTE DE UN miMOVISTAR, EN UN SOLO SITIO ───────────────────────────
+  // Lo que se le añade al alta en el momento de la venta NO es otra venta: es la
+  // misma. Telefónica paga el conjunto, así que se suman las comisiones y se
+  // aplica el multiplicador DEL ALTA (un Disney que por su cuenta iría a ×1,5,
+  // dentro de un miMovistar cobra a ×2). La promo de los 14 € va la última.
+  const importeMiMovistar = (prod: any, comisionBase: number, mult: number) => {
+    const sumaRepos = (prod.repoAnadidos || [])
+      .reduce((a: number, r: any) => a + (Number(r.comision) || 0), 0)
+    let imp = (comisionBase + sumaRepos) * (mult === 0 ? 1 : mult)
+    if (prod.categoria === 'miMovistar' && prod.descuentoSinPlus) imp = Math.max(0, imp - 14)
+    // A céntimos: el ×1,5 de los tramos BV sobre un repo de 10,99 € da tres
+    // decimales, y la pantalla enseñaba uno y la base guardaba otro.
+    return Math.round(imp * 100) / 100
+  }
+
+  // Cambiar de categoría, de tramo o de tipo re-tarifica la línea entera: lo que
+  // se hubiera añadido ya no vale, y tiene que irse con todo lo demás. Si se
+  // quedara colgado, al guardar aparecería en el concepto de una venta que ya no
+  // es la misma.
+  const olvidaRepos = (prod: any) => {
+    prod.repoAnadidos = []
+    delete prod.comisionAlta
+    delete prod.multAlta
+  }
+
+  // El repo de fútbol, se llame como se llame en el catálogo. Es el mismo criterio
+  // que usa el servidor para crear su extra de 10 €.
+  const esRepoFutbol = (nombre: any) => {
+    const t = String(nombre || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    return t.includes('repo up destino futbol') && t.includes('futbol total')
+  }
+
+  // ── AÑADIR UN REPO (ARPU) A UN ALTA (dueño, 27-ago-2026) ────────────────────
+  // Si el cliente YA está en planta no es una venta conjunta: es un repo de
+  // verdad, y va en su propia línea con su propio precio.
+  const anadeRepoAlAlta = (index: number, fila: any) => {
+    const numero = (v: any) => {
+      const n = Number(String(v == null ? '' : v).replace(',', '.'))
+      return isNaN(n) ? 0 : n
+    }
+    const prodActual = formData.productos[index] || {}
+    const esTraslado = prodActual.categoria === 'Traslado miMovistar'
+      || String(prodActual.producto || '').toLowerCase().includes('traslado')
+
+    // El repo de fútbol NO se puede fundir dentro del alta: Telefónica paga por
+    // él dos conceptos (los 78 € y un extra de 10 € que crea el programa) y ese
+    // extra solo nace si la línea va en la palanca «Repos (Arpu)». Además, en un
+    // alta nueva el fútbol no es un repo: es el paquete que ya lo trae.
+    if (esRepoFutbol(fila.producto)) {
+      window.alert('El Repo de Fútbol va SIEMPRE en su propia línea, nunca dentro del alta:'
+        + ' Telefónica paga por él dos conceptos (los 78 € y un extra de 10 €) y ese extra'
+        + ' solo se genera si la línea es de Repos (Arpu).\n\n'
+        + '· Si el cliente ES nuevo: elige directamente el paquete que ya trae Fútbol Total.\n'
+        + '· Si el cliente YA estaba en planta: añádelo con el botón «Otro Repo (Arpu)».')
+      return
+    }
+
+    const enPlanta = window.confirm(PREGUNTA_PLANTA
+      + '\n\n[ Aceptar = SÍ, ya está en planta ]   [ Cancelar = NO, es un alta nueva ]')
+
+    if (!enPlanta && !window.confirm(AVISO_BAJA_TV
+        + '\n\n[ Aceptar = SÍ, han pasado ]   [ Cancelar = no lo sé / no han pasado ]')) return
+    // La regla de siempre: en un traslado Telefónica no abona lo que se añade.
+    if (esTraslado
+        && !window.confirm('Cualquier Suscripción en Traslado no cuenta, quiere continuar, Si o No')) return
+
+    setFormData((prev: any) => {
+      const arr = [...prev.productos]
+      const prod: any = { ...arr[index] }
+
+      if (enPlanta) {
+        // Repo de verdad: línea aparte, con el precio de la tarifa de repos.
+        // El Nº Pedido NO se copia: cada uno llega con su propio boletín.
+        // En un traslado sigue mandando la regla de siempre: no se abona.
+        const mult = numero(fila.comisionConCoste)
+        arr.push({
+          categoria: 'Repos UP', producto: String(fila.producto || ''),
+          isSuscTraslado: esTraslado,
+          importe: esTraslado ? '0'
+            : String(Math.round(numero(fila.comision) * (mult === 0 ? 1 : mult) * 100) / 100),
+          telf: prod.telf || '', noCliente: prod.noCliente || '', pendiente: 'No', imei: '',
+          numeroPedido: '', rentConCoste: '', origenStock: '', seguro: '', seguroImporte: 0,
+          fabricante: '', subcategoria: '', gama: '', isLibre: false, isSwap: false,
+        })
+        return { ...prev, productos: arr }
+      }
+
+      // Alta nueva: TODO en una línea, con los importes sumados. Sin la comisión
+      // del paquete no hay nada que sumar: mejor no tocar que guardar de menos.
+      if (!prod.comisionAlta) {
+        window.alert('Vuelve a elegir el Producto del paquete antes de añadir el repo:'
+          + ' el programa necesita su comisión para sumar los importes.')
+        return prev
+      }
+      prod.repoAnadidos = [...(prod.repoAnadidos || []),
+        { producto: String(fila.producto || ''), comision: esTraslado ? 0 : numero(fila.comision) }]
+      prod.importe = String(importeMiMovistar(prod, numero(prod.comisionAlta), numero(prod.multAlta)))
+      arr[index] = prod
+      return { ...prev, productos: arr }
+    })
+  }
+
+  const quitaRepoDelAlta = (index: number, i: number) => {
+    setFormData((prev: any) => {
+      const arr = [...prev.productos]
+      const prod: any = { ...arr[index] }
+      prod.repoAnadidos = (prod.repoAnadidos || []).filter((_: any, k: number) => k !== i)
+      const numero = (v: any) => Number(String(v == null ? '' : v).replace(',', '.')) || 0
+      prod.importe = String(importeMiMovistar(prod, numero(prod.comisionAlta), numero(prod.multAlta)))
+      arr[index] = prod
+      return { ...prev, productos: arr }
+    })
+  }
+
   const handleProductChange = (index: number, field: string, value: any) => {
     setFormData((prev: any) => {
       let newProducts = [...prev.productos]
@@ -382,6 +497,7 @@ export default function NuevaVentaPage() {
          newProducts[index].importe = ''
          newProducts[index].gama = ''
          newProducts[index].descuentoSinPlus = false
+         olvidaRepos(newProducts[index])
       }
 
       // Cambiar el «Tipo» (gama) tiene que limpiar lo de la gama anterior: sin
@@ -391,6 +507,7 @@ export default function NuevaVentaPage() {
          newProducts[index].producto = ''
          newProducts[index].importe = ''
          newProducts[index].descuentoSinPlus = false
+         olvidaRepos(newProducts[index])
       }
 
       if (field === 'fabricante' || field === 'subcategoria') {
@@ -398,6 +515,7 @@ export default function NuevaVentaPage() {
          newProducts[index].importe = ''
          newProducts[index].descuentoSinPlus = false
          newProducts[index].gama = ''
+         olvidaRepos(newProducts[index])
       }
       
       // Autofill importe if product is selected
@@ -485,7 +603,7 @@ export default function NuevaVentaPage() {
               } else {
                 const baseCom = parseSafeNum(selectedItem.comision);
                 const mult = parseSafeNum(selectedItem.comisionConCoste || '1.00');
-                newProducts[index].importe = String(baseCom * (mult === 0 ? 1 : mult));
+                newProducts[index].importe = String(Math.round(baseCom * (mult === 0 ? 1 : mult) * 100) / 100);
               }
             } else if (cat === 'Suscripciones TV') {
               if (newProducts[index].isSuscTraslado) {
@@ -493,7 +611,7 @@ export default function NuevaVentaPage() {
               } else {
                 const baseCom = parseSafeNum(selectedItem.comision);
                 const mult = parseSafeNum(selectedItem.comisionConCoste || '1.00');
-                newProducts[index].importe = String(baseCom * (mult === 0 ? 1 : mult));
+                newProducts[index].importe = String(Math.round(baseCom * (mult === 0 ? 1 : mult) * 100) / 100);
               }
             } else if (cat === 'O2' || cat === 'Seguro' || cat === 'Prepago' || cat === 'Varios' || cat === 'Accesorios') {
               newProducts[index].importe = selectedItem.comision || ''
@@ -512,12 +630,12 @@ export default function NuevaVentaPage() {
             } else if (cat === 'miMovistar' || cat === 'Resto BAF' || cat === 'Traslado miMovistar') {
               const baseCom = parseSafeNum(selectedItem.comision);
               const mult = parseSafeNum(selectedItem.comisionConCoste);
-              let impMm = baseCom * (mult === 0 ? 1 : mult);
-              // Promoción «sin el Paquete Movistar Plus»: −14 € (solo miMovistar).
-              if (cat === 'miMovistar' && newProducts[index].descuentoSinPlus) {
-                impMm = Math.max(0, impMm - 14);
-              }
-              newProducts[index].importe = String(impMm);
+              // Se guardan para poder sumar después los repos de la misma venta.
+              newProducts[index].comisionAlta = String(baseCom)
+              newProducts[index].multAlta = String(mult === 0 ? 1 : mult)
+              newProducts[index].repoAnadidos = []
+              // La promo de los 14 € la aplica ya el cálculo único.
+              newProducts[index].importe = String(importeMiMovistar(newProducts[index], baseCom, mult));
             } else if (cat === 'Ti' || cat === 'TMA' || cat === 'Micro' || cat === 'Rent') {
               newProducts[index].importe = selectedItem.anual || selectedItem.mensual || ''
             } else {
@@ -545,8 +663,8 @@ export default function NuevaVentaPage() {
          if (selMm) {
             const numMm = (v: any) => Number(String(v ?? '').replace(',', '.')) || 0
             const multMm = numMm(selMm.comisionConCoste)
-            const baseMm = numMm(selMm.comision) * (multMm === 0 ? 1 : multMm)
-            newProducts[index].importe = String(value === true ? Math.max(0, baseMm - 14) : baseMm)
+            newProducts[index].importe = String(importeMiMovistar(
+               { ...newProducts[index], descuentoSinPlus: value === true }, numMm(selMm.comision), multMm))
          }
       }
 
@@ -839,6 +957,34 @@ export default function NuevaVentaPage() {
       // Los avisos con decisión (antifraude de traslados, posible duplicado)
       // vuelven como 409 con su bandera: se pregunta, y si el comercial acepta
       // se reintenta ACUMULANDO las confirmaciones (pueden encadenarse los dos).
+      // Lo que se añade dentro del alta va en UNA sola línea: el concepto se
+      // escribe seguido (igual que los paquetes del catálogo, un renglón por
+      // producto) y el importe ya viene sumado de la pantalla.
+      const CON_REPOS_DENTRO = ['miMovistar', 'Traslado miMovistar']
+      const rastroConjunta: string[] = []
+      const productosAGuardar = formData.productos.map((p: any) => {
+        const limpio: any = { ...p }
+        delete limpio.repoAnadidos; delete limpio.comisionAlta; delete limpio.multAlta
+        const extras: any[] = p.repoAnadidos || []
+        if (!extras.length || !CON_REPOS_DENTRO.includes(p.categoria)) return limpio
+        limpio.producto = [String(p.producto), ...extras.map((r: any) => String(r.producto))].join('\n')
+        // El desglose viaja con la venta por DOS motivos: el antifraude de
+        // traslados tiene que saber que aquí dentro hay TV aunque la línea sea un
+        // alta, y el importe compuesto no se puede re-deducir del catálogo (los
+        // extras cobran con el multiplicador del alta, no con el suyo).
+        limpio.reposDentro = extras.map((r: any) => String(r.producto))
+        const eur = (n: number) => n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        const base = Number(String(p.comisionAlta || 0).replace(',', '.')) || 0
+        const mult = Number(String(p.multAlta || 1).replace(',', '.')) || 1
+        rastroConjunta.push('Venta conjunta: ' + String(p.producto).split('\n').join(' + ')
+          + ' ' + eur(base) + ' € + ' + extras.map((r: any) => r.producto + ' ' + eur(Number(r.comision) || 0) + ' €').join(' + ')
+          + ' = ×' + mult + ' → ' + eur(Number(p.importe) || 0) + ' €')
+        return limpio
+      })
+      const anotacionesConRastro = rastroConjunta.length
+        ? [String(formData.anotaciones || '').trim(), ...rastroConjunta].filter(Boolean).join(' | ')
+        : formData.anotaciones
+
       const confirmaciones: any = {}
       let res: Response = null as any
       let data: any = null
@@ -846,7 +992,7 @@ export default function NuevaVentaPage() {
         res = await fetch('/api/sales/unified', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...formData, periodKey: activePeriodKey, codigo: selectedTienda, ...confirmaciones })
+          body: JSON.stringify({ ...formData, productos: productosAGuardar, anotaciones: anotacionesConRastro, periodKey: activePeriodKey, codigo: selectedTienda, ...confirmaciones })
         })
         data = await res.json()
         if (res.status !== 409) break
@@ -1329,6 +1475,78 @@ export default function NuevaVentaPage() {
                           </span>
                         </label>
                       )}
+
+                      {/* ── ¿LE AÑADES ALGÚN REPO (ARPU) EN ESTA MISMA VENTA? ─────────
+                          Lo que entra en el momento de la venta es UNA sola venta. Lo
+                          que el paquete YA lleva no se puede elegir: un Repo (Arpu) es
+                          SUBIR la facturación, y si no sube, Telefónica no lo paga. */}
+                      {prod.producto && (prod.categoria === 'miMovistar' || prod.categoria === 'Traslado miMovistar')
+                        && !String(prod.subcategoria || '').toUpperCase().startsWith('PROMO') && (() => {
+                        // Los repos que se teclean con casillas propias (el incremento de
+                        // ARPU y el de «Reposicionamientos destino») no se pueden plegar:
+                        // su precio no está en la tarifa y entrarían por 0 €.
+                        const fechaEs = String(formData.fechaVenta || '').split('-').reverse().join('/')
+                        const porNombre = new Map<string, any>()
+                        for (const r of (catalogs['Repos UP'] || [])) {
+                          if (!r.producto) continue
+                          if (esRepoArpuManual(r.producto) || esRepoIncrementoArpu(r.producto)) continue
+                          // VIGENCIAS: con dos tarifas del mismo repo gana la que cubre la
+                          // fecha de la venta, igual que en el desplegable del paquete.
+                          const clave = String(r.producto)
+                          const ya = porNombre.get(clave)
+                          if (!ya || isVentaWithinDates(fechaEs, r.validFrom, r.validTo)) porNombre.set(clave, r)
+                        }
+                        const repos = [...porNombre.values()]
+                          .map((r: any) => ({ ...r, v: puedeAnadirse(prod.producto, r.producto) }))
+                          .sort((a: any, b: any) => String(a.producto).localeCompare(String(b.producto), 'es'))
+                        if (!repos.length) return null
+                        const puestos: any[] = prod.repoAnadidos || []
+                        return (
+                          <div style={{ border: '2px dashed #7B1FA2', borderRadius: 8, padding: 10,
+                                        background: 'rgba(123,31,162,0.05)', marginTop: 8 }}>
+                            <div style={{ fontSize: 13, fontWeight: 'bold', color: '#6A1B9A', marginBottom: 6 }}>
+                              ➕ ¿Le añades algún Repo (Arpu) en esta misma venta?
+                            </div>
+                            <select className="form-select" value=""
+                              onChange={e => {
+                                const fila = repos.find((r: any) => String(r.producto) === e.target.value)
+                                e.target.value = ''
+                                if (fila) anadeRepoAlAlta(index, fila)
+                              }}
+                              style={{ backgroundColor: '#F3E5F5', border: '1px solid #CE93D8', color: '#4A148C' }}>
+                              <option value="">Selecciona un Repo (Arpu)…</option>
+                              {repos.map((r: any, ir: number) => (
+                                <option key={ir} value={String(r.producto)}
+                                        disabled={!r.v.permitido} title={r.v.motivo}>
+                                  {r.v.permitido ? '' : '⛔ '}{String(r.producto)}
+                                  {r.v.permitido ? '' : ' — ya lo lleva el paquete'}
+                                </option>
+                              ))}
+                            </select>
+                            {puestos.length > 0 && (
+                              <div style={{ marginTop: 8, background: '#F3E5F5', borderRadius: 6, padding: '8px 10px' }}>
+                                {puestos.map((r: any, i: number) => (
+                                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8,
+                                                        fontSize: 13, color: '#4A148C', padding: '2px 0' }}>
+                                    <span style={{ flex: 1 }}>➕ {r.producto}</span>
+                                    <span>{Number(r.comision || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span>
+                                    <button type="button" onClick={() => quitaRepoDelAlta(index, i)}
+                                      title="Quitar de la venta"
+                                      style={{ border: 'none', background: 'transparent', color: '#B71C1C',
+                                               cursor: 'pointer', fontWeight: 'bold', fontSize: 15 }}>×</button>
+                                  </div>
+                                ))}
+                                <div style={{ borderTop: '1px solid #CE93D8', marginTop: 6, paddingTop: 6,
+                                              display: 'flex', justifyContent: 'space-between',
+                                              fontWeight: 'bold', color: '#4A148C' }}>
+                                  <span>UNA SOLA VENTA · total</span>
+                                  <span>{Number(prod.importe || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })()}
 
                       <div style={{ height: 1, backgroundColor: '#E0E0E0', margin: '8px 0' }}></div>
 

@@ -1,0 +1,128 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// QUÉ REPO SE PUEDE AÑADIR A UN ALTA (dueño, 27-ago-2026)
+//
+// Un Repo (Arpu) es SUBIR LA FACTURACIÓN de un cliente. De ahí sale toda la
+// regla, en una frase del dueño: «si vale más, sí; si no, no se considera un
+// repo». Así que:
+//
+//   · El paquete YA lleva ese servicio y el repo no sube nada  → PROHIBIDO
+//   · El paquete lo lleva pero el repo SUBE de nivel           → permitido
+//   · El paquete no lo lleva                                    → permitido
+//
+// Y hay un matiz que da el dueño: «el Fútbol Total es todos», o sea que quien
+// tiene Fútbol Total ya tiene La Liga y Champions dentro — no hay nada que
+// subir. Al revés sí: de La Liga o Champions se puede subir a Fútbol Total.
+//
+// El porqué de la prohibición: en miMovistar Telefónica paga a N+2, así que
+// tras la baja de un paquete de TV tienen que pasar 3 meses y 20 días para que
+// vuelva a pagar. Eso NO lo sabe el programa (no tenemos las bajas), por eso va
+// como pregunta al comercial y no como candado automático.
+// ─────────────────────────────────────────────────────────────────────────────
+
+import { norm } from './antifraudeVentas'
+
+/** Las familias de servicio y su ESCALERA. Un repo de la misma familia solo se
+ *  permite si su peldaño es más alto que el que ya lleva el alta. */
+export interface Familia {
+  clave: string
+  etiqueta: string
+  /** peldaños de menor a mayor; cada uno con las pistas que lo reconocen */
+  escalera: { nivel: number; pistas: string[] }[]
+}
+
+export const FAMILIAS: Familia[] = [
+  {
+    clave: 'futbol', etiqueta: 'Fútbol',
+    escalera: [
+      { nivel: 1, pistas: ['champion', 'la liga', 'laliga'] },
+      { nivel: 2, pistas: ['futbol total', 'futbol'] },   // el Fútbol Total los incluye
+    ],
+  },
+  {
+    clave: 'netflix', etiqueta: 'Netflix',
+    escalera: [
+      { nivel: 1, pistas: ['netflix con anuncios', 'netfilx con anuncios', 'netflix anuncios'] },
+      { nivel: 2, pistas: ['netflix estandar', 'netfilx estandar'] },
+      { nivel: 3, pistas: ['netflix premium', 'netfilx premium'] },
+    ],
+  },
+  {
+    clave: 'movistarplus', etiqueta: 'Movistar+',
+    escalera: [{ nivel: 1, pistas: ['movistar+', 'movistar +', 'movistar plus'] }],
+  },
+  {
+    clave: 'ficcion', etiqueta: 'Ficción Total',
+    escalera: [{ nivel: 1, pistas: ['ficcion'] }],
+  },
+]
+
+/** Qué nivel de cada familia trae un texto de producto. */
+export function nivelesDe(texto: any): Record<string, number> {
+  const t = norm(texto)
+  const out: Record<string, number> = {}
+  if (!t) return out
+  for (const f of FAMILIAS) {
+    for (const peldano of f.escalera) {
+      if (peldano.pistas.some(p => t.includes(p))) {
+        out[f.clave] = Math.max(out[f.clave] || 0, peldano.nivel)
+      }
+    }
+  }
+  return out
+}
+
+export const etiquetaFamilia = (clave: string) =>
+  FAMILIAS.find(f => f.clave === clave)?.etiqueta || clave
+
+export interface Veredicto {
+  permitido: boolean
+  motivo: string           // por qué no, en castellano de tienda
+  familia?: string
+}
+
+/**
+ * ¿Se puede añadir este repo a este alta?
+ * @param productoAlta  el producto del alta («Movistar+\nFútbol Total»)
+ * @param productoRepo  el producto de Repos (Arpu) que se quiere añadir
+ */
+export function puedeAnadirse(productoAlta: any, productoRepo: any): Veredicto {
+  const enAlta = nivelesDe(productoAlta)
+  const enRepo = nivelesDe(productoRepo)
+
+  for (const clave of Object.keys(enRepo)) {
+    const yaTiene = enAlta[clave]
+    if (!yaTiene) continue                       // el alta no lo lleva: adelante
+    const sube = enRepo[clave] > yaTiene
+    if (sube) continue                           // sube de nivel: es un repo de verdad
+
+    const fam = etiquetaFamilia(clave)
+    // La Ficción Total no tiene escalera: si el alta la lleva, ningún repo con
+    // «Ficción» aporta nada (la mezcla de Ficción + Netflix ya va dentro).
+    const detalle = clave === 'futbol' && yaTiene === 2
+      ? 'el Fútbol Total ya incluye La Liga y Champions'
+      : `el alta ya lleva ${fam} y este repo no sube de nivel`
+    return {
+      permitido: false, familia: clave,
+      motivo: `No se puede: ${detalle}. Un Repo (Arpu) solo vale si SUBE la facturación del cliente.`,
+    }
+  }
+  return { permitido: true, motivo: '' }
+}
+
+/** La misma pregunta, para una lista de repos: útil para pintar el desplegable
+ *  con los que no caben ya deshabilitados y con su motivo. */
+export function filtraRepos<T extends { producto?: any }>(productoAlta: any, repos: T[]) {
+  return repos.map(r => ({ ...r, veredicto: puedeAnadirse(productoAlta, r.producto) }))
+}
+
+/** El aviso de los 3 meses + 20 días: se pregunta SIEMPRE que el repo entre en
+ *  una familia que el alta no lleva pero que el cliente pudo tener antes. */
+export const AVISO_BAJA_TV =
+  'Si este cliente tuvo antes un paquete de TV, tienen que haber pasado 3 meses y 20 días '
+  + 'desde la baja para que Telefónica lo pague (miMovistar se cobra a N+2).\n\n'
+  + '¿Han pasado ya?'
+
+export const PREGUNTA_PLANTA =
+  '¿Este cliente YA está en planta (ya era cliente antes de esta venta)?\n\n'
+  + '· SÍ  → se graba como Repo (Arpu) aparte, con su propio precio.\n'
+  + '· NO  → entra dentro del alta: una sola venta, con los importes sumados.'
