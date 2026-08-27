@@ -994,8 +994,18 @@ export default function CatalogosPage() {
       }
     })
 
+    // Lo que se convierte en vigencia nueva en vez de pisar la fila: se le enseña
+    // al final, para que quien pega vea exactamente qué ha pasado.
+    const vigenciasNuevas: string[] = []
+    // Las que traen fecha nueva pero el MISMO precio: no se tocan, y se dice.
+    const fechasIgnoradas: string[] = []
+
     // 2. Matching and Intelligent Import
-    setCatalogs(prev => {
+    // Se calcula aquí y no dentro de setCatalogs: el updater de React se ejecuta
+    // DESPUÉS, así que el resumen de vigencias salía siempre vacío. Y en modo
+    // desarrollo React llama al updater dos veces, con lo que un aviso ahí dentro
+    // se vería duplicado.
+    const nuevosCatalogos = ((prev: Record<string, ProductItem[]>) => {
       const currentItems = prev[activeTab] || []
       
       // Mark all existing as 'missing' initially
@@ -1028,14 +1038,78 @@ export default function CatalogosPage() {
            isCompositeMatch(it)
         )
 
-        // MIGRATION FALLBACK: Si no hay coincidencia exacta por fecha, 
+        // Mismo nombre EXACTO pero otra fecha: es el mismo producto, y más abajo se
+        // decide si es una vigencia nueva.
+        let porNombreExacto = -1
+        if (matchIndex === -1) {
+          porNombreExacto = updatedItems.findIndex(it =>
+             normalize(it.producto) === pNameNorm && isCompositeMatch(it))
+        }
+
+        // MIGRATION FALLBACK: si no hay coincidencia exacta por fecha,
         // busca el primer producto cuyo nombre contenga al otro (o viceversa),
         // esto soluciona problemas donde en Excel falta la palabra "APPLE" al principio, etc.
-        if (matchIndex === -1) {
+        // OJO: solo entra si NO existe ninguna fila con el nombre exacto. Este
+        // rescate empareja por trozos y confunde productos de verdad: «Netflix con
+        // anuncios» cae dentro de «Ficción Total Netflix con Anuncios», que es otra
+        // cosa y cuesta 56 € en vez de 7,86 €. Con una fila de nombre exacto delante,
+        // el parecido no tiene por qué opinar.
+        if (matchIndex === -1 && porNombreExacto === -1) {
           matchIndex = updatedItems.findIndex(it => {
             const dbName = normalize(it.producto);
             return (dbName.includes(pNameNorm) || pNameNorm.includes(dbName)) && isCompositeMatch(it);
           })
+        } else if (matchIndex === -1) {
+          matchIndex = porNombreExacto
+        }
+
+        // UNA FECHA NUEVA ES UNA VIGENCIA NUEVA, NO UN CAMBIO DE PRECIO (ago-2026).
+        // El rescate por nombre de aquí arriba está para los nombres que bailan en
+        // el Excel («APPLE» que falta al principio), pero se tragaba también el caso
+        // de «mismo producto, fecha distinta»: pegar la tarifa de agosto con Desde
+        // 01/08 machacaba la fila de julio y su precio se perdía para siempre. Y a
+        // mano, fila por fila con el botón «+», son demasiados productos para no
+        // equivocarse. Si las dos fechas existen y NO son la misma, se añade una
+        // fila nueva; la vieja la cierra sola el guardado, el día antes.
+        // Solo cuando el nombre es EXACTAMENTE el mismo. Si el nombre ha cambiado
+        // («Netflix Estándar x2» → «Netflix Estándar x2 PROMO») no es una vigencia
+        // nueva: es un renombrado, y ahí sí hay que actualizar la fila de siempre.
+        // Dejar viva la vieja llenaría el desplegable de Nueva Venta de productos
+        // repetidos, uno con el precio bueno y otro con el viejo.
+        if (matchIndex >= 0 && rowDesde
+            && normalize(updatedItems[matchIndex].producto) === pNameNorm) {
+          const yaEsta = updatedItems[matchIndex]
+          const desdeExistente = (yaEsta.validFrom || '').trim()
+          // Solo si el PRECIO cambia. Si la tarifa es la misma, partir la vigencia
+          // solo duplicaría filas: el precio de julio y el de agosto son el mismo y
+          // la fila de siempre ya los cubre a los dos.
+          const precioNuevo = esTipoComisionPorMultiplicador(activeTab)
+            ? numEs(row.comision) * numEs(row.comisionConCoste, 1)
+            : amount
+          const precioViejo = esTipoComisionPorMultiplicador(activeTab)
+            ? numEs(yaEsta.comision) * numEs(yaEsta.comisionConCoste, 1)
+            : numEs(yaEsta.cuotaAnual !== undefined ? yaEsta.cuotaAnual : yaEsta.cuota)
+          const cambiaElPrecio = Math.abs(precioNuevo - precioViejo) >= 0.005
+          if (desdeExistente && desdeExistente !== rowDesde && cambiaElPrecio) {
+            vigenciasNuevas.push(`· ${row.producto}: ${precioViejo.toFixed(2)} € hasta el `
+              + `${desdeExistente.slice(0, 5)}…  →  ${precioNuevo.toFixed(2)} € desde el ${rowDesde}`)
+            // La fila vieja se QUEDA (con su precio y su fecha): es la vigencia
+            // anterior. Sin marcarla como vista, el guardado la borraría por
+            // «obsoleta» y el precio de antes se perdería igual que si la hubiéramos
+            // pisado — que es justo lo que este cambio viene a evitar. Al guardar,
+            // el cierre automático le pone el «Hasta» el día antes de la nueva.
+            yaEsta.importStatus = 'unchanged'
+            matchIndex = -1
+          } else if (desdeExistente && desdeExistente !== rowDesde) {
+            // Mismo precio con otra fecha: se deja la fila como está, con su vigencia
+            // de siempre. Tocarle la fecha le quitaría cobertura a los días de antes.
+            fechasIgnoradas.push(`· ${row.producto} (${precioNuevo.toFixed(2)} €)`)
+            // CLAVE: marcarla como vista. Todas las filas entran al bucle como
+            // 'missing' y el guardado BORRA las que sigan así («productos obsoletos»).
+            // Sin esta línea, dejarla en paz significaba borrarla.
+            yaEsta.importStatus = 'unchanged'
+            return   // nada más que hacer con esta fila
+          }
         }
 
         if (matchIndex >= 0) {
@@ -1182,6 +1256,12 @@ export default function CatalogosPage() {
             newItem.comision = row.comision
             newItem.comisionConCoste = row.comisionConCoste
           } else if (esTipoComisionPorMultiplicador(activeTab)) {
+            // La Categoría (la primera columna del pegado) también, como en el resto
+            // de pestañas: las filas que ya estaban la tienen, y sin ella la fila
+            // nueva no se reconoce como el MISMO producto. Consecuencia real: al
+            // añadir una vigencia, el cierre automático no las agrupaba y quedaban
+            // las dos abiertas, con lo que Nueva Venta podía coger la vieja.
+            newItem.subcategoria = row.categoria
             newItem.comision = row.comision
             newItem.comisionConCoste = row.comisionConCoste || '1.00'
           } else if (activeTab === 'Prepago') {
@@ -1199,11 +1279,32 @@ export default function CatalogosPage() {
         ...prev,
         [activeTab]: [...newProductsList, ...updatedItems]
       }
-    })
+    })(catalogs)
 
+    setCatalogs(nuevosCatalogos)
     setDirty(true)
     setBulkText('')
     setShowBulk(false)
+
+    // Que se vea lo que ha hecho: una fecha distinta no pisa el precio viejo, añade
+    // una vigencia. Sin decirlo, quien pega no sabe si ha cambiado una fila o creado
+    // dos, y son demasiados productos para ir comprobándolo uno a uno.
+    if (fechasIgnoradas.length > 0 && vigenciasNuevas.length === 0) {
+      window.alert('✅ Nada que cambiar.\n\n' + fechasIgnoradas.length + ' productos ya tenían '
+        + 'esa misma tarifa, así que se dejan con la vigencia que ya tienen: cambiarles solo '
+        + 'la fecha les quitaría cobertura en los días de antes.')
+    }
+    if (vigenciasNuevas.length > 0) {
+      const lista = vigenciasNuevas.slice(0, 15).join('\n')
+        + (vigenciasNuevas.length > 15 ? '\n… y ' + (vigenciasNuevas.length - 15) + ' más' : '')
+      window.alert('🗓️ VIGENCIAS NUEVAS (' + vigenciasNuevas.length + ')\n\n'
+        + 'Estos productos ya tenían una tarifa con OTRA fecha. No se ha pisado: se ha '
+        + 'añadido una fila nueva y la vieja se cerrará sola al guardar, el día antes.\n\n'
+        + lista + '\n\n'
+        + (fechasIgnoradas.length ? 'Los otros ' + fechasIgnoradas.length + ' productos ya tenían '
+            + 'esa misma tarifa y se quedan como estaban.\n\n' : '')
+        + 'Revísalo en la tabla (las filas nuevas salen en verde) y pulsa Guardar Cambios.')
+    }
   }
 
   if (authorized === null || loading || isLoadingPeriods) return <div style={{ padding: 40, color: 'var(--mercedes-cyan)', textAlign: 'center' }}>Sincronizando con Periodos DB...</div>
