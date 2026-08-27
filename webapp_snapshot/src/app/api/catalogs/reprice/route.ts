@@ -1,15 +1,21 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { PrismaClient } from '@prisma/client'
-import { isSaleCancelled, isVentaWithinDates } from '@/lib/salesUtils'
+import { isSaleCancelled, isVentaWithinDates, esRepoArpuManual } from '@/lib/salesUtils'
+
+// Los repos de «incremento de ARPU» se teclean con las casillas Fact. Anterior /
+// Fact. Nueva: su precio no está en la tarifa. Mismo reconocedor que Nueva Venta.
+const esIncrementoArpu = (producto: any) =>
+  String(producto || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .includes('incremento de arpu')
 import { runExtrasEngine } from '@/lib/extrasEngine'
 
 // Corrección masiva de operaciones tras cambiar el catálogo de un periodo.
 // El precio se CONGELA en la venta al teclearla (Rent: Sale.cuota = precio del
 // dispositivo; Seguro: Sale.cuota y Sale.seguroImporte = prima anual), así que
 // corregir el catálogo a posteriori NO corrige las ventas ya tecleadas. Este
-// endpoint re-aplica el snapshot: para cada venta Rent/Seguro del periodo,
-// busca la vigencia que CUBRE la fecha de la venta y reescribe su importe.
+// endpoint re-aplica el snapshot: para cada venta Rent/Seguro/Repos (Arpu) del
+// periodo, busca la vigencia que CUBRE la fecha de la venta y reescribe su importe.
 // Es la pareja del reprice del FFVV (patrón vigencias, commit efdbf27), pero
 // para las palancas de Tiendas que guardan foto del precio. ESTRICTO: si
 // ninguna vigencia cubre la fecha, la venta NO se toca (mejor dejarla como
@@ -40,8 +46,11 @@ export async function POST(request: Request) {
     // elimina el "+" y colapsa "Galaxy S26" con "Galaxy S26+" (pares reales del
     // catálogo Rent), lo que repreciaría una venta con la tarifa del otro modelo.
     // Nueva Venta autofilla por nombre EXACTO, así que aquí el exacto es lo seguro.
-    const rows = await prisma.productCatalog.findMany({ where: { periodId: wp.id, categoria: { in: ['Rent', 'Seguro'] } } })
-    const byName: Record<string, Record<string, any[]>> = { Rent: {}, Seguro: {} }
+    // 'Repos UP' es la palanca «Repos (Arpu)»: su precio también se congela en la
+    // venta (cuota = comisión × multiplicador), así que cambiar la tarifa a mitad de
+    // mes tampoco corregía las ventas ya tecleadas.
+    const rows = await prisma.productCatalog.findMany({ where: { periodId: wp.id, categoria: { in: ['Rent', 'Seguro', 'Repos UP'] } } })
+    const byName: Record<string, Record<string, any[]>> = { Rent: {}, Seguro: {}, 'Repos UP': {} }
     for (const r of rows) {
       const k = String(r.producto || '').trim().toLowerCase()
       if (!k) continue
@@ -64,7 +73,18 @@ export async function POST(request: Request) {
       },
     })
 
+    const num = (v: any): number => {
+      const n = v === null || v === undefined || v === '' ? NaN : parseFloat(String(v).replace(',', '.'))
+      return isNaN(n) ? 0 : n
+    }
     const precioDe = (c: any): number | null => {
+      // Repos (Arpu): el importe es comisión × multiplicador, igual que lo calcula
+      // Nueva Venta. Un multiplicador a 0 o vacío vale 1 (mismo criterio que allí).
+      if (String(c.categoria) === 'Repos UP') {
+        if (c.comision === null || c.comision === undefined || c.comision === '') return null
+        const mult = num(c.comisionConCoste)
+        return Math.round(num(c.comision) * (mult === 0 ? 1 : mult) * 100) / 100
+      }
       // Rent: 'anual' = Cuota Total del dispositivo. Seguro: 'anual' = prima anual.
       const raw = c.anual || c.mensual
       const n = raw ? parseFloat(String(raw).replace(',', '.')) : NaN
@@ -82,14 +102,26 @@ export async function POST(request: Request) {
       // Las anuladas no cuentan en ningún cálculo: no se tocan.
       if (isSaleCancelled(s)) continue
 
-      // ¿Rent o Seguro? Mismo criterio que las pantallas (detalle con respaldo grupo/sheet).
+      // ¿Rent, Seguro o Repos (Arpu)? Mismo criterio que las pantallas (detalle con
+      // respaldo grupo/sheet: en las ventas de repos el sheet suele venir como 'OP').
       const det = String(s.detalle || '').toLowerCase()
       const grp = String(s.grupo || s.sheet || '').toLowerCase()
       const esRent = det === 'rent' || det === 'tma' || grp === 'rent'
       const esSeguro = det === 'seguro' || grp === 'seguro'
-      if (!esRent && !esSeguro) continue
+      const esRepo = det === 'repos up' || grp === 'repos up'
+      if (!esRent && !esSeguro && !esRepo) continue
 
-      const catKey = esSeguro ? 'Seguro' : 'Rent'
+      if (esRepo) {
+        // Estos dos NO tienen precio de tarifa: salen de casillas que teclea la
+        // persona (el incremento de ARPU, o Fact. Anterior/Fact. Nueva). Reprecarlos
+        // sería inventarles un importe.
+        if (esRepoArpuManual(s.producto) || esIncrementoArpu(s.producto)) { manuales++; continue }
+        // Un repo a 0 € es una suscripción sobre un traslado, que Telefónica no
+        // abona a propósito. Darle precio ahora sería cobrar de más.
+        if (Number(s.cuota || 0) === 0) { manuales++; continue }
+      }
+
+      const catKey = esSeguro ? 'Seguro' : (esRepo ? 'Repos UP' : 'Rent')
       const k = String(s.producto || '').trim().toLowerCase()
       if (!k) continue
       const cands = byName[catKey][k]
