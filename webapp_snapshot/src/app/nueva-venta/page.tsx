@@ -701,8 +701,14 @@ export default function NuevaVentaPage() {
                 <td style={{ ...num, color: '#1B2430' }}>
                   {f.tipo === 'torneo' ? eur(f.ahora) + ' € en juego' : '+' + eur(f.ahora) + ' €'}
                 </td>
-                <td style={{ ...num, color: '#A9670A' }}>
-                  {f.luego > f.ahora ? '+' + eur(f.luego) + ' €' : '—'}
+                {/* Siempre la cifra, nunca una raya: si no sube, se sigue cobrando lo
+                    mismo — poner «—» hacía creer que esa palanca dejaba de pagar en el
+                    2º tramo, cuando el total de abajo sí la estaba sumando. */}
+                <td style={{ ...num, color: f.luego > f.ahora ? '#A9670A' : '#8A96A3' }}>
+                  {f.tipo === 'torneo'
+                    ? eur(f.luego) + ' € en juego'
+                    : '+' + eur(f.luego) + ' €'}
+                  {f.luego <= f.ahora && <span style={{ fontWeight: 'normal', fontSize: 10.5 }}> (igual)</span>}
                 </td>
               </tr>
             ))}
@@ -711,8 +717,9 @@ export default function NuevaVentaPage() {
                 Esta venta te suma
               </td>
               <td style={{ ...num, paddingTop: 7, fontSize: 15, color: '#1B5E20' }}>{eur(c.totalAhora)} €</td>
-              <td style={{ ...num, paddingTop: 7, fontSize: 15, color: '#A9670A' }}>
-                {c.totalLuego > c.totalAhora ? 'hasta ' + eur(c.totalLuego) + ' €' : '—'}
+              <td style={{ ...num, paddingTop: 7, fontSize: 15,
+                            color: c.totalLuego > c.totalAhora ? '#A9670A' : '#8A96A3' }}>
+                {c.totalLuego > c.totalAhora ? 'hasta ' + eur(c.totalLuego) + ' €' : eur(c.totalLuego) + ' €'}
               </td>
             </tr>
           </tbody>
