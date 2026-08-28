@@ -546,6 +546,89 @@ export default function NuevaVentaPage() {
   }
 
 
+  /**
+   * La tira del mes: dónde va el comercial en cada palanca, y los torneos abiertos.
+   * Los objetivos son los del equipo repartidos por las horas de cada uno, tal y
+   * como los calcula la nómina; el 2º tramo de casi todas lo decide el EQUIPO, y por
+   * eso se dice con esas palabras.
+   */
+  const TiraDelMes = () => {
+    if (!miComision) return null
+    const eur = (n: number) => Number(n || 0).toLocaleString('es-ES',
+      { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    const cifra = (n: number, pct: boolean) => pct ? eur(n) + ' €' : String(Math.round(n))
+    const conObjetivo = (miComision.reglas || []).filter((r: any) => r.objetivo1 > 0 || r.llevas > 0)
+    if (!conObjetivo.length && !(miComision.torneos || []).length) return null
+    const pct = (a: number, b: number) => b > 0 ? Math.max(0, Math.min(100, (a / b) * 100)) : 0
+
+    const tarjeta: any = {
+      background: '#FFFFFF', border: '1px solid #E0E6ED', borderRadius: 10,
+      padding: '10px 12px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', minWidth: 0,
+    }
+    return (
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 12, fontWeight: 'bold', letterSpacing: '.06em',
+                      textTransform: 'uppercase', color: '#2E7D32', marginBottom: 8 }}>
+          🧮 Cómo vas este mes · {formData.vendedor}
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(215px, 1fr))', gap: 10 }}>
+          {conObjetivo.map((r: any, i: number) => {
+            const cumplido1 = r.objetivo1 > 0 && r.llevas >= r.objetivo1
+            const falta2 = Math.max(0, (r.objetivo2 || 0) - (r.conseguido2 || 0))
+            return (
+              <div key={i} style={tarjeta}>
+                <div style={{ fontSize: 12, color: '#5B6875', fontWeight: 600 }}>{r.grupo}</div>
+                <div style={{ fontSize: 21, fontWeight: 'bold', color: '#1B2430', margin: '2px 0 1px' }}>
+                  {cifra(r.llevas, r.esPorcentaje)}
+                  {!r.esPorcentaje && <span style={{ fontSize: 13, color: '#8A96A3', fontWeight: 'normal' }}> uds</span>}
+                </div>
+                <div style={{ height: 5, borderRadius: 3, background: '#E4E9EF', overflow: 'hidden', margin: '6px 0 5px' }}>
+                  <div style={{ height: '100%', borderRadius: 3,
+                                width: pct(r.llevas, r.objetivo1) + '%',
+                                background: cumplido1 ? '#2E7D32' : 'var(--mercedes-cyan)' }} />
+                </div>
+                <div style={{ fontSize: 11.5, color: '#8A96A3', lineHeight: 1.35 }}>
+                  {r.objetivo1 > 0
+                    ? (cumplido1
+                        ? <>tu objetivo {cifra(r.objetivo1, r.esPorcentaje)} ✓</>
+                        : <>tu objetivo {cifra(r.objetivo1, r.esPorcentaje)} · <b style={{ color: '#A9670A' }}>
+                            te faltan {cifra(r.objetivo1 - r.llevas, r.esPorcentaje)}</b></>)
+                    : <>sin objetivo</>}
+                  {r.objetivo2 > 0 && (r.esEquipoObj2
+                    ? (falta2 > 0
+                        ? <> · 2º tramo: al equipo le faltan <b style={{ color: '#A9670A' }}>{cifra(falta2, r.esPorcentaje)}</b></>
+                        : <> · 2º tramo del equipo ✓</>)
+                    : (falta2 > 0 ? <> · 2º objetivo {cifra(r.objetivo2, r.esPorcentaje)}</> : <> · 2º objetivo ✓</>))}
+                  {r.tramo > 0 && <> · cobras al <b style={{ color: '#2E7D32' }}>tramo {r.tramo}</b></>}
+                  {r.topeAplicado && r.topeMotivo && <> · <span style={{ color: '#A9670A' }}>⚠ {r.topeMotivo}</span></>}
+                </div>
+              </div>
+            )
+          })}
+          {(miComision.torneos || []).map((t: any, i: number) => (
+            <div key={'t' + i} style={{ ...tarjeta, borderColor: '#CE93D8', background: '#FBF5FD' }}>
+              <div style={{ fontSize: 12, color: '#6A1B9A', fontWeight: 600 }}>🏆 {t.nombre}</div>
+              <div style={{ fontSize: 21, fontWeight: 'bold', color: '#6A1B9A', margin: '2px 0 1px' }}>
+                {t.llevaEquipo} <span style={{ fontSize: 13, fontWeight: 'normal' }}>de {t.minGrupal}</span>
+              </div>
+              <div style={{ height: 5, borderRadius: 3, background: '#E4E9EF', overflow: 'hidden', margin: '6px 0 5px' }}>
+                <div style={{ height: '100%', borderRadius: 3, background: '#8E24AA',
+                              width: pct(t.llevaEquipo, t.minGrupal) + '%' }} />
+              </div>
+              <div style={{ fontSize: 11.5, color: '#8A96A3', lineHeight: 1.35 }}>
+                {t.cumplido
+                  ? <>se está pagando a <b style={{ color: '#2E7D32' }}>{eur(t.rateActual)} €</b> por venta</>
+                  : <>al equipo le faltan <b style={{ color: '#A9670A' }}>{t.minGrupal - t.llevaEquipo}</b> para cobrarlo</>}
+                {t.objetivo2Grupal > 0 && <> · a {t.objetivo2Grupal} sube a {eur(t.importePorVenta2)} €</>}
+                {t.agotado && <> · <span style={{ color: '#A9670A' }}>bote agotado</span></>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   /** El recuadro verde: lo que esta línea le suma a quien la está grabando. */
   const PanelDeLaVenta = ({ prod }: { prod: any }) => {
     const c = cuentaDeLaVenta(prod)
@@ -1397,6 +1480,8 @@ export default function NuevaVentaPage() {
 
         {/* 2. Bloque de Productos */}
         <div>
+          <TiraDelMes />
+
           <h3 style={{ marginBottom: 16, color: 'var(--light-text)' }}>Productos ({formData.productos.length}/50)</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {formData.productos.map((prod: any, index: number) => (
