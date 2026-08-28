@@ -9,6 +9,9 @@ import { getEffectiveTiendaComerciales, getEffectiveSellers } from '@/lib/comerc
 import { isVentaWithinDates, esRepoArpuManual, importeRepoArpu, factorRepoArpu, REPO_ARPU_CORTE, PALANCA_REPOS } from '@/lib/salesUtils'
 import { useGuard } from '@/hooks/useGuard'
 import { puedeAnadirse, PREGUNTA_PLANTA, AVISO_BAJA_TV } from '@/lib/reposCompatibles'
+// El MISMO emparejador que usa el panel de comisiones y la nómina: así lo que se
+// enseña aquí es exactamente lo que se cobra después.
+import { matchesRule, getValueForRule } from '@/lib/panelComisionesTiendas'
 import { usePeriod } from '@/components/PeriodProvider'
 
 export default function NuevaVentaPage() {
@@ -353,6 +356,90 @@ export default function NuevaVentaPage() {
     return t.includes('repo up destino futbol') && t.includes('futbol total')
   }
 
+  // ── LO QUE LE CUENTA AL COMERCIAL (dueño, 28-ago-2026) ─────────────────────
+  // Lo que lleva en el mes y los torneos abiertos, tal y como los ve la nómina. Se
+  // pide UNA vez —al elegir comercial y mes— y luego cada línea se calcula en
+  // local, sin volver a preguntar. Si no llega, el recuadro sencillamente no sale:
+  // es mejor no enseñar nada que enseñar una cifra que no cuadre con la nómina.
+  const [miComision, setMiComision] = useState<any>(null)
+  useEffect(() => {
+    const vend = String(formData.vendedor || '').trim()
+    if (!vend || !activePeriodKey) { setMiComision(null); return }
+    let vivo = true
+    fetch(`/api/comisiones-al-vuelo?periodKey=${encodeURIComponent(activePeriodKey)}&vendedor=${encodeURIComponent(vend)}`)
+      .then(r => r.json())
+      .then(d => { if (vivo) setMiComision(d && d.success && d.hayReglas ? d : null) })
+      .catch(() => { if (vivo) setMiComision(null) })
+    return () => { vivo = false }
+  }, [formData.vendedor, activePeriodKey])
+
+  /**
+   * Qué le suma al comercial la línea que está tecleando. Devuelve una fila por
+   * palanca y otra por torneo, con lo que gana AHORA y lo que ganaría si se llega
+   * al segundo tramo. El salto de tramo se paga sobre TODAS las ventas del mes,
+   * no solo sobre las nuevas: por eso se enseñan las dos cifras.
+   */
+  const cuentaDeLaVenta = (prod: any) => {
+    if (!miComision || !prod?.producto || !prod?.categoria) return null
+    // Las tarifas vienen tal y como se teclean en el panel: «3», «7€», «1,4%».
+    // Hay que quitarles el símbolo o «7€» se lee como cero y la palanca sale a 0,00.
+    const num = (v: any) => {
+      const limpio = String(v ?? '').replace(/[^0-9.,-]/g, '').replace(',', '.')
+      return Number(limpio) || 0
+    }
+    // La línea, con la forma que espera el motor de comisiones.
+    const comoVenta = {
+      vendedor: formData.vendedor,
+      producto: prod.producto,
+      cuota: num(prod.importe),
+      importe: num(prod.importe),
+      seguroImporte: num(prod.seguroImporte),
+      detalle: prod.categoria,
+      sheet: prod.categoria,
+      categoria: prod.categoria,
+      fecha: String(formData.fechaVenta || '').split('-').reverse().join('/'),
+      isSwap: !!prod.isSwap,
+      anulado: 'No', pendiente: prod.pendiente || 'No',
+    }
+    const filas: any[] = []
+    for (const r of (miComision.reglas || [])) {
+      if (!matchesRule(comoVenta, r.grupo, r.productosCuentan)) continue
+      const suma = r.esPorcentaje ? getValueForRule(comoVenta, r.grupo) : 1
+      if (!suma) continue
+      const pct1 = num(r.importe1), pct2 = num(r.importe2)
+      const ahora = r.esPorcentaje ? (suma * pct1) / 100 : pct1
+      const luego = r.esPorcentaje ? (suma * pct2) / 100 : pct2
+      filas.push({
+        tipo: 'palanca', nombre: r.grupo,
+        llevas: r.llevas, seria: r.llevas + suma,
+        objetivo1: r.objetivo1, objetivo2: r.objetivo2, conseguido2: r.conseguido2,
+        esEquipoObj2: r.esEquipoObj2, esPorcentaje: r.esPorcentaje,
+        tramo: r.tramo, ahora, luego: pct2 ? luego : ahora,
+        tope: r.topeAplicado ? r.topeMotivo : null,
+      })
+    }
+    // Los torneos: solo los que están abiertos en la fecha de la venta.
+    const iso = String(formData.fechaVenta || '')
+    for (const t of (miComision.torneos || [])) {
+      if (t.desde && iso < t.desde) continue
+      if (t.hasta && iso > t.hasta) continue
+      const r = (miComision.reglas || []).find((x: any) => x.grupo === t.tipoVenta)
+      if (!matchesRule(comoVenta, t.tipoVenta, r?.productosCuentan || '')) continue
+      filas.push({
+        tipo: 'torneo', nombre: t.nombre,
+        llevaEquipo: t.llevaEquipo, minGrupal: t.minGrupal, objetivo2Grupal: t.objetivo2Grupal,
+        ahora: t.importePorVenta, luego: t.importePorVenta2 || t.importePorVenta,
+        desde: t.desde, hasta: t.hasta, topeBote: t.topeBote,
+      })
+    }
+    if (!filas.length) return null
+    return {
+      filas,
+      totalAhora: filas.reduce((a, f) => a + (f.tipo === 'palanca' ? f.ahora : 0), 0),
+      totalLuego: filas.reduce((a, f) => a + f.luego, 0),
+    }
+  }
+
   // El repo que está esperando respuesta a «¿el cliente ya estaba en planta?».
   // Guarda en qué línea va y qué fila del catálogo se eligió.
   const [repoPendiente, setRepoPendiente] = useState<any>(null)
@@ -456,6 +543,81 @@ export default function NuevaVentaPage() {
       arr[index] = prod
       return { ...prev, productos: arr }
     })
+  }
+
+
+  /** El recuadro verde: lo que esta línea le suma a quien la está grabando. */
+  const PanelDeLaVenta = ({ prod }: { prod: any }) => {
+    const c = cuentaDeLaVenta(prod)
+    if (!c) return null
+    const eur = (n: number) => Number(n || 0).toLocaleString('es-ES',
+      { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    const uds = (n: number, pct: boolean) => pct
+      ? eur(n) + ' €'
+      : String(Math.round(n))
+    const cel: any = { padding: '4px 0', fontSize: 12.5, verticalAlign: 'baseline' }
+    const num: any = { ...cel, textAlign: 'right', whiteSpace: 'nowrap', paddingLeft: 10, fontWeight: 'bold' }
+    return (
+      <div style={{ border: '2px dashed #2E7D32', borderRadius: 8, background: '#E8F5E9',
+                    padding: '10px 12px', marginTop: 8 }}>
+        <div style={{ fontSize: 13, fontWeight: 'bold', color: '#1B5E20', marginBottom: 7 }}>
+          🧮 Lo que te cuenta esta venta
+        </div>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '.06em', color: '#6B7C6E' }}>
+              <th style={{ textAlign: 'left', paddingBottom: 4 }}>Palanca</th>
+              <th style={{ textAlign: 'right', paddingBottom: 4 }}>Ahora</th>
+              <th style={{ textAlign: 'right', paddingBottom: 4, paddingLeft: 10 }}>Si se llega al 2º</th>
+            </tr>
+          </thead>
+          <tbody>
+            {c.filas.map((f: any, i: number) => (
+              <tr key={i} style={{ borderTop: '1px solid #C8E6C9' }}>
+                <td style={{ ...cel, color: f.tipo === 'torneo' ? '#6A1B9A' : '#1B5E20', fontWeight: 600 }}>
+                  {f.tipo === 'torneo' ? '🏆 ' : ''}{f.nombre}
+                  <span style={{ display: 'block', fontSize: 11.5, fontWeight: 'normal', color: '#5A6B5D', marginTop: 1 }}>
+                    {f.tipo === 'torneo' ? (
+                      <>del {String(f.desde).split('-').reverse().join('/')} al {String(f.hasta).split('-').reverse().join('/')}
+                        {' · '}el equipo va {f.llevaEquipo} de {f.minGrupal}
+                        {f.llevaEquipo >= f.minGrupal ? ' ✓' : ` (faltan ${f.minGrupal - f.llevaEquipo})`}</>
+                    ) : (
+                      <>llevas {uds(f.llevas, f.esPorcentaje)} → <b>{uds(f.seria, f.esPorcentaje)}</b>
+                        {f.objetivo1 > 0 && (f.llevas >= f.objetivo1
+                          ? ' · tu objetivo ' + uds(f.objetivo1, f.esPorcentaje) + ' ✓'
+                          : ' · tu objetivo ' + uds(f.objetivo1, f.esPorcentaje))}
+                        {f.objetivo2 > 0 && (f.esEquipoObj2
+                          ? ` · el 2º lo decide el equipo: ${uds(f.conseguido2, f.esPorcentaje)} de ${uds(f.objetivo2, f.esPorcentaje)}`
+                          : ` · 2º objetivo ${uds(f.objetivo2, f.esPorcentaje)}`)}
+                        {f.tope ? ' · ⚠ ' + f.tope : ''}</>
+                    )}
+                  </span>
+                </td>
+                <td style={{ ...num, color: '#1B2430' }}>
+                  {f.tipo === 'torneo' ? eur(f.ahora) + ' € en juego' : '+' + eur(f.ahora) + ' €'}
+                </td>
+                <td style={{ ...num, color: '#A9670A' }}>
+                  {f.luego > f.ahora ? '+' + eur(f.luego) + ' €' : '—'}
+                </td>
+              </tr>
+            ))}
+            <tr style={{ borderTop: '2px solid #2E7D32' }}>
+              <td style={{ ...cel, paddingTop: 7, fontWeight: 'bold', fontSize: 13.5, color: '#1B5E20' }}>
+                Esta venta te suma
+              </td>
+              <td style={{ ...num, paddingTop: 7, fontSize: 15, color: '#1B5E20' }}>{eur(c.totalAhora)} €</td>
+              <td style={{ ...num, paddingTop: 7, fontSize: 15, color: '#A9670A' }}>
+                {c.totalLuego > c.totalAhora ? 'hasta ' + eur(c.totalLuego) + ' €' : '—'}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div style={{ fontSize: 11, color: '#5A6B5D', marginTop: 7, lineHeight: 1.4 }}>
+          Al llegar al 2º objetivo se cobra más por <b>todas</b> las ventas del mes, no solo por
+          las nuevas. Los torneos solo se pagan si llega el equipo entero.
+        </div>
+      </div>
+    )
   }
 
   const handleProductChange = (index: number, field: string, value: any) => {
@@ -1722,6 +1884,8 @@ export default function NuevaVentaPage() {
                         )
                       })()}
 
+                      <PanelDeLaVenta prod={prod} />
+
                       <div style={{ height: 1, backgroundColor: '#E0E0E0', margin: '8px 0' }}></div>
 
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
@@ -2050,6 +2214,7 @@ export default function NuevaVentaPage() {
                           </select>
                         </div>
                       </div>
+                    <PanelDeLaVenta prod={prod} />
 
                     </div>
 
