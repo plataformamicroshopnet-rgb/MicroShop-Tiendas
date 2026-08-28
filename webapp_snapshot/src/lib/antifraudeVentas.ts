@@ -62,6 +62,17 @@ export const esPalancaAlta = (categoria: any) => {
   return c === 'mimovistar' || c === 'traslado mimovistar' || c === 'resto baf'
 }
 
+/** ¿Es un PAQUETE DE TELEVISIÓN? En Repos UP y Suscripciones TV lo es todo
+ *  (Netflix, Disney, HBO, SkyShowtime, Champions, Fútbol Total, Movistar+…)
+ *  menos dos cosas que no son tele: el repo de ARPU que se pone a mano y el
+ *  extra de 10 € del fútbol, que es la hermana de otra línea. */
+export const esPaqueteDeTV = (categoria: any, producto: any) => {
+  if (!esPalancaSuelta(categoria)) return false
+  const p = norm(producto)
+  if (!p) return false
+  return !/reposicionamientos destino|incremento de arpu|^extra repos/.test(p)
+}
+
 /** El extra de 10 € del fútbol cuelga del repo con `sustituyeA`: es la MISMA
  *  operación, no una segunda. Se ignora al comparar para no contarla dos veces.
  *  OJO — no confundir con la HIJA de una corrección de precio, que también lleva
@@ -287,3 +298,67 @@ export function reglaLineaRepetida(
   }
   return null
 }
+
+// ── REGLA 5 — LA TELE DEL MISMO DÍA VA DENTRO DEL ALTA ──────────────────────
+// Si el cliente se da de alta HOY, la tele que se lleva no es un repo: no hay
+// nada que reposicionar, el cliente acaba de entrar. Telefónica paga esa tele
+// dentro del paquete del alta, y la línea suelta se queda sin cobrar.
+// Medido contra junio-agosto: 61 operaciones lo hicieron así (52 de ellas el
+// mismo patrón — alta con Fútbol Total y el Netflix apuntado aparte), de los
+// siete comerciales. Y no era para cobrar de más: apuntándolo BIEN cobran
+// 2.556 puntos MÁS en esos tres meses, unos 42 por operación. Era ignorancia.
+// Se deja fuera «Traslado miMovistar» a propósito: ahí el cliente ya existía
+// y un repo el mismo día sí puede ser bueno.
+export function reglaTvDelMismoDia(
+  lineas: { categoria: any; producto: any }[],
+  previas: { producto: any; detalle?: any; sheet?: any; fecha?: any; numeroPedido?: any;
+             vendedor?: any; codigo?: any; anulado?: any; pendiente?: any;
+             sustituida?: any; sustituyeA?: any }[] = [],
+  fechaVenta?: Date,
+): AvisoAntifraude | null {
+  const teles = lineas.filter(l => esPaqueteDeTV(l.categoria, l.producto))
+  if (teles.length === 0) return null
+  const tele = String(teles[0].producto).replace(/\n/g, ' · ')
+
+  // (a) El alta viene en ESTA misma pulsación. No hay nada que borrar: basta
+  //     con elegir el paquete que ya lleve la tele dentro.
+  const altaAqui = lineas.find(l => norm(l.categoria) === 'mimovistar'
+    && String(l.producto || '').trim())
+  if (altaAqui) {
+    return {
+      clave: 'confirmarTvMismoDia',
+      titulo: 'La tele va dentro del alta',
+      bloquea: true,
+      texto: `Estás dando de alta a este cliente («${String(altaAqui.producto).replace(/\n/g, ' · ')}») `
+           + `y aparte le apuntas «${tele}».\n\n`
+           + `Un cliente que se da de alta hoy no tiene nada que reposicionar: para Telefónica `
+           + `esa tele va DENTRO del paquete del alta, y la línea suelta no la paga.\n\n`
+           + `Quita la línea de «${tele}» y, en el alta, elige el paquete que ya la lleve dentro. `
+           + `Además cobras más: el paquete completo paga bastante más que el alta pelada más el repo.`,
+    }
+  }
+
+  // (b) El alta ya está grabada, del MISMO DÍA. Aquí sí hay que deshacerla.
+  if (!fechaVenta) return null
+  const alta = previas.find(p => cuentaParaComparar(p)
+    && norm(p.detalle || p.sheet) === 'mimovistar'
+    && (() => { const f = fechaDe(p.fecha); return !!f && f.getTime() === fechaVenta.getTime() })())
+  if (!alta) return null
+
+  const ped = String(alta.numeroPedido || '').trim()
+  const donde = [alta.codigo, alta.vendedor].filter(Boolean).join(' · ')
+  return {
+    clave: 'confirmarTvMismoDia',
+    titulo: 'Ese cliente se ha dado de alta hoy',
+    bloquea: true,
+    texto: `Este cliente ya tiene un alta de miMovistar grabada HOY mismo (${alta.fecha}): `
+         + `«${String(alta.producto).replace(/\n/g, ' · ')}»`
+         + (ped ? `, pedido ${ped}` : '') + (donde ? ` (${donde})` : '') + `.\n\n`
+         + `Un cliente que se da de alta hoy no tiene nada que reposicionar: para Telefónica `
+         + `«${tele}» va DENTRO del paquete del alta, y grabado aparte no lo paga.\n\n`
+         + `Lo que hay que hacer: BORRAR el alta de hoy y volver a grabarla eligiendo el paquete `
+         + `que ya incluya «${tele}».\n\n`
+         + `No pierdes nada, al revés: el paquete completo paga más que el alta suelta más el repo.`,
+  }
+}
+

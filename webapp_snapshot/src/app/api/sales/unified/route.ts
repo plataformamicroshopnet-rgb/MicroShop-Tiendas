@@ -6,7 +6,7 @@ import { PrismaClient } from '@prisma/client'
 import { runExtrasEngine } from '@/lib/extrasEngine'
 import { randomUUID } from 'crypto'
 import { reglaYaVaDentro, reglaMismoServicio, reglaPedidoDeOtroCliente,
-         reglaLineaRepetida, AvisoAntifraude } from '@/lib/antifraudeVentas'
+         reglaLineaRepetida, reglaTvDelMismoDia, AvisoAntifraude } from '@/lib/antifraudeVentas'
 import { esRepoArpuManual, importeRepoArpu, rastroRepoArpu } from '@/lib/salesUtils'
 
 const prisma = new PrismaClient()
@@ -227,9 +227,9 @@ export async function POST(request: Request) {
     // Sustituye al aviso de duplicado de siempre, que exigía que el producto se
     // llamara EXACTAMENTE igual y solo miraba la base de datos: de las 12
     // operaciones que la auditoría confirmó cobrando dos veces, no vio 11.
-    // Estas cuatro reglas se midieron ANTES contra junio-agosto: 40 avisos en
-    // tres meses (13 al mes en toda la cadena) y ni una operación buena
-    // molestada. Todas AVISAN; ninguna bloquea.
+    // Cada regla se midió ANTES contra junio-agosto, y ninguna molesta a una
+    // operación buena. Dos de ellas PROHÍBEN (no hay «Aceptar» que valga):
+    // «eso ya va dentro del alta» y «la tele del mismo día». Las demás avisan.
     {
       const lineas = data.productos
         .filter((p: any) => String(p.producto || '').trim())
@@ -254,6 +254,9 @@ export async function POST(request: Request) {
 
         const avisos: (AvisoAntifraude | null)[] = [
           reglaYaVaDentro(lineas, previasCliente as any, fechaVentaDate, 30),
+          // Va DESPUÉS de «ya va dentro»: cuando las dos saltan, la primera
+          // explica mejor el caso (el alta nombra ese mismo servicio).
+          reglaTvDelMismoDia(lineas, previasCliente as any, fechaVentaDate),
           reglaMismoServicio(lineas, previasCliente as any, fechaVentaDate, 30),
           reglaLineaRepetida(lineas, previasCliente as any),
           reglaPedidoDeOtroCliente(lineas, data.nif, previasPedido as any),
