@@ -43,11 +43,17 @@ export const FAMILIAS: Familia[] = [
     ],
   },
   {
+    // NETFLIX NO TIENE ESCALERA (dueño, 28-ago-2026). La tuvo unos días: se
+    // permitía subir de anuncios a Estándar y a Premium con un repo. Al verlo en
+    // la pantalla el dueño lo cortó, y con razón: el propio desplegable del
+    // paquete ya ofrece la misma gama con cada Netflix («Ficción Total con netflix
+    // Estándar», «…con netflix premium»). Si el cliente quiere el de arriba, se
+    // elige EL PAQUETE, no el paquete de abajo más un repo encima. Así que basta
+    // con que el alta lleve un Netflix cualquiera para que ningún repo de Netflix
+    // pueda añadirse.
     clave: 'netflix', etiqueta: 'Netflix',
     escalera: [
-      { nivel: 1, pistas: ['netflix con anuncios', 'netfilx con anuncios', 'netflix anuncios'] },
-      { nivel: 2, pistas: ['netflix estandar', 'netfilx estandar'] },
-      { nivel: 3, pistas: ['netflix premium', 'netfilx premium'] },
+      { nivel: 1, pistas: ['netflix', 'netfilx'] },
     ],
   },
   {
