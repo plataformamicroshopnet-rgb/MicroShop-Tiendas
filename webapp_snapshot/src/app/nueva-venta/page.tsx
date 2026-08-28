@@ -461,11 +461,28 @@ export default function NuevaVentaPage() {
     // extra solo nace si la línea va en la palanca «Repos (Arpu)». Además, en un
     // alta nueva el fútbol no es un repo: es el paquete que ya lo trae.
     if (esRepoFutbol(fila.producto)) {
-      window.alert('El Repo de Fútbol va SIEMPRE en su propia línea, nunca dentro del alta:'
-        + ' Telefónica paga por él dos conceptos (los 78 € y un extra de 10 €) y ese extra'
-        + ' solo se genera si la línea es de Repos (Arpu).\n\n'
-        + '· Si el cliente ES nuevo: elige directamente el paquete que ya trae Fútbol Total.\n'
-        + '· Si el cliente YA estaba en planta: añádelo con el botón «Otro Repo (Arpu)».')
+      // Antes esto mandaba «al botón Otro Repo (Arpu)», que en la tarjeta del
+      // paquete no existe: dejaba al comercial tirado justo cuando pedía ayuda.
+      // Ahora, si dice que sí, la línea se crea aquí mismo.
+      if (!window.confirm('El Repo de Fútbol va SIEMPRE en su propia línea, nunca dentro del alta:'
+          + ' Telefónica paga por él dos conceptos (los 78 € y un extra de 10 €) y ese extra'
+          + ' solo se genera si la línea es de Repos (Arpu).\n\n'
+          + 'OJO: si el cliente es NUEVO esto no es un repo — cancela y elige directamente el'
+          + ' paquete que ya trae Fútbol Total.\n\n'
+          + '[ Aceptar = ya estaba en planta, créame la línea ]   [ Cancelar ]')) return
+      const n2 = (v: any) => { const x = Number(String(v ?? '').replace(',', '.')); return isNaN(x) ? 0 : x }
+      const m2 = n2(fila.comisionConCoste)
+      setFormData((prev: any) => ({
+        ...prev,
+        productos: [...prev.productos, {
+          categoria: 'Repos UP', producto: String(fila.producto || ''),
+          importe: String(Math.round(n2(fila.comision) * (m2 === 0 ? 1 : m2) * 100) / 100),
+          telf: prodActual.telf || formData.telefonoFijo || '', noCliente: prodActual.noCliente || '',
+          pendiente: 'No', imei: '', numeroPedido: '', rentConCoste: '', origenStock: '',
+          seguro: '', seguroImporte: 0, fabricante: '', subcategoria: '', gama: '',
+          isLibre: false, isSwap: false,
+        }],
+      }))
       return
     }
 
@@ -2070,31 +2087,16 @@ export default function NuevaVentaPage() {
                           </select>
                         </div>
                         
-                        <div style={{ marginTop: '12px' }}>
-                          <button
-                            type="button"
-                            onClick={() => handleAddSuscripcion(index)}
-                            className="btn-secondary"
-                            style={{ 
-                                width: '100%', 
-                                padding: '10px 8px', 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                justifyContent: 'center', 
-                                gap: '8px', 
-                                border: 'none', 
-                                backgroundColor: '#5CB615', 
-                                color: '#FFFFFF', 
-                                borderRadius: '6px', 
-                                cursor: 'pointer',
-                                fontWeight: 'bold',
-                                boxShadow: '0 4px 12px rgba(92,182,21,0.3)',
-                                transition: 'all 0.2s ease'
-                            }}
-                          >
-                            <ShieldPlus size={16} /> Añadir Suscripciones TV
-                          </button>
-                        </div>
+                        {/* AQUÍ ESTABA «Añadir Suscripciones TV» (fuera el 28-ago-2026).
+                            Era la puerta de atrás: creaba una línea de Repos (Arpu) con el
+                            desplegable abierto del todo, sin las prohibiciones del recuadro
+                            morado y sin preguntar nada. Por ahí se podía volver a meter el
+                            servicio que el paquete ya llevaba, que es justo lo que la
+                            política vino a cortar. Lo que hacía se hace mejor arriba:
+                            · dentro del alta → el desplegable «¿Le añades algún Repo (Arpu)?»
+                            · en su propia línea → ese mismo desplegable, contestando que el
+                              cliente YA estaba en planta.
+                            Y para lo que no cabe ahí, «Añadir otra línea» sigue estando. */}
                       </div>
                     </div>
                   </div>
