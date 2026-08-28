@@ -553,6 +553,14 @@ export default function NuevaVentaPage() {
    * eso se dice con esas palabras.
    */
   const TiraDelMes = () => {
+    if (!String(formData.vendedor || '').trim()) {
+      return (
+        <div style={{ border: '1px dashed #A5A5A5', borderRadius: 8, background: '#FAFAFA',
+                      padding: '10px 14px', marginBottom: 16, fontSize: 12.5, color: '#666' }}>
+          🧮 Elige el <b>Comercial</b> en la Cabecera para ver cómo va el mes y lo que suma cada venta.
+        </div>
+      )
+    }
     if (!miComision) return null
     const eur = (n: number) => Number(n || 0).toLocaleString('es-ES',
       { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -631,6 +639,20 @@ export default function NuevaVentaPage() {
 
   /** El recuadro verde: lo que esta línea le suma a quien la está grabando. */
   const PanelDeLaVenta = ({ prod }: { prod: any }) => {
+    // Sin producto elegido no hay nada que contar todavía: eso sí se calla.
+    if (!prod?.producto || !prod?.categoria) return null
+    // Pero si falta el COMERCIAL, hay que decirlo. Callarse deja al que graba
+    // pensando que la pantalla está rota — le pasó al dueño el 28-ago.
+    if (!String(formData.vendedor || '').trim()) {
+      return (
+        <div style={{ border: '1px dashed #A5A5A5', borderRadius: 8, background: '#FAFAFA',
+                      padding: '9px 12px', marginTop: 8, fontSize: 12.5, color: '#666' }}>
+          🧮 Elige el <b>Comercial</b> arriba, en la Cabecera, y aquí verás lo que esta venta
+          le cuenta en comisiones y torneos.
+        </div>
+      )
+    }
+    if (!miComision) return null
     const c = cuentaDeLaVenta(prod)
     if (!c) return null
     const eur = (n: number) => Number(n || 0).toLocaleString('es-ES',
