@@ -1825,8 +1825,11 @@ export default function NuevaVentaPage() {
                           Lo que entra en el momento de la venta es UNA sola venta. Lo
                           que el paquete YA lleva no se puede elegir: un Repo (Arpu) es
                           SUBIR la facturación, y si no sube, Telefónica no lo paga. */}
-                      {prod.producto && (prod.categoria === 'miMovistar' || prod.categoria === 'Traslado miMovistar')
-                        && !String(prod.subcategoria || '').toUpperCase().startsWith('PROMO') && (() => {
+                      {/* Las PROMO DIGI y PROMO VODAFONE entran por aquí igual que el resto
+                          (dueño, 28-ago-2026): es el MISMO producto, solo que en promoción,
+                          así que le tocan las mismas incompatibilidades. Al montar el bloque
+                          las dejé fuera y no salía ni el desplegable. */}
+                      {prod.producto && (prod.categoria === 'miMovistar' || prod.categoria === 'Traslado miMovistar') && (() => {
                         // Los repos que se teclean con casillas propias (el incremento de
                         // ARPU y el de «Reposicionamientos destino») no se pueden plegar:
                         // su precio no está en la tarifa y entrarían por 0 €.

@@ -43,26 +43,26 @@ export const FAMILIAS: Familia[] = [
     ],
   },
   {
-    // NETFLIX NO TIENE ESCALERA (dueño, 28-ago-2026). La tuvo unos días: se
-    // permitía subir de anuncios a Estándar y a Premium con un repo. Al verlo en
-    // la pantalla el dueño lo cortó, y con razón: el propio desplegable del
-    // paquete ya ofrece la misma gama con cada Netflix («Ficción Total con netflix
-    // Estándar», «…con netflix premium»). Si el cliente quiere el de arriba, se
-    // elige EL PAQUETE, no el paquete de abajo más un repo encima. Así que basta
-    // con que el alta lleve un Netflix cualquiera para que ningún repo de Netflix
-    // pueda añadirse.
-    clave: 'netflix', etiqueta: 'Netflix',
+    // FICCIÓN Y NETFLIX SON LA MISMA FAMILIA (dueño, 28-ago-2026).
+    //
+    // Netflix tuvo escalera unos días: se permitía subir de anuncios a Estándar y a
+    // Premium con un repo. El dueño lo cortó al verlo en pantalla, y con razón: el
+    // propio desplegable del paquete ya ofrece la misma gama con cada Netflix, así
+    // que la subida se elige en EL PAQUETE, no con un repo encima.
+    //
+    // Y van juntas porque son el mismo sitio del recibo con dos nombres. El paquete
+    // normal se llama «Ficción Total con netflix Estándar»; el MISMO paquete en
+    // promoción se llama «Movistar Plus + Fútbol + Netfilx Estandar», sin la palabra
+    // Ficción. Separadas, las promos no bloqueaban los repos de Ficción y el mismo
+    // producto tenía reglas distintas según cómo estuviera escrito.
+    clave: 'ficcion', etiqueta: 'Ficción / Netflix',
     escalera: [
-      { nivel: 1, pistas: ['netflix', 'netfilx'] },
+      { nivel: 1, pistas: ['ficcion', 'netflix', 'netfilx'] },
     ],
   },
   {
     clave: 'movistarplus', etiqueta: 'Movistar+',
     escalera: [{ nivel: 1, pistas: ['movistar+', 'movistar +', 'movistar plus'] }],
-  },
-  {
-    clave: 'ficcion', etiqueta: 'Ficción Total',
-    escalera: [{ nivel: 1, pistas: ['ficcion'] }],
   },
 ]
 
