@@ -37,6 +37,25 @@ export const esDesdeAgosto2026 = (s: any): boolean => {
     return d >= new Date(2026, 7, 1)
 }
 
+/** El token de la palanca territorial del fútbol (TC1435). */
+export const TIPO_FUTBOL_TERRITORIAL = 'Altas Fútbol + Desarrollo TV'
+
+/** Tipo de venta EFECTIVO de una regla de la Entrada de Datos (TERRITORIAL
+ *  TIENDAS). La regla del fútbol guardada con el valor viejo «Repo Fútbol»
+ *  cuenta con el token nuevo, que replica lo que Telefónica mide en el TC1435
+ *  (las altas con fútbol incluidas): así no hay que tocar las reglas ya
+ *  guardadas de cada mes. Si en el desplegable se elige otro tipo, se respeta.
+ *  SOLO para las reglas territoriales: la palanca «Repo Fútbol» de las
+ *  comisiones de los comerciales sigue contando únicamente los repos. */
+export const tipoVentaDeReglaTerritorial = (rule: any): string => {
+    const nombre = String(rule?.nombre || '').toLowerCase()
+    const tv = String(rule?.tipoVenta || '').trim().toLowerCase()
+    if ((tv === 'repo fútbol' || tv === 'repo futbol')
+        && (nombre.includes('fútbol') || nombre.includes('futbol')))
+        return TIPO_FUTBOL_TERRITORIAL
+    return rule?.tipoVenta || ''
+}
+
 export const matchTipoVenta = (sale: any, tipoVentaRaw: string) => {
     if (!tipoVentaRaw) return false;
 
@@ -141,6 +160,36 @@ export const matchTipoVenta = (sale: any, tipoVentaRaw: string) => {
                            || (cat === 'repos' && prod.includes('extra repo')
                                && (prod.includes('fútbol') || prod.includes('futbol'))))
                         : (prod.includes('fútbol') || prod.includes('futbol') || prod.includes('repo f'));
+                    break;
+                case 'altas fútbol + desarrollo tv':
+                case 'altas futbol + desarrollo tv':
+                    // LA PALANCA TERRITORIAL DEL FÚTBOL (TC1435). Telefónica cuenta:
+                    //  (a) las ALTAS de miMovistar cuyo paquete lleva Fútbol Total,
+                    //      Champions o LaLiga (las promos DIGI/VODAFONE con fútbol
+                    //      también son altas miMovistar), y las altas Fusión Bar;
+                    //  (b) los REPOS destino fútbol —la unidad es el extra de 10 €,
+                    //      una línea por cliente— y los repos destino Champions/
+                    //      LaLiga, que no llevan extra. La línea de 78 € del repo
+                    //      NO casa: contaría doble.
+                    // Antes de agosto-2026, EXACTAMENTE el criterio viejo de «Repo
+                    // Fútbol» (por nombre), que ya arrastraba las altas con fútbol:
+                    // el histórico no se mueve ni una unidad (junio 52, julio 84).
+                    if (esDesdeAgosto2026(sale)) {
+                        const conFutbol = prod.includes('fútbol') || prod.includes('futbol')
+                            || prod.includes('champion') || prod.includes('laliga') || prod.includes('la liga');
+                        const esAltaFutbol = cat === 'mimovistar' && conFutbol;
+                        const esFusionBar = (cat === 'mimovistar' || cat === 'resto baf')
+                            && (prod.includes('fusión') || prod.includes('fusion')) && prod.includes('bar');
+                        const esExtraFutbol = cat === 'repo futbol' || cat === 'repo fútbol'
+                            || (cat === 'repos' && prod.includes('extra repo')
+                                && (prod.includes('fútbol') || prod.includes('futbol')));
+                        const esRepoChampLiga = (cat === 'repos up' || cat === 'suscripciones tv')
+                            && (prod.includes('champion') || prod.includes('laliga') || prod.includes('la liga'))
+                            && !prod.includes('fútbol total') && !prod.includes('futbol total');
+                        matched = esAltaFutbol || esFusionBar || esExtraFutbol || esRepoChampLiga;
+                    } else {
+                        matched = prod.includes('fútbol') || prod.includes('futbol') || prod.includes('repo f');
+                    }
                     break;
                 default:
                     if (tipoVenta.toLowerCase().trim() === cat) {

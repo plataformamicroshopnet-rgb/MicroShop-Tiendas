@@ -5,7 +5,7 @@
 // página Territorial PDV, la Entrada de Datos y el panel de Ganancias ("Comisiones
 // Tiendas Locales"). No duplicar.
 
-import { matchTipoVenta } from '@/lib/ventaMatching'
+import { matchTipoVenta, tipoVentaDeReglaTerritorial } from '@/lib/ventaMatching'
 import { TIENDAS_COMERCIALES } from '@/lib/constants'
 import { getEffectiveTiendaComerciales } from '@/lib/comercialRoster'
 import { getSaleCommission } from '@/lib/saleCommission'
@@ -229,7 +229,7 @@ export function computeTerritorialRows(input: TerritorialInput): any[] {
     // En palancas con `baseComision` se excluyen las ventas O2 (su territorial es aparte)
     // también del conteo, para espejar el grupo de Operaciones por Grupo Cliente.
     const _notO2 = (s: any) => String(s.detalle || s.categoria || '').toLowerCase().trim() !== 'o2'
-    const perStoreData = TIENDAS_FISICAS.map(store => getSalesDataForStoreAndType(sales, store, terrRule.tipoVenta, tiendaMap))
+    const perStoreData = TIENDAS_FISICAS.map(store => getSalesDataForStoreAndType(sales, store, tipoVentaDeReglaTerritorial(terrRule), tiendaMap))
     const perStore = perStoreData.map(d => terrRule.baseComision ? d.logs.filter(_notO2).length : d.value)
     const salesTot = perStore.reduce((a, b) => a + b, 0)
 

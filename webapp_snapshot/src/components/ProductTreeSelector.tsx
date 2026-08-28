@@ -18,7 +18,7 @@ interface Props {
 // entiende desde siempre: cat rent|seguro) pero NO estaba en esta lista, así que
 // el selector la pintaba como «Fórmula Libre (Antigua)» y parecía que no había
 // nada elegido (torneo del dueño, 24-ago-2026). Añadida como opción normal.
-export const TIPOS_DE_VENTA = ["Alta BAF Total", "Alta BAF Convergente", "Dispositivos", "Seguro", "Dispositivos + Seguros", "Swap", "MPA", "FTTR", "ARPU", "Repo Fútbol"]
+export const TIPOS_DE_VENTA = ["Alta BAF Total", "Alta BAF Convergente", "Dispositivos", "Seguro", "Dispositivos + Seguros", "Swap", "MPA", "FTTR", "ARPU", "Repo Fútbol", "Altas Fútbol + Desarrollo TV"]
 
 export default function ProductTreeSelector({ value, onChange, disabled, placeholder = "Seleccionar..." }: Props) {
   const [isOpen, setIsOpen] = useState(false)

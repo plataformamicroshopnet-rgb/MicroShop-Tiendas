@@ -8,6 +8,7 @@ import { usePeriod } from '@/components/PeriodProvider'
 import { TIENDAS_COMERCIALES } from '@/lib/constants'
 import ProductTreeSelector from '@/components/ProductTreeSelector'
 import { matchTipoVenta } from '@/hooks/useComisionesData'
+import { tipoVentaDeReglaTerritorial } from '@/lib/ventaMatching'
 import { getSaleCommission } from '@/lib/saleCommission'
 import { renderDashboardData, getCurrentMonthString, isSaleCancelled } from '@/lib/salesUtils'
 
@@ -347,10 +348,10 @@ export default function TerritorialTab() {
   // Pre-calcular totales
   // Pre-calcular totales
   const grandTotalTiendas = tiendasRules.reduce((acc, rule) => {
-    const dataAux = getSalesDataForStoreAndType('Auxiliadora 45', rule.tipoVenta);
-    const dataCor = getSalesDataForStoreAndType('Correhuela', rule.tipoVenta);
-    const dataVil = getSalesDataForStoreAndType('Villamayor', rule.tipoVenta);
-    const dataBej = getSalesDataForStoreAndType('Béjar', rule.tipoVenta);
+    const dataAux = getSalesDataForStoreAndType('Auxiliadora 45', tipoVentaDeReglaTerritorial(rule));
+    const dataCor = getSalesDataForStoreAndType('Correhuela', tipoVentaDeReglaTerritorial(rule));
+    const dataVil = getSalesDataForStoreAndType('Villamayor', tipoVentaDeReglaTerritorial(rule));
+    const dataBej = getSalesDataForStoreAndType('Béjar', tipoVentaDeReglaTerritorial(rule));
     const salesTot = dataAux.value + dataCor.value + dataVil.value + dataBej.value;
 
     const impAux = calculateTiendaImporte(rule, 'Auxiliadora 45', dataAux.value, salesTot);
@@ -444,10 +445,10 @@ export default function TerritorialTab() {
             </thead>
             <tbody>
               {tiendasRules.map((rule, idx) => {
-                const dataAux = getSalesDataForStoreAndType('Auxiliadora 45', rule.tipoVenta);
-                const dataCor = getSalesDataForStoreAndType('Correhuela', rule.tipoVenta);
-                const dataVil = getSalesDataForStoreAndType('Villamayor', rule.tipoVenta);
-                const dataBej = getSalesDataForStoreAndType('Béjar', rule.tipoVenta);
+                const dataAux = getSalesDataForStoreAndType('Auxiliadora 45', tipoVentaDeReglaTerritorial(rule));
+                const dataCor = getSalesDataForStoreAndType('Correhuela', tipoVentaDeReglaTerritorial(rule));
+                const dataVil = getSalesDataForStoreAndType('Villamayor', tipoVentaDeReglaTerritorial(rule));
+                const dataBej = getSalesDataForStoreAndType('Béjar', tipoVentaDeReglaTerritorial(rule));
                 // Palanca "% sobre comisiones €": excluye las ventas O2 (su territorial es
                 // aparte; matchTipoVenta las arrastra por nombre de producto) tanto en
                 // unidades como en €, para espejar el grupo de Operaciones por Grupo Cliente.
