@@ -14,7 +14,7 @@
 // subir. Al revés sí: de La Liga o Champions se puede subir a Fútbol Total.
 //
 // El porqué de la prohibición: en miMovistar Telefónica paga a N+2, así que
-// tras la baja de un paquete de TV tienen que pasar 3 meses y 20 días para que
+// tras la baja de un paquete de TV tienen que pasar 20 días para que
 // vuelva a pagar. Eso NO lo sabe el programa (no tenemos las bajas), por eso va
 // como pregunta al comercial y no como candado automático.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -148,10 +148,10 @@ export function filtraRepos<T extends { producto?: any }>(productoAlta: any, rep
   return repos.map(r => ({ ...r, veredicto: puedeAnadirse(productoAlta, r.producto) }))
 }
 
-/** El aviso de los 3 meses + 20 días: se pregunta SIEMPRE que el repo entre en
+/** El aviso de los 20 días: se pregunta SIEMPRE que el repo entre en
  *  una familia que el alta no lleva pero que el cliente pudo tener antes. */
 export const AVISO_BAJA_TV =
-  'Si este cliente tuvo antes un paquete de TV, tienen que haber pasado 3 meses y 20 días '
+  'Si este cliente tuvo antes un paquete de TV, tienen que haber pasado 20 días '
   + 'desde la baja para que Telefónica lo pague (miMovistar se cobra a N+2).\n\n'
   + '¿Han pasado ya?'
 

@@ -1921,7 +1921,7 @@ export default function NuevaVentaPage() {
                                   <>
                                     <div style={{ fontSize: 13.5, color: '#4E342E', marginBottom: 10, lineHeight: 1.45 }}>
                                       Si este cliente tuvo antes un paquete de TV, tienen que haber pasado
-                                      <b> 3 meses y 20 días</b> desde la baja para que Telefónica lo pague
+                                      <b> 20 días</b> desde la baja para que Telefónica lo pague
                                       (miMovistar se cobra a N+2). <b>¿Han pasado?</b>
                                     </div>
                                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
