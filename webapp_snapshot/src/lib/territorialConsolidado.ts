@@ -5,7 +5,7 @@
 // página Territorial PDV, la Entrada de Datos y el panel de Ganancias ("Comisiones
 // Tiendas Locales"). No duplicar.
 
-import { matchTipoVenta, tipoVentaDeReglaTerritorial } from '@/lib/ventaMatching'
+import { matchTipoVenta, tipoVentaDeReglaTerritorial, seSalvaDelFiltroFutbol } from '@/lib/ventaMatching'
 import { TIENDAS_COMERCIALES } from '@/lib/constants'
 import { getEffectiveTiendaComerciales } from '@/lib/comercialRoster'
 import { getSaleCommission } from '@/lib/saleCommission'
@@ -104,7 +104,7 @@ export function getSalesDataForStoreAndType(sales: any[], storeName: string, tip
       // Un cliente de futbol corregido deja TRES filas con la palabra «Futbol»
       // en el producto (la madre y sus dos hijas). Sin este filtro contaba 3
       // unidades en la regla territorial, que paga 300 €/500 € POR TIENDA.
-      if (esCorreccionRepos(s) || esVentaSustituida(s)) return false
+      if ((esCorreccionRepos(s) || esVentaSustituida(s)) && !seSalvaDelFiltroFutbol(tipoVenta, s)) return false
       if (!storeSellers.some(seller => (s.vendedor || '').toLowerCase() === seller.toLowerCase())) return false
       return isProductMatch(s)
     })

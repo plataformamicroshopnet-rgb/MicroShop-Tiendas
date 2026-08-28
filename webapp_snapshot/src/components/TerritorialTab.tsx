@@ -8,7 +8,8 @@ import { usePeriod } from '@/components/PeriodProvider'
 import { TIENDAS_COMERCIALES } from '@/lib/constants'
 import ProductTreeSelector from '@/components/ProductTreeSelector'
 import { matchTipoVenta } from '@/hooks/useComisionesData'
-import { tipoVentaDeReglaTerritorial } from '@/lib/ventaMatching'
+import { tipoVentaDeReglaTerritorial, seSalvaDelFiltroFutbol } from '@/lib/ventaMatching'
+import { esCorreccionRepos, esVentaSustituida } from '@/lib/salesUtils'
 import { getSaleCommission } from '@/lib/saleCommission'
 import { renderDashboardData, getCurrentMonthString, isSaleCancelled } from '@/lib/salesUtils'
 
@@ -170,6 +171,10 @@ export default function TerritorialTab() {
 
       filtered = sales.filter(s => {
         if (isSaleCancelled(s)) return false;
+        // Los MISMOS filtros que Territorial PDV (territorialConsolidado): sin
+        // ellos, un cliente de fútbol corregido contaba TRES veces aquí y las
+        // dos pantallas enseñaban cifras distintas del mismo mes.
+        if ((esCorreccionRepos(s) || esVentaSustituida(s)) && !seSalvaDelFiltroFutbol(tipoVenta, s)) return false;
         if (!storeSellers.some(seller => (s.vendedor || '').toLowerCase() === seller.toLowerCase())) return false;
         return isProductMatch(s);
       });

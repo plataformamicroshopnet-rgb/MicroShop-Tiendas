@@ -56,6 +56,19 @@ export const tipoVentaDeReglaTerritorial = (rule: any): string => {
     return rule?.tipoVenta || ''
 }
 
+/** Para la palanca territorial del fútbol: ¿esta fila se salva del filtro de
+ *  correcciones? Los repos de julio se re-tejearon el 09-ago como madre
+ *  sustituida + hija de 78 € + hija de 10 €, y el filtro genérico tiraba las
+ *  TRES: julio contaba 0 repos (26 en vez de 84) y pintaba 0 € en un mes que
+ *  Telefónica paga al tramo 2. La hija del extra (palanca «Repo Fútbol») es LA
+ *  unidad del cliente corregido: una por cliente. La madre sustituida y la
+ *  hija de 78 € siguen fuera. */
+export const seSalvaDelFiltroFutbol = (tipoVenta: string, sale: any): boolean => {
+    if (tipoVenta !== TIPO_FUTBOL_TERRITORIAL) return false
+    const cat = String(sale?.categoria || sale?.detalle || sale?.sheet || '').trim().toLowerCase()
+    return cat === 'repo futbol' || cat === 'repo fútbol'
+}
+
 export const matchTipoVenta = (sale: any, tipoVentaRaw: string) => {
     if (!tipoVentaRaw) return false;
 
