@@ -87,6 +87,8 @@ export async function POST(req: Request) {
           // borrador, quedan restos de la tanda anterior justo en las claves
           // que el clonado vuelve a escribir.
           `condiciones_plus_data_${periodKey}`, `fttr_discount_${periodKey}`,
+          // Los torneos del borrador: se regeneran en blanco como todo lo demás.
+          `torneos_config_${periodKey}`,
           // Los 9 % del Jefe de Tiendas de ESE mes: si no se borran, un borrador
           // re-clonado se queda con los porcentajes de la tanda anterior.
           ...JEFE_PCT_KEYS_BASE.map(k => `${k}_${periodKey}`)
@@ -208,7 +210,10 @@ export async function POST(req: Request) {
             horario: h.horario,
             // La TIENDA del comercial se perdía al clonar → el territorial del
             // mes nuevo salía a 0 € porque no sabía a qué tienda va cada uno.
-            tienda: h.tienda
+            tienda: h.tienda,
+            // Y el CORREO se perdía igual: el mes clonado nacía con la plantilla
+            // sin emails y los comerciales se quedaban sin los avisos del mes.
+            email: h.email
           }))
         });
       }
@@ -229,6 +234,20 @@ export async function POST(req: Request) {
         ...JEFE_PCT_KEYS_BASE.map(k => `${k}_${source.period_key}`)
       ];
       
+      // TORNEOS — a propósito NO se clonan, pero el mes nuevo estrena su clave
+      // VACÍA. Sin ella, `loadTorneosConfigMes` y las dos APIs de comisiones se
+      // caen al respaldo GLOBAL `torneos_config` cuando el mes nuevo pasa a ser
+      // el mes en curso, y el mes estrenaría el torneo del mes anterior. Hoy eso
+      // solo sale como un torneo fantasma con fechas viejas (los de agosto son
+      // de ventana 'tramo' y no pagan fuera de sus días), pero un torneo de
+      // ventana 'mes' SÍ pagaría el mes entero sin que nadie lo hubiera decidido.
+      // Los torneos se deciden mes a mes: el nuevo nace en blanco.
+      await prisma.appSetting.upsert({
+        where: { key: `torneos_config_${periodKey}` },
+        update: { value: JSON.stringify({ concursos: [] }) },
+        create: { key: `torneos_config_${periodKey}`, value: JSON.stringify({ concursos: [] }) },
+      });
+
       for (const oldKey of keysToCopy) {
         const setting = await prisma.appSetting.findUnique({ where: { key: oldKey } });
         if (setting) {

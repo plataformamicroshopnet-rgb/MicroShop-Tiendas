@@ -60,6 +60,12 @@ export interface SaludMesTiendasResponse {
   pasos?: PasoSaludMes[]
 }
 
+/** '2026_09' → '2026_08'. */
+export function mesAnterior(periodKey: string): string {
+  const [y, m] = periodKey.split('_').map(Number)
+  return m === 1 ? `${y - 1}_12` : `${y}_${String(m - 1).padStart(2, '0')}`
+}
+
 /** '2026_08' → '2026_09'. */
 export function mesSiguiente(periodKey: string): string {
   const [y, m] = periodKey.split('_').map(Number)

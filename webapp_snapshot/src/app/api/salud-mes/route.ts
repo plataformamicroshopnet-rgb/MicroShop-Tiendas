@@ -4,7 +4,7 @@ import { getSession } from '@/lib/auth'
 import { loadPanelInputs } from '@/lib/panelComisionesTiendasServer'
 import { computePanelComisionesTiendas } from '@/lib/panelComisionesTiendas'
 import { computeComisionJefeTiendas, jefePctKeysTodas, resolverJefePcts, JEFE_PCT_KEYS_BASE } from '@/lib/comisionJefeTiendas'
-import { PasoSaludMes, SaludMesTiendasResponse, EstadoPaso, mesSiguiente } from '@/lib/saludMesTiendas'
+import { PasoSaludMes, SaludMesTiendasResponse, EstadoPaso, mesSiguiente, mesAnterior } from '@/lib/saludMesTiendas'
 import { claveSelloRevision, huellaDelPaso, leerSello, cuandoEnCristiano } from '@/lib/revisadoPorMiTiendas'
 import { computeVersusTiendas, catalogosDelMesTiendas } from '@/lib/versusTiendas'
 
@@ -181,17 +181,41 @@ export async function GET(request: Request) {
       const objs = await prisma.tiendaStoreObjective.findMany({ where: { periodKey } })
       const conAlgo = objs.filter(o => TIENDAS_FISICAS.includes(o.storeName))
       const faltan = TIENDAS_FISICAS.filter(t => !conAlgo.some(o => o.storeName === t))
+
+      // ¿Son los del mes ANTERIOR, clonados? Al pre-crear el mes, el clonado
+      // copia los objetivos del mes de origen: las 4 tiendas aparecen llenas y
+      // el paso se ponía VERDE, como si el Excel de Telefónica ya hubiera
+      // llegado. Se comparan cifra a cifra y, si son calcados, se avisa.
+      // (Los CATÁLOGOS no llevan este aviso a propósito: los precios sí siguen
+      //  valiendo de un mes al siguiente hasta que Telefónica mande otros.)
+      const CAMPOS_OBJ = ['bafConvMS', 'restoBaf', 'tvFutbol', 'dispSegEuros', 'dispUnidades',
+                          'seguros', 'movil', 'repos', 'fttr', 'alarmas', 'bafNoTrasl'] as const
+      const huellaObjs = (filas: any[]) => filas
+        .filter(o => TIENDAS_FISICAS.includes(o.storeName))
+        .sort((a, b) => String(a.storeName).localeCompare(String(b.storeName)))
+        .map(o => `${o.storeName}:${CAMPOS_OBJ.map(c => String((o as any)[c] ?? '')).join('|')}`)
+        .join('//')
+      const prevKey = mesAnterior(periodKey)
+      const objsPrev = await prisma.tiendaStoreObjective.findMany({ where: { periodKey: prevKey } })
+      const sonDelMesAnterior = conAlgo.length > 0 && objsPrev.length > 0
+        && huellaObjs(objs) === huellaObjs(objsPrev)
       pasos.push({
         id: 'objetivos_tienda',
         titulo: 'Objetivos por tienda (Excel de Telefónica)',
         resumen: 'Que la tabla oficial del mes está, para que el Seguimiento de Tramitación tenga objetivos.',
-        estado: faltan.length === 0 ? 'verde' : (faltan.length === TIENDAS_FISICAS.length ? 'rojo' : 'ambar'),
-        detalles: faltan.length === 0
-          ? [`Las ${TIENDAS_FISICAS.length} tiendas tienen sus objetivos oficiales.`]
-          : [`Faltan objetivos de: ${faltan.join(', ')}.`],
+        estado: faltan.length === TIENDAS_FISICAS.length ? 'rojo'
+              : (faltan.length || sonDelMesAnterior) ? 'ambar' : 'verde',
+        detalles: faltan.length
+          ? [`Faltan objetivos de: ${faltan.join(', ')}.`]
+          : sonDelMesAnterior
+            ? [`⚠ Son los objetivos de ${nombreMes(prevKey)}, calcados: los trajo el clonado del mes, no el Excel de Telefónica.`,
+               `Hasta que subas los de ${nombreMes(periodKey)}, todo lo que mida cumplimiento (Seguimiento de Tramitación, termómetro, Territorial) compara contra las cifras del mes pasado.`]
+            : [`Las ${TIENDAS_FISICAS.length} tiendas tienen sus objetivos oficiales.`],
         ayuda: faltan.length
           ? 'Los publica solo el ERP al subir el Excel «Objetivos pdv» a Comunicados Mensuales (o el envío diario de las 05:00). Si sigue vacío, re-guarda el Excel en el ERP.'
-          : undefined,
+          : sonDelMesAnterior
+            ? `Sube el Excel «Objetivos pdv» de ${nombreMes(periodKey)} a Comunicados Mensuales Tiendas en el ERP: al guardarlo, los objetivos buenos llegan solos y este paso se pone en verde.`
+            : undefined,
         accion: { tipo: 'enlace', etiqueta: 'Seguimiento de Tramitación', href: '/seguimiento-ventas/tramitacion' },
         ...(conTablas && conAlgo.length ? { tablas: [{
           titulo: 'Objetivos oficiales por tienda',
@@ -482,15 +506,37 @@ export async function GET(request: Request) {
       const hay = await prisma.appSetting.findMany({ where: { key: { in: claves } }, select: { key: true, value: true } })
       const presentes = new Set(hay.filter(h => h.value && h.value !== '[]' && h.value !== '{}').map(h => h.key))
       const faltan = claves.filter(c => !presentes.has(c))
+
+      // La misma trampa que en los objetivos por tienda: al pre-crear el mes, el
+      // territorial se clona con los OBJETIVOS del mes anterior (los de agosto,
+      // p. ej. el 161 del fútbol) y el paso salía VERDE. Si el del mes es calcado
+      // al anterior, se avisa: el % de cumplimiento y el tramo que pinta
+      // Territorial PDV son contra el objetivo del mes pasado.
+      const valorTerr = hay.find(h => h.key === `territorial_tiendas_${periodKey}`)?.value || ''
+      const terrPrev = valorTerr
+        ? (await prisma.appSetting.findUnique({
+            where: { key: `territorial_tiendas_${mesAnterior(periodKey)}` },
+            select: { value: true },
+          }))?.value || ''
+        : ''
+      const territorialEsDelMesAnterior = !!valorTerr && valorTerr === terrPrev
       pasos.push({
         id: 'territorial_o2',
         titulo: 'Territorial y O2 MovilFree del mes',
         resumen: 'Que las tres configuraciones del mes están cargadas.',
-        estado: faltan.length === 0 ? 'verde' : (faltan.length === claves.length ? 'rojo' : 'ambar'),
-        detalles: faltan.length === 0
-          ? ['Territorial de tiendas, territorial O2 y reglas O2: las tres presentes.']
-          : [`Faltan: ${faltan.map(c => c.replace(`_${periodKey}`, '')).join(', ')}.`],
-        ayuda: faltan.length ? 'Se arrastran al clonar el mes; si falta, revísalo en Territorial.' : undefined,
+        estado: faltan.length === claves.length ? 'rojo'
+              : (faltan.length || territorialEsDelMesAnterior) ? 'ambar' : 'verde',
+        detalles: faltan.length
+          ? [`Faltan: ${faltan.map(c => c.replace(`_${periodKey}`, '')).join(', ')}.`]
+          : territorialEsDelMesAnterior
+            ? [`Las tres configuraciones están, pero el territorial de tiendas es CALCADO al de ${nombreMes(mesAnterior(periodKey))}: lo trajo el clonado.`,
+               'Mientras no pongas los objetivos de este mes, el % y el tramo de Territorial PDV se miden contra los del mes pasado.']
+            : ['Territorial de tiendas, territorial O2 y reglas O2: las tres presentes.'],
+        ayuda: faltan.length
+          ? 'Se arrastran al clonar el mes; si falta, revísalo en Territorial.'
+          : territorialEsDelMesAnterior
+            ? 'Cuando llegue el TER de Telefónica, pon los objetivos de cada palanca en Entrada de Datos → TERRITORIAL TIENDAS.'
+            : undefined,
         accion: { tipo: 'enlace', etiqueta: 'Ganancias / Territorial', href: '/direccion-tiendas/ganancias' },
       })
     }
