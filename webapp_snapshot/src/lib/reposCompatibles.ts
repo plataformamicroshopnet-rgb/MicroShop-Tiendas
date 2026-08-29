@@ -64,6 +64,46 @@ export const FAMILIAS: Familia[] = [
     clave: 'movistarplus', etiqueta: 'Movistar+',
     escalera: [{ nivel: 1, pistas: ['movistar+', 'movistar +', 'movistar plus'] }],
   },
+  // ── FAMILIAS NUEVAS (30-ago-2026, F2 de la Disección de Agosto) ────────────
+  // La lista oficial de addons del TER trae Deportes, Disney, HBO, SkyShowtime,
+  // Cine, Motor y Series, y estas familias no existían: un alta «Fusión BAR
+  // deportes» con un repo «Deportes PROMO» encima pasaba sin aviso. Van a UN
+  // solo peldaño, con el mismo criterio que decidió el dueño para Netflix: la
+  // subida de gama se elige en EL PAQUETE, no con un repo encima — y dos del
+  // mismo palo al mismo cliente en 30 días ya lo caza el aviso de duplicados.
+  // OJO con las pistas: son subcadenas. «MOTOROLA» contiene «motor» y las
+  // Ray-Ban «Skyler» contienen «sky» — pero los Rent NUNCA pasan por aquí:
+  // estas familias solo comparan paquetes de alta contra repos/suscripciones
+  // (puedeAnadirse en Nueva Venta y las palancas de alta/suelta del
+  // antifraude), y en esas palancas no vive ningún dispositivo.
+  {
+    clave: 'deportes', etiqueta: 'Deportes',
+    escalera: [{ nivel: 1, pistas: ['deportes'] }],
+  },
+  {
+    clave: 'disney', etiqueta: 'Disney+',
+    escalera: [{ nivel: 1, pistas: ['disney'] }],
+  },
+  {
+    clave: 'hbo', etiqueta: 'HBO Max',
+    escalera: [{ nivel: 1, pistas: ['hbo'] }],
+  },
+  {
+    clave: 'skyshowtime', etiqueta: 'SkyShowtime',
+    escalera: [{ nivel: 1, pistas: ['skyshowtime'] }],
+  },
+  {
+    clave: 'cine', etiqueta: 'Cine',
+    escalera: [{ nivel: 1, pistas: ['cine'] }],
+  },
+  {
+    clave: 'motor', etiqueta: 'Motor',
+    escalera: [{ nivel: 1, pistas: ['motor'] }],
+  },
+  {
+    clave: 'series', etiqueta: 'Series',
+    escalera: [{ nivel: 1, pistas: ['series'] }],
+  },
 ]
 
 /** Qué nivel de cada familia trae un texto de producto. */

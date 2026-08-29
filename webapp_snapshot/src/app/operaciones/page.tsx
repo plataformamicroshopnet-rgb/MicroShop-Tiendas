@@ -812,13 +812,43 @@ function OperationsContent() {
     setEditForm((prev: any) => ({ ...prev, [field]: value }))
   }
 
+  // Al ANULAR, la causa importa: las anulaciones por causa técnica (ORTI)
+  // SÍ cuentan a favor en los objetivos del Territorial si no se reformulan
+  // en 15 días — pero solo si sabemos la causa. Se pregunta al guardar una
+  // anulación nueva y queda como etiqueta [ANULADA: CAUSA] en las notas,
+  // legible por personas y por el programa.
+  const CAUSAS_ANULACION = [
+    'OPERACIONES', 'SISTEMAS', 'NO HAY FIBRA EN LA ZONA', 'NO HAY RED',
+    'PROBLEMAS CANALIZADO', 'PROBLEMAS ESTETICOS', 'CALIDAD COMERCIAL (DEMORAS)',
+    'OTRA (no cuenta para Telefónica)',
+  ]
+  const pideCausaAnulacion = (): string | null => {
+    const menu = CAUSAS_ANULACION.map((c, i) => `${i + 1}. ${c}`).join('\n')
+    const r = window.prompt(
+      '¿CAUSA de la anulación? Escribe el número.\n\n' + menu +
+      '\n\nLas causas 1-7 son técnicas (ORTI): Telefónica las cuenta A FAVOR del objetivo si no se reformulan en 15 días.',
+      '8')
+    if (r === null) return null
+    const n = parseInt(String(r).trim(), 10)
+    return CAUSAS_ANULACION[(n >= 1 && n <= CAUSAS_ANULACION.length ? n : CAUSAS_ANULACION.length) - 1]
+  }
+
   const saveEdit = async () => {
     setSaving(true)
     try {
+      const updates = (() => { const { __filaCatalogo, ...limpio } = editForm; return limpio })()
+      // ¿Esta edición ANULA la venta y aún no tiene causa apuntada?
+      const seAnula = (updates as any).anulado === 'Si' || (updates as any).pendiente === 'Anulado'
+      const notasActuales = String((updates as any).anotaciones ?? '')
+      if (seAnula && !/\[ANULADA:/i.test(notasActuales)) {
+        const causa = pideCausaAnulacion()
+        if (causa === null) { setSaving(false); return }
+        ;(updates as any).anotaciones = [notasActuales, `[ANULADA: ${causa}]`].filter(Boolean).join(' · ')
+      }
       const res = await fetch('/api/sales', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: editingId, updates: (() => { const { __filaCatalogo, ...limpio } = editForm; return limpio })() })
+        body: JSON.stringify({ id: editingId, updates })
       })
       const data = await res.json()
       if (data.success) {

@@ -569,6 +569,24 @@ export default function NuevaVentaPage() {
    * como los calcula la nómina; el 2º tramo de casi todas lo decide el EQUIPO, y por
    * eso se dice con esas palabras.
    */
+  // LA LETRA PEQUEÑA DEL TER (30-ago-2026): las reglas que deciden si
+  // Telefónica paga el alta entera, a la vista del comercial al grabar.
+  // Recordatorio fijo, sin ventanas: no estorba, enseña.
+  const LetraPequenaAlta = ({ categoria }: { categoria: any }) => {
+    const c = String(categoria || '')
+    if (c !== 'miMovistar' && c !== 'Traslado miMovistar' && c !== 'Resto BAF') return null
+    return (
+      <div style={{ marginTop: 8, padding: '9px 12px', background: 'var(--bg-body)', border: '1px solid var(--border-light)', borderLeft: '4px solid #0E6B5C', borderRadius: 8, fontSize: 12, color: 'var(--medium-gray)', lineHeight: 1.55 }}>
+        <strong style={{ color: 'var(--text-main)' }}>La letra pequeña de Telefónica</strong><br />
+        · Si este domicilio tuvo una <strong>baja de fibra en los últimos 30 días</strong> (da igual el titular), el alta no se paga — y una baja en los 30 días siguientes la anula.<br />
+        {c !== 'Resto BAF' && (<>
+          · La fibra y el paquete deben ir en el <strong>MISMO pedido</strong> de Movistar: en dos pedidos pagan ~60 € en vez de ~2× la cuota.<br />
+          · Si el paquete lleva <strong>fútbol</strong> y el cliente lo quita antes del día 8 del segundo mes, pagan 1,5/1,3 cuotas en vez de 2.
+        </>)}
+      </div>
+    )
+  }
+
   const TiraDelMes = () => {
     if (!String(formData.vendedor || '').trim()) {
       return (
@@ -2024,6 +2042,7 @@ export default function NuevaVentaPage() {
                       })()}
 
                       <PanelDeLaVenta prod={prod} />
+                      <LetraPequenaAlta categoria={prod.categoria} />
 
                       <div style={{ height: 1, backgroundColor: '#E0E0E0', margin: '8px 0' }}></div>
 
@@ -2339,6 +2358,7 @@ export default function NuevaVentaPage() {
                         </div>
                       </div>
                     <PanelDeLaVenta prod={prod} />
+                    <LetraPequenaAlta categoria={prod.categoria} />
 
                     </div>
 

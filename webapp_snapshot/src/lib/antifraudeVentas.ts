@@ -362,3 +362,94 @@ export function reglaTvDelMismoDia(
   }
 }
 
+// ── REGLA 6 — EL CRUCE O2 ↔ MOVISTAR ES UN REPOSICIONAMIENTO ────────────────
+// La letra pequeña del TER (Consideraciones, fila 15): «El paso entre O2 y
+// Movistar o viceversa se tratará como un reposicionamiento». Si un cliente
+// con O2 reciente se graba como ALTA Movistar (o al revés), Telefónica no
+// paga el alta (~150-200 €): paga 2× el incremento de ARPU, que puede ser
+// casi nada. Medido contra junio-agosto: 0 casos — protección de futuro.
+// AVISA (no bloquea): el comercial puede saber algo que la base no sabe.
+export function reglaCruceO2(
+  lineas: { categoria: any; producto: any }[],
+  previas: { producto: any; detalle?: any; sheet?: any; fecha?: any; anulado?: any;
+             pendiente?: any; sustituida?: any; sustituyeA?: any }[] = [],
+  fechaVenta?: Date,
+  dias = 90,
+): AvisoAntifraude | null {
+  if (!fechaVenta) return null
+  const dentroDeVentana = (p: any) => {
+    const f = fechaDe(p.fecha)
+    return !!f && Math.abs(f.getTime() - fechaVenta.getTime()) <= dias * 86400000
+  }
+  const esAltaMovistar = (c: any) => {
+    const n = norm(c)
+    return n === 'mimovistar' || n === 'resto baf' || n === 'traslado mimovistar'
+  }
+  const grabaAltaMovistar = lineas.some(l => esAltaMovistar(l.categoria) && String(l.producto || '').trim())
+  const grabaO2 = lineas.some(l => norm(l.categoria) === 'o2' && String(l.producto || '').trim())
+  const previasVivas = previas.filter(p => cuentaParaComparar(p) && dentroDeVentana(p))
+  const teniaO2 = previasVivas.find(p => norm(p.detalle || p.sheet) === 'o2')
+  const teniaMovistar = previasVivas.find(p => esAltaMovistar(p.detalle || p.sheet))
+  let mensaje: string | null = null
+  if (grabaAltaMovistar && teniaO2) {
+    mensaje = `Este cliente tiene una operación O2 reciente («${String(teniaO2.producto).replace(/\n/g, ' · ')}», `
+      + `del ${teniaO2.fecha}) y estás grabando un ALTA Movistar.`
+  } else if (grabaO2 && teniaMovistar) {
+    mensaje = `Este cliente tiene un alta Movistar reciente («${String(teniaMovistar.producto).replace(/\n/g, ' · ')}», `
+      + `del ${teniaMovistar.fecha}) y estás grabando una operación O2.`
+  }
+  if (!mensaje) return null
+  return {
+    clave: 'confirmarCruceO2',
+    titulo: 'El paso O2 ↔ Movistar es un reposicionamiento',
+    texto: mensaje + `\n\nPara Telefónica el paso entre O2 y Movistar (o al revés) NO es un alta: `
+      + `se liquida como REPOSICIONAMIENTO (2× el incremento de cuota, que puede ser casi 0), `
+      + `no como alta nueva (~150-200 €).\n\n`
+      + `Si es el MISMO servicio cambiando de marca, apúntalo como repo. `
+      + `Pulsa Aceptar solo si de verdad son servicios distintos (p. ej. otra vivienda).`,
+  }
+}
+
+// ── REGLA 7 — EL CONVERGENTE VA EN UN SOLO PEDIDO ───────────────────────────
+// CRITERIO LECTURA BAF (TER, Consideraciones fila 6): fibra y paquete
+// miMovistar deben tramitarse en el MISMO pedido; en dos pedidos, Telefónica
+// lo degrada a «BAF no miMovistar» (~60 € en vez de ~2× la cuota, y fuera de
+// la palanca Convergente del Territorial). Aquí se caza el reflejo visible:
+// el mismo cliente, el mismo día, con una línea de fibra (Resto BAF) y otra
+// de miMovistar con NÚMEROS DE PEDIDO DISTINTOS. Medido: 0 casos en
+// junio-agosto — protección de futuro. AVISA, no bloquea.
+export function reglaPedidoPartido(
+  lineas: { categoria: any; producto: any; numeroPedido?: any }[],
+  previas: { producto: any; detalle?: any; sheet?: any; fecha?: any; numeroPedido?: any;
+             anulado?: any; pendiente?: any; sustituida?: any; sustituyeA?: any }[] = [],
+  fechaVenta?: Date,
+): AvisoAntifraude | null {
+  const ped = (x: any) => String(x || '').trim()
+  const mismas = lineas.map(l => ({ cat: norm(l.categoria), pedido: ped(l.numeroPedido), producto: l.producto }))
+  const deHoy = (previas || []).filter(p => {
+    if (!cuentaParaComparar(p) || !fechaVenta) return false
+    const f = fechaDe(p.fecha)
+    return !!f && f.getTime() === fechaVenta.getTime()
+  }).map(p => ({ cat: norm(p.detalle || p.sheet), pedido: ped(p.numeroPedido), producto: p.producto }))
+  const todas = [...mismas, ...deHoy]
+  const mm = todas.filter(x => x.cat === 'mimovistar' && x.pedido)
+  const rb = todas.filter(x => x.cat === 'resto baf' && x.pedido)
+  for (const a of mm) {
+    for (const b of rb) {
+      if (a.pedido !== b.pedido) {
+        return {
+          clave: 'confirmarPedidoPartido',
+          titulo: 'La fibra y el paquete van en pedidos distintos',
+          texto: `Este cliente lleva hoy una línea de fibra (pedido ${b.pedido}) y un paquete miMovistar `
+            + `(pedido ${a.pedido}) con NÚMEROS DE PEDIDO DISTINTOS.\n\n`
+            + `Para Telefónica, si la fibra y el paquete no van en el MISMO pedido, el alta se degrada a `
+            + `«BAF no miMovistar»: paga ~60 € en vez de ~2× la cuota, y no puntúa como Convergente.\n\n`
+            + `Comprueba en Movistar que se tramitó en UN solo pedido. Si es así, corrige aquí el número; `
+            + `pulsa Aceptar solo si de verdad son dos operaciones separadas.`,
+        }
+      }
+    }
+  }
+  return null
+}
+

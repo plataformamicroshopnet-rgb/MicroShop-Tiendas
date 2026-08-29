@@ -6,7 +6,8 @@ import { PrismaClient } from '@prisma/client'
 import { runExtrasEngine } from '@/lib/extrasEngine'
 import { randomUUID } from 'crypto'
 import { reglaYaVaDentro, reglaMismoServicio, reglaPedidoDeOtroCliente,
-         reglaLineaRepetida, reglaTvDelMismoDia, AvisoAntifraude } from '@/lib/antifraudeVentas'
+         reglaLineaRepetida, reglaTvDelMismoDia, reglaCruceO2, reglaPedidoPartido,
+         AvisoAntifraude } from '@/lib/antifraudeVentas'
 import { esRepoArpuManual, importeRepoArpu, rastroRepoArpu } from '@/lib/salesUtils'
 
 const prisma = new PrismaClient()
@@ -235,6 +236,7 @@ export async function POST(request: Request) {
         .filter((p: any) => String(p.producto || '').trim())
         .map((p: any) => ({ categoria: p.categoria, producto: p.producto, numeroPedido: p.numeroPedido,
                             sinPaquetePlus: !!p.descuentoSinPlus }))
+      const lineasConPedido = lineas
 
       if (lineas.length > 0) {
         const previasCliente = await prisma.sale.findMany({
@@ -260,6 +262,9 @@ export async function POST(request: Request) {
           reglaMismoServicio(lineas, previasCliente as any, fechaVentaDate, 30),
           reglaLineaRepetida(lineas, previasCliente as any),
           reglaPedidoDeOtroCliente(lineas, data.nif, previasPedido as any),
+          // Las dos de la letra pequeña del TER (30-ago-2026). Ambas AVISAN.
+          reglaCruceO2(lineasConPedido, previasCliente as any, fechaVentaDate, 90),
+          reglaPedidoPartido(lineasConPedido, previasCliente as any, fechaVentaDate),
         ]
         for (const aviso of avisos) {
           if (!aviso) continue
@@ -283,7 +288,8 @@ export async function POST(request: Request) {
         // RASTRO: si venía alguna confirmación, queda escrito quién la aceptó.
         const confirmadas = ['confirmarYaVaDentro', 'confirmarMismoServicioVenta',
                              'confirmarMismoServicioHistorico', 'confirmarLineaRepetida',
-                             'confirmarPedido', 'confirmarAntifraude']
+                             'confirmarPedido', 'confirmarAntifraude',
+                             'confirmarCruceO2', 'confirmarPedidoPartido']
           .filter(k => (data as any)[k])
         if (confirmadas.length > 0) {
           try {
