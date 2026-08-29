@@ -415,9 +415,11 @@ export default function TerritorialPdvPage() {
               const isValueObjective = row.key === 'rent_disp_seguros';
               const isBafConvMsDisp = row.key === 'baf_conv_ms_disp';
 
-              // Formateo de objetivo y ventas
+              // Formateo de objetivo y ventas. La fila del TC1458 ya no está
+              // muerta: su objetivo es el 40 % de attach en unidades (p. ej. 28
+              // de 68 convergentes) y el texto del medidor viaja en tramoAplicado.
               const displayObj = isBafConvMsDisp
-                ? '-' 
+                ? (row.objetivo > 0 ? `${row.objetivo} (40 %)` : '-')
                 : (isValueObjective ? formatCurrency(row.objetivo) : row.objetivo);
               
               const displaySales = isValueObjective

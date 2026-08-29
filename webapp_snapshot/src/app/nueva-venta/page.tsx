@@ -965,7 +965,12 @@ export default function NuevaVentaPage() {
                }
             } else if (cat === 'miMovistar' || cat === 'Resto BAF' || cat === 'Traslado miMovistar') {
               const baseCom = parseSafeNum(selectedItem.comision);
-              const mult = parseSafeNum(selectedItem.comisionConCoste);
+              // TRASLADOS: Telefónica paga TODOS los traslados ATF con BAF a
+              // ×2,0 sobre el PVP (OFE código 1796), da igual que el paquete
+              // sea AV, MV o BV. Al preciarse con el catálogo de miMovistar,
+              // los combos BV salían a ×1,5: julio registró 1.447 € cuando el
+              // OFE paga 1.750. El multiplicador del traslado es el suyo.
+              const mult = cat === 'Traslado miMovistar' ? 2 : parseSafeNum(selectedItem.comisionConCoste);
               // Se guardan para poder sumar después los repos de la misma venta.
               newProducts[index].comisionAlta = String(baseCom)
               newProducts[index].multAlta = String(mult === 0 ? 1 : mult)

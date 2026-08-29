@@ -220,6 +220,61 @@ export function computeTerritorialRows(input: TerritorialInput): any[] {
   const tiendaMap = getEffectiveTiendaComerciales(input.tiendaHours)
 
   return STATIC_PALANCAS.map(p => {
+    // ── TC1458 «BAF Convergente MS / Dispositivos» — EL MEDIDOR DEL 40 % ──
+    // Telefónica paga +0,2 × PVP por CADA alta convergente si el convergente
+    // llega al 100 % Y al menos el 40 % de esas altas llevan terminal. Su
+    // medidor oficial existe (viaja en la liquidación: mayo 30,4 %, junio 8 %)
+    // pero aquí la fila salía muerta (sin regla → 0). Este bloque la convierte
+    // en el CUENTAKILÓMETROS del attach: cuántas convergentes llevan un Rent
+    // del mismo NIF a ±30 días — definición CALIBRADA contra lo declarado por
+    // Telefónica (junio: nuestras 4 = sus 4/51 exactas). El importe se queda a
+    // 0 € hasta que las dos puertas abran (el € exacto es multiplicador × PVP
+    // y llega con la fase de bases oficiales).
+    if (p.key === 'baf_conv_ms_disp') {
+      const _fd = (f: any): number | null => {
+        const t = String(f || '')
+        if (t.length < 10 || t[2] !== '/' || t[5] !== '/') return null
+        const d = new Date(Number(t.slice(6, 10)), Number(t.slice(3, 5)) - 1, Number(t.slice(0, 2)))
+        return isNaN(d.getTime()) ? null : d.getTime()
+      }
+      // OJO: sin esCorreccionRepos — un Rent con corrección de precio sigue
+      // siendo un terminal de verdad (la madre sustituida ya queda fuera, y la
+      // hija es su representación viva).
+      // LIMITACIÓN CONOCIDA: la pantalla solo carga las ventas DEL MES, así que
+      // un par que cruce la frontera (alta a fin de mes, terminal a primeros
+      // del siguiente) se escapa — junio: contamos 3 de las 4 que declaró
+      // Telefónica, y la cuarta era justo un cruce de mes. El medidor es para
+      // EMPUJAR el attach (la jugada es alta+terminal en la misma visita, que
+      // nunca cruza mes); la cifra que liquida es la declarada del cierre.
+      const _viva = (s: any) => !isSaleCancelled(s) && !esVentaSustituida(s)
+      const convs = sales.filter(s => _viva(s)
+        && String(s.detalle || s.categoria || '').trim().toLowerCase() === 'mimovistar')
+      const rents = sales.filter(s => _viva(s)
+        && String(s.detalle || s.categoria || '').trim().toLowerCase() === 'rent')
+      const DIA = 86400000
+      const conTerminal = convs.filter(c => {
+        const cf = _fd(c.fecha); const nif = String(c.nif || '').toUpperCase()
+        if (!nif || cf === null) return false
+        return rents.some(r => {
+          if (String(r.nif || '').toUpperCase() !== nif) return false
+          const rf = _fd(r.fecha)
+          return rf !== null && Math.abs(rf - cf) <= 30 * DIA
+        })
+      })
+      const objetivo40 = Math.ceil(convs.length * 0.4)
+      const pctAttach = convs.length > 0 ? (conTerminal.length / convs.length) * 100 : 0
+      // La otra puerta: el convergente al 100 % (su propia regla)
+      const reglaConv = findRuleInList(['Alta BAF Convergente', 'Altas BAF Movistar Convergente'], territorialRules || [])
+      const objConv = parseNumber(reglaConv?.obj1Global)
+      const puertaConv = objConv > 0 && convs.length >= objConv
+      return { ...p, objetivo: objetivo40, obj1Target: objetivo40, obj2Target: 0, obj3Target: 0,
+        ventas: conTerminal.length, ventasBase: conTerminal.length, comisionBase: 0,
+        pct: objetivo40 > 0 ? (conTerminal.length / objetivo40) * 100 : 0,
+        t1Raw: p.tramos.tramo1, t2Raw: p.tramos.tramo2, t3Raw: p.tramos.tramo3, bonifRaw: p.tramos.bonif,
+        tramoAplicado: `attach ${pctAttach.toFixed(1)} % de ${convs.length} convergentes (necesita 40 %)`
+          + (puertaConv ? ' · puerta convergente OK' : ' · puerta convergente pendiente'),
+        importe: 0, potencial1: null, potencial2: null, potencial3: null, logs: conTerminal }
+    }
     const terrRule = findRuleInList(p.matches, territorialRules || [])
     if (!terrRule) {
       return { ...p, objetivo: 0, obj1Target: 0, obj2Target: 0, obj3Target: 0, ventas: 0, ventasBase: 0, comisionBase: 0, pct: 0, t1Raw: p.tramos.tramo1, t2Raw: p.tramos.tramo2, t3Raw: p.tramos.tramo3, bonifRaw: p.tramos.bonif, tramoAplicado: '', importe: 0, potencial1: null, potencial2: null, potencial3: null, logs: [] }

@@ -167,11 +167,14 @@ export const matchTipoVenta = (sale: any, tipoVentaRaw: string) => {
                     // de 78 € y el extra de 10 €— y las dos llevan «Fútbol» en el nombre.
                     // Si se casara por el nombre, un cliente contaría DOS altas. Se casa
                     // por PALANCA: solo la del extra es la que cuenta como alta.
+                    // Las hijas de LaLiga/Champions (29-ago) NO cuentan aquí: su unidad
+                    // es la MADRE de Repos (Arpu), y esta palanca es la de Fútbol Total.
                     // Antes de agosto, el criterio de siempre (histórico intacto).
                     matched = esDesdeAgosto2026(sale)
-                        ? (cat === 'repo futbol' || cat === 'repo fútbol'
+                        ? ((cat === 'repo futbol' || cat === 'repo fútbol'
                            || (cat === 'repos' && prod.includes('extra repo')
                                && (prod.includes('fútbol') || prod.includes('futbol'))))
+                           && !prod.includes('champion') && !prod.includes('laliga') && !prod.includes('la liga'))
                         : (prod.includes('fútbol') || prod.includes('futbol') || prod.includes('repo f'));
                     break;
                 case 'altas fútbol + desarrollo tv':
@@ -193,9 +196,13 @@ export const matchTipoVenta = (sale: any, tipoVentaRaw: string) => {
                         const esAltaFutbol = cat === 'mimovistar' && conFutbol;
                         const esFusionBar = (cat === 'mimovistar' || cat === 'resto baf')
                             && (prod.includes('fusión') || prod.includes('fusion')) && prod.includes('bar');
-                        const esExtraFutbol = cat === 'repo futbol' || cat === 'repo fútbol'
+                        // Las hijas de LaLiga/Champions no son la unidad (lo es su
+                        // madre de Repos UP, que ya cuenta en esRepoChampLiga): sin
+                        // esta exclusión un repo a LaLiga contaría DOS veces.
+                        const esExtraFutbol = (cat === 'repo futbol' || cat === 'repo fútbol'
                             || (cat === 'repos' && prod.includes('extra repo')
-                                && (prod.includes('fútbol') || prod.includes('futbol')));
+                                && (prod.includes('fútbol') || prod.includes('futbol'))))
+                            && !prod.includes('champion') && !prod.includes('laliga') && !prod.includes('la liga');
                         const esRepoChampLiga = (cat === 'repos up' || cat === 'suscripciones tv')
                             && (prod.includes('champion') || prod.includes('laliga') || prod.includes('la liga'))
                             && !prod.includes('fútbol total') && !prod.includes('futbol total');

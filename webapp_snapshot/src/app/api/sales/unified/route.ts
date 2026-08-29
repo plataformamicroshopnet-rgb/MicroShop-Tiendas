@@ -319,6 +319,14 @@ export async function POST(request: Request) {
     const REPOS_PALANCA = 'Repos UP'
     const EXTRA_FUTBOL_PALANCA = 'Repo Fútbol'
     const EXTRA_FUTBOL_PRODUCTO = 'Repo Up Destino Fútbol'
+    // El extra de 10 € (NC142Y) es para repos con destino «Fútbol Total,
+    // LaLiga o Champions» — no solo Fútbol Total. Un repo a LaLiga o Champions
+    // se quedaba sin sus 10 € y el comercial sin su línea.
+    const esRepoChampLiga = (nombre: any) => {
+      const t = String(nombre || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+      if (t.includes('futbol total')) return false
+      return t.includes('champion') || t.includes('laliga') || t.includes('la liga')
+    }
     const esRepoFutbol = (nombre: any) => {
       const t = String(nombre || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
       return t.includes('repo up destino futbol') && t.includes('futbol total')
@@ -466,6 +474,44 @@ export async function POST(request: Request) {
         })
       }
 
+      // ── EL EXTRA DEL TRASLADO (29-ago-2026) ────────────────────────────
+      // Telefónica paga cada traslado ATF con BAF a ×2,0 sobre PVP MÁS un
+      // extra de 10 € («Extra de Traslados ATF con BAF», OFE NC143M). Nadie
+      // lo registraba. Igual que el extra del Swap, va en «Varios» y enlazado
+      // a su traslado: anular uno se lleva al otro.
+      if (String(prod.categoria || '') === 'Traslado miMovistar') {
+        salesToInsert.push({
+          sheet: 'Varios',
+          vendedor: data.vendedor,
+          fecha: fechaStr,
+          codigo: data.codigo || '',
+          producto: 'Extra Traslado ATF con BAF',
+          nombreCliente: data.nombreCliente,
+          nif: data.nif.toUpperCase(),
+          potencial: prod.noCliente || '',
+          telf: prod.telf || '',
+          pendiente: prod.pendiente || 'No',
+          anulado: 'No',
+          anotaciones: 'Extra del traslado ATF con BAF (lo crea el programa)',
+          sustituyeA: idMadre,
+          telefonoFijo: data.telefonoFijo || '',
+          telefonoMovil: data.telefonoMovil || '',
+          boletin: '',
+          grupo: '-',
+          cuota: 10,
+          detalle: 'Varios',
+          imei: null,
+          numeroPedido: prod.numeroPedido || null,
+          origenStock: null,
+          rentConCoste: null,
+          seguro: null,
+          seguroImporte: null,
+          isLibre: false,
+          isSwap: false,
+          periodId: anchorWp?.id || null
+        })
+      }
+
       // ── EL EXTRA DEL REPO DE FÚTBOL (ago-2026) ─────────────────────────
       // Telefónica paga DOS conceptos por el mismo cliente: el repo
       // («Futbol Total PROMO Repo Up Destino Fútbol», 78 €) y un extra de 10 €.
@@ -473,20 +519,29 @@ export async function POST(request: Request) {
       // que la línea hermana del Swap. Va en la palanca «Repo Fútbol» y no en
       // «Repos (Arpu)» a propósito: así los 10 € no engordan la base del % de
       // Repos y esta línea es la que cuenta como UNA unidad de esa regla.
-      if (String(prod.categoria || '') === REPOS_PALANCA && esRepoFutbol(prod.producto)) {
+      if (String(prod.categoria || '') === REPOS_PALANCA
+          && (esRepoFutbol(prod.producto) || esRepoChampLiga(prod.producto))) {
+        // El PRODUCTO de la hija dice el destino: para LaLiga/Champions se llama
+        // distinto A PROPÓSITO — así el contador del Territorial cuenta la MADRE
+        // (una unidad por cliente) y la palanca «Repo Fútbol» de las comisiones
+        // de los comerciales sigue contando solo los de Fútbol Total, hasta que
+        // el dueño decida si estos también puntúan ahí.
+        const productoExtra = esRepoFutbol(prod.producto) ? EXTRA_FUTBOL_PRODUCTO
+          : (String(prod.producto || '').toLowerCase().includes('champion')
+              ? 'Repo Up Destino Champions' : 'Repo Up Destino LaLiga')
         salesToInsert.push({
           sheet: EXTRA_FUTBOL_PALANCA,
           vendedor: data.vendedor,
           fecha: fechaStr,
           codigo: data.codigo || '',
-          producto: EXTRA_FUTBOL_PRODUCTO,
+          producto: productoExtra,
           nombreCliente: data.nombreCliente,
           nif: data.nif.toUpperCase(),
           potencial: prod.noCliente || '',
           telf: prod.telf || '',
           pendiente: prod.pendiente || 'No',
           anulado: 'No',
-          anotaciones: 'Extra del repo de fútbol (lo crea el programa)',
+          anotaciones: 'Extra del repo de fútbol/LaLiga/Champions (lo crea el programa)',
           // Enlazada a su repo de 78 €: un cliente es UNA operacion, asi que
           // anular cualquiera de las dos se lleva la otra (cascada del PATCH de
           // /api/sales). Sin esto, al caerse el repo el extra seguia cobrandose.
