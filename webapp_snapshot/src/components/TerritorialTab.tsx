@@ -9,6 +9,7 @@ import { TIENDAS_COMERCIALES } from '@/lib/constants'
 import ProductTreeSelector from '@/components/ProductTreeSelector'
 import { matchTipoVenta } from '@/hooks/useComisionesData'
 import { tipoVentaDeReglaTerritorial, seSalvaDelFiltroFutbol } from '@/lib/ventaMatching'
+import { ajusteOficialDispositivos, pvpDeAltaBaf } from '@/lib/territorialConsolidado'
 import { esCorreccionRepos, esVentaSustituida } from '@/lib/salesUtils'
 import { getSaleCommission } from '@/lib/saleCommission'
 import { renderDashboardData, getCurrentMonthString, isSaleCancelled } from '@/lib/salesUtils'
@@ -141,9 +142,12 @@ export default function TerritorialTab() {
   // pertenecen a la palanca O2 (que ya cobra en su propio territorial) y matchTipoVenta
   // las arrastra por nombre de producto (fibra+móvil). Así la base = los mismos grupos de
   // Operaciones por Grupo Cliente (Convergente → miMovistar; Altas BAF → Resto BAF + miMovistar).
+  // DESDE LA F3 (30-ago-2026) la base es la OFICIAL: Σ PVP con IVA de las
+  // altas (lo que multiplica Telefónica), no la comisión interna (≈2× el PVP,
+  // que inflaba el esperado al doble). Mismo ayudante que Territorial PDV.
   const comisionBaseDe = (logs: any[]) => (logs || [])
     .filter(s => String(s.detalle || s.categoria || '').toLowerCase().trim() !== 'o2')
-    .reduce((acc, s) => acc + getSaleCommission(s, _commissionCtx), 0);
+    .reduce((acc, s) => acc + pvpDeAltaBaf(s, catalogs), 0);
 
   const getSalesDataForStoreAndType = (storeName: string, tipoVenta: string) => {
     if (!tipoVenta) return { value: 0, logs: [] };
@@ -462,10 +466,23 @@ export default function TerritorialTab() {
                 const logsCor = rule.baseComision ? dataCor.logs.filter(_notO2) : dataCor.logs;
                 const logsVil = rule.baseComision ? dataVil.logs.filter(_notO2) : dataVil.logs;
                 const logsBej = rule.baseComision ? dataBej.logs.filter(_notO2) : dataBej.logs;
-                const salesAux = rule.baseComision ? logsAux.length : dataAux.value;
-                const salesCor = rule.baseComision ? logsCor.length : dataCor.value;
-                const salesVil = rule.baseComision ? logsVil.length : dataVil.value;
-                const salesBej = rule.baseComision ? logsBej.length : dataBej.value;
+                // Dispositivos (TC1437): a la base de cuotas se suma el numerador
+                // oficial (910 €/alta FTTR + seguros a tarifa plana), igual que en
+                // Territorial PDV — las dos pantallas dicen lo mismo.
+                const esDispositivos = !rule.baseComision
+                  && String(rule.tipoVenta || '').toLowerCase().includes('dispositivos');
+                const ajusteDisp = (store: string): number => {
+                  if (!esDispositivos) return 0;
+                  let sellers: string[] = [];
+                  const key = Object.keys(TIENDAS_COMERCIALES).find(k => k.toLowerCase().replace('é','e') === store.toLowerCase().replace('é','e'));
+                  if (key) sellers = TIENDAS_COMERCIALES[key];
+                  return ajusteOficialDispositivos(sales.filter(s =>
+                    sellers.some(x => String(s.vendedor || '').toLowerCase() === String(x).toLowerCase())));
+                };
+                const salesAux = (rule.baseComision ? logsAux.length : dataAux.value) + ajusteDisp('Auxiliadora 45');
+                const salesCor = (rule.baseComision ? logsCor.length : dataCor.value) + ajusteDisp('Correhuela');
+                const salesVil = (rule.baseComision ? logsVil.length : dataVil.value) + ajusteDisp('Villamayor');
+                const salesBej = (rule.baseComision ? logsBej.length : dataBej.value) + ajusteDisp('Béjar');
                 const salesTot = salesAux + salesCor + salesVil + salesBej;
                 
                 const obj1Target = rule.obj1Type === 'global' ? parseNumber(rule.obj1Global) : 0;

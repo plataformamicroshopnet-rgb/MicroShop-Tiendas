@@ -74,6 +74,61 @@ const parseNumber = (val: any): number => {
   return parseFloat(s) || 0
 }
 
+// ── LAS BASES OFICIALES DEL TER (30-ago-2026, F3 de la Disección) ───────────
+
+const _normSuave = (v: any) => String(v || '').toLowerCase()
+  .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim()
+
+/** Ajuste del numerador OFICIAL del TC1437 (Dispositivos) para unas ventas:
+ *  Telefónica suma 910 € por cada alta FTTR y valora los seguros a tarifa
+ *  plana (Smartphone 200 · Tablet 50 · Reacondicionado 150) en vez de la
+ *  prima real. Nuestro motor sumaba solo cuotas: pintaba 56,5 % cuando el
+ *  cálculo oficial daba 58,4 % — casi 2 puntos estructurales de menos, y el
+ *  objetivo SÍ incluye los ingresos de FTTR. Devuelve los € A SUMAR sobre la
+ *  base de cuotas ya contada (para los seguros, la diferencia plano−prima). */
+export function ajusteOficialDispositivos(ventas: any[]): number {
+  let ajuste = 0
+  for (const s of ventas) {
+    if (isSaleCancelled(s) || esVentaSustituida(s)) continue
+    const cat = _normSuave(s.detalle || s.categoria || s.sheet)
+    const prod = _normSuave(s.producto)
+    if (prod.includes('fttr')) { ajuste += 910; continue }
+    if (cat === 'seguro') {
+      const plano = prod.includes('tablet') ? 50 : (prod.includes('reacond') ? 150 : 200)
+      const prima = parseFloat(String(s.cuota ?? s.importe ?? '0').replace(',', '.')) || 0
+      ajuste += plano - prima
+    }
+  }
+  return Math.round(ajuste * 100) / 100
+}
+
+/** PVP con IVA de un alta BAF, que es la base REAL del pago de Telefónica
+ *  (multiplicador × PVP), no nuestra comisión interna (≈2× el PVP): con la
+ *  comisión, el «esperado» salía inflado ~×2 (4.550 € frente a los 2.487,95 €
+ *  que Telefónica pagó en junio). La venta no guarda el PVP: se recupera del
+ *  catálogo casando producto y comprobando que com × mult == cuota (el mismo
+ *  truco que la deducción de gama); si no casa (venta conjunta con repos
+ *  dentro, producto retocado), se aproxima con cuota/2 (el multiplicador 2 es
+ *  el dominante). */
+export function pvpDeAltaBaf(sale: any, catalogs?: Record<string, any[]>): number {
+  const cuota = parseFloat(String(sale?.cuota ?? sale?.importe ?? '0').replace(',', '.')) || 0
+  const prodVenta = _normSuave(sale?.producto)
+  if (catalogs && prodVenta) {
+    const cat = _normSuave(sale.detalle || sale.categoria || sale.sheet)
+    const listas = cat === 'resto baf' ? ['Resto BAF'] : ['miMovistar']
+    for (const l of listas) {
+      for (const fila of (catalogs[l] || [])) {
+        if (_normSuave(fila.producto) !== prodVenta) continue
+        const com = parseFloat(String(fila.comision ?? '0').replace(',', '.')) || 0
+        const mult = parseFloat(String(fila.comisionConCoste ?? '0').replace(',', '.')) || 0
+        const m = mult === 0 ? 1 : mult
+        if (com > 0 && Math.abs(com * m - cuota) < 0.02) return com
+      }
+    }
+  }
+  return Math.round((cuota / 2) * 100) / 100
+}
+
 // === Funciones idénticas a la Entrada de Datos (components/TerritorialTab) ===
 
 // Ventas (unidades, o € si el tipo es "dispositivos/importe") de una tienda física para
@@ -249,8 +304,18 @@ export function computeTerritorialRows(input: TerritorialInput): any[] {
       const _viva = (s: any) => !isSaleCancelled(s) && !esVentaSustituida(s)
       const convs = sales.filter(s => _viva(s)
         && String(s.detalle || s.categoria || '').trim().toLowerCase() === 'mimovistar')
+      const gamaDe = (prod: any): string => {
+        for (const fila of (((input as any).catalogs || {})['Rent'] || [])) {
+          if (String(fila.producto || '').trim().toLowerCase() === String(prod || '').trim().toLowerCase())
+            return String(fila.gama || '').toUpperCase()
+        }
+        return ''
+      }
       const rents = sales.filter(s => _viva(s)
-        && String(s.detalle || s.categoria || '').trim().toLowerCase() === 'rent')
+        && String(s.detalle || s.categoria || '').trim().toLowerCase() === 'rent'
+        // El TER solo cuenta terminales de gama Media o superior para el
+        // attach; sin catálogo a mano (llamadas de prueba), se cuentan todos.
+        && gamaDe(s.producto) !== 'BAJA')
       const DIA = 86400000
       const conTerminal = convs.filter(c => {
         const cf = _fd(c.fecha); const nif = String(c.nif || '').toUpperCase()
@@ -285,7 +350,19 @@ export function computeTerritorialRows(input: TerritorialInput): any[] {
     // también del conteo, para espejar el grupo de Operaciones por Grupo Cliente.
     const _notO2 = (s: any) => String(s.detalle || s.categoria || '').toLowerCase().trim() !== 'o2'
     const perStoreData = TIENDAS_FISICAS.map(store => getSalesDataForStoreAndType(sales, store, tipoVentaDeReglaTerritorial(terrRule), tiendaMap))
-    const perStore = perStoreData.map(d => terrRule.baseComision ? d.logs.filter(_notO2).length : d.value)
+    let perStore = perStoreData.map(d => terrRule.baseComision ? d.logs.filter(_notO2).length : d.value)
+    // Dispositivos (TC1437): a la base de cuotas se le suma el numerador
+    // oficial que el conteo por cuotas no ve — 910 €/alta FTTR y la
+    // diferencia de valorar los seguros a tarifa plana (200/50/150).
+    if (p.key === 'rent_disp_seguros') {
+      perStore = perStore.map((v, i) => {
+        const sellers = (tiendaMap as any)[Object.keys(tiendaMap).find(k =>
+          k.toLowerCase().replace('é', 'e') === TIENDAS_FISICAS[i].toLowerCase().replace('é', 'e')) || ''] || []
+        const deLaTienda = sales.filter(s =>
+          sellers.some((x: string) => String(s.vendedor || '').toLowerCase() === String(x).toLowerCase()))
+        return v + ajusteOficialDispositivos(deLaTienda)
+      })
+    }
     const salesTot = perStore.reduce((a, b) => a + b, 0)
 
     // Condicionante `baseComision`: el % se aplica sobre la Σ de comisiones por venta
@@ -296,10 +373,13 @@ export function computeTerritorialRows(input: TerritorialInput): any[] {
       dashRowsBasico: (input as any).dashRowsBasico || [],
       viewingPeriod: (input as any).viewingPeriod || ''
     }
-    // Comisión base (€) POR TIENDA, con O2 fuera (su territorial es aparte). Se
-    // usa para el importe real y para los potenciales por tramo.
+    // Base € POR TIENDA para las palancas en % (BAF 20/30, Convergente 40/50),
+    // con O2 fuera (su territorial es aparte). DESDE LA F3 la base es la
+    // OFICIAL: Σ PVP con IVA de las altas (lo que multiplica Telefónica), no
+    // la comisión interna, que es ≈2× el PVP e inflaba el esperado al doble
+    // (validado con junio: pagó 2.487,95 € y el motor esperaba 4.550 €).
     const perStoreCom = TIENDAS_FISICAS.map((_store, i) =>
-      perStoreData[i].logs.filter(_notO2).reduce((a: number, s: any) => a + getSaleCommission(s, ctx), 0))
+      perStoreData[i].logs.filter(_notO2).reduce((a: number, s: any) => a + pvpDeAltaBaf(s, ctx.catalogs), 0))
 
     const importe = TIENDAS_FISICAS.reduce((acc, store, i) => {
       // Excluye ventas O2 (detalle='o2'): pertenecen a la palanca O2 (propio territorial);
