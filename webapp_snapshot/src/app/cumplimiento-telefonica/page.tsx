@@ -110,7 +110,10 @@ export default function CumplimientoTelefonicaPage() {
             .catch(e => console.error(e))
             .finally(() => setLoading(false));
             
-        fetch('/api/admin/periodos')
+        // La lista OFICIAL de periodos (misma forma), que ya viene filtrada por
+        // el cerrojo de visibilidad. Antes esta pantalla —que abren los
+        // comerciales— tiraba de /api/admin/periodos, sin filtro ni permiso.
+        fetch('/api/period')
             .then(r => r.json())
             .then(d => {
                 if (d.success && d.periods) {

@@ -1,15 +1,35 @@
 import { PrismaClient } from '@prisma/client'
 import { NextResponse } from 'next/server'
 import { JEFE_PCT_KEYS_BASE } from '@/lib/comisionJefeTiendas'
-import { exigeAdmin } from '@/lib/apiGuard'
+import { exigeAdmin, exigeSesion } from '@/lib/apiGuard'
+import { getSession } from '@/lib/auth'
+import { esFuturo, sesionPuedeVerFuturo } from '@/lib/visibilidadPeriodos'
 
 const prisma = new PrismaClient()
 
-export async function GET() {
+// La lista de meses. Iba SIN sesión y SIN filtro mientras el POST/PUT sí
+// exigían administrador: cualquiera podía pedirla y ver los meses futuros con
+// sus objetivos y tramos, que es justo lo que el cerrojo de visibilidad tapa en
+// el selector (si los comerciales ven las condiciones del mes que viene, pueden
+// guardarse ventas para el que más les convenga). Ahora pide sesión y aplica el
+// MISMO filtro que /api/period, la fuente única: ADMIN, JEFE_TIENDAS y
+// DIRECCION siguen viéndolo todo — el resto, solo el mes activo y los pasados.
+export async function GET(request: Request) {
   try {
-    const periods = await prisma.workPeriod.findMany({
+    const no = await exigeSesion(request)
+    if (no) return no
+
+    let periods = await prisma.workPeriod.findMany({
       orderBy: { createdAt: 'desc' }
     })
+
+    let session: any = null
+    try { session = await getSession() } catch { session = null }
+    if (session?.user && !sesionPuedeVerFuturo(session.user)) {
+      const activo = periods.find(p => p.status === 'ACTIVE') || null
+      periods = periods.filter(p => !esFuturo(p, activo))
+    }
+
     return NextResponse.json({ success: true, periods })
   } catch (error) {
     console.error('Error fetching periods:', error)
