@@ -67,7 +67,12 @@ export interface ExplicacionComision {
   bloques: { etiqueta: string; texto: string }[]
 }
 
-export function explicaReglaComision(rule: any): ExplicacionComision {
+/** Penalización del mes (fila de Condiciones Mensuales, type=PENALIZACION). */
+export interface PenalizacionMes { text?: any; amount?: any }
+
+const sinHtml = (v: any) => String(v || '').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
+
+export function explicaReglaComision(rule: any, penalizaciones?: PenalizacionMes[]): ExplicacionComision {
   const bloques: { etiqueta: string; texto: string }[] = []
   const productos = String(rule?.productosCuentan || '').trim()
   const clave = productos.toLowerCase()
@@ -116,6 +121,19 @@ export function explicaReglaComision(rule: any): ExplicacionComision {
   // ── las condiciones (el mismo texto que el OJO ámbar) ──
   for (const c of textoCondicionantes(rule)) {
     bloques.push({ etiqueta: 'CONDICIÓN', texto: c })
+  }
+
+  // ── las penalizaciones del mes (Condiciones Mensuales, a mano del dueño) ──
+  // Son GENERALES, no de esta palanca: se enseñan en todos los librillos para
+  // que «toda la información esté en el mismo sitio» (dueño, 30-ago-2026).
+  // La fuente sigue siendo la pantalla de Condiciones Mensuales: se editan
+  // allí y aquí aparecen solas.
+  for (const p of (penalizaciones || [])) {
+    const texto = sinHtml(p?.text)
+    if (!texto) continue
+    const imp = sinHtml(p?.amount)
+    bloques.push({ etiqueta: 'PENALIZACIÓN',
+      texto: texto + (imp && imp !== '0€' && imp !== '0 €' ? ` (${imp})` : '') })
   }
 
   // ── el porqué del «me salía más a fin de mes» ──

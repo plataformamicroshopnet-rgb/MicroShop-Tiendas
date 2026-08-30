@@ -406,6 +406,9 @@ export default function ComisionesDashboardPage() {
     const { authorized, user } = useGuard('MODULE_COMISIONES')
     const [salesModal, setSalesModal] = React.useState<{ title: string; sales: any[] } | null>(null);
     const [librillo, setLibrillo] = React.useState<ExplicacionComision | null>(null);
+    // Las penalizaciones del mes (Condiciones Mensuales): se cargan una vez y
+    // viajan al final de cada librillo ℹ.
+    const [penalizacionesMes, setPenalizacionesMes] = React.useState<any[]>([]);
     
 
     const {
@@ -426,6 +429,19 @@ export default function ComisionesDashboardPage() {
         activePeriodKey,
         catalogs
     } = useComisionesData(user)
+
+    // Las penalizaciones se leen del mismo mes que enseña la pantalla
+    // (el activePeriodKey del propio hook de datos).
+    React.useEffect(() => {
+        if (!activePeriodKey) return
+        fetch(`/api/admin/monthly-conditions?periodKey=${encodeURIComponent(activePeriodKey)}`)
+            .then(r => r.json())
+            .then(d => {
+                const filas = Array.isArray(d) ? d : (d?.data || d?.conditions || [])
+                setPenalizacionesMes(filas.filter((c: any) => String(c?.type) === 'PENALIZACION'))
+            })
+            .catch(() => setPenalizacionesMes([]))
+    }, [activePeriodKey])
 
     const handleReorderTiendaRule = async (index: number, direction: 'up' | 'down') => {
         if (!tiendaRules || !setTiendaRules || !activePeriodKey) return;
@@ -502,14 +518,19 @@ export default function ComisionesDashboardPage() {
                             aria-label="Cerrar">×</button>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {librillo.bloques.map((b, i) => (
-                      <div key={i} style={{ padding: '10px 12px', background: b.etiqueta === 'ASÍ SE COBRA' ? '#fff7ed' : '#f8fafc',
-                                            border: `1px solid ${b.etiqueta === 'ASÍ SE COBRA' ? '#fdba74' : '#e2e8f0'}`,
-                                            borderRadius: 9, fontSize: 13.5, lineHeight: 1.55, color: '#334155' }}>
-                        <span style={{ fontWeight: 800, color: b.etiqueta === 'ASÍ SE COBRA' ? '#c2410c' : '#0284c7', marginRight: 6 }}>{b.etiqueta}</span>
-                        {b.texto}
-                      </div>
-                    ))}
+                    {librillo.bloques.map((b, i) => {
+                      const esCobro = b.etiqueta === 'ASÍ SE COBRA'
+                      const esPenal = b.etiqueta === 'PENALIZACIÓN'
+                      return (
+                        <div key={i} style={{ padding: '10px 12px',
+                                              background: esCobro ? '#fff7ed' : esPenal ? '#fef2f2' : '#f8fafc',
+                                              border: `1px solid ${esCobro ? '#fdba74' : esPenal ? '#fecaca' : '#e2e8f0'}`,
+                                              borderRadius: 9, fontSize: 13.5, lineHeight: 1.55, color: '#334155' }}>
+                          <span style={{ fontWeight: 800, color: esCobro ? '#c2410c' : esPenal ? '#dc2626' : '#0284c7', marginRight: 6 }}>{b.etiqueta}</span>
+                          {b.texto}
+                        </div>
+                      )
+                    })}
                   </div>
                   <div style={{ marginTop: 12, fontSize: 11.5, color: '#64748b' }}>
                     Los números salen de la regla de ESTE mes: si cambia la configuración, este texto cambia con ella.
@@ -895,7 +916,7 @@ export default function ComisionesDashboardPage() {
                                                                     size={14}
                                                                     color="#0284c7"
                                                                     style={{ cursor: 'pointer', flexShrink: 0 }}
-                                                                    onClick={(e) => { e.stopPropagation(); setLibrillo(explicaReglaComision(rule)); }}
+                                                                    onClick={(e) => { e.stopPropagation(); setLibrillo(explicaReglaComision(rule, penalizacionesMes)); }}
                                                                     aria-label={`Cómo se cobra ${gName}`}
                                                                   />
                                                                   {gName === 'ARPU' ? 'Repos (Arpu)' : gName}
