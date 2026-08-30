@@ -323,6 +323,10 @@ export interface RepartoPorVenta {
   gatePctPalanca: number      // 0 = sin candado de cobro
   gateCumplido: boolean       // sin cumplirse, el torneo entero paga 0 (todo queda «en juego»)
   objetivo2PctMin: number     // 0 = el 2º importe solo exige las ventas del 2º objetivo
+  // El contador crudo, para la línea «faltan X para el 100 % y Y para el 115 %»
+  // (dueño, 30-ago-2026: mejor que el número fijo del 2º objetivo):
+  palancaUds: number | null   // ventas del MES de la palanca de referencia
+  palancaObj: number | null   // su objetivo del mes (obj. 1º tramo)
 }
 
 export function repartoPorVenta(items: { name: string; sale: any }[], c: Concurso,
@@ -362,13 +366,20 @@ export function repartoPorVenta(items: { name: string; sale: any }[], c: Concurs
   const gatePct = Math.max(0, Number(c.gatePctPalanca) || 0)
   const pctMin2 = Math.max(0, Number(c.objetivo2PctMin) || 0)
   let pctPalanca: number | null = null
-  if (gatePct > 0 || pctMin2 > 0) {
+  let palancaUds: number | null = null
+  let palancaObj: number | null = null
+  {
+    // Se mide siempre que la palanca sea resoluble (no solo con candados): el
+    // contador alimenta también la línea «faltan X para el 100 % y Y para el
+    // 115 %» del ranking (dueño, 30-ago-2026).
     const regla = reglaDeReferencia(c, reglas || [])
     const obj1 = regla ? (parseFloat(String(regla.objPrimerTramo ?? '').replace(',', '.')) || 0) : 0
     if (regla && obj1 > 0) {
       let uds = 0
       for (const { sale } of items) if (matchesRule(sale, regla.nombre, regla.productosCuentan)) uds++
       pctPalanca = uds / obj1 * 100
+      palancaUds = uds
+      palancaObj = obj1
     }
   }
   const gateCumplido = gatePct <= 0 || (pctPalanca !== null && pctPalanca >= gatePct)
@@ -402,7 +413,20 @@ export function repartoPorVenta(items: { name: string; sale: any }[], c: Concurs
   return { filas, repartido, enJuegoTotal, tope, agotado: tope > 0 && restante < rate,
            teamVentas, minIndividual: minInd, minGrupal: minGrp, grupalCumplido,
            rateActual: rate, objetivo2Grupal: obj2, importePorVenta2: rate2, objetivo2Cumplido,
-           pctPalanca, gatePctPalanca: gatePct, gateCumplido, objetivo2PctMin: pctMin2 }
+           pctPalanca, gatePctPalanca: gatePct, gateCumplido, objetivo2PctMin: pctMin2,
+           palancaUds, palancaObj }
+}
+
+// «Faltan X para el 100 % y Y para el 115 %» — la línea que pide el dueño en
+// vez del número fijo del 2º objetivo (30-ago-2026). Los umbrales 100/115 son
+// los tramos oficiales del PRV de la palanca (Lanzamiento CP AGO26, pág. 30).
+export function faltanParaTramos(rep: RepartoPorVenta): string | null {
+  if (rep.palancaUds === null || rep.palancaObj === null || !(rep.palancaObj > 0)) return null
+  const f100 = Math.max(0, Math.ceil(rep.palancaObj - rep.palancaUds))
+  const f115 = Math.max(0, Math.ceil(rep.palancaObj * 1.15 - rep.palancaUds))
+  if (f100 <= 0 && f115 <= 0) return '100 % y 115 % conseguidos ✔'
+  if (f100 <= 0) return `100 % conseguido ✔ · faltan ${f115} para el 115 %`
+  return `faltan ${f100} para el 100 % y ${f115} para el 115 %`
 }
 
 // ── Las NOTAS del concurso se escriben SOLAS desde sus condiciones ──────────

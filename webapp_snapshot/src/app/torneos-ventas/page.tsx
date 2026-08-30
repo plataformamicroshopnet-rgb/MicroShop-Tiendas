@@ -9,7 +9,7 @@ import { usePeriod } from '@/components/PeriodProvider'
 import { renderDashboardData, isSolar360 } from '@/lib/salesUtils'
 import { getSaleCommission } from '@/lib/saleCommission'
 import { can } from '@/lib/permissions'
-import { loadTorneosConfigMes, concursoSaleValue, estadoConcurso, concursoJuegaEnMes, generaNotasConcurso, premioLabel, repartoPorVenta, resolverObjetivosTorneo, fmtEur, RepartoPorVenta, TorneosConfig } from '@/lib/torneosConfig'
+import { loadTorneosConfigMes, concursoSaleValue, estadoConcurso, concursoJuegaEnMes, generaNotasConcurso, premioLabel, repartoPorVenta, faltanParaTramos, fmtEur, RepartoPorVenta, TorneosConfig } from '@/lib/torneosConfig'
 
 // Nombre de vendedor normalizado (minúsculas, sin acentos) para casar el mapa de
 // comisiones con el roster, igual que hace useComisionesData con los vendedores.
@@ -431,7 +431,9 @@ export default function TorneosVentasPage() {
                         : <> repartido {fmtEur(col.porVenta.repartido)}</>}</>
                     )}
                     {col.porVenta.objetivo2Grupal > 0 && !col.porVenta.objetivo2Cumplido ? (
-                      <> · 🎯 a {fmtEur(col.porVenta.importePorVenta2)} por venta si el equipo llega a {col.porVenta.objetivo2Grupal}</>
+                      // En vez del número fijo del 2º objetivo, lo que FALTA para
+                      // el 100 % y el 115 % de la palanca del mes (dueño, 30-ago).
+                      <> · 🎯 a {fmtEur(col.porVenta.importePorVenta2)} por venta — {faltanParaTramos(col.porVenta) ?? `si el equipo llega a ${col.porVenta.objetivo2Grupal}`}</>
                     ) : null}
                   </div>
                 ) : null}

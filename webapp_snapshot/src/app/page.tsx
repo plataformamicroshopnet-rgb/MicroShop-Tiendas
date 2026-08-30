@@ -11,7 +11,7 @@ import { getSaleCommission } from '@/lib/saleCommission'
 import { getEffectiveTiendaComerciales } from '@/lib/comercialRoster'
 import { can } from '@/lib/permissions'
 import { getDiasLaborablesRestantes } from '@/lib/trackingCalculations'
-import { loadTorneosConfigMes, concursoSaleValue, estadoConcurso, concursoJuegaEnMes, repartoPorVenta, resolverObjetivosTorneo, TorneosConfig } from '@/lib/torneosConfig'
+import { loadTorneosConfigMes, concursoSaleValue, estadoConcurso, concursoJuegaEnMes, repartoPorVenta, faltanParaTramos, TorneosConfig } from '@/lib/torneosConfig'
 import {
   loadDashboardConfig,
   DEFAULT_DASHBOARD_CONFIG,
@@ -725,7 +725,7 @@ export default function DashboardPage() {
                         : <>repartido {eurFmt(r.repartido)}</>}
                     {r.objetivo2Grupal > 0 ? (r.objetivo2Cumplido
                       ? <> · 🎯 ¡2º objetivo! todas a {eurFmt(r.importePorVenta2)}</>
-                      : <> · 🎯 a {eurFmt(r.importePorVenta2)}/venta si llegáis a {r.objetivo2Grupal}</>) : null}
+                      : <> · 🎯 a {eurFmt(r.importePorVenta2)}/venta — {faltanParaTramos(r) ?? `si llegáis a ${r.objetivo2Grupal}`}</>) : null}
                   </div>) })() : null}
                 {/* Con UN solo concurso la carta es ancha: la lista va en 2
                     columnas (1º-4º izquierda, 5º-8º derecha). Con 2-3 concursos
