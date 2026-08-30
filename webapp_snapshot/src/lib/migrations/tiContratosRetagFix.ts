@@ -284,6 +284,323 @@ const RETAG: { id: string; de: string; a: string }[] = [
   }
 ]
 
+
+// TANDA 2 (30-ago, aprobada por el dueño: «el 1 ok» — modelo ALTA POR LÍNEA):
+// Telefónica paga los 10 € del ALTA CLIENTE (NC13D7/D8) por CADA línea que el
+// cliente nuevo contrata el primer día — también las tecleadas como «Líneas
+// extras adicionales» (la capa por gama es la misma: AV 15/MV 10/BV 5, así que
+// adicional→Cliente NUEVO da capa+10 exacto). Junio: 28 líneas calibradas
+// contra la pantalla de Liquidaciones (residuo +50 = BAF SA + pendientes).
+// Julio: 33 líneas por el fichero spxd 2026-07 (sus capas llegan en la remesa
+// de septiembre). La adicional BAF SA queda FUERA (punto 2, pendiente).
+const RETAG2: { id: string; de: string; a: string }[] = [
+  {
+    "id": "8797edf2-4151-4a2c-bf69-9b41185a10b0",
+    "de": "Contrato Móvil BV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil BV - Cliente NUEVO"
+  },
+  {
+    "id": "7b2f49c0-2de3-45dd-8f08-9a44405623ed",
+    "de": "Contrato Móvil BV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil BV - Cliente NUEVO"
+  },
+  {
+    "id": "b396b65c-fdca-449d-8e85-b0adc8ec691b",
+    "de": "Contrato Móvil BV - Alta, portabilidad y migración contrato móvil",
+    "a": "Contrato Móvil BV - Cliente NUEVO"
+  },
+  {
+    "id": "71308717-bd4c-48b1-88b8-b00068eaa8be",
+    "de": "Contrato Móvil BV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil BV - Cliente NUEVO"
+  },
+  {
+    "id": "b697c8a0-2387-4df3-b81b-37bf5354ad14",
+    "de": "Contrato Móvil MV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil MV - Cliente NUEVO"
+  },
+  {
+    "id": "890d3af6-99cb-46bd-b56d-7cc50405f8f4",
+    "de": "Contrato Móvil AV - Alta, portabilidad y migración",
+    "a": "Contrato Móvil AV - Cliente NUEVO"
+  },
+  {
+    "id": "c597871d-0315-4adb-9c00-9137b3f1fdad",
+    "de": "Contrato Móvil AV - Alta, portabilidad y migración",
+    "a": "Contrato Móvil AV - Cliente NUEVO"
+  },
+  {
+    "id": "fa92c898-11b9-452b-85e3-97ed8e1101a0",
+    "de": "Contrato Móvil BV - Alta, portabilidad y migración contrato móvil",
+    "a": "Contrato Móvil BV - Cliente NUEVO"
+  },
+  {
+    "id": "d6415ad5-48f5-4fd0-9238-775e5a8069e5",
+    "de": "Contrato Móvil MV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil MV - Cliente NUEVO"
+  },
+  {
+    "id": "1b28759e-33bd-4746-8a04-12eb45751d46",
+    "de": "Contrato Móvil MV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil MV - Cliente NUEVO"
+  },
+  {
+    "id": "348a26f7-afdb-44e7-b8b2-0a539acb0d19",
+    "de": "Contrato Móvil MV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil MV - Cliente NUEVO"
+  },
+  {
+    "id": "c05b1ad1-500f-43b9-9e62-ed9c6ea61e44",
+    "de": "Contrato Móvil AV - Alta, portabilidad y migración",
+    "a": "Contrato Móvil AV - Cliente NUEVO"
+  },
+  {
+    "id": "d19897b6-faee-46ea-830f-72764d92f034",
+    "de": "Contrato Móvil AV - Alta, portabilidad y migración",
+    "a": "Contrato Móvil AV - Cliente NUEVO"
+  },
+  {
+    "id": "77157962-5540-4dad-a000-66792f26668d",
+    "de": "Contrato Móvil BV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil BV - Cliente NUEVO"
+  },
+  {
+    "id": "bb0b1f89-2646-4032-9c99-ea7aacecdb86",
+    "de": "Contrato Móvil BV - Alta, portabilidad y migración contrato móvil",
+    "a": "Contrato Móvil BV - Cliente NUEVO"
+  },
+  {
+    "id": "0a0f23c1-34b8-4a2b-a73f-2387510aa302",
+    "de": "Contrato Móvil AV - Alta, portabilidad y migración",
+    "a": "Contrato Móvil AV - Cliente NUEVO"
+  },
+  {
+    "id": "9655e7e0-4d03-45a3-9b8c-41a53a544ccc",
+    "de": "Contrato Móvil AV - Alta, portabilidad y migración",
+    "a": "Contrato Móvil AV - Cliente NUEVO"
+  },
+  {
+    "id": "57ef76b3-75fa-4212-bb04-b2c006795f1e",
+    "de": "Contrato Móvil AV - Alta, portabilidad y migración",
+    "a": "Contrato Móvil AV - Cliente NUEVO"
+  },
+  {
+    "id": "f4f27a85-f5be-4fdf-9b86-107e17eb1749",
+    "de": "Contrato Móvil BV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil BV - Cliente NUEVO"
+  },
+  {
+    "id": "26de015c-cc50-4eef-be25-428c8712a4f1",
+    "de": "Contrato Móvil AV - Alta, portabilidad y migración",
+    "a": "Contrato Móvil AV - Cliente NUEVO"
+  },
+  {
+    "id": "c44a4b8a-4108-43cc-903e-5eae35d02d09",
+    "de": "Contrato Móvil AV - Alta, portabilidad y migración",
+    "a": "Contrato Móvil AV - Cliente NUEVO"
+  },
+  {
+    "id": "72f9ac5b-d211-4451-a6ba-e70809dc7bce",
+    "de": "Contrato Móvil AV - Alta, portabilidad y migración",
+    "a": "Contrato Móvil AV - Cliente NUEVO"
+  },
+  {
+    "id": "518cd632-e7c8-4c3b-bfe2-c909e6980034",
+    "de": "Contrato Móvil BV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil BV - Cliente NUEVO"
+  },
+  {
+    "id": "105f155f-4249-43d9-ab86-6065861c7e5c",
+    "de": "Contrato Móvil BV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil BV - Cliente NUEVO"
+  },
+  {
+    "id": "d5551e0c-9f71-4e9f-ae59-c0f5f3870a8f",
+    "de": "Contrato Móvil BV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil BV - Cliente NUEVO"
+  },
+  {
+    "id": "fec9bdcd-911f-4a3a-a61b-876327094df3",
+    "de": "Contrato Móvil BV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil BV - Cliente NUEVO"
+  },
+  {
+    "id": "c8f75066-397c-48eb-a919-ca82fd4e3bec",
+    "de": "Contrato Móvil BV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil BV - Cliente NUEVO"
+  },
+  {
+    "id": "2d0bf83d-11a5-4e13-b1df-12fe1b988491",
+    "de": "Contrato Móvil AV - Alta, portabilidad y migración",
+    "a": "Contrato Móvil AV - Cliente NUEVO"
+  },
+  {
+    "id": "e6bb59a8-c7eb-47d7-a180-1e707ff3a902",
+    "de": "Contrato Móvil MV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil MV - Cliente NUEVO"
+  },
+  {
+    "id": "467b9633-dbde-4605-ae49-3e1bab6c7601",
+    "de": "Contrato Móvil BV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil BV - Cliente NUEVO"
+  },
+  {
+    "id": "e9e3dc7f-2f54-4ebe-8946-d91d976834c1",
+    "de": "Contrato Móvil BV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil BV - Cliente NUEVO"
+  },
+  {
+    "id": "f7aaee18-a1f2-4b2c-aa35-0cfa22d7d56e",
+    "de": "Contrato Móvil BV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil BV - Cliente NUEVO"
+  },
+  {
+    "id": "0ddec742-7e63-49ed-aaa1-5a6642c77b50",
+    "de": "Contrato Móvil BV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil BV - Cliente NUEVO"
+  },
+  {
+    "id": "8b2ccc39-77ba-484d-8dca-5cf55b74cc51",
+    "de": "Contrato Móvil MV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil MV - Cliente NUEVO"
+  },
+  {
+    "id": "6ca2ce1d-87bc-4714-926c-57d4390b7203",
+    "de": "Contrato Móvil MV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil MV - Cliente NUEVO"
+  },
+  {
+    "id": "ab2886e0-2d39-4011-852b-0c1057aaf0ce",
+    "de": "Contrato Móvil MV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil MV - Cliente NUEVO"
+  },
+  {
+    "id": "c8eff641-e08b-4f38-a7b9-a6f64c2dbc8b",
+    "de": "Contrato Móvil MV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil MV - Cliente NUEVO"
+  },
+  {
+    "id": "5acf92fb-e5ac-4ada-a8b3-9718aa3fe2d6",
+    "de": "Contrato Móvil MV - Alta, portabilidad y migración contrato móvil",
+    "a": "Contrato Móvil MV - Cliente NUEVO"
+  },
+  {
+    "id": "1dda6606-af25-42e1-8435-216426473bc7",
+    "de": "Contrato Móvil MV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil MV - Cliente NUEVO"
+  },
+  {
+    "id": "61b67563-17f4-4dc6-9714-aaec2212cbd6",
+    "de": "Contrato Móvil MV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil MV - Cliente NUEVO"
+  },
+  {
+    "id": "b70fe4a6-f12d-4629-840f-98bc77b8940f",
+    "de": "Contrato Móvil BV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil BV - Cliente NUEVO"
+  },
+  {
+    "id": "6b4a32e0-ed87-46b3-b3c5-d4524ca43214",
+    "de": "Contrato Móvil AV - Alta, portabilidad y migración",
+    "a": "Contrato Móvil AV - Cliente NUEVO"
+  },
+  {
+    "id": "bab94a32-1c62-4da0-ad28-d6e6bd5cf990",
+    "de": "Contrato Móvil MV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil MV - Cliente NUEVO"
+  },
+  {
+    "id": "a2059983-6967-4b64-8202-e17f168b6d30",
+    "de": "Contrato Móvil BV - Alta, portabilidad y migración contrato móvil",
+    "a": "Contrato Móvil BV - Cliente NUEVO"
+  },
+  {
+    "id": "d803e1ec-dc63-4704-9fe1-dbb4ef66bf17",
+    "de": "Contrato Móvil BV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil BV - Cliente NUEVO"
+  },
+  {
+    "id": "6d66bf87-3ecb-4283-90cd-0a10c99a8aeb",
+    "de": "Contrato Móvil MV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil MV - Cliente NUEVO"
+  },
+  {
+    "id": "a6132023-53d1-4c8b-ab87-6d357f328003",
+    "de": "Contrato Móvil MV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil MV - Cliente NUEVO"
+  },
+  {
+    "id": "2600e5ce-1187-48b3-b9b6-19cd077fb2d9",
+    "de": "Contrato Móvil MV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil MV - Cliente NUEVO"
+  },
+  {
+    "id": "831295e2-a3dd-483e-a993-bbf586d59179",
+    "de": "Contrato Móvil MV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil MV - Cliente NUEVO"
+  },
+  {
+    "id": "4f6b6494-edf6-48b1-a1f8-4fca19b28c43",
+    "de": "Contrato Móvil MV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil MV - Cliente NUEVO"
+  },
+  {
+    "id": "1b254161-a9d0-4dbf-9392-e57d13662c94",
+    "de": "Contrato Móvil MV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil MV - Cliente NUEVO"
+  },
+  {
+    "id": "6f4a20af-54b4-409f-8ef6-fbe03906730b",
+    "de": "Contrato Móvil MV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil MV - Cliente NUEVO"
+  },
+  {
+    "id": "98e0bcdf-dd50-4597-aeeb-9d636e02ef33",
+    "de": "Contrato Móvil BV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil BV - Cliente NUEVO"
+  },
+  {
+    "id": "927ce199-2ddf-4785-9842-c7153b43cb45",
+    "de": "Contrato Móvil MV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil MV - Cliente NUEVO"
+  },
+  {
+    "id": "bfa197b9-2973-48c1-ae1f-960c7ab0d93d",
+    "de": "Contrato Móvil MV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil MV - Cliente NUEVO"
+  },
+  {
+    "id": "ade1855b-a9c2-4727-a49f-262365a9d5d3",
+    "de": "Contrato Móvil BV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil BV - Cliente NUEVO"
+  },
+  {
+    "id": "b470b224-a9a4-48db-9e5c-56592513bd4c",
+    "de": "Contrato Móvil BV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil BV - Cliente NUEVO"
+  },
+  {
+    "id": "118e00fa-6873-473e-b571-02d662276fa2",
+    "de": "Contrato Móvil MV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil MV - Cliente NUEVO"
+  },
+  {
+    "id": "e5af415e-44bc-43eb-8f2f-9a8498de62da",
+    "de": "Contrato Móvil MV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil MV - Cliente NUEVO"
+  },
+  {
+    "id": "812bd773-c039-4411-864b-0af31fe70ea1",
+    "de": "Contrato Móvil BV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil BV - Cliente NUEVO"
+  },
+  {
+    "id": "040f5c9d-c151-46b4-b7e2-03b59ab93f28",
+    "de": "Contrato Móvil AV - Alta, portabilidad y migración Líneas extras adicionales",
+    "a": "Contrato Móvil AV - Cliente NUEVO"
+  }
+]
+
 export async function fixTiContratosRetag() {
   const prisma = new PrismaClient()
   try {
@@ -322,15 +639,15 @@ export async function fixTiContratosRetag() {
       }
     }
 
-    // (3) el re-etiquetado, venta a venta con guarda exacta
+    // (3) el re-etiquetado, venta a venta con guarda exacta (tandas 1 y 2)
     let retag = 0
-    for (const r of RETAG) {
+    for (const r of [...RETAG, ...RETAG2]) {
       const res = await prisma.sale.updateMany({
         where: { id: r.id, producto: r.de },
         data: { producto: r.a } })
       retag += res.count
     }
-    console.log(`[tiRetag] planos cerrados asegurados · ${retag}/${RETAG.length} ventas re-etiquetadas a Cliente NUEVO`)
+    console.log(`[tiRetag] planos cerrados asegurados · ${retag}/${RETAG.length + RETAG2.length} ventas re-etiquetadas a Cliente NUEVO`)
   } catch (e) {
     console.error('[tiRetag] error (no bloquea el arranque):', e)
   } finally {
