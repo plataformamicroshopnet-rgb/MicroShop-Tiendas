@@ -49,6 +49,9 @@ export interface Concurso {
   minGrupal?: number             // solo 'porVenta': ventas mínimas ENTRE TODOS — sin llegar, no cobra nadie
   objetivo2Grupal?: number       // solo 'porVenta' (dueño, 25-ago-2026): 2º OBJETIVO de equipo (ventas)
   importePorVenta2?: number      //   al llegar, TODAS las ventas pasan a pagarse a este importe (retroactivo)
+  objetivo2PctMin?: number       //   coletilla del cartel «mínimo el X%» en la frase del 2º objetivo
+                                 //   (dueño, 30-ago-2026): condición que ÉL vigila al pagar, como la
+                                 //   nota del 100% — el motor NO la comprueba (solo cuenta ventas)
   palancaRef?: string            // objetivos en % (dueño, 26-ago-2026): regla de comisiones de referencia
   minGrupalPct?: number          //   mínimo de equipo como % del 1º objetivo de esa palanca (100 = entero)
   objetivo2Pct?: number          //   2º objetivo como % del mismo objetivo (ej. 115)
@@ -136,6 +139,7 @@ export function parseTorneosConfig(raw: any): TorneosConfig {
         minGrupal: Math.max(0, Math.floor(Number(c.minGrupal) || 0)),
         objetivo2Grupal: Math.max(0, Math.floor(Number(c.objetivo2Grupal) || 0)),
         importePorVenta2: Number(c.importePorVenta2) || 0,
+        objetivo2PctMin: Math.max(0, Number(c.objetivo2PctMin) || 0),
         palancaRef: String(c.palancaRef || '').trim(),
         minGrupalPct: Math.max(0, Number(c.minGrupalPct) || 0),
         objetivo2Pct: Math.max(0, Number(c.objetivo2Pct) || 0),
@@ -380,16 +384,23 @@ export function generaNotasConcurso(c: Concurso): string {
   }
   if ((c.premioModo || 'podio') === 'porVenta') {
     if (Number(c.importePorVenta) > 0) partes.push(`Se paga ${fmtEur(Number(c.importePorVenta))} por venta realizada.`)
-    if (Number(c.importePorVenta2) > 0 && Number(c.objetivo2Grupal) > 0)
-      partes.push(`🎯 Al llegar el equipo a ${c.objetivo2Grupal} venta(s)`
-        + (Number(c.objetivo2Pct) > 0 ? ` (el ${c.objetivo2Pct}% del objetivo${c.palancaRef ? ' de ' + c.palancaRef : ''})` : '')
-        + `, TODAS pasan a ${fmtEur(Number(c.importePorVenta2))} por venta.`)
     if (Number(c.minIndividual) > 0) partes.push(`Mínimo individual: ${c.minIndividual} venta(s) para cobrar.`)
     if (Number(c.minGrupal) > 0) partes.push(`Mínimo de equipo: ${c.minGrupal} venta(s) entre todos`
       + (Number(c.minGrupalPct) > 0 ? ` (el ${c.minGrupalPct}% del objetivo${c.palancaRef ? ' de ' + c.palancaRef : ''})` : '') + '.')
     if (Number(c.topeBote) > 0) partes.push(`Bote máximo: ${fmtEur(Number(c.topeBote))} entre todos, por orden de venta.`)
   }
   if (c.notas) partes.push(String(c.notas))
+  // La frase del 🎯 CIERRA el cartel (dueño, 30-ago-2026): primero las reglas
+  // base y la letra del concurso, y el premio gordo al final. La coletilla
+  // «mínimo el X%» es condición que vigila el dueño al pagar (como la nota del
+  // 100%): el motor solo cuenta ventas del torneo.
+  if ((c.premioModo || 'podio') === 'porVenta'
+      && Number(c.importePorVenta2) > 0 && Number(c.objetivo2Grupal) > 0) {
+    partes.push(`🎯 Al llegar el equipo a ${c.objetivo2Grupal} venta(s)`
+      + (Number(c.objetivo2Pct) > 0 ? ` (el ${c.objetivo2Pct}% del objetivo${c.palancaRef ? ' de ' + c.palancaRef : ''})` : '')
+      + (Number(c.objetivo2PctMin) > 0 ? ` mínimo el ${c.objetivo2PctMin}%` : '')
+      + `, TODAS pasan a ${fmtEur(Number(c.importePorVenta2))} por venta.`)
+  }
   return partes.join(' ')
 }
 

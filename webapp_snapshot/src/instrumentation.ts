@@ -5,5 +5,7 @@ export async function register() {
     await runO2AdicionalesFix()
     const { fixTerritorialJulio } = await import('./lib/migrations/territorialJulioFix')
     await fixTerritorialJulio()
+    const { fixTorneoPctMin } = await import('./lib/migrations/torneoPctMinFix')
+    await fixTorneoPctMin()
   }
 }

@@ -369,6 +369,12 @@ export default function ConfiguradorTorneosPage() {
                            value={c.importePorVenta2 || ''} placeholder="ej. 10 (doblar los 5)"
                            onChange={e => updateConcurso(ci, { importePorVenta2: Number(e.target.value) })} />
                   </div>
+                  <div>
+                    <label style={{ fontSize: 12, color: 'var(--medium-gray,#64748b)', fontWeight: 600 }}>«mínimo el X%» del 2º objetivo (cartel)</label>
+                    <input type="number" step="1" style={{ ...ipt, width: '100%', marginTop: 4 }}
+                           value={c.objetivo2PctMin || ''} placeholder="ej. 120 — condición que vigilas tú"
+                           onChange={e => updateConcurso(ci, { objetivo2PctMin: Number(e.target.value) })} />
+                  </div>
                   {/* OBJETIVOS EN % (dueño, 26-ago-2026): «llegar al 100%» = el 1º objetivo
                       de la palanca del mes. Se guardan también resueltos en unidades. */}
                   <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 14, background: 'rgba(14,165,233,0.06)', border: '1px dashed rgba(14,165,233,0.4)', borderRadius: 10, padding: '10px 12px' }}>
