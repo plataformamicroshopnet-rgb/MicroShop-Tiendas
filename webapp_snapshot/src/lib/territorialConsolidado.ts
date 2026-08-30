@@ -23,7 +23,7 @@ export const STATIC_PALANCAS = [
     tramos: { tramo1: '20%', tramo2: '30%', tramo3: '-', bonif: '-' },
     matches: ['Alta BAF Total', 'Altas BAF', 'baf total'],
     reglas: [
-      'QUÉ CUENTA · Altas y portabilidades de fibra Movistar y O2 de las 4 tiendas, más los traslados con fibra. Las anuladas por causa técnica (ORTI) que no se rehacen en 15 días también SUMAN a favor.',
+      'QUÉ CUENTA · Altas y portabilidades de fibra Movistar y O2 de las 4 tiendas. Las anuladas por causa técnica (ORTI) que no se rehacen en 15 días también SUMAN a favor. Los TRASLADOS no puntúan para el objetivo — pero SÍ se pagan (×2 su cuota + 10 € de extra, por el tarifario).',
       'OBJETIVO · La suma de los objetivos BAF Convergente MS + Convergente O2 + Resto BAF del Excel de Telefónica. Se mide con la EMPRESA entera, no tienda a tienda.',
       'QUÉ PAGA · Al llegar al 100 % del objetivo: el 20 % de la cuota (PVP con IVA y promos) de CADA operación del mes. Al 115 %: el 30 %. Por debajo del 100 %: nada.',
       'CANDADOS · Sin el 80 % del Convergente no se cobra. Una baja de fibra en el domicilio a ±30 días anula el alta (mismo titular o distinto). Si el cliente baja de tarifa en los 15 días tras instalar, pagan por la tarifa menor.',
@@ -37,7 +37,7 @@ export const STATIC_PALANCAS = [
     tramos: { tramo1: '40%', tramo2: '50%', tramo3: '-', bonif: '-' },
     matches: ['Alta BAF Convergente', 'Altas BAF Movistar Convergente', 'baf convergente'],
     reglas: [
-      'QUÉ CUENTA · Altas, portabilidades y traslados de miMovistar y Fusión (fibra + paquete). OJO: la fibra y el paquete deben tramitarse en el MISMO pedido de Movistar; en dos pedidos, Telefónica lo degrada a fibra suelta (~60 €). Las ORTI no rehechas en 15 días suman.',
+      'QUÉ CUENTA · Altas y portabilidades de miMovistar y Fusión (fibra + paquete). OJO: la fibra y el paquete deben tramitarse en el MISMO pedido de Movistar; en dos pedidos, Telefónica lo degrada a fibra suelta (~60 €). Las ORTI no rehechas en 15 días suman. Los TRASLADOS no puntúan (se pagan aparte).',
       'OBJETIVO · El BAF CONVERGENTE MS del Excel. Empresa entera.',
       'QUÉ PAGA · Al 100 %: el 40 % de la cuota (PVP con IVA) de cada alta. Al 115 %: el 50 %.',
       'ES LA LLAVE DE TODO · Esta palanca es EL GATE: sin su 80 % no se cobra el resto del Territorial (BAF, Fútbol, FTTR, Dispositivos).',

@@ -8,7 +8,6 @@ import { PageHeader } from '@/components/PageHeader'
 import { useComisionesData, matchTipoVenta } from '@/hooks/useComisionesData'
 import { ALL_GROUPS } from '@/lib/comisiones'
 import { useGuard } from '@/hooks/useGuard'
-import { textoCondicionantes } from '@/lib/condicionantesTexto'
 
 // EL LIBRILLO ℹ DE CADA PALANCA (dueño, 30-ago-2026): igual que en Territorial
 // PDV, cada fila explica qué cuenta y cómo se cobra — la respuesta escrita al
@@ -928,23 +927,12 @@ export default function ComisionesDashboardPage() {
                                                                     </div>
                                                                 )}
                                                             </div>
-                                                            {/* EL «OJO» DE LA PALANCA. Se escribe SOLO a partir de lo que la
-                                                                regla tiene configurado (lib/condicionantesTexto), nunca a
-                                                                mano: asi lo que se lee es exactamente lo que se paga. Si un
-                                                                dia se añade o se quita una condicion, el aviso cambia con
-                                                                ella; y si no hay ninguna, no se enseña nada. */}
-                                                            {(() => {
-                                                              const ojo = textoCondicionantes(rule)
-                                                              if (ojo.length === 0) return null
-                                                              return (
-                                                                <div style={{ marginTop: 2, padding: '2px 6px', borderRadius: 5,
-                                                                              background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.35)',
-                                                                              fontSize: 10, lineHeight: 1.25, color: '#92400E', fontWeight: 500 }}>
-                                                                  {ojo.join(' ')}
-                                                                </div>
-                                                              )
-                                                            })()}
-                                                        </td>
+                                                            {/* El «OJO» ámbar vivía aquí debajo de cada fila. El dueño lo
+                                                                mudó al librillo ℹ (30-ago-2026): las filas quedan limpias y
+                                                                toda la información —condiciones incluidas— en el mismo sitio.
+                                                                El texto lo sigue generando lib/condicionantesTexto, dentro
+                                                                de explicaReglaComision. */}
+                                                            </td>
                                                         <td style={{ padding: '8px 8px', textAlign: 'center', fontSize: 12.5, color: '#334155' }}>
                                                             {formatImporteTramo(rule.importePrimerTramo)}
                                                         </td>

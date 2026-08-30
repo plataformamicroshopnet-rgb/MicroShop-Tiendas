@@ -28,8 +28,11 @@ const importeTxt = (v: any) => esPct(v) ? `el ${String(v).trim()} de tus €` : 
 /** Traducción amable de lo que cuenta cada token del desplegable. Si un token
  *  no está en el mapa, se enseña tal cual (mejor literal que inventado). */
 const QUE_CUENTA: Record<string, string> = {
-  'alta baf total': 'TODAS las altas de fibra: miMovistar, Resto BAF y traslados — cada alta de fibra que grabas suma aquí',
-  'alta baf convergente': 'las altas de miMovistar (fibra + paquete). Un traslado también. La fibra sola (Resto BAF) NO',
+  // OJO TRASLADOS (verificado con el TER, 30-ago-2026): Telefónica los PAGA
+  // (×2 su cuota + 10 € de extra) pero NO los cuenta para el cumplimiento —
+  // «se pagan pero no puntúan». Aquí pasa igual: no suman unidades.
+  'alta baf total': 'las altas de fibra: miMovistar y Resto BAF. Los traslados NO puntúan aquí — se pagan aparte (×2 su cuota + 10 € de extra), pero no suman al objetivo',
+  'alta baf convergente': 'las altas de miMovistar (fibra + paquete). La fibra sola (Resto BAF) NO, y los traslados tampoco puntúan (se pagan aparte)',
   'arpu': 'todos tus Repos (Arpu) en €: lo que sube la cuota del cliente. El repo de fútbol también suma aquí sus 78 €',
   'extra repos up destino fútbol': 'los repos de FÚTBOL: una unidad por cliente (la línea del extra que crea el programa)',
   'dispositivos, seguro': 'los € de tus dispositivos (Rent y venta) y de tus seguros',
