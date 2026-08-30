@@ -13,7 +13,7 @@ export async function register() {
     await fixTorneoLegacyPct()
     const { fixNetflixRename } = await import('./lib/migrations/netflixRenameFix')
     await fixNetflixRename()
-    const { fixTiContratosDesdoble } = await import('./lib/migrations/tiContratosDesdobleFix')
-    await fixTiContratosDesdoble()
+    const { fixTiContratosListaLimpia } = await import('./lib/migrations/tiContratosListaLimpiaFix')
+    await fixTiContratosListaLimpia()
   }
 }
