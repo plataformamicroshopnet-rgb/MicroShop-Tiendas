@@ -38,7 +38,9 @@ export async function GET(request: Request) {
         // dos veces la misma operación.
         sustituida: true, sustituyeA: true,
         nombreCliente: true, telf: true, telefonoMovil: true, imei: true,
-        numeroPedido: true, vendedor: true, cuota: true, anulado: true, pendiente: true,
+        // origenStock (30-ago-2026): sin él, el ERP no distingue el Rent
+        // LOGISTICO (que no tiene IMEI al teclear) del de tienda.
+        numeroPedido: true, origenStock: true, vendedor: true, cuota: true, anulado: true, pendiente: true,
         rentConCoste: true, seguro: true, seguroImporte: true, isSwap: true,
       },
     })
@@ -117,6 +119,7 @@ export async function GET(request: Request) {
         telf: s.telf || s.telefonoMovil || '',
         imei: s.imei || '',
         numeroPedido: s.numeroPedido || '',
+        origenStock: (s as any).origenStock || '',
         vendedor: s.vendedor,
         cuota: s.cuota,
         comision: r2(comision),

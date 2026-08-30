@@ -60,18 +60,32 @@ export async function GET() {
       { header: 'Fecha', key: 'fecha', width: 15 },
       { header: 'NIF', key: 'nif', width: 15 },
       { header: 'Cliente', key: 'nombreCliente', width: 30 },
+      { header: 'Teléfono', key: 'telf', width: 14 },
+      { header: 'Nº Pedido', key: 'numeroPedido', width: 17 },
+      { header: 'IMEI', key: 'imei', width: 18 },
+      { header: 'Origen', key: 'origenStock', width: 11 },
+      { header: 'Tienda', key: 'codigo', width: 14 },
       { header: 'Producto', key: 'producto', width: 20 },
+      { header: 'Tipo', key: 'detalle', width: 14 },
       { header: 'Grupo', key: 'grupo', width: 15 },
       { header: 'Cuota (€)', key: 'cuota', width: 12 },
       { header: 'Pendiente', key: 'pendiente', width: 12 },
       { header: 'Anulado', key: 'anulado', width: 12 },
+      { header: 'Swap', key: 'isSwap', width: 8 },
+      { header: 'Anotaciones', key: 'anotaciones', width: 28 },
       { header: 'Creado El', key: 'createdAt', width: 20 }
     ]
     styleHeader(sheetSales)
+    // Todos los campos en TODOS los Excel (dueño, 30-ago-2026): el «backup» era
+    // el export MÁS POBRE del programa — sin teléfono, sin pedido, sin IMEI.
     sales.forEach(s => sheetSales.addRow({
-      id: s.id, periodId: s.periodId, sheet: s.sheet, vendedor: s.vendedor, 
-      fecha: s.fecha, nif: s.nif, nombreCliente: s.nombreCliente, producto: s.producto,
+      id: s.id, periodId: s.periodId, sheet: s.sheet, vendedor: s.vendedor,
+      fecha: s.fecha, nif: s.nif, nombreCliente: s.nombreCliente,
+      telf: s.telf, numeroPedido: s.numeroPedido, imei: s.imei,
+      origenStock: s.origenStock, codigo: s.codigo, detalle: s.detalle,
+      producto: s.producto,
       grupo: s.grupo, cuota: s.cuota, pendiente: s.pendiente, anulado: s.anulado,
+      isSwap: s.isSwap === true ? 'Sí' : '', anotaciones: s.anotaciones,
       createdAt: s.createdAt.toISOString()
     }))
 

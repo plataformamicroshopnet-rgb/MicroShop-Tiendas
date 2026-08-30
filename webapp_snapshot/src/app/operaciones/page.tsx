@@ -1333,6 +1333,10 @@ function OperationsContent() {
 
               Teléfono: s.telf || '-',
               NumeroPedido: s.numeroPedido || '-',
+              // Todos los campos en TODOS los Excel (dueño, 30-ago-2026): el
+              // origen del stock distingue el 🚚 Logístico (sin IMEI al teclear).
+              Origen: String(s.origenStock || '') === 'LOGISTICO' ? 'Logístico'
+                    : String(s.origenStock || '') === 'TIENDA' ? 'Tienda' : (s.origenStock || '-'),
               Pte: s.pendiente === 'Si' && s.anulado !== 'Si' && s.pendiente !== 'Anulado' ? 'Si' : 'No',
               Anulado: (s.anulado === 'Si' || s.pendiente === 'Anulado') ? 'Si' : 'No',
               Anotaciones: s.anotaciones || '',
@@ -1356,6 +1360,7 @@ function OperationsContent() {
 
               Teléfono: '-',
               NumeroPedido: '-',
+              Origen: '-',
               Pte: 'No',
               Anulado: 'No',
               Anotaciones: 'Extra Automático',
@@ -1378,6 +1383,7 @@ function OperationsContent() {
 
         { header: 'Teléfono', key: 'Teléfono', width: 15 },
         { header: 'Nº Pedido', key: 'NumeroPedido', width: 18 },
+        { header: 'Origen', key: 'Origen', width: 11 },
         { header: 'Pte', key: 'Pte', width: 8 },
         { header: 'Anulado', key: 'Anulado', width: 10 },
         { header: 'Anotaciones', key: 'Anotaciones', width: 30 },

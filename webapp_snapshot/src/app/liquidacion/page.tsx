@@ -1195,7 +1195,13 @@ export default function LiquidacionesPage() {
         const SOURCE_OGC = { href: '/operaciones-grupo-cliente', label: 'Operaciones por Grupo Cliente' }
         const SOURCE_MF = { href: '/movilfree', label: 'MovilFree' }
         const estadoDe = (s: any) => isAnul(s) ? 'NULL' : (String(s.pendiente || '').toLowerCase().trim() === 'si' ? 'PED' : 'OK')
-        const toDrill = (s: any) => ({ fecha: s.fecha || '-', comercial: s.vendedor || '-', nif: s.nif || '-', telf: s.telf || '-', tienda: s.codigo || '-', producto: s.producto || '-', cuota: parseNum(s.cuota || s.importe), swap: s.isSwap === true, comision: getComm(s), estado: estadoDe(s) })
+        // Todos los campos en TODOS los Excel (dueño, 30-ago-2026): nombre,
+        // pedido, IMEI y origen viajan también en los desgloses de la Hoja de Cobro.
+        const toDrill = (s: any) => ({ fecha: s.fecha || '-', comercial: s.vendedor || '-', nif: s.nif || '-',
+            nombre: s.nombreCliente || '-', telf: s.telf || '-', pedido: s.numeroPedido || '-',
+            imei: s.imei || '-',
+            origen: String(s.origenStock || '') === 'LOGISTICO' ? 'Logístico' : String(s.origenStock || '') === 'TIENDA' ? 'Tienda' : (s.origenStock || '-'),
+            tienda: s.codigo || '-', producto: s.producto || '-', cuota: parseNum(s.cuota || s.importe), swap: s.isSwap === true, comision: getComm(s), estado: estadoDe(s) })
 
         const movMap: Record<string, { uds: number, eur: number, sales: any[] }> = {}
         GRUPOS.forEach(g => { movMap[g.id] = { uds: 0, eur: 0, sales: [] } })
@@ -1342,11 +1348,17 @@ export default function LiquidacionesPage() {
         // ── Exportación (Excel / PDF / Imprimir) ──
         const effSel = (exportSel.length ? exportSel : [0, 1, 2, 3, 4]).filter((i: number) => i >= 0 && i < sections.length).sort((a, b) => a - b)
         const uniqueDrill = (sec: any) => Array.from(new Set((sec.rows || []).map((r: any) => r.drill).filter(Boolean))).flatMap((d: any) => d)
-        const drillToRowObj = (d: any) => ({ fecha: d.fecha, comercial: d.comercial, nif: d.nif, telefono: d.telf, tienda: d.tienda, producto: d.producto, swap: d.swap ? 'Sí' : 'No', comision: Number(d.comision || 0), estado: d.estado })
+        const drillToRowObj = (d: any) => ({ fecha: d.fecha, comercial: d.comercial, nif: d.nif,
+            nombre: d.nombre || '-', telefono: d.telf, pedido: d.pedido || '-', imei: d.imei || '-',
+            origen: d.origen || '-', tienda: d.tienda, producto: d.producto,
+            cuota: Number(d.cuota || 0), swap: d.swap ? 'Sí' : 'No', comision: Number(d.comision || 0), estado: d.estado })
         const DETAIL_COLS = [
             { header: 'Fecha', key: 'fecha', width: 12 }, { header: 'Comercial', key: 'comercial', width: 20 },
-            { header: 'Cliente (NIF)', key: 'nif', width: 16 }, { header: 'Teléfono', key: 'telefono', width: 14 },
+            { header: 'Cliente (NIF)', key: 'nif', width: 16 }, { header: 'Nombre Cliente', key: 'nombre', width: 26 },
+            { header: 'Teléfono', key: 'telefono', width: 14 }, { header: 'Nº Pedido', key: 'pedido', width: 17 },
+            { header: 'IMEI', key: 'imei', width: 18 }, { header: 'Origen', key: 'origen', width: 11 },
             { header: 'Tienda', key: 'tienda', width: 16 }, { header: 'Producto', key: 'producto', width: 34 },
+            { header: 'Cuota (€)', key: 'cuota', width: 12 },
             { header: 'Swap', key: 'swap', width: 8 }, { header: 'Comisión (€)', key: 'comision', width: 14 }, { header: 'Estado', key: 'estado', width: 10 },
         ]
         const sheetName = (t: string, fallback: string) => (String(t).replace(/[\\\/\?\*\[\]:]/g, '').trim().slice(0, 28) || fallback)
@@ -2093,7 +2105,11 @@ export default function LiquidacionesPage() {
                 { header: 'Fecha', key: 'fecha', width: 12 },
                 { header: 'Vendedor', key: 'vendedor', width: 20 },
                 { header: 'Cliente (NIF)', key: 'nif', width: 15 },
+                { header: 'Nombre Cliente', key: 'nombre', width: 26 },
                 { header: 'Teléfono', key: 'telefono', width: 15 },
+                { header: 'Nº Pedido', key: 'pedido', width: 17 },
+                { header: 'IMEI', key: 'imei', width: 18 },
+                { header: 'Origen', key: 'origen', width: 11 },
                 { header: 'Tienda', key: 'codigo', width: 15 },
                 { header: 'Tipo de Venta', key: 'tipoVenta', width: 20 },
                 { header: 'Producto', key: 'producto', width: 30 },
@@ -2118,7 +2134,12 @@ export default function LiquidacionesPage() {
                     fecha: sale.fecha || '-',
                     vendedor: sale.vendedor || '-',
                     nif: sale.nif || '-',
+                    nombre: sale.nombreCliente || '-',
                     telefono: sale.telf || '-',
+                    pedido: sale.numeroPedido || '-',
+                    imei: sale.imei || '-',
+                    origen: String(sale.origenStock || '') === 'LOGISTICO' ? 'Logístico'
+                          : String(sale.origenStock || '') === 'TIENDA' ? 'Tienda' : (sale.origenStock || '-'),
                     codigo: sale.codigo || '-',
                     tipoVenta: sale.detalle === 'Ti' ? 'Contratos Móvil' : sale.detalle === 'O2' ? 'O2 MovilFree' : (sale.detalle || '-'),
                     producto: sale.producto || 'Sin especificar',
@@ -2136,7 +2157,11 @@ export default function LiquidacionesPage() {
                     fecha: new Date(ex.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }),
                     vendedor: ex.seller || '-',
                     nif: ex.customerNif || '-',
+                    nombre: ex.customerName || '-',
                     telefono: '-',
+                    pedido: '-',
+                    imei: '-',
+                    origen: '-',
                     codigo: resolveExtraCode(ex) || 'MANUAL',
                     tipoVenta: 'EXTRA',
                     producto: ex.rule?.name || 'Incentivo Manual',

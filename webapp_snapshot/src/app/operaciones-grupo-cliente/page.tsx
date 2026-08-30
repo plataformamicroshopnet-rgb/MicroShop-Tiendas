@@ -279,6 +279,19 @@ function SectionTable({
   showCuotaTotal?: boolean;
   tabId?: string;
 }) {
+  // Buscador de la sección (dueño, 30-ago-2026: «un buscador en todos los
+  // grupos»): filtra los clientes del grupo por NIF, nombre, teléfono, pedido,
+  // producto, comercial o IMEI. Los totales de la cabecera siguen siendo los de
+  // TODA la sección (el dinero no baila al buscar); el contador dice «X de Y».
+  const [busca, setBusca] = useState('')
+  const nrm = (v: any) => String(v || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+  const b = nrm(busca).trim()
+  const grupoCasa = (g: NifGroup) => !b
+    || nrm(g.nif).includes(b) || nrm(g.nombre).includes(b)
+    || g.sales.some((s: any) => nrm(s.telf).includes(b) || nrm(s.numeroPedido).includes(b)
+        || nrm(s.producto).includes(b) || nrm(s.vendedor).includes(b) || nrm(s.imei).includes(b))
+  const visibles = groups.filter(grupoCasa)
+
   if (groups.length === 0) return null
 
   const llaves = LLAVES_TAB[tabId] || []
@@ -302,7 +315,17 @@ function SectionTable({
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ background: badgeColor, color: '#fff', fontSize: 11, fontWeight: 800, padding: '3px 10px', borderRadius: 20, letterSpacing: 1 }}>{badge}</span>
           <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--light-text)' }}>{label}</span>
-          <span style={{ fontSize: 12, color: 'var(--medium-gray)' }}>{groups.length} clientes · {totalUnits} uds.</span>
+          <span style={{ fontSize: 12, color: 'var(--medium-gray)' }}>
+            {b ? `${visibles.length} de ${groups.length}` : groups.length} clientes · {totalUnits} uds.
+          </span>
+          <input
+            value={busca}
+            onChange={e => setBusca(e.target.value)}
+            placeholder="🔍 NIF, cliente, teléfono, pedido, producto…"
+            style={{ fontSize: 12, padding: '5px 10px', borderRadius: 8, minWidth: 240,
+                     border: `1px solid ${badgeColor}60`, background: 'var(--bg-card, #fff)',
+                     color: 'var(--light-text)', outline: 'none' }}
+          />
         </div>
         <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
           {showCuotaTotal && (
@@ -335,7 +358,7 @@ function SectionTable({
             </tr>
           </thead>
           <tbody>
-            {groups.flatMap((group, gi) => {
+            {visibles.flatMap((group, gi) => {
               return group.sales.map((sale: any, si: number) => {
                 const rowBg = si % 2 === 0 ? 'transparent' : `${badgeColor}08`
                 const isLast = si === group.sales.length - 1
@@ -1295,6 +1318,12 @@ function GrupoClienteContent() {
             'Fecha Tram.': s.fecha || '—',
             Telefono: s.telf || '—',
             'Nº Pedido': s.numeroPedido || '—',
+            // Todos los campos en TODOS los Excel (dueño, 30-ago-2026): el de
+            // Rent bajaba sin IMEI ni origen y no se veía qué era logístico.
+            IMEI: s.imei || '—',
+            Origen: String(s.origenStock || '') === 'LOGISTICO' ? 'Logístico'
+                  : String(s.origenStock || '') === 'TIENDA' ? 'Tienda' : (s.origenStock || '—'),
+            'Pte.': s.pendiente || '—',
             Codigo: s.codigo || '—',
             Comercial: s.vendedor || '—',
             Producto: isVariosSwap(s) ? `Swap de ${s.producto || ''}`.trim() : (s.producto || '—'),
@@ -1333,6 +1362,12 @@ function GrupoClienteContent() {
             'Fecha Tram.': fechas.length > 0 ? fechas.join(', ') : '—',
             Telefono: telefons.length > 0 ? telefons.join(', ') : '—',
             'Nº Pedido': Array.from(new Set(pg.sales.map((s: any) => s.numeroPedido).filter(Boolean))).join(', ') || '—',
+            IMEI: Array.from(new Set(pg.sales.map((s: any) => s.imei).filter(Boolean))).join(', ') || '—',
+            Origen: Array.from(new Set(pg.sales.map((s: any) =>
+              String(s.origenStock || '') === 'LOGISTICO' ? 'Logístico'
+              : String(s.origenStock || '') === 'TIENDA' ? 'Tienda' : '').filter(Boolean))).join(', ') || '—',
+            'Pte.': (() => { const n = pg.sales.filter((s: any) => String(s.pendiente || '').trim().toLowerCase().startsWith('s')).length
+                             return n > 0 ? `${n} pte` : '—' })(),
             Codigo: first.codigo || '—',
             Comercial: first.vendedor || '—',
             Producto: first.producto || '—',
@@ -1357,6 +1392,8 @@ function GrupoClienteContent() {
     sheet.views = [{ showGridLines: true }]
 
     // Definir columnas
+    // Todos los campos en TODOS los Excel (dueño, 30-ago-2026): IMEI, origen
+    // del stock (Tienda/Logístico) y estado pendiente viajan siempre.
     sheet.columns = [
       { header: 'Grupo', key: 'Grupo', width: 22 },
       { header: 'NIF', key: 'NIF', width: 14 },
@@ -1364,6 +1401,9 @@ function GrupoClienteContent() {
       { header: 'Fecha Tram.', key: 'Fecha Tram.', width: 15 },
       { header: 'Teléfono', key: 'Telefono', width: 16 },
       { header: 'Nº Pedido', key: 'Nº Pedido', width: 16 },
+      { header: 'IMEI', key: 'IMEI', width: 18 },
+      { header: 'Origen', key: 'Origen', width: 11 },
+      { header: 'Pte.', key: 'Pte.', width: 8 },
       { header: 'Código', key: 'Codigo', width: 12 },
       { header: 'Comercial', key: 'Comercial', width: 20 },
       { header: 'Producto', key: 'Producto', width: 26 },
@@ -1379,7 +1419,7 @@ function GrupoClienteContent() {
       cell.font = { name: 'Segoe UI', size: 11, bold: true, color: { argb: 'FFFFFFFF' } }
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00ADEF' } }
       const rightAlign = ['Uds', 'Cuota Total (€)', 'Comisión'].includes(cell.value as string)
-      const centerAlign = ['NIF', 'Fecha Tram.', 'Teléfono', 'Código'].includes(cell.value as string)
+      const centerAlign = ['NIF', 'Fecha Tram.', 'Teléfono', 'Código', 'IMEI', 'Origen', 'Pte.'].includes(cell.value as string)
       cell.alignment = {
         vertical: 'middle',
         horizontal: rightAlign ? 'right' : (centerAlign ? 'center' : 'left')
@@ -1442,17 +1482,20 @@ function GrupoClienteContent() {
           top: { style: 'thin', color: { argb: 'FFE2E8F0' } }
         }
         
-        const rightAlign = colNumber >= 9
-        const centerAlign = [2, 4, 5, 6].includes(colNumber)
+        // Índices con las 15 columnas (Uds=13, Cuota=14, Comisión=15). OJO: los
+        // viejos (9/10/11) llevaban tiempo descolocados de una inserción
+        // anterior y la moneda caía en Uds — de paso, arreglado.
+        const rightAlign = colNumber >= 13
+        const centerAlign = [2, 4, 5, 6, 7, 8, 9, 10].includes(colNumber)
         cell.alignment = {
           vertical: 'middle',
           horizontal: rightAlign ? 'right' : (centerAlign ? 'center' : 'left')
         }
 
-        if (colNumber === 9) {
+        if (colNumber === 13) {
           cell.numFmt = '#,##0'
         }
-        if (colNumber === 10 || colNumber === 11) {
+        if (colNumber === 14 || colNumber === 15) {
           cell.numFmt = currencyFmt
         }
       })
@@ -1674,6 +1717,10 @@ function GrupoClienteContent() {
         Empresa: ea.customerName || '—',
         'Fecha Tram.': fch,
         Telefono: telf,
+        'Nº Pedido': '—',
+        IMEI: '—',
+        Origen: '—',
+        'Pte.': '—',
         Codigo: cod,
         Comercial: ea.seller || '—',
         Producto: ea.rule?.name || 'Extra Manual',
