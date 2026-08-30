@@ -13,6 +13,7 @@
  * importe, este texto cambia con él.
  */
 import { textoCondicionantes } from './condicionantesTexto'
+import { FAMILIAS } from './reposCompatibles'
 
 const num = (v: any) => {
   const n = Number(String(v ?? '').replace(/[€%\s]/g, '').replace(',', '.'))
@@ -25,10 +26,21 @@ const fmt = (v: any) => {
 const esPct = (v: any) => String(v ?? '').includes('%')
 const importeTxt = (v: any) => esPct(v) ? `el ${String(v).trim()} de tus €` : `${fmt(v)} € por unidad`
 
+/** Las familias de servicios que no se pueden duplicar, SACADAS DEL PROPIO
+ *  MOTOR de incompatibilidades (reposCompatibles.FAMILIAS): si un día se añade
+ *  una familia nueva, este texto crece solo. */
+const familiasIncompatibles = FAMILIAS.map(f => f.etiqueta).join(' · ')
+
 /** Lo que NO cuenta — la letra pequeña de exclusión de cada palanca, cuando
- *  la tiene (pedida por el dueño para el fútbol, 30-ago-2026). */
+ *  la tiene (pedida por el dueño para el fútbol, 30-ago-2026; las
+ *  incompatibilidades con productos, 30-ago por la tarde). */
 const QUE_NO_CUENTA: Record<string, string> = {
   'extra repos up destino fútbol': 'repos con un repo-down (bajada de valor) a ±20 días, en CUALQUIER canal; y los de origen LaLiga o Champions a destino Fútbol Total — eso no es subir. Además el cliente debe mantener el Fútbol Total activo el día 8 del segundo mes, o Telefónica lo tira.',
+  'arpu': 'un repo del MISMO servicio que el cliente ya tiene NO se paga — el programa lo avisa o lo bloquea al grabarlo. '
+    + `Las familias que no se pueden repetir: ${familiasIncompatibles}. `
+    + 'En Fútbol se puede SUBIR (de Champions o LaLiga a Fútbol Total), nunca repetir ni bajar. '
+    + 'Y la tele suelta a un cliente dado de alta HOY no es un repo: va DENTRO del paquete del alta (elige el paquete que ya la lleve). '
+    + 'Dos servicios del mismo palo al mismo cliente en 30 días saltan como duplicado.',
   'alta baf total': 'las altas con una baja de fibra en el domicilio a ±30 días (mismo titular o distinto): Telefónica las anula.',
   'alta baf convergente': 'las altas con baja a ±30 días; y si la fibra y el paquete van en pedidos DISTINTOS de Movistar, se degrada a fibra suelta.',
 }
