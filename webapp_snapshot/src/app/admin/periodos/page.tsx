@@ -120,7 +120,9 @@ export default function AdminPeriodosPage() {
               {p.period_key}
             </div>
             <div>
-              <div style={{ fontWeight: 600, fontSize: 16, color: 'var(--light-text)' }}>{p.name || 'Periodo Sin Nombre'}</div>
+              {/* El nombre sale del propio mes/año: «Agosto 2026». El campo name
+                  no existe en WorkPeriod y esto pintaba «Periodo Sin Nombre». */}
+              <div style={{ fontWeight: 600, fontSize: 16, color: 'var(--light-text)' }}>{p.name || `${MESES[Number(p.month) - 1] ?? 'Mes ' + p.month} ${p.year}`}</div>
               <div style={{ fontSize: 13, color: 'var(--medium-gray)', marginTop: 4 }}>ID: {p.id.split('-')[0]}...</div>
             </div>
           </div>
