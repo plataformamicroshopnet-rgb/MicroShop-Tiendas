@@ -88,9 +88,9 @@ export default function SeguimientoVentasPage() {
       permission: 'CARD_COMISIONES_EQUIPO'
     },
     {
-      title: 'Condiciones, Comisiones Extras del mes y Penalizaciones',
+      title: 'Condiciones y Penalizaciones · Meses anteriores',
       image: '/tiendas-condiciones.png',
-      description: 'Consulta de condiciones, bonificaciones especiales y notas asignadas a este periodo.',
+      description: 'Archivo de lo comunicado en meses ya cerrados. Lo del mes en curso está en el ℹ️ de cada comisión.',
       icon: Target,
       action: () => router.push('/seguimiento-ventas/condiciones-mensuales'),
       color: 'rgba(245, 158, 11, 0.1)',

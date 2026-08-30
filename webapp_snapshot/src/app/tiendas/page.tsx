@@ -57,8 +57,8 @@ export default function TiendasHubPage() {
       isMain: false
     },
     {
-      title: 'Condiciones, Comisiones Extras del mes y Penalizaciones',
-      description: 'Consulta de condiciones, bonificaciones especiales y notas asignadas a este periodo.',
+      title: 'Condiciones y Penalizaciones · Meses anteriores',
+      description: 'Archivo de lo comunicado en meses ya cerrados. Lo del mes en curso está en el ℹ️ de cada comisión.',
       image: '/tiendas-condiciones.png',
       icon: Target,
       action: () => router.push('/tiendas/condiciones-mensuales'),

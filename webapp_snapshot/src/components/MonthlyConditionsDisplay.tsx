@@ -49,16 +49,31 @@ const TYPE_CONFIG = {
   }
 }
 
+const MESES_CORTOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+
 export function MonthlyConditionsDisplay() {
-  const { activePeriodKey } = usePeriod()
+  // ARCHIVO (30-ago-2026, orden del dueño): esta pantalla ya NO enseña el mes en
+  // curso — lo vigente vive en el ℹ de cada fila del Panel de Comisiones. Aquí
+  // queda solo la consulta de meses ANTERIORES, tal y como se comunicaron.
+  const { activePeriodKey, availablePeriods, isLoadingPeriods } = usePeriod()
+  const mesesAnteriores = useMemo(() =>
+    (availablePeriods || [])
+      .filter(p => activePeriodKey && p.period_key < activePeriodKey)
+      .sort((a, b) => b.period_key.localeCompare(a.period_key)),
+    [availablePeriods, activePeriodKey])
+  const [mesArchivo, setMesArchivo] = useState('')
+  useEffect(() => {
+    if (!mesArchivo && mesesAnteriores.length > 0) setMesArchivo(mesesAnteriores[0].period_key)
+  }, [mesesAnteriores, mesArchivo])
+
   const [conditions, setConditions] = useState<IMonthlyCondition[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!activePeriodKey) return
+    if (!mesArchivo) return
 
     setLoading(true)
-    fetch(`/api/admin/monthly-conditions?periodKey=${activePeriodKey}`)
+    fetch(`/api/admin/monthly-conditions?periodKey=${mesArchivo}`)
       .then(res => res.json())
       .then(res => {
         if (res.success) {
@@ -67,7 +82,7 @@ export function MonthlyConditionsDisplay() {
       })
       .catch(err => console.error(err))
       .finally(() => setLoading(false))
-  }, [activePeriodKey])
+  }, [mesArchivo])
 
   const [isEditMode, setIsEditMode] = useState(false)
   const [cardOrder, setCardOrder] = useState<string[]>([])
@@ -130,45 +145,60 @@ export function MonthlyConditionsDisplay() {
       </button>
   );
 
-  if (loading) {
-    return (
-      <div className="w-full">
-        <PageHeader 
-          title={<><Target color="#f59e0b" size={28} /> Condiciones, Comisiones Extras del mes y Penalizaciones</>}
-          subtitle="Consulta de condiciones y notas aplicables al periodo actual."
-          showBack={true}
-        />
-        <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)' }}>
-          Cargando condiciones del mes...
-        </div>
-      </div>
-    )
-  }
-
-  if (conditions.length === 0) {
-    return (
-      <div className="w-full">
-        <PageHeader 
-          title={<><Target color="#f59e0b" size={28} /> Condiciones, Comisiones Extras del mes y Penalizaciones</>}
-          subtitle="Consulta de condiciones y notas aplicables al periodo actual."
-          showBack={true}
-        />
-        {/* Empty state implicitly handled by returning just the header */}
-      </div>
-    ) 
-  }
+  // Cargando si la lista de meses aún no llegó, o si hay mes elegido y sus
+  // tarjetas están en camino.
+  const cargando = isLoadingPeriods || (mesesAnteriores.length > 0 && (loading || !mesArchivo))
 
   return (
     <div className="w-full">
       <div style={{ marginBottom: -8 }}>
-        <PageHeader 
-          title={<><Target color="#f59e0b" size={28} /> Condiciones, Comisiones Extras del mes y Penalizaciones</>}
-          subtitle="Consulta de condiciones y notas aplicables al periodo actual."
+        <PageHeader
+          title={<><Target color="#f59e0b" size={28} /> Condiciones y Penalizaciones · Meses anteriores</>}
+          subtitle="Archivo de lo comunicado en cada mes ya cerrado."
           showBack={true}
-          headerActions={headerActions}
+          headerActions={!cargando && conditions.length > 0 ? headerActions : undefined}
         />
       </div>
 
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 10,
+                    background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.25)',
+                    color: 'var(--text-muted)', fontSize: 13.5, lineHeight: 1.5, margin: '14px 0' }}>
+        <Info size={18} color="#3b82f6" style={{ flexShrink: 0 }} />
+        <span>El <b>mes en curso</b> ya no se enseña aquí: cada fila del <b>Panel de Comisiones</b> lleva
+        su ℹ️ con lo que cuenta, lo que paga y las penalizaciones al día.</span>
+      </div>
+
+      {mesesAnteriores.length > 0 && (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '0 0 18px' }}>
+          {mesesAnteriores.map(p => {
+            const activo = mesArchivo === p.period_key
+            return (
+              <button key={p.period_key} onClick={() => setMesArchivo(p.period_key)}
+                style={{ padding: '6px 14px', borderRadius: 18, cursor: 'pointer', fontWeight: 700, fontSize: 13,
+                         border: `1px solid ${activo ? '#f59e0b' : 'var(--border-strong)'}`,
+                         background: activo ? 'rgba(245, 158, 11, 0.12)' : 'var(--bg-card)',
+                         color: activo ? '#b45309' : 'var(--text-muted)' }}>
+                {MESES_CORTOS[Number(p.month) - 1] || p.month} {p.year}
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {cargando ? (
+        <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)' }}>
+          Cargando condiciones del mes...
+        </div>
+      ) : mesesAnteriores.length === 0 ? (
+        <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)' }}>
+          Todavía no hay meses anteriores que consultar.
+        </div>
+      ) : conditions.length === 0 ? (
+        <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)' }}>
+          Este mes no tiene condiciones ni notas guardadas.
+        </div>
+      ) : (
+        <>
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes wiggle {
             0% { transform: rotate(0deg); }
@@ -271,6 +301,8 @@ export function MonthlyConditionsDisplay() {
           )
         })}
       </div>
+        </>
+      )}
     </div>
   )
 }
