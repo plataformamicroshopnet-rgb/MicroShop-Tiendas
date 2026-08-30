@@ -1,13 +1,19 @@
 'use client'
 
 import React from 'react'
-import { Trophy, Target, Euro, Calendar, Clock, AlertCircle, Medal, BadgeCheck, ListFilter, XCircle, Sparkles, Crown, Diamond, ArrowUp, ArrowDown } from 'lucide-react'
+import { Trophy, Target, Euro, Calendar, Clock, AlertCircle, Medal, BadgeCheck, ListFilter, XCircle, Sparkles, Crown, Diamond, ArrowUp, ArrowDown, Info } from 'lucide-react'
+import { explicaReglaComision, ExplicacionComision } from '@/lib/explicaComision'
 import Link from 'next/link'
 import { PageHeader } from '@/components/PageHeader'
 import { useComisionesData, matchTipoVenta } from '@/hooks/useComisionesData'
 import { ALL_GROUPS } from '@/lib/comisiones'
 import { useGuard } from '@/hooks/useGuard'
 import { textoCondicionantes } from '@/lib/condicionantesTexto'
+
+// EL LIBRILLO ℹ DE CADA PALANCA (dueño, 30-ago-2026): igual que en Territorial
+// PDV, cada fila explica qué cuenta y cómo se cobra — la respuesta escrita al
+// «me salía más dinero a fin de mes». Los textos salen de la regla del mes
+// (lib/explicaComision), nunca a mano.
 import { useRouter } from 'next/navigation'
 import { normalizeRole } from '@/lib/appConfig'
 import { useEffect } from 'react'
@@ -400,6 +406,7 @@ export default function ComisionesDashboardPage() {
     const router = useRouter()
     const { authorized, user } = useGuard('MODULE_COMISIONES')
     const [salesModal, setSalesModal] = React.useState<{ title: string; sales: any[] } | null>(null);
+    const [librillo, setLibrillo] = React.useState<ExplicacionComision | null>(null);
     
 
     const {
@@ -478,6 +485,39 @@ export default function ComisionesDashboardPage() {
                 title={salesModal?.title || ''}
                 sales={salesModal?.sales || []}
             />
+            {librillo && (
+              <div onClick={() => setLibrillo(null)}
+                   style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+                <div onClick={e => e.stopPropagation()}
+                     style={{ background: '#ffffff', borderRadius: 14, maxWidth: 620, width: '100%',
+                              maxHeight: '82vh', overflowY: 'auto', padding: '20px 24px',
+                              boxShadow: '0 18px 50px rgba(0,0,0,0.30)', border: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 10 }}>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.6px', color: '#0284c7', textTransform: 'uppercase' }}>Cómo se cobra</div>
+                      <h3 style={{ margin: '2px 0 0', fontSize: 19, color: '#0f172a' }}>{librillo.titulo === 'ARPU' ? 'Repos (Arpu)' : librillo.titulo}</h3>
+                    </div>
+                    <button onClick={() => setLibrillo(null)}
+                            style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 20, color: '#64748b', lineHeight: 1 }}
+                            aria-label="Cerrar">×</button>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {librillo.bloques.map((b, i) => (
+                      <div key={i} style={{ padding: '10px 12px', background: b.etiqueta === 'ASÍ SE COBRA' ? '#fff7ed' : '#f8fafc',
+                                            border: `1px solid ${b.etiqueta === 'ASÍ SE COBRA' ? '#fdba74' : '#e2e8f0'}`,
+                                            borderRadius: 9, fontSize: 13.5, lineHeight: 1.55, color: '#334155' }}>
+                        <span style={{ fontWeight: 800, color: b.etiqueta === 'ASÍ SE COBRA' ? '#c2410c' : '#0284c7', marginRight: 6 }}>{b.etiqueta}</span>
+                        {b.texto}
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ marginTop: 12, fontSize: 11.5, color: '#64748b' }}>
+                    Los números salen de la regla de ESTE mes: si cambia la configuración, este texto cambia con ella.
+                  </div>
+                </div>
+              </div>
+            )}
             <PageHeader 
                 title={<><Trophy size={28} className="mercedes-text" color="var(--mercedes-cyan)" /> Panel de Comisiones</>}
                 showBack={true}
@@ -851,7 +891,16 @@ export default function ComisionesDashboardPage() {
                                                     <tr style={{ backgroundColor: rowBg, borderBottom: '1px solid #e2e8f0', transition: 'background 0.2s', color: '#334155' }}>
                                                         <td style={{ padding: '8px 10px', fontSize: 12.5, fontWeight: 700, color: '#0f172a' }}>
                                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                                <span>{gName === 'ARPU' ? 'Repos (Arpu)' : gName}</span>
+                                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                                                  <Info
+                                                                    size={14}
+                                                                    color="#0284c7"
+                                                                    style={{ cursor: 'pointer', flexShrink: 0 }}
+                                                                    onClick={(e) => { e.stopPropagation(); setLibrillo(explicaReglaComision(rule)); }}
+                                                                    aria-label={`Cómo se cobra ${gName}`}
+                                                                  />
+                                                                  {gName === 'ARPU' ? 'Repos (Arpu)' : gName}
+                                                                </span>
                                                                 {/* Aquí vivía la chapa «Tramo 1 por condición» y, después, la línea
                                                                     «⚠️ Este mes: Tramo 1 forzado…». Las dos fuera por decisión del
                                                                     dueño (12-ago-2026): la fila deja de contar el ESTADO del mes y
