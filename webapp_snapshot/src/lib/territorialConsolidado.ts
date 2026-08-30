@@ -51,7 +51,7 @@ export const STATIC_PALANCAS = [
     tramos: { tramo1: '-', tramo2: '-', tramo3: '-', bonif: '20%' },
     matches: ['BAF Convergente MS / Dispositivos', 'baf convergente ms / dispositivos'],
     reglas: [
-      'QUÉ ES · Una BONIFICACIÓN extra del +20 % de la cuota por CADA alta convergente del mes — encima del 40/50 % de la palanca de arriba (~2.300 €/mes con los números de agosto).',
+      'QUÉ ES · Una BONIFICACIÓN extra del +20 % de la cuota por CADA alta convergente del mes — encima del 40/50 % de la palanca de arriba: el PRV pasa del 40/50 % al 60/70 % (pág. 30 del Lanzamiento). ~2.300 €/mes con los números de agosto.',
       'DOS PUERTAS · (1) el Convergente al 100 % de su objetivo; y (2) que al menos el 40 % de esas altas lleven un terminal de gama Media o superior entregado en el mes o el siguiente.',
       'EL MEDIDOR · Esta fila cuenta las convergentes con terminal (mismo cliente, a ±30 días). Telefónica declara su propio medidor en la liquidación: mayo 30 %, junio 8 % — por eso nunca se ha cobrado.',
       'LA JUGADA · Convergente + terminal EN LA MISMA VISITA. Cada venta así acerca los ~2.300 €.',
@@ -68,7 +68,7 @@ export const STATIC_PALANCAS = [
       'QUÉ CUENTA · Altas de Solución FTTR (kit principal) — la fibra invisible. Las ORTI también suman.',
       'OBJETIVO · POR TIENDA, no por empresa: cada tienda pelea su propio objetivo del Excel (2/2/3/2 en agosto).',
       'QUÉ PAGA · 200 € fijos a CADA tienda que llegue al 100 % del suyo. Julio: solo Villamayor lo logró → 200 €.',
-      'PROPINA · Cada alta FTTR paga además 100 € por unidad (tarifario nacional) y computa 910 € en el objetivo de ingresos de Dispositivos — una FTTR empuja TRES palancas a la vez.',
+      'PROPINA · Cada alta FTTR paga además 100 € por unidad (30 € de base + 70 € condicionados, pág. 29 del Lanzamiento) y computa 910 € en el objetivo de ingresos de Dispositivos — una FTTR empuja TRES palancas a la vez.',
       'CANDADOS · El 80 % del Convergente. Cobro N+2.',
     ]
   },
@@ -81,7 +81,7 @@ export const STATIC_PALANCAS = [
     reglas: [
       'QUÉ CUENTA (en €) · El PVP sin IVA de los dispositivos (Rent y venta) entregados en el mes o el siguiente + 910 € por cada alta FTTR + los seguros a valor fijo: Smartphone 200 € · Tablet 50 € · Reacondicionado 150 €. La gama Baja, con tope de 100 uds por tienda.',
       'OBJETIVO · La suma de INGRESOS DISPOSITIVOS + INGRESOS SEGURO MÓVIL + INGRESOS FIBRA FTTR del Excel (agosto: 94.463 €). Distribuidor entero.',
-      'QUÉ PAGA · Al 100 %: el 3,5 % del PVP sin IVA de los dispositivos. Al 115 %: el 4,5 %. Al 130 %: el 6 %.',
+      'QUÉ PAGA · Al 100 %: el 3,5 % del PVP sin IVA de los dispositivos. Al 115 %: el 4,5 %. Al 130 %: el 6 % (escalón nuevo de agosto — pág. 30 del Lanzamiento).',
       'CANDADOS · El 80 % del Convergente; certificación de 30 dispositivos por tienda; fuera la autoventa, los desistimientos en 15 días y los repo-down a Base (±20 días); los seguros deben seguir vivos el día 8 del 2º mes.',
       'CUÁNDO · Cobro N+2. Mayo se quedó a 8.019 € del objetivo: cada venta de terminal cuenta.',
     ]
@@ -96,7 +96,8 @@ export const STATIC_PALANCAS = [
       'QUÉ CUENTA · Todo el fútbol del mes: altas de miMovistar con Fútbol Total, Champions o LaLiga; altas de Fusión Bar; y los repos con destino Fútbol Total, su pago único, Champions o LaLiga (con subida de cuota). Las ORTI no rehechas en 15 días suman.',
       'QUÉ NO CUENTA · Repos con repo-down a ±20 días (en cualquier canal) y los de origen LaLiga/Champions a destino Fútbol Total (eso no es subir).',
       'OBJETIVO · ALTAS FÚTBOL + DESARROLLO TV del Excel, sumados (agosto: 50 + 111 = 161). Empresa entera.',
-      'QUÉ PAGA · Al 100 %: 300 € por CADA tienda (1.200 €). Al 115 %: 500 € por tienda (2.000 €). Junio y julio se cobraron a 2.000 €.',
+      'QUÉ PAGA · Entre el 100 % y el 115 %: 300 € por CADA tienda (1.200 €). Del 115 % en adelante: 500 € por tienda (2.000 €). Junio quedó al 132 % → 2.000 € (declarado por Telefónica en la liquidación de agosto); julio llega en el fichero de septiembre. [Lanzamiento ago, pág. 30]',
+      'EL EXTRA DE 10 € · Cada repo destino fútbol lleva además 10 € de extra en el tarifario — y es EXTRA puro: 0 € de base, todo condicionado (pág. 29). No contar con él hasta verlo declarado (concepto NC142Y).',
       'CANDADOS · El Fútbol Total debe seguir activo el día 8 del 2º mes (altas y repos); el 80 % del Convergente. Cobro N+2.',
     ]
   }
