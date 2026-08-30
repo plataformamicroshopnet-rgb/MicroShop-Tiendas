@@ -25,6 +25,14 @@ const fmt = (v: any) => {
 const esPct = (v: any) => String(v ?? '').includes('%')
 const importeTxt = (v: any) => esPct(v) ? `el ${String(v).trim()} de tus €` : `${fmt(v)} € por unidad`
 
+/** Lo que NO cuenta — la letra pequeña de exclusión de cada palanca, cuando
+ *  la tiene (pedida por el dueño para el fútbol, 30-ago-2026). */
+const QUE_NO_CUENTA: Record<string, string> = {
+  'extra repos up destino fútbol': 'repos con un repo-down (bajada de valor) a ±20 días, en CUALQUIER canal; y los de origen LaLiga o Champions a destino Fútbol Total — eso no es subir. Además el cliente debe mantener el Fútbol Total activo el día 8 del segundo mes, o Telefónica lo tira.',
+  'alta baf total': 'las altas con una baja de fibra en el domicilio a ±30 días (mismo titular o distinto): Telefónica las anula.',
+  'alta baf convergente': 'las altas con baja a ±30 días; y si la fibra y el paquete van en pedidos DISTINTOS de Movistar, se degrada a fibra suelta.',
+}
+
 /** Traducción amable de lo que cuenta cada token del desplegable. Si un token
  *  no está en el mapa, se enseña tal cual (mejor literal que inventado). */
 const QUE_CUENTA: Record<string, string> = {
@@ -34,7 +42,7 @@ const QUE_CUENTA: Record<string, string> = {
   'alta baf total': 'las altas de fibra: miMovistar y Resto BAF. Los traslados NO puntúan aquí — se pagan aparte (×2 su cuota + 10 € de extra), pero no suman al objetivo',
   'alta baf convergente': 'las altas de miMovistar (fibra + paquete). La fibra sola (Resto BAF) NO, y los traslados tampoco puntúan (se pagan aparte)',
   'arpu': 'todos tus Repos (Arpu) en €: lo que sube la cuota del cliente. El repo de fútbol también suma aquí sus 78 €',
-  'extra repos up destino fútbol': 'los repos de FÚTBOL: una unidad por cliente (la línea del extra que crea el programa)',
+  'extra repos up destino fútbol': 'TU UNIDAD aquí es el repo de fútbol: la línea del extra que crea el programa, una por cliente. El OBJETIVO en cambio viene del cuadro COMPLETO del fútbol de Telefónica (TC1435): altas de miMovistar con Fútbol Total, Champions o LaLiga; altas de Fusión Bar; y los repos destino Fútbol Total, su pago único, Champions o LaLiga — por eso el número del objetivo es alto: lo alimenta todo el fútbol del mes. Las ORTI no rehechas en 15 días suman al objetivo',
   'dispositivos, seguro': 'los € de tus dispositivos (Rent y venta) y de tus seguros',
   'solución fttr': 'las altas de la fibra invisible (Solución FTTR)',
   'swap': 'los Swap (renove del terminal del cliente)',
@@ -57,6 +65,9 @@ export function explicaReglaComision(rule: any): ExplicacionComision {
     etiqueta: 'QUÉ CUENTA',
     texto: QUE_CUENTA[clave] || `las ventas de: ${productos || rule?.nombre || 'esta palanca'}`,
   })
+  if (QUE_NO_CUENTA[clave]) {
+    bloques.push({ etiqueta: 'QUÉ NO CUENTA', texto: QUE_NO_CUENTA[clave] })
+  }
 
   // ── el objetivo ──
   const obj1 = num(rule?.objPrimerTramo)
