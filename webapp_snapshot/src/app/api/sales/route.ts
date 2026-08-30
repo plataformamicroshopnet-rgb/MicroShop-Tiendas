@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { PrismaClient } from '@prisma/client'
+import { mesYaPagadoN3, fechaPagoN3 } from '@/lib/nominaN3'
 import { ROLES } from '@/lib/appConfig'
 import { can, canEdit, canView } from '@/lib/permissions'
 import { findCatalogVigente, esRepoArpuManual } from '@/lib/salesUtils'
@@ -197,13 +198,19 @@ export async function PATCH(request: Request) {
     const existingSale = await prisma.sale.findUnique({ where: { id } })
     if (!existingSale) return NextResponse.json({ success: false, error: 'Operación no existe' })
 
-    // ── MARCHA ATRÁS PARA MODIFICAR (por usuario, máx 4 meses) ──────────
-    // Configurable en Gestión de Usuarios (retroDiasModificar, días naturales).
-    // Sin configurar: 120 días (4 meses) para quien tenga permiso de edición.
-    // El Admin no tiene límite.
-    const dbUserEdit = await prisma.user.findUnique({ where: { username: session.user.username || '' } })
-    if ((dbUserEdit?.role || session.user.role) !== 'ADMIN') {
-      const margenModificar = ((dbUserEdit as any)?.retroDiasModificar ?? 120) as number
+    // ── MARCHA ATRÁS PARA MODIFICAR: los CUATRO meses sin pagar (30-ago-2026) ──
+    // La ventana de negocio es la regla N+3: el mes M se paga el 1 de M+4, así
+    // que en todo momento hay exactamente CUATRO meses vivos (hoy: mayo-agosto).
+    // Antes aquí había un tope plano de 120 días que (a) recortaba los primeros
+    // días del cuarto mes y (b) NO cerraba un mes ya pagado si aún caía dentro
+    // de los 120 días — se podía editar una venta cuya nómina ya estaba abonada
+    // y descuadrar Tiendas contra el abonaré. Ahora:
+    //  · Mes con nómina PAGADA: inmutable PARA TODOS, admin incluido (el mismo
+    //    candado que ya tenía el alta de ventas en /api/sales/unified).
+    //  · Mes sin pagar: editable por quien tenga permiso de edición. Si un
+    //    usuario tiene un retroDiasModificar EXPLÍCITO en Gestión de Usuarios,
+    //    se respeta como límite MÁS corto (para acotar a alguien a propósito).
+    {
       const hoy = new Date(); hoy.setHours(0, 0, 0, 0)
       const parseFecha = (f: any) => {
         const p = String(f || '').split('/')
@@ -211,18 +218,37 @@ export async function PATCH(request: Request) {
         const d = new Date(Number(p[2]), Number(p[1]) - 1, Number(p[0]))
         return isNaN(d.getTime()) ? null : d
       }
-      const limite = new Date(hoy); limite.setDate(limite.getDate() - margenModificar)
-      const fechaActual = parseFecha(existingSale.fecha)
-      if (fechaActual && fechaActual < limite) {
-        return NextResponse.json({ success: false, error: `No puedes modificar operaciones de hace más de ${margenModificar} días. Pide a un administrador que amplíe tu marcha atrás en Gestión de Usuarios.` }, { status: 403 })
+      const bloqueaPagado = (d: Date | null, que: string) => {
+        if (d && mesYaPagadoN3(d, hoy)) {
+          const pago = fechaPagoN3(d)
+          return NextResponse.json({ success: false, error: `${que}: la nómina de ese mes ya se pagó (regla N+3, el 1 de ${pago.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}) y es inmutable. Si de verdad hay que tocarla, coméntalo con el administrador.` }, { status: 403 })
+        }
+        return null
       }
+      const fechaActual = parseFecha(existingSale.fecha)
+      const noPagada = bloqueaPagado(fechaActual, 'No se puede modificar esta operación')
+      if (noPagada) return noPagada
       if (updates.fecha !== undefined && updates.fecha) {
         const fechaNueva = parseFecha(updates.fecha)
         if (fechaNueva && fechaNueva > hoy) {
           return NextResponse.json({ success: false, error: 'La fecha no puede ser futura.' }, { status: 400 })
         }
-        if (fechaNueva && fechaNueva < limite) {
-          return NextResponse.json({ success: false, error: `No puedes mover una operación a hace más de ${margenModificar} días.` }, { status: 403 })
+        const noPagadaDestino = bloqueaPagado(fechaNueva, 'No se puede mover la operación a ese mes')
+        if (noPagadaDestino) return noPagadaDestino
+      }
+      // Límite explícito por usuario (opcional, siempre más corto que los 4 meses)
+      const dbUserEdit = await prisma.user.findUnique({ where: { username: session.user.username || '' } })
+      const margenExplicito = (dbUserEdit as any)?.retroDiasModificar
+      if ((dbUserEdit?.role || session.user.role) !== 'ADMIN' && margenExplicito !== null && margenExplicito !== undefined) {
+        const limite = new Date(hoy); limite.setDate(limite.getDate() - Number(margenExplicito))
+        if (fechaActual && fechaActual < limite) {
+          return NextResponse.json({ success: false, error: `No puedes modificar operaciones de hace más de ${margenExplicito} días. Pide a un administrador que amplíe tu marcha atrás en Gestión de Usuarios.` }, { status: 403 })
+        }
+        if (updates.fecha !== undefined && updates.fecha) {
+          const fechaNueva = parseFecha(updates.fecha)
+          if (fechaNueva && fechaNueva < limite) {
+            return NextResponse.json({ success: false, error: `No puedes mover una operación a hace más de ${margenExplicito} días.` }, { status: 403 })
+          }
         }
       }
     }
