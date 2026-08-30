@@ -11,5 +11,7 @@ export async function register() {
     await fixTorneoGates()
     const { fixTorneoLegacyPct } = await import('./lib/migrations/torneoLegacyPctFix')
     await fixTorneoLegacyPct()
+    const { fixNetflixRename } = await import('./lib/migrations/netflixRenameFix')
+    await fixNetflixRename()
   }
 }

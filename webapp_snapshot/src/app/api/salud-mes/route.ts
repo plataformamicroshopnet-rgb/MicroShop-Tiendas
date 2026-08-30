@@ -146,6 +146,138 @@ export async function GET(request: Request) {
       })
     }
 
+    // ── Paso 2b: EL SEMÁFORO DE LOS CANDADOS GORDOS (F4, 30-ago-2026) ────────
+    // Justificante: Lanzamiento CP AGO26, pág. 30 — «Cumplimiento mínimo del
+    // 80% (BAF OC) para cobro del RESTO de PRVs» y «[certificación] 30 ventas
+    // de dispositivos por tienda». Nada a mano: los candados se LEEN de los
+    // condicionantes de las reglas del mes y se miden con EL MOTOR del Panel
+    // (mismos contadores, mismas ventas) — si un candado cambia, esto cambia.
+    {
+      try {
+        const { loadPanelInputs } = await import('@/lib/panelComisionesTiendasServer')
+        const { computePanelComisionesTiendas } = await import('@/lib/panelComisionesTiendas')
+        const { matchTipoVenta } = await import('@/lib/ventaMatching')
+        const { input, tiendaHours } = await loadPanelInputs(prisma, periodKey)
+        if ((input.tiendaRules || []).length > 0) {
+          const motor = computePanelComisionesTiendas(input)
+          const norm = (v: any) => String(v || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim()
+
+          // Candados únicos declarados en las reglas del mes
+          const cands: { type: string; targetGroup: string; value: number }[] = []
+          const vistos = new Set<string>()
+          for (const r of input.tiendaRules as any[]) {
+            let arr: any[] = []
+            try { arr = JSON.parse(String(r.condicionantes || '[]')) } catch {}
+            for (const c of arr || []) {
+              const t = String(c?.type || ''); const tg = String(c?.targetGroup || '').trim(); const v = Number(c?.value) || 0
+              if ((t !== 'REQUIRE_GROUP_PCT_TRAMO2' && t !== 'REQUIRE_STORE_QTY_TRAMO2') || !(v > 0) || !tg) continue
+              const k = `${t}|${norm(tg)}|${v}`
+              if (vistos.has(k)) continue
+              vistos.add(k)
+              cands.push({ type: t, targetGroup: tg, value: v })
+            }
+          }
+
+          // La CERTIFICACIÓN de Telefónica no es un condicionante del dueño (la
+          // quitó de las comisiones el 12-ago): es la exigencia OFICIAL del PRV
+          // de Dispositivos — «[certificación] mínimo 30 ventas de dispositivos
+          // por tienda» (Lanzamiento CP AGO26, pág. 30). Va fija, con su
+          // justificante, y midiendo Dispositivos sin la Gama Baja.
+          cands.push({ type: 'CERT_TELEFONICA_STORE', targetGroup: 'Dispositivos', value: 30 })
+
+          if (cands.length > 0) {
+            const ventasVivas = (input.sales as any[]).filter(s => {
+              const an = norm(s.anulado); const pe = norm(s.pendiente)
+              return an !== 'si' && pe !== 'anulado' && s.sustituida !== true
+            })
+            const tiendaDeVend: Record<string, string> = {}
+            for (const h of tiendaHours as any[]) {
+              const t = String(h.tienda || '').trim()
+              if (t) tiendaDeVend[norm(h.comercial)] = t
+            }
+
+            const detalles: string[] = []
+            const filas: string[][] = []
+            let pendientesDeCumplir = 0
+            for (const c of cands) {
+              if (c.type === 'REQUIRE_GROUP_PCT_TRAMO2') {
+                const regla = (motor.adjustedTiendaRules as any[]).find(r => norm(r.nombre) === norm(c.targetGroup))
+                const obj = Number(regla?.objPrimerTramo || 0)
+                const uds = Number((motor.teamGroupCounts as any)[regla?.nombre] ?? 0)
+                              + Number((motor.teamGroupPending as any)?.[regla?.nombre] ?? 0)
+                if (!(obj > 0)) continue
+                const pct = uds / obj * 100
+                const cumple = pct >= c.value
+                if (!cumple) pendientesDeCumplir++
+                const faltan = Math.max(0, Math.ceil(obj * c.value / 100 - uds))
+                detalles.push(cumple
+                  ? `🔓 ${c.targetGroup} al ${pct.toFixed(0)} % — el candado del ${c.value} % está CUMPLIDO (colchón ${(pct - c.value).toFixed(0)} pts).`
+                  : `🔒 ${c.targetGroup} al ${pct.toFixed(0)} % — faltan ${faltan} para el ${c.value} % que abre el cobro del resto.`)
+                filas.push([`${c.value} % de ${c.targetGroup}`, 'Empresa', `${uds} de ${obj} (${pct.toFixed(0)} %)`,
+                            `${c.value} %`, cumple ? '🟢 cumplido' : `🔴 faltan ${faltan}`])
+              } else {
+                // Conteo por tienda (la tienda es la del COMERCIAL según la
+                // plantilla del mes, igual que el motor). La certificación de
+                // Telefónica descuenta la Gama Baja (gama del catálogo Rent).
+                const esCert = c.type === 'CERT_TELEFONICA_STORE'
+                const gamaDe: Record<string, string> = {}
+                if (esCert) {
+                  for (const p of ((input.catalogs as any)?.['Rent'] || [])) {
+                    gamaDe[norm(p.producto)] = norm(p.gama)
+                  }
+                }
+                const porTienda: Record<string, number> = {}
+                Object.values(tiendaDeVend).forEach(t => { if (!(t in porTienda)) porTienda[t] = 0 })
+                for (const s of ventasVivas) {
+                  const t = tiendaDeVend[norm(s.vendedor)]
+                  if (!t) continue
+                  if (!matchTipoVenta(s, c.targetGroup)) continue
+                  if (esCert && gamaDe[norm(s.producto)] === 'baja') continue
+                  porTienda[t] += 1
+                }
+                const tiendas = Object.keys(porTienda).sort()
+                if (tiendas.length === 0) continue
+                const flojas = tiendas.filter(t => porTienda[t] < c.value)
+                if (flojas.length) pendientesDeCumplir++
+                detalles.push(flojas.length === 0
+                  ? `🔓 ${c.targetGroup}: las ${tiendas.length} tiendas pasan de ${c.value} (certificación cubierta).`
+                  : `🔒 ${c.targetGroup}: exige ${c.value} por tienda y faltan en ${flojas.map(t => `${t} (${porTienda[t]})`).join(', ')}.`)
+                for (const t of tiendas) {
+                  filas.push([`${c.value} × tienda de ${c.targetGroup}`, t, String(porTienda[t]), String(c.value),
+                              porTienda[t] >= c.value ? '🟢 cumplido' : `🔴 faltan ${c.value - porTienda[t]}`])
+                }
+              }
+            }
+
+            if (filas.length > 0) {
+              // En un mes CERRADO, un candado sin cumplir ya no es aviso: es rojo.
+              const cerrado = wp?.status === 'HISTORIC'
+              pasos.push({
+                id: 'candados_gordos',
+                titulo: 'El semáforo de los candados gordos',
+                resumen: 'El gate del 80 % del Convergente y la certificación por tienda, medidos en vivo con el motor del Panel.',
+                estado: pendientesDeCumplir === 0 ? 'verde' : (cerrado ? 'rojo' : 'ambar'),
+                detalles,
+                ayuda: pendientesDeCumplir > 0 && !cerrado
+                  ? 'Sin el gate del Convergente no se cobra el RESTO del Territorial (pág. 30 del Lanzamiento): cada convergente y cada dispositivo de las tiendas flojas cuentan.'
+                  : undefined,
+                accion: { tipo: 'enlace', etiqueta: 'Territorial PDV', href: '/seguimiento-ventas/territorial-pdv' },
+                ...(conTablas ? { tablas: [{
+                  titulo: 'Candados del mes',
+                  subtitulo: 'Leídos de los condicionantes de las palancas; contados por el motor del Panel (pendientes incluidos en el gate de empresa).',
+                  columnas: ['Candado', 'Ámbito', 'Lleva', 'Exige', 'Estado'],
+                  numericas: [2, 3],
+                  filas,
+                }] } : {}),
+              })
+            }
+          }
+        }
+      } catch (e) {
+        console.error('[salud-mes] candados gordos:', e)
+      }
+    }
+
     // ── Paso 3: plantilla de comerciales ────────────────────────────────────
     {
       const horas = await prisma.tiendaComercialHour.findMany({ where: { periodKey } })
