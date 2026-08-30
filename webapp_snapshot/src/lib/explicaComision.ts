@@ -49,10 +49,11 @@ const QUE_NO_CUENTA: Record<string, string> = {
  *  no está en el mapa, se enseña tal cual (mejor literal que inventado). */
 const QUE_CUENTA: Record<string, string> = {
   // OJO TRASLADOS (verificado con el TER, 30-ago-2026): Telefónica los PAGA
-  // (×2 su cuota + 10 € de extra) pero NO los cuenta para el cumplimiento —
-  // «se pagan pero no puntúan». Aquí pasa igual: no suman unidades.
-  'alta baf total': 'las altas de fibra: miMovistar y Resto BAF. Los traslados NO puntúan aquí — se pagan aparte (×2 su cuota + 10 € de extra), pero no suman al objetivo',
-  'alta baf convergente': 'las altas de miMovistar (fibra + paquete). La fibra sola (Resto BAF) NO, y los traslados tampoco puntúan (se pagan aparte)',
+  // a la empresa (×2 su cuota + 10 € de extra) pero NO los cuenta para el
+  // cumplimiento. En el librillo del comercial solo se dice que no puntúan:
+  // el «se pagan aparte» era dinero de la EMPRESA y confundía (dueño, 30-ago).
+  'alta baf total': 'las altas de fibra: miMovistar y Resto BAF. Los traslados NO puntúan',
+  'alta baf convergente': 'las altas de miMovistar (fibra + paquete). La fibra sola (Resto BAF) NO, y los traslados tampoco',
   'arpu': 'todos tus Repos (Arpu) en €: lo que sube la cuota del cliente. El repo de fútbol también suma aquí sus 78 €',
   'extra repos up destino fútbol': 'TU UNIDAD aquí es el repo de fútbol: la línea del extra que crea el programa, una por cliente. El OBJETIVO en cambio viene del cuadro COMPLETO del fútbol de Telefónica (TC1435): altas de miMovistar con Fútbol Total, Champions o LaLiga; altas de Fusión Bar; y los repos destino Fútbol Total, su pago único, Champions o LaLiga — por eso el número del objetivo es alto: lo alimenta todo el fútbol del mes. Las ORTI no rehechas en 15 días suman al objetivo',
   'dispositivos, seguro': 'los € de tus dispositivos (Rent y venta) y de tus seguros',
