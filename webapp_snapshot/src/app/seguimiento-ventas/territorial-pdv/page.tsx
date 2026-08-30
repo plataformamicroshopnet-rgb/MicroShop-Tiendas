@@ -19,6 +19,11 @@ export default function TerritorialPdvPage() {
 
   const [loading, setLoading] = useState(true)
   const [sales, setSales] = useState<any[]>([])
+  // El librillo de cada palanca (icono ℹ de la tabla): las reglas oficiales
+  // del TER de Telefónica, en cristiano, para saber qué hay que hacer para
+  // cobrar cada importe. Los textos viven junto a las palancas en
+  // territorialConsolidado (fuente única).
+  const [reglasPalanca, setReglasPalanca] = useState<any>(null)
   const [tiendaRules, setTiendaRules] = useState<any[]>([])
   const [territorialRules, setTerritorialRules] = useState<any[]>([])
   const [catalogs, setCatalogs] = useState<Record<string, any[]>>({})
@@ -316,6 +321,47 @@ export default function TerritorialPdvPage() {
     return calculatedRows.reduce((acc, row) => acc + row.importe, 0);
   }, [calculatedRows]);
 
+  const PanelReglas = () => {
+    if (!reglasPalanca) return null
+    return (
+      <div onClick={() => setReglasPalanca(null)}
+           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+        <div onClick={e => e.stopPropagation()}
+             style={{ background: 'var(--bg-body, #fff)', borderRadius: 14, maxWidth: 620, width: '100%',
+                      maxHeight: '82vh', overflowY: 'auto', padding: '20px 24px',
+                      boxShadow: '0 18px 50px rgba(0,0,0,0.30)', border: '1px solid var(--border-light, #e5e5e5)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 10 }}>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.6px', color: 'var(--mercedes-cyan)', textTransform: 'uppercase' }}>Cómo se cobra</div>
+              <h3 style={{ margin: '2px 0 0', fontSize: 19, color: 'var(--text-main)' }}>{reglasPalanca.palanca}</h3>
+            </div>
+            <button onClick={() => setReglasPalanca(null)}
+                    style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 20, color: 'var(--medium-gray)', lineHeight: 1 }}
+                    aria-label="Cerrar">×</button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {((reglasPalanca as any).reglas || []).map((r: string, i: number) => {
+              const sep = r.indexOf(' · ')
+              const etiqueta = sep > 0 ? r.slice(0, sep) : ''
+              const cuerpo = sep > 0 ? r.slice(sep + 3) : r
+              return (
+                <div key={i} style={{ padding: '10px 12px', background: 'var(--bg-card, rgba(0,0,0,0.03))',
+                                      border: '1px solid var(--border-light, #e8e8e8)', borderRadius: 9, fontSize: 13.5, lineHeight: 1.55 }}>
+                  {etiqueta && <span style={{ fontWeight: 800, color: 'var(--mercedes-cyan)', marginRight: 6 }}>{etiqueta}</span>}
+                  <span style={{ color: 'var(--text-main)' }}>{cuerpo}</span>
+                </div>
+              )
+            })}
+          </div>
+          <div style={{ marginTop: 12, fontSize: 11.5, color: 'var(--medium-gray)' }}>
+            Reglas del comunicado TER oficial de Telefónica del mes · los importes se liquidan a los 2 meses (N+2)
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (authorized === null) {
     return <div style={{ padding: 40, color: 'var(--mercedes-cyan)', fontWeight: 600 }}>Verificando credenciales del módulo...</div>;
   }
@@ -334,6 +380,7 @@ export default function TerritorialPdvPage() {
 
   return (
     <div style={{ padding: '24px 32px', backgroundColor: 'var(--bg-app)', minHeight: '100vh', fontFamily: 'system-ui, -apple-system, sans-serif', color: 'var(--text-main)' }}>
+      <PanelReglas />
       {/* CABECERA */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -442,7 +489,20 @@ export default function TerritorialPdvPage() {
                   }}
                 >
                   <td style={{ padding: '9px 12px', fontWeight: 600, color: 'var(--text-muted)' }}>{row.negocio}</td>
-                  <td style={{ padding: '9px 12px', fontWeight: 700, color: 'var(--text-main)' }}>{row.palanca}</td>
+                  <td style={{ padding: '9px 12px', fontWeight: 700, color: 'var(--text-main)' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+                      {Array.isArray((row as any).reglas) && (row as any).reglas.length > 0 && (
+                        <Info
+                          size={15}
+                          color="var(--mercedes-cyan)"
+                          style={{ cursor: 'pointer', flexShrink: 0 }}
+                          onClick={(e) => { e.stopPropagation(); setReglasPalanca(row); }}
+                          aria-label={`Cómo se cobra ${row.palanca}`}
+                        />
+                      )}
+                      {row.palanca}
+                    </span>
+                  </td>
                   
                   <td style={{ padding: '9px 12px', textAlign: 'center', fontWeight: 600, color: 'var(--text-main)', backgroundColor: 'rgba(255,255,255,0.01)' }}>
                     {displayObj}

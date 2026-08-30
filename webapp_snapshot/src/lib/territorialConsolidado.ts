@@ -21,42 +21,84 @@ export const STATIC_PALANCAS = [
     negocio: 'Fijo',
     palanca: 'Altas BAF',
     tramos: { tramo1: '20%', tramo2: '30%', tramo3: '-', bonif: '-' },
-    matches: ['Alta BAF Total', 'Altas BAF', 'baf total']
+    matches: ['Alta BAF Total', 'Altas BAF', 'baf total'],
+    reglas: [
+      'QUÉ CUENTA · Altas y portabilidades de fibra Movistar y O2 de las 4 tiendas, más los traslados con fibra. Las anuladas por causa técnica (ORTI) que no se rehacen en 15 días también SUMAN a favor.',
+      'OBJETIVO · La suma de los objetivos BAF Convergente MS + Convergente O2 + Resto BAF del Excel de Telefónica. Se mide con la EMPRESA entera, no tienda a tienda.',
+      'QUÉ PAGA · Al llegar al 100 % del objetivo: el 20 % de la cuota (PVP con IVA y promos) de CADA operación del mes. Al 115 %: el 30 %. Por debajo del 100 %: nada.',
+      'CANDADOS · Sin el 80 % del Convergente no se cobra. Una baja de fibra en el domicilio a ±30 días anula el alta (mismo titular o distinto). Si el cliente baja de tarifa en los 15 días tras instalar, pagan por la tarifa menor.',
+      'CUÁNDO · Se cobra a los 2 meses (N+2). Lo que se instala a partir del 2º mes se va a la liquidación del mes de instalación.',
+    ]
   },
   {
     key: 'altas_baf_conv',
     negocio: 'Fijo',
     palanca: 'Altas BAF Movistar Convergente',
     tramos: { tramo1: '40%', tramo2: '50%', tramo3: '-', bonif: '-' },
-    matches: ['Alta BAF Convergente', 'Altas BAF Movistar Convergente', 'baf convergente']
+    matches: ['Alta BAF Convergente', 'Altas BAF Movistar Convergente', 'baf convergente'],
+    reglas: [
+      'QUÉ CUENTA · Altas, portabilidades y traslados de miMovistar y Fusión (fibra + paquete). OJO: la fibra y el paquete deben tramitarse en el MISMO pedido de Movistar; en dos pedidos, Telefónica lo degrada a fibra suelta (~60 €). Las ORTI no rehechas en 15 días suman.',
+      'OBJETIVO · El BAF CONVERGENTE MS del Excel. Empresa entera.',
+      'QUÉ PAGA · Al 100 %: el 40 % de la cuota (PVP con IVA) de cada alta. Al 115 %: el 50 %.',
+      'ES LA LLAVE DE TODO · Esta palanca es EL GATE: sin su 80 % no se cobra el resto del Territorial (BAF, Fútbol, FTTR, Dispositivos).',
+      'CANDADOS · Baja a ±30 días anula; bajada de tarifa en 15 días tras instalar → pagan por la menor; si el paquete lleva fútbol y el cliente lo quita antes del día 8 del 2º mes, pagan 1,5/1,3 cuotas en vez de 2. Cobro N+2.',
+    ]
   },
   {
     key: 'baf_conv_ms_disp',
     negocio: 'Fijo',
     palanca: 'BAF Convergente MS / Dispositivos',
     tramos: { tramo1: '-', tramo2: '-', tramo3: '-', bonif: '20%' },
-    matches: ['BAF Convergente MS / Dispositivos', 'baf convergente ms / dispositivos']
+    matches: ['BAF Convergente MS / Dispositivos', 'baf convergente ms / dispositivos'],
+    reglas: [
+      'QUÉ ES · Una BONIFICACIÓN extra del +20 % de la cuota por CADA alta convergente del mes — encima del 40/50 % de la palanca de arriba (~2.300 €/mes con los números de agosto).',
+      'DOS PUERTAS · (1) el Convergente al 100 % de su objetivo; y (2) que al menos el 40 % de esas altas lleven un terminal de gama Media o superior entregado en el mes o el siguiente.',
+      'EL MEDIDOR · Esta fila cuenta las convergentes con terminal (mismo cliente, a ±30 días). Telefónica declara su propio medidor en la liquidación: mayo 30 %, junio 8 % — por eso nunca se ha cobrado.',
+      'LA JUGADA · Convergente + terminal EN LA MISMA VISITA. Cada venta así acerca los ~2.300 €.',
+      'CANDADOS · El terminal ligado a la venta en ≤30 días; fuera desistimientos (15 días) y repo-down a Base (±20 días). Cobro N+2.',
+    ]
   },
   {
     key: 'fibra_fttr',
     negocio: 'Fijo',
     palanca: 'Fibra FTTR por Tienda',
     tramos: { tramo1: '200 €', tramo2: '-', tramo3: '-', bonif: '-' },
-    matches: ['FTTR', 'Fibra FTTR por Tienda', 'fttr por tienda']
+    matches: ['FTTR', 'Fibra FTTR por Tienda', 'fttr por tienda'],
+    reglas: [
+      'QUÉ CUENTA · Altas de Solución FTTR (kit principal) — la fibra invisible. Las ORTI también suman.',
+      'OBJETIVO · POR TIENDA, no por empresa: cada tienda pelea su propio objetivo del Excel (2/2/3/2 en agosto).',
+      'QUÉ PAGA · 200 € fijos a CADA tienda que llegue al 100 % del suyo. Julio: solo Villamayor lo logró → 200 €.',
+      'PROPINA · Cada alta FTTR paga además 100 € por unidad (tarifario nacional) y computa 910 € en el objetivo de ingresos de Dispositivos — una FTTR empuja TRES palancas a la vez.',
+      'CANDADOS · El 80 % del Convergente. Cobro N+2.',
+    ]
   },
   {
     key: 'rent_disp_seguros',
     negocio: 'Móvil',
     palanca: 'Rent/Dispositivos + Seguros',
     tramos: { tramo1: '3,5%', tramo2: '4,5%', tramo3: '6,0%', bonif: '-' },
-    matches: ['Dispositivos + Seguros', 'Rent/Dispositivos + Seguros', 'Dispositivos + Seguro']
+    matches: ['Dispositivos + Seguros', 'Rent/Dispositivos + Seguros', 'Dispositivos + Seguro'],
+    reglas: [
+      'QUÉ CUENTA (en €) · El PVP sin IVA de los dispositivos (Rent y venta) entregados en el mes o el siguiente + 910 € por cada alta FTTR + los seguros a valor fijo: Smartphone 200 € · Tablet 50 € · Reacondicionado 150 €. La gama Baja, con tope de 100 uds por tienda.',
+      'OBJETIVO · La suma de INGRESOS DISPOSITIVOS + INGRESOS SEGURO MÓVIL + INGRESOS FIBRA FTTR del Excel (agosto: 94.463 €). Distribuidor entero.',
+      'QUÉ PAGA · Al 100 %: el 3,5 % del PVP sin IVA de los dispositivos. Al 115 %: el 4,5 %. Al 130 %: el 6 %.',
+      'CANDADOS · El 80 % del Convergente; certificación de 30 dispositivos por tienda; fuera la autoventa, los desistimientos en 15 días y los repo-down a Base (±20 días); los seguros deben seguir vivos el día 8 del 2º mes.',
+      'CUÁNDO · Cobro N+2. Mayo se quedó a 8.019 € del objetivo: cada venta de terminal cuenta.',
+    ]
   },
   {
     key: 'altas_futbol_tv',
     negocio: 'Fijo',
     palanca: 'Altas Fútbol/ Desarrollo TV por Tienda',
     tramos: { tramo1: '300 €', tramo2: '500 €', tramo3: '-', bonif: '-' },
-    matches: ['Repo Fútbol', 'Altas Fútbol/ Desarrollo TV por Tienda', 'Repo Futbol', 'futbol por tienda']
+    matches: ['Repo Fútbol', 'Altas Fútbol/ Desarrollo TV por Tienda', 'Repo Futbol', 'futbol por tienda'],
+    reglas: [
+      'QUÉ CUENTA · Todo el fútbol del mes: altas de miMovistar con Fútbol Total, Champions o LaLiga; altas de Fusión Bar; y los repos con destino Fútbol Total, su pago único, Champions o LaLiga (con subida de cuota). Las ORTI no rehechas en 15 días suman.',
+      'QUÉ NO CUENTA · Repos con repo-down a ±20 días (en cualquier canal) y los de origen LaLiga/Champions a destino Fútbol Total (eso no es subir).',
+      'OBJETIVO · ALTAS FÚTBOL + DESARROLLO TV del Excel, sumados (agosto: 50 + 111 = 161). Empresa entera.',
+      'QUÉ PAGA · Al 100 %: 300 € por CADA tienda (1.200 €). Al 115 %: 500 € por tienda (2.000 €). Junio y julio se cobraron a 2.000 €.',
+      'CANDADOS · El Fútbol Total debe seguir activo el día 8 del 2º mes (altas y repos); el 80 % del Convergente. Cobro N+2.',
+    ]
   }
 ]
 
