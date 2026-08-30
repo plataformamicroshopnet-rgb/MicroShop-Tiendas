@@ -15,9 +15,9 @@ export async function register() {
     await fixNetflixRename()
     const { fixTiContratosListaLimpia } = await import('./lib/migrations/tiContratosListaLimpiaFix')
     await fixTiContratosListaLimpia()
-    const { fixTiContratosOrden } = await import('./lib/migrations/tiContratosOrdenFix')
-    await fixTiContratosOrden()
     const { fixTiContratosRetag } = await import('./lib/migrations/tiContratosRetagFix')
     await fixTiContratosRetag()
+    const { fixTiContratosOrden } = await import('./lib/migrations/tiContratosOrdenFix')
+    await fixTiContratosOrden()
   }
 }

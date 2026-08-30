@@ -1,19 +1,25 @@
 import { PrismaClient } from '@prisma/client'
 
 // Orden de la lista de Contratos Móvil (30-ago-2026, el dueño: «colócalas en
-// el mismo orden que te las mandé»). Las pantallas de catálogo ordenan por
-// createdAt ascendente, así que se fija una secuencia de segundos sobre la
-// fecha más antigua del grupo: AV (nuevo → existente → adicionales), MV igual,
-// BV igual, y la adicional BAF SA al final. Estable si se ejecuta dos veces.
+// el mismo orden que te las mandé» y después «los puedes colocar en orden» por
+// los planos cerrados). Las pantallas de catálogo ordenan por createdAt
+// ascendente, así que se fija una secuencia de segundos sobre la fecha más
+// antigua del grupo: cada familia junta (nuevo → existente → el plano viejo
+// CERRADO 31/08 → adicionales), AV, MV, BV, y la adicional BAF SA al final.
+// Estable si se ejecuta dos veces. OJO: debe correr DESPUÉS de
+// tiContratosRetagFix, que es quien re-crea los planos cerrados.
 const ORDEN = [
   'Contrato Móvil AV - Cliente NUEVO',
   'Contrato Móvil AV - Cliente EXISTENTE',
+  'Contrato Móvil AV - Alta, portabilidad y migración',
   'Contrato Móvil AV - Alta, portabilidad y migración Líneas extras adicionales',
   'Contrato Móvil MV - Cliente NUEVO',
   'Contrato Móvil MV - Cliente EXISTENTE',
+  'Contrato Móvil MV - Alta, portabilidad y migración contrato móvil',
   'Contrato Móvil MV - Alta, portabilidad y migración Líneas extras adicionales',
   'Contrato Móvil BV - Cliente NUEVO',
   'Contrato Móvil BV - Cliente EXISTENTE',
+  'Contrato Móvil BV - Alta, portabilidad y migración contrato móvil',
   'Contrato Móvil BV - Alta, portabilidad y migración Líneas extras adicionales',
   'Contrato Móvil Línea móvil adicional asociada a BAF SA',
 ]
