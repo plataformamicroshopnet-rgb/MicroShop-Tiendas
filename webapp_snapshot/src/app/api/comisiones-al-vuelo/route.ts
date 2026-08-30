@@ -110,7 +110,8 @@ export async function GET(request: Request) {
     const torneos = (cfg?.concursos || [])
       .filter((c: any) => (c.premioModo || 'podio') === 'porVenta' && Number(c.importePorVenta) > 0)
       .map((cRaw: any) => {
-        const c = resolverObjetivosTorneo(cRaw, input.tiendaRules || [])
+        // resolverObjetivosTorneo RETIRADO (30-ago-2026): los % son los candados del motor.
+        const c = cRaw
         const rep = repartoPorVenta(items, c, input.catalogs || {}, input.tiendaRules || [])
         return {
           id: c.id,

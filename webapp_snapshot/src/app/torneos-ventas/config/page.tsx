@@ -8,7 +8,7 @@ import { can } from '@/lib/permissions'
 import { usePeriod } from '@/components/PeriodProvider'
 import {
   TorneosConfig, Concurso, TorneoPremio, MAX_CONCURSOS, TORNEOS_CONFIG_KEY_MES,
-  loadTorneosConfigMes, generaNotasConcurso, resolverObjetivosTorneo, reglaDeReferencia } from '@/lib/torneosConfig'
+  loadTorneosConfigMes, generaNotasConcurso, reglaDeReferencia } from '@/lib/torneosConfig'
 
 const nuevoConcurso = (): Concurso => ({
   id: 'c' + Date.now(),
@@ -138,9 +138,13 @@ export default function ConfiguradorTorneosPage() {
       // así que no se le exige tipoVenta para guardarse.
       const limpio: TorneosConfig = {
         concursos: config.concursos.filter(c => c.nombre.trim() && (c.metrica === 'comisiones' || c.tipoVenta.trim())).map(c => ({
-          // los % se fijan también en unidades al guardar (red de seguridad si
-          // en algún sitio no llegan las reglas del mes)
-          ...resolverObjetivosTorneo(c, reglasMes),
+          // Los mínimos del torneo son SUYOS (ventas de sus fechas) y se guardan
+          // tal cual. El viejo «% → unidades al guardar» se RETIRÓ el 30-ago-2026:
+          // convertía el % del objetivo de la palanca (mes entero) en un mínimo
+          // de ventas de la VENTANA del torneo — al dueño le pisó 29→67 y 39→78.
+          // Los % de verdad son los candados del motor (gatePctPalanca /
+          // objetivo2PctMin), que miden el MES con el contador del Panel.
+          ...c, minGrupalPct: 0, objetivo2Pct: 0,
           premios: c.premios.map((p, i) => ({ ...p, pos: i + 1, importe: Number(p.importe) || 0 }))
         }))
       }
@@ -369,17 +373,15 @@ export default function ConfiguradorTorneosPage() {
                            value={c.importePorVenta2 || ''} placeholder="ej. 10 (doblar los 5)"
                            onChange={e => updateConcurso(ci, { importePorVenta2: Number(e.target.value) })} />
                   </div>
-                  <div>
-                    <label style={{ fontSize: 12, color: 'var(--medium-gray,#64748b)', fontWeight: 600 }}>«mínimo el X%» del 2º objetivo (cartel)</label>
-                    <input type="number" step="1" style={{ ...ipt, width: '100%', marginTop: 4 }}
-                           value={c.objetivo2PctMin || ''} placeholder="ej. 120 — condición que vigilas tú"
-                           onChange={e => updateConcurso(ci, { objetivo2PctMin: Number(e.target.value) })} />
-                  </div>
-                  {/* OBJETIVOS EN % (dueño, 26-ago-2026): «llegar al 100%» = el 1º objetivo
-                      de la palanca del mes. Se guardan también resueltos en unidades. */}
+                  {/* CANDADOS EN % — LOS COMPRUEBA EL MOTOR (30-ago-2026): miden el
+                      contador de la palanca sobre el MES ENTERO (mismo universo que su
+                      fila del Panel). NO tocan los mínimos del torneo, que siguen siendo
+                      ventas de SUS fechas. Las casillas viejas «% → unidades» se
+                      retiraron: convertían el % del mes en un mínimo de la ventana del
+                      torneo y pisaban los números del dueño (29→67, 39→78). */}
                   <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 14, background: 'rgba(14,165,233,0.06)', border: '1px dashed rgba(14,165,233,0.4)', borderRadius: 10, padding: '10px 12px' }}>
                     <div>
-                      <label style={{ fontSize: 12, color: 'var(--medium-gray,#64748b)', fontWeight: 600 }}>🧭 En % del objetivo de la palanca (opcional)</label>
+                      <label style={{ fontSize: 12, color: 'var(--medium-gray,#64748b)', fontWeight: 600 }}>🧭 Palanca de referencia de los candados</label>
                       <select style={{ ...ipt, width: '100%', marginTop: 4 }} value={c.palancaRef || ''}
                               onChange={e => updateConcurso(ci, { palancaRef: e.target.value })}>
                         <option value="">— la que casa con el Tipo de Venta —</option>
@@ -389,33 +391,23 @@ export default function ConfiguradorTorneosPage() {
                       </select>
                     </div>
                     <div>
-                      <label style={{ fontSize: 12, color: 'var(--medium-gray,#64748b)', fontWeight: 600 }}>Mínimo de equipo en %</label>
+                      <label style={{ fontSize: 12, color: 'var(--medium-gray,#64748b)', fontWeight: 600 }}>🔒 Candado de COBRO: % mínimo del MES</label>
                       <input type="number" step="1" style={{ ...ipt, width: '100%', marginTop: 4 }}
-                             value={c.minGrupalPct || ''} placeholder="ej. 100"
-                             onChange={e => updateConcurso(ci, { minGrupalPct: Number(e.target.value) })} />
+                             value={c.gatePctPalanca || ''} placeholder="ej. 100 — sin llegar, el torneo paga 0"
+                             onChange={e => updateConcurso(ci, { gatePctPalanca: Number(e.target.value) })} />
                     </div>
                     <div>
-                      <label style={{ fontSize: 12, color: 'var(--medium-gray,#64748b)', fontWeight: 600 }}>2º objetivo en %</label>
+                      <label style={{ fontSize: 12, color: 'var(--medium-gray,#64748b)', fontWeight: 600 }}>🎯 Candado del 2º importe: % mínimo del MES</label>
                       <input type="number" step="1" style={{ ...ipt, width: '100%', marginTop: 4 }}
-                             value={c.objetivo2Pct || ''} placeholder="ej. 115"
-                             onChange={e => updateConcurso(ci, { objetivo2Pct: Number(e.target.value) })} />
+                             value={c.objetivo2PctMin || ''} placeholder="ej. 120 — sin llegar, no hay salto"
+                             onChange={e => updateConcurso(ci, { objetivo2PctMin: Number(e.target.value) })} />
                     </div>
-                    {(Number(c.minGrupalPct) > 0 || Number(c.objetivo2Pct) > 0) && (() => {
+                    {(Number(c.gatePctPalanca) > 0 || Number(c.objetivo2PctMin) > 0) && (() => {
                       const regla = reglaDeReferencia(c, reglasMes)
-                      if (!regla) return <div style={{ gridColumn: '1 / -1', fontSize: 12.5, color: '#b45309', fontWeight: 600 }}>⚠️ No encuentro la palanca de referencia en las reglas de {mesLabel}: elígela en el desplegable.</div>
-                      const res = resolverObjetivosTorneo(c, reglasMes)
-                      const cambioMin = Number(c.minGrupalPct) > 0 && Number(c.minGrupal) > 0 && res.minGrupal !== c.minGrupal
-                      const cambioObj = Number(c.objetivo2Pct) > 0 && Number(c.objetivo2Grupal) > 0 && res.objetivo2Grupal !== c.objetivo2Grupal
+                      if (!regla) return <div style={{ gridColumn: '1 / -1', fontSize: 12.5, color: '#b45309', fontWeight: 600 }}>⚠️ No encuentro la palanca de referencia en las reglas de {mesLabel}: elígela en el desplegable (sin palanca medible, el candado NO deja pagar).</div>
                       return (
-                        <div style={{ gridColumn: '1 / -1', fontSize: 12.5, lineHeight: 1.5 }}>
-                          <span style={{ color: '#0f766e', fontWeight: 700 }}>
-                            Con «{regla.nombre}» (objetivo {regla.objPrimerTramo}):
-                            {Number(c.minGrupalPct) > 0 ? ` mínimo = ${res.minGrupal} ventas` : ''}
-                            {Number(c.objetivo2Pct) > 0 ? ` · 2º objetivo = ${res.objetivo2Grupal} ventas` : ''}.
-                          </span>
-                          {(cambioMin || cambioObj) && (
-                            <span style={{ color: '#b45309', fontWeight: 700 }}> ⚠️ El objetivo de la palanca ha cambiado desde el último guardado — pulsa Guardar para fijar los números nuevos.</span>
-                          )}
+                        <div style={{ gridColumn: '1 / -1', fontSize: 12.5, lineHeight: 1.5, color: '#0f766e', fontWeight: 700 }}>
+                          Los candados miden «{regla.nombre}» (objetivo del mes: {regla.objPrimerTramo}) sobre el MES entero — el programa lo comprueba solo. Los mínimos del torneo de arriba siguen siendo ventas de sus fechas.
                         </div>
                       )
                     })()}

@@ -9,5 +9,7 @@ export async function register() {
     await fixTorneoPctMin()
     const { fixTorneoGates } = await import('./lib/migrations/torneoGatesFix')
     await fixTorneoGates()
+    const { fixTorneoLegacyPct } = await import('./lib/migrations/torneoLegacyPctFix')
+    await fixTorneoLegacyPct()
   }
 }

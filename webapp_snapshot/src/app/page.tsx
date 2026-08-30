@@ -602,7 +602,9 @@ export default function DashboardPage() {
           items.push({ name: v, sale: s });
         });
         // objetivos en % del objetivo de la palanca: resueltos con las reglas del mes
-        const rep = repartoPorVenta(items, resolverObjetivosTorneo(c, tiendaRules), catalogs, tiendaRules);
+        // resolverObjetivosTorneo RETIRADO (30-ago-2026): convertía el % del mes
+        // en un mínimo de la VENTANA del torneo. Los % son los candados del motor.
+        const rep = repartoPorVenta(items, c, catalogs, tiendaRules);
         // Con el mínimo de equipo sin llegar se enseña lo EN JUEGO (lo que se
         // puede perder), que motiva más que un 0,00 € (dueño, 24-ago-2026).
         const conFila = new Set(rep.filas.map(f => f.name));

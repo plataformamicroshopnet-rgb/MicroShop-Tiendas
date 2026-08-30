@@ -57,9 +57,10 @@ export interface Concurso {
   gatePctPalanca?: number        //   candado de COBRO: sin llegar a este % del objetivo de la palanca
                                  //   del MES, el torneo entero paga 0 (sustituye a la nota a mano
                                  //   «imprescindible llegar al 100%…»). También lo comprueba el motor.
-  palancaRef?: string            // objetivos en % (dueño, 26-ago-2026): regla de comisiones de referencia
-  minGrupalPct?: number          //   mínimo de equipo como % del 1º objetivo de esa palanca (100 = entero)
-  objetivo2Pct?: number          //   2º objetivo como % del mismo objetivo (ej. 115)
+  palancaRef?: string            // regla de comisiones de referencia de los CANDADOS del motor
+  minGrupalPct?: number          // ⚰️ RETIRADO (30-ago-2026): convertía el % del MES en un mínimo de la
+  objetivo2Pct?: number          //   VENTANA del torneo y pisó los números del dueño (29→67, 39→78).
+                                 //   Se conservan en el tipo por los JSON viejos; NADIE los aplica ya.
   notas?: string                 // nota extra A MANO; las condiciones salen solas (generaNotasConcurso)
   tituloColor?: string           // color del nombre en el ranking ('' = el de siempre)
   tituloSize?: number            // tamaño en px del nombre en el ranking (0 = el de siempre)
@@ -276,6 +277,11 @@ export function reglaDeReferencia(c: Concurso, reglas: any[]): any | null {
       || null
 }
 
+// ⚰️ RETIRADA (30-ago-2026): convertía minGrupalPct/objetivo2Pct (% del objetivo
+// del MES de la palanca) en mínimos de ventas de la VENTANA del torneo — dos
+// universos distintos: al dueño le pisó 29→67 y 39→78. Los % de verdad son los
+// candados del motor (gatePctPalanca / objetivo2PctMin) dentro de repartoPorVenta.
+// Se deja exportada por compatibilidad; ya no la llama nadie.
 export function resolverObjetivosTorneo(c: Concurso, reglas: any[]): Concurso {
   const minPct = Number(c.minGrupalPct) || 0
   const obj2Pct = Number(c.objetivo2Pct) || 0
@@ -421,8 +427,7 @@ export function generaNotasConcurso(c: Concurso): string {
   if ((c.premioModo || 'podio') === 'porVenta') {
     if (Number(c.importePorVenta) > 0) partes.push(`Se paga ${fmtEur(Number(c.importePorVenta))} por venta realizada.`)
     if (Number(c.minIndividual) > 0) partes.push(`Mínimo individual: ${c.minIndividual} venta(s) para cobrar.`)
-    if (Number(c.minGrupal) > 0) partes.push(`Mínimo de equipo: ${c.minGrupal} venta(s) entre todos`
-      + (Number(c.minGrupalPct) > 0 ? ` (el ${c.minGrupalPct}% del objetivo${c.palancaRef ? ' de ' + c.palancaRef : ''})` : '') + '.')
+    if (Number(c.minGrupal) > 0) partes.push(`Mínimo de equipo: ${c.minGrupal} venta(s) entre todos.`)
     if (Number(c.topeBote) > 0) partes.push(`Bote máximo: ${fmtEur(Number(c.topeBote))} entre todos, por orden de venta.`)
   }
   // El candado de cobro en % — LO COMPRUEBA EL MOTOR (30-ago-2026).
@@ -437,7 +442,6 @@ export function generaNotasConcurso(c: Concurso): string {
   if ((c.premioModo || 'podio') === 'porVenta'
       && Number(c.importePorVenta2) > 0 && Number(c.objetivo2Grupal) > 0) {
     partes.push(`🎯 Al llegar el equipo a ${c.objetivo2Grupal} venta(s)`
-      + (Number(c.objetivo2Pct) > 0 ? ` (el ${c.objetivo2Pct}% del objetivo${c.palancaRef ? ' de ' + c.palancaRef : ''})` : '')
       + (Number(c.objetivo2PctMin) > 0 ? ` mínimo el ${c.objetivo2PctMin}%` : '')
       + `, TODAS pasan a ${fmtEur(Number(c.importePorVenta2))} por venta.`)
   }
@@ -476,7 +480,8 @@ export function torneoExtrasPorVendedor(
   const canon = canonizaVendedores(sales)
   const norm = (v: any) => String(v || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim()
   for (const cRaw of cfg.concursos) {
-    const c = reglas && reglas.length ? resolverObjetivosTorneo(cRaw, reglas) : cRaw
+    // resolverObjetivosTorneo RETIRADO (30-ago-2026): los % son los candados del motor.
+    const c = cRaw
     if ((c.premioModo || 'podio') !== 'porVenta') continue
     if (!(Number(c.importePorVenta) > 0)) continue
     const items: { name: string; sale: any }[] = []
@@ -546,7 +551,8 @@ export function torneoEnJuegoPorVendedor(
     ? new Set(opciones.rosterNombres.map(norm))
     : null
   for (const cRaw of cfg.concursos) {
-    const c = reglas && reglas.length ? resolverObjetivosTorneo(cRaw, reglas) : cRaw
+    // resolverObjetivosTorneo RETIRADO (30-ago-2026): los % son los candados del motor.
+    const c = cRaw
     if ((c.premioModo || 'podio') !== 'porVenta') continue
     if (!(Number(c.importePorVenta) > 0)) continue
     // Torneo con la ventana ya cerrada: nadie puede sumar una venta más, así que
