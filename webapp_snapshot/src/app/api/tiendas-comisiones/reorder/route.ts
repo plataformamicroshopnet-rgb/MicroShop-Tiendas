@@ -28,10 +28,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Faltan parámetros' }, { status: 400 })
     }
 
-    // Usaremos una transacción para asegurar consistencia
+    // Usaremos una transacción para asegurar consistencia.
+    // OJO (30-ago-2026): el periodKey se recibía y NO se usaba — con ids de
+    // otro mes en pantalla (estado sin recargar) se reordenaban las filas de
+    // OTRO mes en silencio. updateMany con {id, periodKey}: un id que no sea
+    // del mes simplemente no toca nada.
     const queries = orderedIds.map((id: string, index: number) => {
-      return prisma.tiendaCommissionRule.update({
-        where: { id },
+      return prisma.tiendaCommissionRule.updateMany({
+        where: { id, periodKey },
         data: { order: index }
       });
     });

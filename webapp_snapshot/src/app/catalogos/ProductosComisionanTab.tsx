@@ -20,13 +20,28 @@ export default function ProductosComisionanTab() {
   const [hours, setHours] = useState<any[]>([])
   const [showPasteModal, setShowPasteModal] = useState(false)
   const [pasteText, setPasteText] = useState('')
+  // De qué mes se CARGARON las filas que hay en pantalla. Viaja con el guardado
+  // (sourcePeriodKey) para que el servidor pare cualquier copia entre meses que
+  // el dueño no haya autorizado (30-ago-2026).
+  const [loadedPeriodKey, setLoadedPeriodKey] = useState<string>('')
+  const [loadError, setLoadError] = useState<string>('')
 
   useEffect(() => {
     if (!activePeriodKey) return
     setLoading(true)
-    fetch(`/api/tiendas-comisiones?periodKey=${activePeriodKey}`)
+    // El agujero del arrastre (30-ago-2026): si este fetch fallaba, en pantalla
+    // se quedaban las reglas del MES ANTERIOR bajo la etiqueta del nuevo, y el
+    // guardado (que borra y recrea el mes entero) las volcaba donde no eran.
+    // Ahora: (1) la pantalla se VACÍA al empezar a cargar, (2) una respuesta
+    // tardía de otro mes se ignora, y (3) un fallo deja la pantalla vacía con
+    // su aviso — nunca con datos de otro mes.
+    setRules([]); setHours([]); setLoadedPeriodKey(''); setLoadError('')
+    let vivo = true
+    const mesPedido = activePeriodKey
+    fetch(`/api/tiendas-comisiones?periodKey=${mesPedido}`)
       .then(r => r.json())
       .then(res => {
+        if (!vivo || mesPedido !== activePeriodKey) return
         if (res.success) {
           setRules(res.rules || [])
           // Rellenar la tienda de filas antiguas (sin ella) con el mapa de siempre
@@ -34,22 +49,49 @@ export default function ProductosComisionanTab() {
             ...h,
             tienda: (h.tienda && String(h.tienda).trim()) || tiendaDeComercial(h.comercial || '')
           })))
+          setLoadedPeriodKey(mesPedido)
+        } else {
+          setLoadError(res.error || 'No se pudieron cargar las reglas de este mes.')
         }
         setLoading(false)
       })
-      .catch(() => setLoading(false))
+      .catch(() => {
+        if (!vivo) return
+        setLoadError('No se pudieron cargar las reglas de este mes (¿conexión?). No se enseña nada para no confundir con otro mes.')
+        setLoading(false)
+      })
+    return () => { vivo = false }
   }, [activePeriodKey])
 
   const handleSave = async () => {
     if (isHistoric) return alert('No puedes modificar un mes histórico.')
+    if (loadError || !loadedPeriodKey) {
+      return alert('Las reglas de este mes no llegaron a cargarse: no se puede guardar (se pisaría el mes con datos que no son suyos). Recarga y vuelve a intentarlo.')
+    }
     setSaving(true)
     try {
-      const res = await fetch('/api/tiendas-comisiones', {
+      const guarda = (extra: Record<string, any> = {}) => fetch('/api/tiendas-comisiones', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ periodKey: activePeriodKey, rules, hours })
+        body: JSON.stringify({ periodKey: activePeriodKey, rules, hours,
+                              sourcePeriodKey: loadedPeriodKey, ...extra })
       })
-      const apiRes = await res.json()
+      let res = await guarda()
+      let apiRes = await res.json()
+      // Los dos candados del servidor piden autorización EXPRESA (dueño, 30-ago):
+      // copiar reglas de un mes a otro, y reescribir un mes cerrado.
+      if (!apiRes.success && apiRes.esCopiaEntreMeses) {
+        if (window.confirm(`⚠️ Estas reglas se cargaron de ${apiRes.sourcePeriodKey} y vas a guardarlas en ${activePeriodKey}.\n\n¿Autorizas COPIARLAS a ${activePeriodKey}?`)) {
+          res = await guarda({ confirmarCopia: true })
+          apiRes = await res.json()
+        }
+      }
+      if (!apiRes.success && apiRes.esMesCerrado) {
+        if (window.confirm(`⚠️ ${activePeriodKey} está CERRADO.\n\n¿Autorizas guardar encima igualmente?`)) {
+          res = await guarda({ confirmarCopia: true, autorizoMesCerrado: true })
+          apiRes = await res.json()
+        }
+      }
       if (apiRes.success) {
          // Si el servidor ha rescatado condicionantes que llegaban vacíos, se
          // DICE: un rescate silencioso vuelve a esconder el problema. Quien
@@ -178,6 +220,12 @@ export default function ProductosComisionanTab() {
   }
 
   if (loading || isLoadingPeriods) return <div style={{ padding: 40, color: 'var(--mercedes-cyan)', textAlign: 'center' }}>Cargando reglas...</div>
+
+  if (loadError) return (
+    <div style={{ padding: 40, textAlign: 'center', color: '#dc2626', fontWeight: 600 }}>
+      ⚠️ {loadError}
+    </div>
+  )
 
   return (
     <div style={{ paddingBottom: 60 }}>

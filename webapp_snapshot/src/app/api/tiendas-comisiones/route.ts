@@ -45,11 +45,53 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    // ── CANDADOS DEL GUARDADO (30-ago-2026, encargo del dueño: «que no se
+    // copien de un mes a otro salvo que yo lo autorice») ─────────────────────
+    // 1) Solo ADMIN guarda reglas — igual que el reorder de al lado. Este POST
+    //    estaba abierto: cualquiera que alcanzara la URL podía borrar y
+    //    reescribir las reglas de cualquier mes.
+    const session = await getSession()
+    if (!session?.user?.username) {
+      return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 })
+    }
+    const dbUser = await prisma.user.findUnique({
+      where: { username: session.user.username },
+      select: { role: true },
+    })
+    if (!dbUser || normalizeRole(dbUser.role) !== 'ADMIN') {
+      return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 403 })
+    }
+
     const data = await request.json()
-    const { periodKey, rules, hours } = data
+    const { periodKey, rules, hours, sourcePeriodKey, confirmarCopia, autorizoMesCerrado } = data
 
     if (!periodKey) {
       return NextResponse.json({ success: false, error: 'Falta periodKey' }, { status: 400 })
+    }
+
+    // 2) La pantalla declara DE QUÉ MES cargó las filas (sourcePeriodKey). Si
+    //    no coincide con el mes al que van, esto es una COPIA entre meses y se
+    //    para en seco salvo autorización expresa. Sin este candado, un fetch
+    //    caído al cambiar de mes dejaba en pantalla las reglas del mes anterior
+    //    y el guardado (que borra y recrea el mes entero) las volcaba al otro
+    //    mes sin que nadie lo viera. Las llamadas viejas sin sourcePeriodKey
+    //    pasan como siempre.
+    if (sourcePeriodKey && sourcePeriodKey !== periodKey && confirmarCopia !== true) {
+      return NextResponse.json({
+        success: false, esCopiaEntreMeses: true, sourcePeriodKey,
+        error: `Estas reglas se cargaron de ${sourcePeriodKey} y se iban a guardar en ${periodKey}: copia entre meses sin autorizar.`,
+      }, { status: 409 })
+    }
+
+    // 3) Un mes CERRADO no se reescribe sin decirlo en voz alta (el isHistoric
+    //    de la pantalla se cae si la lista de periodos no llegó: aquí en el
+    //    servidor no se cae).
+    const wp = await prisma.workPeriod.findFirst({ where: { period_key: periodKey } })
+    if (wp?.status === 'HISTORIC' && autorizoMesCerrado !== true) {
+      return NextResponse.json({
+        success: false, esMesCerrado: true,
+        error: `${periodKey} está CERRADO: guardar encima requiere autorización expresa.`,
+      }, { status: 409 })
     }
 
     // ── LOS CONDICIONANTES NO SE PIERDEN POR EL CAMINO ──────────────────────

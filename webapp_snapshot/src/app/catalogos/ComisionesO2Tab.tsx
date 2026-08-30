@@ -22,24 +22,66 @@ export default function ComisionesO2Tab() {
 
   const [rules, setRules] = useState<any[]>([])
   const [hours, setHours] = useState<any[]>([])
+  // true = este mes NO tiene reglas O2 guardadas (se enseña el botón de traerlas
+  // del mes anterior — la copia solo con ese clic, nunca sola).
+  const [sinReglas, setSinReglas] = useState(false)
 
   useEffect(() => {
     if (!activePeriodKey) return
     setLoading(true)
-    fetch(`/api/settings?key=o2_rules_v2_${activePeriodKey}`)
+    // EL BUG DEL ARRASTRE (30-ago-2026, encargo del dueño): si el mes no tenía
+    // su clave, el estado del mes ANTERIOR se quedaba en pantalla y al Guardar
+    // se escribía en el mes nuevo — «se copian al ir hacia atrás». Ahora la
+    // pantalla se vacía SIEMPRE al cambiar de mes; copiar del anterior es un
+    // botón aparte (autorización expresa).
+    setRules([]); setHours([]); setSinReglas(false)
+    let vivo = true
+    const mesPedido = activePeriodKey
+    fetch(`/api/settings?key=o2_rules_v2_${mesPedido}`)
       .then(r => r.json())
       .then(res => {
+        if (!vivo || mesPedido !== activePeriodKey) return
         if (res.success && res.value) {
           try {
             const parsed = JSON.parse(res.value);
             setRules(parsed.rules || [])
             setHours(parsed.hours || [])
-          } catch(e) {}
+          } catch(e) { setSinReglas(true) }
+        } else {
+          setSinReglas(true)
         }
         setLoading(false)
       })
-      .catch(() => setLoading(false))
+      .catch(() => { if (vivo) setLoading(false) })
+    return () => { vivo = false }
   }, [activePeriodKey])
+
+  // Mes anterior de '2026_09' → '2026_08' (aritmética pura).
+  const mesAnterior = (() => {
+    const m = /^(\d{4})_(\d{2})$/.exec(String(activePeriodKey || ''))
+    if (!m) return ''
+    const t = Number(m[1]) * 12 + (Number(m[2]) - 1) - 1
+    return `${Math.floor(t / 12)}_${String((t % 12) + 1).padStart(2, '0')}`
+  })()
+
+  const traerDelMesAnterior = async () => {
+    if (!mesAnterior) return
+    try {
+      const res = await fetch(`/api/settings?key=o2_rules_v2_${mesAnterior}`)
+      const data = await res.json()
+      if (data.success && data.value) {
+        const parsed = JSON.parse(data.value)
+        setRules(parsed.rules || [])
+        setHours(parsed.hours || [])
+        setSinReglas(false)
+        alert(`Reglas O2 de ${mesAnterior} traídas a la pantalla. Revisa y pulsa Guardar para dejarlas en ${activePeriodKey}.`)
+      } else {
+        alert(`${mesAnterior} tampoco tiene reglas O2 guardadas.`)
+      }
+    } catch {
+      alert('No se pudieron traer las reglas del mes anterior.')
+    }
+  }
 
   const handleSave = async () => {
     if (editLocked) return alert('No puedes modificar un mes histórico.')
@@ -116,6 +158,22 @@ export default function ComisionesO2Tab() {
 
   return (
     <div style={{ paddingBottom: 60 }}>
+      {sinReglas && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', marginBottom: 16,
+                      background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.4)', borderRadius: 10 }}>
+          <AlertCircle size={18} color="#d97706" />
+          <span style={{ fontSize: 13.5, color: '#92400e', fontWeight: 600 }}>
+            {activePeriodKey} no tiene reglas O2 guardadas todavía. Nada se copia solo:
+          </span>
+          {mesAnterior && !editLocked && (
+            <button onClick={traerDelMesAnterior}
+                    style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #d97706',
+                             background: '#fff7ed', color: '#b45309', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
+              Traer las de {mesAnterior}
+            </button>
+          )}
+        </div>
+      )}
       <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 12, marginBottom: 20 }}>
         {isHistoric && !unlockedHistoric && (
           <button

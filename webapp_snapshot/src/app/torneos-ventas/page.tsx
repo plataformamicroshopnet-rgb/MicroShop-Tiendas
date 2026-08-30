@@ -224,7 +224,7 @@ export default function TorneosVentasPage() {
       const items: { name: string; sale: any }[] = [];
       validSellers.forEach(s => s.rawSales.filter(noAnulada).forEach((rs: any) => items.push({ name: s.name, sale: rs })));
       // objetivos en % del objetivo de la palanca: resueltos con las reglas del mes
-      const rep = repartoPorVenta(items, resolverObjetivosTorneo(c, tiendaRules), catalogs);
+      const rep = repartoPorVenta(items, resolverObjetivosTorneo(c, tiendaRules), catalogs, tiendaRules);
       const conFila = new Set(rep.filas.map(f => f.name));
       validSellers.forEach(s => { if (!conFila.has(s.name)) rep.filas.push({ name: s.name, ventas: 0, ganado: 0, enJuego: 0, cumpleMin: !(Number(c.minIndividual) > 0) }); });
       const data = rep.filas.map((f, idx) => ({ pos: idx + 1, name: f.name, value: f.ventas, label: String(f.ventas) }));

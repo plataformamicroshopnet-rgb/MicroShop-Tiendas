@@ -7,5 +7,7 @@ export async function register() {
     await fixTerritorialJulio()
     const { fixTorneoPctMin } = await import('./lib/migrations/torneoPctMinFix')
     await fixTorneoPctMin()
+    const { fixTorneoGates } = await import('./lib/migrations/torneoGatesFix')
+    await fixTorneoGates()
   }
 }

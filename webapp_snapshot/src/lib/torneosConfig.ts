@@ -49,9 +49,14 @@ export interface Concurso {
   minGrupal?: number             // solo 'porVenta': ventas mínimas ENTRE TODOS — sin llegar, no cobra nadie
   objetivo2Grupal?: number       // solo 'porVenta' (dueño, 25-ago-2026): 2º OBJETIVO de equipo (ventas)
   importePorVenta2?: number      //   al llegar, TODAS las ventas pasan a pagarse a este importe (retroactivo)
-  objetivo2PctMin?: number       //   coletilla del cartel «mínimo el X%» en la frase del 2º objetivo
-                                 //   (dueño, 30-ago-2026): condición que ÉL vigila al pagar, como la
-                                 //   nota del 100% — el motor NO la comprueba (solo cuenta ventas)
+  objetivo2PctMin?: number       //   «mínimo el X%»: el salto al 2º importe exige ADEMÁS llegar a ese
+                                 //   % del objetivo de la palanca del MES. LO COMPRUEBA EL MOTOR
+                                 //   (dueño, 30-ago-2026: «las unidades son orientativas — pueden dar
+                                 //   bajas y después tramitarlas; la manera de que no ocurra es con
+                                 //   los porcentajes»)
+  gatePctPalanca?: number        //   candado de COBRO: sin llegar a este % del objetivo de la palanca
+                                 //   del MES, el torneo entero paga 0 (sustituye a la nota a mano
+                                 //   «imprescindible llegar al 100%…»). También lo comprueba el motor.
   palancaRef?: string            // objetivos en % (dueño, 26-ago-2026): regla de comisiones de referencia
   minGrupalPct?: number          //   mínimo de equipo como % del 1º objetivo de esa palanca (100 = entero)
   objetivo2Pct?: number          //   2º objetivo como % del mismo objetivo (ej. 115)
@@ -140,6 +145,7 @@ export function parseTorneosConfig(raw: any): TorneosConfig {
         objetivo2Grupal: Math.max(0, Math.floor(Number(c.objetivo2Grupal) || 0)),
         importePorVenta2: Number(c.importePorVenta2) || 0,
         objetivo2PctMin: Math.max(0, Number(c.objetivo2PctMin) || 0),
+        gatePctPalanca: Math.max(0, Number(c.gatePctPalanca) || 0),
         palancaRef: String(c.palancaRef || '').trim(),
         minGrupalPct: Math.max(0, Number(c.minGrupalPct) || 0),
         objetivo2Pct: Math.max(0, Number(c.objetivo2Pct) || 0),
@@ -306,10 +312,15 @@ export interface RepartoPorVenta {
   objetivo2Grupal: number     // 0 = sin 2º objetivo
   importePorVenta2: number
   objetivo2Cumplido: boolean  // al cumplirse, TODAS las ventas pasan al 2º importe
+  // Candados en % contra la palanca del MES (dueño, 30-ago-2026):
+  pctPalanca: number | null   // % del objetivo de la palanca que lleva el equipo (null = no medible)
+  gatePctPalanca: number      // 0 = sin candado de cobro
+  gateCumplido: boolean       // sin cumplirse, el torneo entero paga 0 (todo queda «en juego»)
+  objetivo2PctMin: number     // 0 = el 2º importe solo exige las ventas del 2º objetivo
 }
 
 export function repartoPorVenta(items: { name: string; sale: any }[], c: Concurso,
-                                catalogs?: Record<string, any[]>): RepartoPorVenta {
+                                catalogs?: Record<string, any[]>, reglas?: any[]): RepartoPorVenta {
   const tope = Number(c.topeBote) || 0
   const minInd = Math.max(0, Math.floor(Number(c.minIndividual) || 0))
   const minGrp = Math.max(0, Math.floor(Number(c.minGrupal) || 0))
@@ -335,7 +346,28 @@ export function repartoPorVenta(items: { name: string; sale: any }[], c: Concurs
   // los tramos de las palancas (ej.: de 5 € a 10 € por venta).
   const obj2 = Math.max(0, Math.floor(Number(c.objetivo2Grupal) || 0))
   const rate2 = Number(c.importePorVenta2) || 0
+  // ── Candados en % contra la palanca del MES (dueño, 30-ago-2026) ──────────
+  // «Las unidades son orientativas: pueden dar bajas y después tramitarlas; la
+  // manera de que no ocurra es con los porcentajes.» Se mide el contador de la
+  // palanca de referencia sobre el MES ENTERO (el mismo universo que su fila
+  // del Panel), no solo la ventana del torneo. Si el candado está puesto y no
+  // se puede medir (llamador sin reglas, o palanca sin objetivo), NO se paga:
+  // mejor quedarse corto que pagar sin comprobar.
+  const gatePct = Math.max(0, Number(c.gatePctPalanca) || 0)
+  const pctMin2 = Math.max(0, Number(c.objetivo2PctMin) || 0)
+  let pctPalanca: number | null = null
+  if (gatePct > 0 || pctMin2 > 0) {
+    const regla = reglaDeReferencia(c, reglas || [])
+    const obj1 = regla ? (parseFloat(String(regla.objPrimerTramo ?? '').replace(',', '.')) || 0) : 0
+    if (regla && obj1 > 0) {
+      let uds = 0
+      for (const { sale } of items) if (matchesRule(sale, regla.nombre, regla.productosCuentan)) uds++
+      pctPalanca = uds / obj1 * 100
+    }
+  }
+  const gateCumplido = gatePct <= 0 || (pctPalanca !== null && pctPalanca >= gatePct)
   const objetivo2Cumplido = obj2 > 0 && rate2 > 0 && teamVentas >= obj2
+    && (pctMin2 <= 0 || (pctPalanca !== null && pctPalanca >= pctMin2))
   const rate = objetivo2Cumplido ? rate2 : (Number(c.importePorVenta) || 0)
   // El reparto se calcula COMO SI el mínimo de equipo estuviera cumplido
   // (mismos bote, orden de fecha y mínimo individual): eso es lo «en juego».
@@ -351,16 +383,20 @@ export function repartoPorVenta(items: { name: string; sale: any }[], c: Concurs
       restante -= rate
     }
   }
+  // El candado del % corta el COBRO igual que el mínimo grupal: todo queda
+  // «en juego» (en ámbar) hasta que la palanca llegue a su %.
+  const seCobra = grupalCumplido && gateCumplido
   const filas = Object.entries(porNombre)
     .map(([name, v]) => ({ name, ventas: v.ventas, enJuego: v.enJuego,
-                           ganado: grupalCumplido ? v.enJuego : 0,
+                           ganado: seCobra ? v.enJuego : 0,
                            cumpleMin: (conteo[name] || 0) >= minInd }))
     .sort((a, b) => b.ventas - a.ventas || b.enJuego - a.enJuego)
   const enJuegoTotal = filas.reduce((acc, f) => acc + f.enJuego, 0)
-  const repartido = grupalCumplido ? enJuegoTotal : 0
+  const repartido = seCobra ? enJuegoTotal : 0
   return { filas, repartido, enJuegoTotal, tope, agotado: tope > 0 && restante < rate,
            teamVentas, minIndividual: minInd, minGrupal: minGrp, grupalCumplido,
-           rateActual: rate, objetivo2Grupal: obj2, importePorVenta2: rate2, objetivo2Cumplido }
+           rateActual: rate, objetivo2Grupal: obj2, importePorVenta2: rate2, objetivo2Cumplido,
+           pctPalanca, gatePctPalanca: gatePct, gateCumplido, objetivo2PctMin: pctMin2 }
 }
 
 // ── Las NOTAS del concurso se escriben SOLAS desde sus condiciones ──────────
@@ -389,11 +425,15 @@ export function generaNotasConcurso(c: Concurso): string {
       + (Number(c.minGrupalPct) > 0 ? ` (el ${c.minGrupalPct}% del objetivo${c.palancaRef ? ' de ' + c.palancaRef : ''})` : '') + '.')
     if (Number(c.topeBote) > 0) partes.push(`Bote máximo: ${fmtEur(Number(c.topeBote))} entre todos, por orden de venta.`)
   }
+  // El candado de cobro en % — LO COMPRUEBA EL MOTOR (30-ago-2026).
+  if ((c.premioModo || 'podio') === 'porVenta' && Number(c.gatePctPalanca) > 0) {
+    partes.push(`Imprescindible llegar al ${c.gatePctPalanca}% del objetivo`
+      + ` de ${c.palancaRef || c.tipoVenta || 'la palanca'} — lo comprueba el programa.`)
+  }
   if (c.notas) partes.push(String(c.notas))
   // La frase del 🎯 CIERRA el cartel (dueño, 30-ago-2026): primero las reglas
-  // base y la letra del concurso, y el premio gordo al final. La coletilla
-  // «mínimo el X%» es condición que vigila el dueño al pagar (como la nota del
-  // 100%): el motor solo cuenta ventas del torneo.
+  // base y la letra del concurso, y el premio gordo al final. El «mínimo el X%»
+  // también lo comprueba el motor (candado del 2º importe).
   if ((c.premioModo || 'podio') === 'porVenta'
       && Number(c.importePorVenta2) > 0 && Number(c.objetivo2Grupal) > 0) {
     partes.push(`🎯 Al llegar el equipo a ${c.objetivo2Grupal} venta(s)`
@@ -446,7 +486,7 @@ export function torneoExtrasPorVendedor(
       if (norm(s.anulado) === 'si' || norm(s.pendiente) === 'anulado') continue
       items.push({ name: canon(vend), sale: s })
     }
-    const rep = repartoPorVenta(items, c, catalogs)
+    const rep = repartoPorVenta(items, c, catalogs, reglas)
     for (const f of rep.filas) {
       if (f.ganado <= 0) continue
       const rate = rep.rateActual || 0

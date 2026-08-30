@@ -111,7 +111,7 @@ export async function GET(request: Request) {
       .filter((c: any) => (c.premioModo || 'podio') === 'porVenta' && Number(c.importePorVenta) > 0)
       .map((cRaw: any) => {
         const c = resolverObjetivosTorneo(cRaw, input.tiendaRules || [])
-        const rep = repartoPorVenta(items, c, input.catalogs || {})
+        const rep = repartoPorVenta(items, c, input.catalogs || {}, input.tiendaRules || [])
         return {
           id: c.id,
           nombre: c.nombre,
