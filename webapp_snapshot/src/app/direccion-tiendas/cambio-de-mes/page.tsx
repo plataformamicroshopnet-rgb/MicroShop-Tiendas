@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { CalendarCheck, RefreshCw, Copy, ArrowRight, Check, X, Maximize2 } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
 import { useGuard } from '@/hooks/useGuard'
+import { usePeriod } from '@/components/PeriodProvider'
 import type { EstadoPaso, PasoSaludMes, SaludMesTiendasResponse, TablaPaso } from '@/lib/saludMesTiendas'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -62,13 +63,19 @@ export default function CambioDeMesTiendasPage() {
   // Tabla abierta a tamaño grande (repasar cada pantalla desde aquí).
   const [ampliada, setAmpliada] = React.useState<TablaPaso | null>(null)
 
+  // El hub OBEDECE al selector de mes del calendario (30-ago-2026): antes
+  // llamaba al chequeo sin decirle el mes y siempre pintaba el activo — con
+  // septiembre pre-creado, era imposible ver sus avisos ámbar de «objetivos
+  // y territorial prestados de agosto» desde la pantalla.
+  const { activePeriodKey } = usePeriod()
   const cargar = React.useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
       // tablas=1: además de los semáforos, el servidor manda las tablas de cada
       // pantalla para repasarlas aquí mismo (el correo del ritual no las pide).
-      const r = await fetch('/api/salud-mes?tablas=1', { cache: 'no-store' })
+      const clave = activePeriodKey ? `&periodKey=${encodeURIComponent(activePeriodKey)}` : ''
+      const r = await fetch(`/api/salud-mes?tablas=1${clave}`, { cache: 'no-store' })
       const j: SaludMesTiendasResponse = await r.json()
       if (!j.success) {
         setError(j.error || 'No se pudo cargar la salud del mes')
@@ -82,7 +89,7 @@ export default function CambioDeMesTiendasPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [activePeriodKey])
 
   React.useEffect(() => {
     if (!authorized) return
