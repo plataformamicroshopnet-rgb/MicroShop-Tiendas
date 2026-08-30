@@ -17,5 +17,7 @@ export async function register() {
     await fixTiContratosListaLimpia()
     const { fixTiContratosOrden } = await import('./lib/migrations/tiContratosOrdenFix')
     await fixTiContratosOrden()
+    const { fixTiContratosRetag } = await import('./lib/migrations/tiContratosRetagFix')
+    await fixTiContratosRetag()
   }
 }

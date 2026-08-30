@@ -20,10 +20,9 @@ const QUITAR = [
   'Contrato Móvil MV - Cliente existente',
   'Contrato Móvil BV - Cliente NUEVO (incluye alta cliente)',
   'Contrato Móvil BV - Cliente existente',
-  // los 3 principales planos, que quedan sustituidos por su desdoble
-  'Contrato Móvil AV - Alta, portabilidad y migración',
-  'Contrato Móvil MV - Alta, portabilidad y migración contrato móvil',
-  'Contrato Móvil BV - Alta, portabilidad y migración contrato móvil',
+  // OJO: los 3 planos viejos ya NO se quitan aquí — tiContratosRetagFix los
+  // mantiene con vigencia CERRADA (31/08) porque las ventas de jun/jul/ago los
+  // necesitan para valorarse (la comisión Ti se busca en el catálogo activo).
 ]
 
 const SUB = {
