@@ -1753,6 +1753,16 @@ export default function CatalogosPage() {
               </tr>
             </thead>
             <tbody>
+              {/* Las sugerencias de la columna «Categoría» de Rent salen del propio
+                  catálogo del mes que se está viendo: así valen tanto si el Excel
+                  vino con el tipo primero como si vino con la marca, y no hacen
+                  falta listas escritas a mano que se quedan cortas. */}
+              {activeTab === 'Rent' && (
+                <datalist id="sugerencias-subcategoria-rent">
+                  {[...new Set((activeData || []).map((p: any) => p.subcategoria).filter(Boolean))]
+                    .sort().map(v => <option key={String(v)} value={String(v)} />)}
+                </datalist>
+              )}
               {activeData.length === 0 ? (
                 <tr>
                   <td colSpan={4} style={{ padding: 40, textAlign: 'center', color: 'var(--medium-gray)' }}>
@@ -1780,21 +1790,27 @@ export default function CatalogosPage() {
                             />
                           </td>
                           <td style={{ padding: '12px 20px' }}>
-                            <select
+                            {/* ⚠️ ERA UN DESPLEGABLE DE 6 OPCIONES ESCRITAS A MANO
+                                (SMARTPHONE/TABLET/ACCESORIO/PC/TV/OTROS) y era una mina:
+                                el catálogo real trae quince tipos —PORTÁTIL, IOT, HOGAR,
+                                GAMING, PULSERA, GAFAS IA…— que no estaban en la lista, y
+                                desde julio-2026 esta columna guarda MARCAS (el Excel que se
+                                pega cambió el orden de sus dos primeras columnas). Resultado:
+                                las 637 celdas salían EN BLANCO y bastaba desplegar una y
+                                elegir para machacar el valor que había.
+                                Ahora es una casilla de escribir con sugerencias sacadas del
+                                PROPIO catálogo del mes: nunca borra nada y se adapta sola a
+                                lo que traiga el Excel. Mismo patrón que en Nueva Venta. */}
+                            <input
+                              type="text"
+                              list="sugerencias-subcategoria-rent"
                               disabled={isHistoric}
                               value={item.subcategoria || ''}
                               onChange={e => updateItem(activeTab, index, 'subcategoria', e.target.value)}
                               className="form-input"
                               style={{ width: '100%', border: 'none', backgroundColor: 'transparent', padding: '8px', fontSize: 14, color: isHistoric ? 'var(--medium-gray)' : 'var(--light-text)' }}
-                            >
-                              <option value="">Seleccionar...</option>
-                              <option value="SMARTPHONE">SMARTPHONE</option>
-                              <option value="TABLET">TABLET</option>
-                              <option value="ACCESORIO">ACCESORIO</option>
-                              <option value="PC">PC</option>
-                              <option value="TV">TV</option>
-                              <option value="OTROS">OTROS</option>
-                            </select>
+                              placeholder="Categoría..."
+                            />
                           </td>
                           <td style={{ padding: '12px 20px' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
