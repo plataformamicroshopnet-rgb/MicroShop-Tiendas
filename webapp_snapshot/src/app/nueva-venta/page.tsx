@@ -407,9 +407,12 @@ export default function NuevaVentaPage() {
       if (!matchesRule(comoVenta, r.grupo, r.productosCuentan)) continue
       const suma = r.esPorcentaje ? getValueForRule(comoVenta, r.grupo) : 1
       if (!suma) continue
-      const pct1 = num(r.importe1), pct2 = num(r.importe2)
+      const pct1 = num(r.importe1), pct2 = num(r.importe2), pct3 = num(r.importe3)
       let ahora = r.esPorcentaje ? (suma * pct1) / 100 : pct1
       let luego = r.esPorcentaje ? (suma * pct2) / 100 : pct2
+      // EL TERCER ESCALÓN. Hoy solo lo tiene «Dispositivos + Seguros» (Rent y
+      // Seguros): 122.802 € al 2 %. Es el que más paga y no se veía.
+      let luego3 = r.esPorcentaje ? (suma * pct3) / 100 : pct3
       let avisoBono: string | null = null
 
       // BONO DE GOLPE (así cobra Marta: 126 € al llegar a 10 altas, y desde la
@@ -423,6 +426,7 @@ export default function NuevaVentaPage() {
         const objetivo = Number(r.objetivo1) || 0
         const antes = Number(r.llevas) || 0
         const despues = antes + suma
+        luego3 = 0   // el bono de golpe no tiene tercer escalón
         if (objetivo > 0 && despues < objetivo) {
           ahora = 0; luego = 0
           const faltan = Math.max(1, Math.ceil(objetivo - despues))
@@ -442,8 +446,11 @@ export default function NuevaVentaPage() {
         tipo: 'palanca', nombre: r.grupo,
         llevas: r.llevas, seria: r.llevas + suma,
         objetivo1: r.objetivo1, objetivo2: r.objetivo2, conseguido2: r.conseguido2,
+        objetivo3: r.objetivo3, conseguido3: r.conseguido3, esEquipoObj3: r.esEquipoObj3,
         esEquipoObj2: r.esEquipoObj2, esPorcentaje: r.esPorcentaje,
         tramo: r.tramo, ahora, luego: r.bonoDeGolpe ? luego : (pct2 ? luego : ahora),
+        // Solo hay tercera cifra si la palanca tiene tercer escalón de verdad.
+        luego3: (Number(r.objetivo3) > 0 && pct3 > 0) ? luego3 : null,
         tope: r.topeAplicado ? r.topeMotivo : null,
         avisoBono,
       })
@@ -467,6 +474,9 @@ export default function NuevaVentaPage() {
       filas,
       totalAhora: filas.reduce((a, f) => a + (f.tipo === 'palanca' ? f.ahora : 0), 0),
       totalLuego: filas.reduce((a, f) => a + f.luego, 0),
+      // El total del 3er escalón: las palancas que no lo tienen siguen aportando
+      // lo del 2º (que es lo que se seguiría cobrando), no cero.
+      totalLuego3: filas.reduce((a, f) => a + (f.luego3 != null ? f.luego3 : f.luego), 0),
     }
   }
 
@@ -727,6 +737,8 @@ export default function NuevaVentaPage() {
       : String(Math.round(n))
     const cel: any = { padding: '4px 0', fontSize: 12.5, verticalAlign: 'baseline' }
     const num: any = { ...cel, textAlign: 'right', whiteSpace: 'nowrap', paddingLeft: 10, fontWeight: 'bold' }
+    // ¿Alguna palanca de esta venta llega a un TERCER escalón?
+    const hayTercero = (c.filas || []).some((f: any) => f.luego3 != null)
     return (
       <div style={{ border: '2px dashed #2E7D32', borderRadius: 8, background: '#E8F5E9',
                     padding: '10px 12px', marginTop: 8 }}>
@@ -739,6 +751,10 @@ export default function NuevaVentaPage() {
               <th style={{ textAlign: 'left', paddingBottom: 4 }}>Palanca</th>
               <th style={{ textAlign: 'right', paddingBottom: 4 }}>Ahora</th>
               <th style={{ textAlign: 'right', paddingBottom: 4, paddingLeft: 10 }}>Si se llega al 2º</th>
+              {/* La tercera columna solo aparece si ALGUNA palanca de esta venta
+                  tiene tercer escalón: hoy solo «Dispositivos + Seguros» (Rent y
+                  Seguros). En las demás ventas la tabla sigue con dos columnas. */}
+              {hayTercero && <th style={{ textAlign: 'right', paddingBottom: 4, paddingLeft: 10 }}>Si se llega al 3º</th>}
             </tr>
           </thead>
           <tbody>
@@ -759,6 +775,9 @@ export default function NuevaVentaPage() {
                         {f.objetivo2 > 0 && (f.esEquipoObj2
                           ? ` · el 2º lo decide el equipo: ${uds(f.conseguido2, f.esPorcentaje)} de ${uds(f.objetivo2, f.esPorcentaje)}`
                           : ` · 2º objetivo ${uds(f.objetivo2, f.esPorcentaje)}`)}
+                        {f.objetivo3 > 0 && (f.esEquipoObj3
+                          ? ` · el 3º lo decide el equipo: ${uds(f.conseguido3, f.esPorcentaje)} de ${uds(f.objetivo3, f.esPorcentaje)}`
+                          : ` · 3º objetivo ${uds(f.objetivo3, f.esPorcentaje)}`)}
                         {f.tope ? ' · ⚠ ' + f.tope : ''}</>
                     )}
                   </span>
@@ -785,6 +804,14 @@ export default function NuevaVentaPage() {
                     : '+' + eur(f.luego) + ' €'}
                   {f.luego <= f.ahora && <span style={{ fontWeight: 'normal', fontSize: 10.5 }}> (igual)</span>}
                 </td>
+                {hayTercero && (
+                  <td style={{ ...num, color: f.luego3 != null && f.luego3 > f.luego ? '#7B4B00' : '#8A96A3' }}>
+                    {f.luego3 == null
+                      ? <span style={{ fontWeight: 'normal', fontSize: 10.5 }}>—</span>
+                      : <>{'+' + eur(f.luego3) + ' €'}
+                          {f.luego3 <= f.luego && <span style={{ fontWeight: 'normal', fontSize: 10.5 }}> (igual)</span>}</>}
+                  </td>
+                )}
               </tr>
             ))}
             <tr style={{ borderTop: '2px solid #2E7D32' }}>
@@ -796,6 +823,12 @@ export default function NuevaVentaPage() {
                             color: c.totalLuego > c.totalAhora ? '#A9670A' : '#8A96A3' }}>
                 {c.totalLuego > c.totalAhora ? 'hasta ' + eur(c.totalLuego) + ' €' : eur(c.totalLuego) + ' €'}
               </td>
+              {hayTercero && (
+                <td style={{ ...num, paddingTop: 7, fontSize: 15,
+                              color: c.totalLuego3 > c.totalLuego ? '#7B4B00' : '#8A96A3' }}>
+                  {c.totalLuego3 > c.totalLuego ? 'hasta ' + eur(c.totalLuego3) + ' €' : eur(c.totalLuego3) + ' €'}
+                </td>
+              )}
             </tr>
           </tbody>
         </table>

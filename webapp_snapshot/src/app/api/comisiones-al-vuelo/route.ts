@@ -92,6 +92,15 @@ export async function GET(request: Request) {
         objetivo2: o.objetivo2,
         conseguido2: o.conseguido2,
         esEquipoObj2: o.esEquipoObj2,
+        // EL TERCER TRAMO (31-ago-2026, el dueño: «falta el objetivo 3 en Rent»).
+        // El motor lo calcula desde siempre, pero aquí no se reenviaba y el cuadro
+        // de la venta solo podía enseñar dos escalones. Hoy la única palanca con
+        // tres es «Dispositivos + Seguros» —la de Rent y Seguros—: 94.463 € al 1 %,
+        // 108.633 € al 1,4 % y 122.802 € al 2 %. Sin esto, el comercial de Rent no
+        // veía el escalón que más paga.
+        objetivo3: o.objetivo3,
+        conseguido3: o.conseguido3,
+        esEquipoObj3: o.esEquipoObj3,
         // en qué tramo se está pagando AHORA MISMO
         tramo: o.hito,
         cumplido: o.cumplido,
