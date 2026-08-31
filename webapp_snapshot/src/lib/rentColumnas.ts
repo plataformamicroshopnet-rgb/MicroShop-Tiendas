@@ -25,13 +25,26 @@
  * para que la pantalla llame a cada cosa por su nombre.
  */
 
-/** Los tipos de aparato que maneja Rent. No hace falta que estén todos: basta
- *  con que sean bastantes para desempatar contra una lista de marcas. */
-const TIPOS = new Set([
+/** Los tipos de aparato que maneja Rent.
+ *
+ *  ⚠️ ESTA LISTA ES LA ÚNICA. La usan el árbitro del pegado (ordenaTipoYMarca),
+ *  el deducidor de rótulos (rolesCatalogoRent) y la migración que enderezó el
+ *  catálogo (rentColumnasFix, que la importa de aquí). NO la copies a otro
+ *  fichero: si dos copias se separan, el importador y los datos dejan de estar
+ *  de acuerdo — y ese desacuerdo es justo lo que, al re-pegar el Excel, hace
+ *  que las filas viejas no casen y el Guardar las borre.
+ *
+ *  No hace falta que estén todos los tipos: basta con que sean bastantes para
+ *  desempatar contra una lista de marcas. Lo que no esté aquí se queda como
+ *  vino, que es el comportamiento seguro. */
+export const TIPOS_RENT = new Set([
   'SMARTPHONE', 'TABLET', 'PORTÁTIL', 'PORTATIL', 'ACCESORIO', 'SMARTWATCH',
   'SMARTTV', 'TV', 'IOT', 'HOGAR', 'GAMING', 'CÁMARA', 'CAMARA', 'FITNESS',
   'PULSERA', 'REACONDICIONADO', 'GAFAS IA', 'ANILLO DE SALUD', 'PC', 'OTROS',
+  // Los patinetes: aparecen en el catálogo de mayo-2026 con este nombre largo.
+  'VEHÍCULO VPL CON SEGURO', 'VEHICULO VPL CON SEGURO',
 ])
+const TIPOS = TIPOS_RENT
 
 const norm = (v: any) => String(v ?? '').trim().toUpperCase()
 
@@ -48,6 +61,33 @@ const POR_DEFECTO: RolesRent = {
   campoCategoria: 'subcategoria',
   campoFabricante: 'fabricante',
   invertido: false,
+}
+
+/**
+ * ORDENA LAS DOS PRIMERAS COLUMNAS DE UNA FILA PEGADA.
+ *
+ * El Excel del dueño trae la cabecera «Fabricante | Categoría» pero DEBAJO pone
+ * el tipo en la primera y la marca en la segunda (ACCESORIO | INNOVA). El
+ * importador las metía a ciegas, así que el programa guardaba «Fabricante =
+ * ACCESORIO» — y luego cada pantalla se peleaba por adivinar cuál era cuál.
+ *
+ * Aquí se mira lo que PONE, no dónde está: si una de las dos es un tipo
+ * conocido y la otra no, se colocan en su sitio. Si no se puede decidir (las
+ * dos son tipos, o ninguna lo es), se respeta el orden en que vinieron: mejor
+ * dejarlo como está que inventarse una corrección.
+ *
+ * Devuelve { fabricante, categoria } ya en su sitio, donde `categoria` es lo
+ * que se guarda en `subcategoria`.
+ */
+export function ordenaTipoYMarca(primera: any, segunda: any): { fabricante: string; categoria: string } {
+  const a = String(primera ?? '').trim()
+  const b = String(segunda ?? '').trim()
+  const aEsTipo = TIPOS.has(norm(a))
+  const bEsTipo = TIPOS.has(norm(b))
+  // La primera es el tipo y la segunda la marca → vienen cambiadas: se giran.
+  if (aEsTipo && !bEsTipo) return { fabricante: b, categoria: a }
+  // Todo lo demás (orden correcto, o no se puede decidir) se deja como vino.
+  return { fabricante: a, categoria: b }
 }
 
 /**

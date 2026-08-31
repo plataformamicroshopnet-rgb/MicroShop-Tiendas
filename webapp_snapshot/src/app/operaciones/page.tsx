@@ -757,7 +757,15 @@ function OperationsContent() {
     const palanca = sale.detalle === 'Traslado miMovistar' ? 'miMovistar' : String(sale.detalle || '')
     const filas = (catalogs as any)[palanca] || []
     return filas.map((f: any, i: number) => {
-      const partes = [f.subcategoria, f.gama, String(f.producto || '').replace(/\n/g, ' · ')]
+      // En Rent se enseñan LAS DOS: la marca y el tipo («INNOVA · ACCESORIO ·
+      // BAJA · Baliza SOS FLASH»). Antes solo salía `subcategoria`, que en Rent
+      // guardaba la marca; al enderezar las columnas (31-ago-2026) ahí quedó el
+      // tipo y la lista habría perdido la marca, que es lo que distingue dos
+      // modelos parecidos. En las demás palancas `subcategoria` es el tramo
+      // (AV/MV/BV, PROMO…) y se deja exactamente como estaba.
+      const partes = (palanca === 'Rent'
+          ? [f.fabricante, f.subcategoria, f.gama, String(f.producto || '').replace(/\n/g, ' · ')]
+          : [f.subcategoria, f.gama, String(f.producto || '').replace(/\n/g, ' · ')])
         .map((x: any) => String(x || '').trim()).filter(Boolean)
       const precio = precioFila(palanca, f)
       return {
@@ -792,7 +800,12 @@ function OperationsContent() {
     // El sello de la promoción se guarda en Anotaciones: la venta no tiene
     // columna para la gama, y así queda por escrito qué promo se aplicó (mismo
     // patrón que la promo «−14 € sin Paquete Movistar Plus» del alta).
-    const sello = [op.fila.subcategoria, op.fila.gama].map((x: any) => String(x || '').trim()).filter(Boolean).join(' · ')
+    // En Rent el sello lleva también la MARCA: sin ella, «ACCESORIO · BAJA» no
+    // dice nada, y la marca es lo que distingue dos modelos parecidos.
+    const sello = (op.palanca === 'Rent'
+        ? [op.fila.fabricante, op.fila.subcategoria, op.fila.gama]
+        : [op.fila.subcategoria, op.fila.gama])
+      .map((x: any) => String(x || '').trim()).filter(Boolean).join(' · ')
     const previas = String(sale.anotaciones || '').trim()
     const anotaciones = sello && !previas.includes(sello)
       ? [previas, `Retipificada: ${sello}`].filter(Boolean).join(' · ')

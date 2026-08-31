@@ -8,6 +8,7 @@ import { Save, Search, Plus, Trash2, FileText, AlertCircle, Target, Euro, Box, C
 import Link from 'next/link'
 
 import ProductosComisionanTab from './ProductosComisionanTab'
+import { ordenaTipoYMarca } from '@/lib/rentColumnas'
 import { useGuard } from '@/hooks/useGuard'
 import { usePeriod } from '@/components/PeriodProvider'
 import { PeriodSelector } from '@/components/PeriodSelector'
@@ -877,10 +878,15 @@ export default function CatalogosPage() {
           const isDate = (s: string) => /^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/.test((s || '').trim());
           const isNewFormat = isDate(parts[3]) || isDate(parts[4]);
 
+          // El Excel trae la cabecera «Fabricante | Categoría» pero debajo pone el
+          // TIPO primero y la MARCA después (ACCESORIO | INNOVA). Se colocan en su
+          // sitio mirando lo que ponen, no dónde vienen (lib/rentColumnas).
+          const col = ordenaTipoYMarca(parts[0], parts[1]);
+
           if (isNewFormat) {
             excelData.push({
-              fabricante: parts[0] || '',
-              categoria: parts[1] || '',
+              fabricante: col.fabricante,
+              categoria: col.categoria,
               producto: parts[2] || '',
               desde: parts[3] || '',
               hasta: parts[4] || '',
@@ -891,8 +897,8 @@ export default function CatalogosPage() {
             })
           } else {
             excelData.push({
-              fabricante: parts[0] || '',
-              categoria: parts[1] || '',
+              fabricante: col.fabricante,
+              categoria: col.categoria,
               producto: parts[2] || '',
               gama: parts[3] || '',
               amountAsStr: parts.length > 4 ? parseSpanishNumber(parts[4]) : '0',
@@ -1641,7 +1647,7 @@ export default function CatalogosPage() {
           <p style={{ fontSize: 13, color: 'var(--medium-gray)', marginBottom: 12 }}>
             Pega tu lista desde Excel. Orden esperado de columnas: <code>{
               activeTab === 'Ti' ? 'Nombre Producto [TAB] Descripción [TAB] Comisión [TAB] Desde [TAB] Hasta' : 
-              activeTab === 'Rent' ? 'Fabricante [TAB] Categoría [TAB] Producto [TAB] Gama [TAB] Cuota Total [TAB] Comisión [TAB] Comisión Coste [TAB] Desde [TAB] Hasta' : 
+              activeTab === 'Rent' ? 'Fabricante y Categoría EN CUALQUIER ORDEN (el programa las coloca sola) [TAB] Producto [TAB] Gama [TAB] Cuota Total [TAB] Comisión [TAB] Comisión Coste [TAB] Desde [TAB] Hasta' : 
               activeTab === 'Seguro' ? 'Categoría [TAB] Nombre de Producto [TAB] Cuota Total (€) [TAB] Comision [TAB] Desde [TAB] Hasta' :
               activeTab === 'Accesorios' ? 'Categoría [TAB] Nombre de Producto [TAB] Cuota Total (€) [TAB] Comision [TAB] Desde [TAB] Hasta' :
               esTipoComisionPorMultiplicador(activeTab) ? 'Categoría [TAB] Nombre de Producto [TAB] Comisión (€) [TAB] Multiplicador [TAB] Comisión X (€) [TAB] Desde [TAB] Hasta' :

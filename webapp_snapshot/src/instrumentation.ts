@@ -21,5 +21,7 @@ export async function register() {
     await fixTiContratosOrden()
     const { fixTorneosJulioRescate } = await import('./lib/migrations/torneosJulioRescateFix')
     await fixTorneosJulioRescate()
+    const { fixRentColumnas } = await import('./lib/migrations/rentColumnasFix')
+    await fixRentColumnas()
   }
 }
