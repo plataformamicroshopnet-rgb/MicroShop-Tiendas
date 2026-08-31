@@ -9,6 +9,7 @@ import { getEffectiveTiendaComerciales, getEffectiveSellers } from '@/lib/comerc
 import { isVentaWithinDates, esRepoArpuManual, importeRepoArpu, factorRepoArpu, REPO_ARPU_CORTE, PALANCA_REPOS } from '@/lib/salesUtils'
 import { useGuard } from '@/hooks/useGuard'
 import { puedeAnadirse, PREGUNTA_PLANTA, AVISO_BAJA_TV } from '@/lib/reposCompatibles'
+import { rolesCatalogoRent } from '@/lib/rentColumnas'
 // El MISMO emparejador que usa el panel de comisiones y la nómina: así lo que se
 // enseña aquí es exactamente lo que se cobra después.
 import { matchesRule, getValueForRule } from '@/lib/panelComisionesTiendas'
@@ -1576,21 +1577,42 @@ export default function NuevaVentaPage() {
                         </select>
                       </div>
 
-                      <div>
-                        <label style={{ fontSize: 13, color: '#1B3D6A', display: 'block', marginBottom: 4 }}>Fabricante</label>
-                        <input list={`fab-${index}`} className="form-input" value={prod.fabricante} onChange={e => handleProductChange(index, 'fabricante', e.target.value)} placeholder="Buscar..." style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
-                        <datalist id={`fab-${index}`}>
-                          {[...new Set((catalogs['Rent'] || []).filter((p:any) => !prod.subcategoria || p.subcategoria === prod.subcategoria).map((p:any) => p.fabricante).filter(Boolean))].sort().map(f => <option key={String(f)} value={String(f)} />)}
-                        </datalist>
-                      </div>
-
-                      <div>
-                        <label style={{ fontSize: 13, color: '#1B3D6A', display: 'block', marginBottom: 4 }}>Categoría</label>
-                        <input list={`cat-${index}`} className="form-input" value={prod.subcategoria} onChange={e => handleProductChange(index, 'subcategoria', e.target.value)} placeholder="Buscar..." style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
-                        <datalist id={`cat-${index}`}>
-                          {[...new Set((catalogs['Rent'] || []).filter((p:any) => !prod.fabricante || p.fabricante === prod.fabricante).map((p:any) => p.subcategoria).filter(Boolean))].sort().map(c => <option key={String(c)} value={String(c)} />)}
-                        </datalist>
-                      </div>
+                      {/* LOS RÓTULOS SE DEDUCEN, NO SE ESCRIBEN (31-ago-2026, el dueño:
+                          «está bailado los nombres Fabricante y Categoría»). El catálogo de
+                          Rent se carga pegando un Excel y el programa mete la 1ª columna en
+                          `fabricante` y la 2ª en `subcategoria` sin mirar lo que traen: hasta
+                          junio venía la MARCA primero y desde julio el TIPO, así que las dos
+                          quedaron cambiadas de sitio en jul/ago/sep. En vez de clavar los
+                          rótulos al orden de un mes —que haría mentir a mayo y junio, y
+                          volvería a mentir al siguiente cambio de Excel—, se mira el catálogo
+                          del mes y se decide cuál habla de tipos (lib/rentColumnas). */}
+                      {(() => {
+                        const roles = rolesCatalogoRent(catalogs['Rent'])
+                        const filtroPor = (campo: 'fabricante' | 'subcategoria') =>
+                          campo === 'fabricante' ? prod.subcategoria : prod.fabricante
+                        const otroCampo = (campo: 'fabricante' | 'subcategoria') =>
+                          campo === 'fabricante' ? 'subcategoria' : 'fabricante'
+                        const casilla = (rotulo: string, campo: 'fabricante' | 'subcategoria', id: string) => (
+                          <div>
+                            <label style={{ fontSize: 13, color: '#1B3D6A', display: 'block', marginBottom: 4 }}>{rotulo}</label>
+                            <input list={`${id}-${index}`} className="form-input" value={prod[campo] || ''}
+                                   onChange={e => handleProductChange(index, campo, e.target.value)}
+                                   placeholder="Buscar..." style={{ backgroundColor: '#E3F2FD', border: '1px solid #90CAF9', color: '#1B3D6A' }} />
+                            <datalist id={`${id}-${index}`}>
+                              {[...new Set((catalogs['Rent'] || [])
+                                .filter((p: any) => !filtroPor(campo) || p[otroCampo(campo)] === filtroPor(campo))
+                                .map((p: any) => p[campo]).filter(Boolean))].sort()
+                                .map(v => <option key={String(v)} value={String(v)} />)}
+                            </datalist>
+                          </div>
+                        )
+                        return (
+                          <>
+                            {casilla('Categoría', roles.campoCategoria, 'cat')}
+                            {casilla('Fabricante', roles.campoFabricante, 'fab')}
+                          </>
+                        )
+                      })()}
                     </div>
 
                     {/* COLUMNA 2: DETALLES DE LA VENTA / PRODUCTO */}
@@ -1688,6 +1710,15 @@ export default function NuevaVentaPage() {
                         <input type="checkbox" checked={prod.isSwap || false} onChange={e => handleProductChange(index, 'isSwap', e.target.checked)} style={{ cursor: 'pointer', width: 16, height: 16, marginLeft: '12px' }} />
                         <label style={{ fontSize: 13, color: '#555' }}>¿Swap?</label>
                       </div>
+
+                      {/* EL CUADRO VERDE, QUE EN RENT NO ESTABA (31-ago-2026, el dueño: «no
+                          salen las comisiones de los comerciales en los rent»). No era un
+                          fallo de cálculo: sencillamente no se había puesto en este bloque —
+                          solo vivía en el de miMovistar y en el genérico. Los dispositivos
+                          Rent comisionan por la palanca «Dispositivos + Seguros», que sí
+                          existe todos los meses. Va en la COLUMNA 2, como en el resto. */}
+                      <PanelDeLaVenta prod={prod} />
+                      <LetraPequenaAlta categoria={prod.categoria} />
                     </div>
 
                     {/* COLUMNA 3: ESTADO Y FINANZAS */}
@@ -2224,6 +2255,15 @@ export default function NuevaVentaPage() {
                             </div>
                           )}
                         </div>
+
+                      {/* EL CUADRO VERDE, AHORA EN EL CENTRO (31-ago-2026, el dueño: «en
+                          algunas sale a la derecha y otros en el centro, y me gustaría que
+                          todos fueran al centro»). Aquí vivía al final de la COLUMNA 3, que
+                          es la estrecha de la derecha: la tabla de palancas salía apretada
+                          en una columna y el texto se partía palabra a palabra. En el bloque
+                          de miMovistar ya estaba en el centro; ahora los tres coinciden. */}
+                      <PanelDeLaVenta prod={prod} />
+                      <LetraPequenaAlta categoria={prod.categoria} />
                     </div>
 
                     {/* COLUMNA 3: FINANZAS / ESTADO */}
@@ -2357,8 +2397,9 @@ export default function NuevaVentaPage() {
                           </select>
                         </div>
                       </div>
-                    <PanelDeLaVenta prod={prod} />
-                    <LetraPequenaAlta categoria={prod.categoria} />
+                    {/* Aquí estaba el cuadro verde, en la columna estrecha de la derecha.
+                        Se ha subido al final de la COLUMNA 2 para que todos los tipos de
+                        venta lo enseñen en el mismo sitio: el centro. */}
 
                     </div>
 
