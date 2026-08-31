@@ -56,8 +56,19 @@ export async function GET(request: Request) {
     // El motor llama `name` a la persona (no `seller`, que es el campo de los extras).
     const mio = (result.sellerStats || []).find((s: any) => iguales(s.name, vendedor))
 
+    // ⚠️ MARTA VA POR OTRO CARRIL (31-ago-2026, el dueño: «a marta le sale pero
+    // no le pone importes»). El motor la paga con las reglas de O2/MovilFree, no
+    // con las de Tiendas (panelComisionesTiendas: `const isO2 = name incluye
+    // 'marta'` → usa o2Rules). Aquí se buscaban sus tarifas en tiendaRules, no se
+    // encontraban, y la pantalla enseñaba su palanca con el importe en blanco:
+    // el cuadro salía, pero a 0,00 €. Se le mandan LAS SUYAS.
+    const esMarta = String(vendedor || '').toLowerCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '').includes('marta')
+    const reglasDeEste = esMarta && (input.o2Rules || []).length
+      ? (input.o2Rules || [])
+      : (input.tiendaRules || [])
     const porNombre: Record<string, any> = {}
-    for (const r of (input.tiendaRules || [])) porNombre[String(r.nombre)] = r
+    for (const r of reglasDeEste) porNombre[String(r.nombre)] = r
 
     const reglas = ((mio?.objetivosResumen || []) as any[]).map(o => {
       const r = porNombre[o.grupo] || {}
@@ -70,6 +81,12 @@ export async function GET(request: Request) {
         importe1: r.importePrimerTramo || '',
         importe2: r.importeSegundoTramo || '',
         importe3: r.importeTercerTramo || '',
+        // ¿El primer tramo es un BONO DE GOLPE en vez de un precio por venta?
+        // (condicionante ACCUMULATIVE_FIXED_BASE — es como cobra Marta: 126 € al
+        // llegar a 10 altas, y desde la 11ª cada una a 8,04 €). Sin esto la
+        // pantalla enseñaría «+126 €» en CADA venta, que es mentira y sobre
+        // dinero. Viaja como bandera para que la pantalla lo cuente bien.
+        bonoDeGolpe: String(r.condicionantes || '').includes('ACCUMULATIVE_FIXED_BASE'),
         llevas: o.conseguido1,
         objetivo1: o.objetivo1,
         objetivo2: o.objetivo2,

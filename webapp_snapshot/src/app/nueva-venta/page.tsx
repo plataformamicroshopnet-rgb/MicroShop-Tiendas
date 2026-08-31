@@ -408,15 +408,44 @@ export default function NuevaVentaPage() {
       const suma = r.esPorcentaje ? getValueForRule(comoVenta, r.grupo) : 1
       if (!suma) continue
       const pct1 = num(r.importe1), pct2 = num(r.importe2)
-      const ahora = r.esPorcentaje ? (suma * pct1) / 100 : pct1
-      const luego = r.esPorcentaje ? (suma * pct2) / 100 : pct2
+      let ahora = r.esPorcentaje ? (suma * pct1) / 100 : pct1
+      let luego = r.esPorcentaje ? (suma * pct2) / 100 : pct2
+      let avisoBono: string | null = null
+
+      // BONO DE GOLPE (así cobra Marta: 126 € al llegar a 10 altas, y desde la
+      // 11ª cada una a 8,04 €). El primer tramo NO es un precio por venta: es un
+      // premio único. Enseñar «+126 €» en cada venta sería mentir sobre dinero,
+      // así que se cuenta lo que ESTA venta cambia de verdad:
+      //   · si aún no llega al objetivo → 0 €, y cuántas le faltan
+      //   · si es justo la que lo alcanza → el bono entero
+      //   · si ya está dentro → el precio de las siguientes
+      if (r.bonoDeGolpe) {
+        const objetivo = Number(r.objetivo1) || 0
+        const antes = Number(r.llevas) || 0
+        const despues = antes + suma
+        if (objetivo > 0 && despues < objetivo) {
+          ahora = 0; luego = 0
+          const faltan = Math.max(1, Math.ceil(objetivo - despues))
+          avisoBono = `esta venta todavía no te paga: con ${faltan} más se te abonan `
+            + `${pct1.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} € de golpe.`
+        } else if (objetivo > 0 && antes < objetivo && despues >= objetivo) {
+          ahora = pct1; luego = pct1
+          avisoBono = `¡es LA venta que abre el premio! Con esta llegas a ${objetivo} y se te abonan `
+            + `${pct1.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} € de golpe.`
+        } else {
+          ahora = pct2; luego = pct2
+          avisoBono = 'el premio ya lo tienes; a partir de aquí cada venta suma su importe.'
+        }
+      }
+
       filas.push({
         tipo: 'palanca', nombre: r.grupo,
         llevas: r.llevas, seria: r.llevas + suma,
         objetivo1: r.objetivo1, objetivo2: r.objetivo2, conseguido2: r.conseguido2,
         esEquipoObj2: r.esEquipoObj2, esPorcentaje: r.esPorcentaje,
-        tramo: r.tramo, ahora, luego: pct2 ? luego : ahora,
+        tramo: r.tramo, ahora, luego: r.bonoDeGolpe ? luego : (pct2 ? luego : ahora),
         tope: r.topeAplicado ? r.topeMotivo : null,
+        avisoBono,
       })
     }
     // Los torneos: solo los que están abiertos en la fecha de la venta.
@@ -733,6 +762,16 @@ export default function NuevaVentaPage() {
                         {f.tope ? ' · ⚠ ' + f.tope : ''}</>
                     )}
                   </span>
+                  {/* El aviso del BONO DE GOLPE: cuando el primer tramo no es un
+                      precio por venta sino un premio único (así cobra Marta), hay
+                      que decir con todas las letras si esta venta paga o no. */}
+                  {f.avisoBono && (
+                    <span style={{ display: 'block', marginTop: 3, padding: '3px 6px', borderRadius: 5,
+                                   background: 'rgba(217,119,6,0.10)', border: '1px solid rgba(217,119,6,0.35)',
+                                   fontSize: 11.5, fontWeight: 500, color: '#8A5A08', lineHeight: 1.3 }}>
+                      {f.avisoBono}
+                    </span>
+                  )}
                 </td>
                 <td style={{ ...num, color: '#1B2430' }}>
                   {f.tipo === 'torneo' ? eur(f.ahora) + ' € en juego' : '+' + eur(f.ahora) + ' €'}

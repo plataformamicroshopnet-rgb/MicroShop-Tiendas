@@ -19,5 +19,7 @@ export async function register() {
     await fixTiContratosRetag()
     const { fixTiContratosOrden } = await import('./lib/migrations/tiContratosOrdenFix')
     await fixTiContratosOrden()
+    const { fixTorneosJulioRescate } = await import('./lib/migrations/torneosJulioRescateFix')
+    await fixTorneosJulioRescate()
   }
 }
