@@ -7,6 +7,7 @@ import { FilePlus, ShieldPlus } from 'lucide-react'
 import { CODIGOS_TRAMITACION } from '@/lib/constants'
 import { getEffectiveTiendaComerciales, getEffectiveSellers } from '@/lib/comercialRoster'
 import { isVentaWithinDates, esRepoArpuManual, importeRepoArpu, factorRepoArpu, REPO_ARPU_CORTE, PALANCA_REPOS } from '@/lib/salesUtils'
+import type { FactoresRepoArpu } from '@/lib/salesUtils'
 import { useGuard } from '@/hooks/useGuard'
 import { puedeAnadirse, PREGUNTA_PLANTA, AVISO_BAJA_TV } from '@/lib/reposCompatibles'
 import { rolesCatalogoRent } from '@/lib/rentColumnas'
@@ -65,6 +66,8 @@ export default function NuevaVentaPage() {
 
   const [stockItems, setStockItems] = useState<any[]>([])
   const [tiendaHours, setTiendaHours] = useState<any[]>([])
+  // Multiplicadores del repo de ARPU DE ESTE MES (null = los de siempre).
+  const [factoresArpu, setFactoresArpu] = useState<FactoresRepoArpu | null>(null)
 
   // Plantilla del mes (panel "Horarios de Comerciales"); fallback a la lista fija
   const tiendaMap = getEffectiveTiendaComerciales(tiendaHours)
@@ -215,8 +218,13 @@ export default function NuevaVentaPage() {
     if (!activePeriodKey) return
     fetch(`/api/tiendas-comisiones?periodKey=${activePeriodKey}`)
       .then(r => r.json())
-      .then(d => setTiendaHours(d?.hours || []))
-      .catch(() => setTiendaHours([]))
+      .then(d => {
+        setTiendaHours(d?.hours || [])
+        // Los multiplicadores del repo de ARPU son POR MES: se cogen del
+        // servidor para que lo que se enseña sea lo que se va a grabar.
+        setFactoresArpu(d?.repoArpuFactores || null)
+      })
+      .catch(() => { setTiendaHours([]); setFactoresArpu(null) })
   }, [activePeriodKey])
 
   useEffect(() => {
@@ -1012,7 +1020,7 @@ export default function NuevaVentaPage() {
               // sale del incremento que teclea el tramitador por su multiplicador
               // (lo elige el programa según el tramo). Al elegir el producto aún
               // no hay incremento: el importe se rellena al teclearlo.
-              newProducts[index].importe = String(importeRepoArpu(newProducts[index].arpuIncremento))
+              newProducts[index].importe = String(importeRepoArpu(newProducts[index].arpuIncremento, factoresArpu))
             } else if (cat === 'Repos UP' && esRepoIncrementoArpu(newProducts[index].producto)) {
               // Repo de incremento de ARPU dentro de la palanca nueva: el importe
               // lo ponen las casillas Fact. Anterior / Fact. Nueva, no la tarifa.
@@ -1108,7 +1116,7 @@ export default function NuevaVentaPage() {
       
       // Repo de ARPU a mano: el importe se rehace en cuanto cambia el incremento.
       if (usaIncrementoArpu(newProducts[index]) && field === 'arpuIncremento') {
-         newProducts[index].importe = String(importeRepoArpu(value))
+         newProducts[index].importe = String(importeRepoArpu(value, factoresArpu))
       }
 
       // Recalcular importe para Repos si cambian los factores numéricos
@@ -2347,8 +2355,8 @@ export default function NuevaVentaPage() {
                       {usaIncrementoArpu(prod) && (() => {
                         const inc = parseFloat(String(prod.arpuIncremento ?? '').replace(',', '.'))
                         const hayInc = !isNaN(inc) && inc > 0
-                        const factor = factorRepoArpu(prod.arpuIncremento)
-                        const total = importeRepoArpu(prod.arpuIncremento)
+                        const factor = factorRepoArpu(prod.arpuIncremento, factoresArpu)
+                        const total = importeRepoArpu(prod.arpuIncremento, factoresArpu)
                         return (
                           <div className="form-group" style={{ marginBottom: 0 }}>
                             <label className="form-label" style={{ color: '#555', fontSize: 11, fontWeight: 'bold' }}>

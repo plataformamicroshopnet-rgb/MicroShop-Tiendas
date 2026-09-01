@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server'
+import { claveFactoresRepoArpu, leeFactoresRepoArpu, FACTORES_REPO_ARPU_DEFECTO } from '@/lib/salesUtils'
 import { PrismaClient } from '@prisma/client'
 import { getSession } from '@/lib/auth'
 import { ROLES, normalizeRole } from '@/lib/appConfig'
@@ -36,7 +37,18 @@ export async function GET(request: Request) {
       orderBy: { comercial: 'asc' }
     })
 
-    return NextResponse.json({ success: true, rules, hours })
+    // Los multiplicadores del repo de ARPU del mes viajan aquí para que Nueva
+    // Venta enseñe en el cuadro verde EXACTAMENTE lo que se va a grabar. Si la
+    // pantalla usara los de siempre y el mes tuviera otros, el comercial vería
+    // un importe y se guardaría otro.
+    const cfgArpu = await prisma.appSetting.findUnique({
+      where: { key: claveFactoresRepoArpu(periodKey) },
+    })
+    const repoArpuFactores = cfgArpu?.value
+      ? leeFactoresRepoArpu(cfgArpu.value)
+      : FACTORES_REPO_ARPU_DEFECTO
+
+    return NextResponse.json({ success: true, rules, hours, repoArpuFactores })
   } catch (error) {
     console.error('Error GET tiendas comisiones:', error)
     return NextResponse.json({ success: false, error: 'Error al obtener datos' }, { status: 500 })

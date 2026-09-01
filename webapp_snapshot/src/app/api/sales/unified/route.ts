@@ -8,7 +8,8 @@ import { randomUUID } from 'crypto'
 import { reglaYaVaDentro, reglaMismoServicio, reglaPedidoDeOtroCliente,
          reglaLineaRepetida, reglaTvDelMismoDia, reglaCruceO2, reglaPedidoPartido,
          AvisoAntifraude } from '@/lib/antifraudeVentas'
-import { esRepoArpuManual, importeRepoArpu, rastroRepoArpu } from '@/lib/salesUtils'
+import { esRepoArpuManual, importeRepoArpu, rastroRepoArpu,
+         claveFactoresRepoArpu, leeFactoresRepoArpu, FACTORES_REPO_ARPU_DEFECTO } from '@/lib/salesUtils'
 
 const prisma = new PrismaClient()
 
@@ -104,11 +105,24 @@ export async function POST(request: Request) {
     const numValidProducts = data.productos.filter((p: any) => p.producto !== '').length
     if (numValidProducts === 0) return NextResponse.json({ success: false, error: 'Configura al menos un producto' }, { status: 400 })
 
+    // Los multiplicadores del repo de ARPU son POR MES desde septiembre-2026
+    // (Telefónica los bajó; lo cobrado antes se cobró con los de antes y no se
+    // toca). Si el mes no tiene tabla propia valen los de siempre: ×2 desde
+    // 10 €, ×1,5 por debajo. Se leen ANTES de validar, porque la validación de
+    // «falta el incremento» ya usa el importe resultante.
+    let factoresArpu = FACTORES_REPO_ARPU_DEFECTO
+    if (data.periodKey) {
+      const cfgArpu = await prisma.appSetting.findUnique({
+        where: { key: claveFactoresRepoArpu(String(data.periodKey)) },
+      })
+      if (cfgArpu?.value) factoresArpu = leeFactoresRepoArpu(cfgArpu.value)
+    }
+
     // Repo de ARPU: sin incremento no hay venta. El importe de estas ventas SIEMPRE
     // sale de incremento × multiplicador; si se dejara pasar sin él, entraría el
     // número en crudo (sin multiplicar) y nadie lo notaría hasta la liquidación.
     if (data.productos.some((p: any) => p.producto !== '' && esRepoArpuManual(p.producto)
-        && !(importeRepoArpu(p.arpuIncremento) > 0))) {
+        && !(importeRepoArpu(p.arpuIncremento, factoresArpu) > 0))) {
       return NextResponse.json({ success: false, error: 'Falta el Incremento de ARPU del repo «Reposicionamientos destino BAF miMovistar/Fusión»: el importe se calcula con él (×2 desde 10 €, ×1,5 por debajo).' }, { status: 400 })
     }
 
@@ -385,11 +399,11 @@ export async function POST(request: Request) {
       const esRepoArpu = esRepoArpuManual(prod.producto)
       const incArpu = esRepoArpu ? prod.arpuIncremento : null
       const hayIncArpu = esRepoArpu && incArpu !== null && incArpu !== undefined
-        && String(incArpu).trim() !== '' && importeRepoArpu(incArpu) > 0
+        && String(incArpu).trim() !== '' && importeRepoArpu(incArpu, factoresArpu) > 0
 
       let finalAnotaciones = data.anotaciones || ''
       if (hayIncArpu) {
-        finalAnotaciones = [finalAnotaciones, rastroRepoArpu(incArpu)].filter(Boolean).join(' · ')
+        finalAnotaciones = [finalAnotaciones, rastroRepoArpu(incArpu, factoresArpu)].filter(Boolean).join(' · ')
       }
       if (prod.motivoSinStock) {
         finalAnotaciones = finalAnotaciones 
@@ -428,7 +442,7 @@ export async function POST(request: Request) {
         // Para Seguros: cuota en BD = Cuota Total (seguroImporte), no la Comisión (importe)
         // Esto asegura que el Registro de Operaciones y todos los paneles lean el valor correcto.
         cuota: hayIncArpu
-          ? importeRepoArpu(incArpu)
+          ? importeRepoArpu(incArpu, factoresArpu)
           : ((prod.categoria === 'Seguro' && prod.seguroImporte && parseFloat(prod.seguroImporte.toString().replace(',','.')) > 0)
             ? parseFloat(prod.seguroImporte.toString().replace(',','.'))
             : (prod.importe ? parseFloat(prod.importe.toString().replace(',','.')) : null)),

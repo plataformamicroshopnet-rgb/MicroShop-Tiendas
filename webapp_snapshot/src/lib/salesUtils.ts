@@ -71,6 +71,53 @@ export const PALANCA_REPO_FUTBOL = 'Repo Fútbol'
 export const REPO_ARPU_PRODUCTO = 'Reposicionamientos destino BAF miMovistar/Fusión'
 export const REPO_ARPU_CORTE = 10
 
+/**
+ * LOS MULTIPLICADORES, POR MES (01-sep-2026, el dueño: «han bajado los importes
+ * de algunas ventas el ×1,5 y ×2 … el cambio es a partir de hoy 1 de
+ * septiembre»).
+ *
+ * Estaban escritos aquí a fuego (2 y 1,5) porque desde agosto-2026 no habían
+ * cambiado. Telefónica los ha bajado, y bajarlos a secas reescribiría el pasado:
+ * lo que se cobró en agosto se cobró con los de agosto. Así que ahora cada mes
+ * tiene los suyos, guardados en `repo_arpu_factores_{YYYY_MM}`; los meses sin
+ * nada guardado usan estos de siempre.
+ *
+ * ⚠️ EL IMPORTE SE CALCULA AL GUARDAR LA VENTA y se queda escrito en `cuota`
+ * (ver /api/sales/unified). Cambiar los factores NO toca ni un euro de lo ya
+ * grabado: solo manda sobre las ventas que se den de alta a partir de entonces.
+ */
+export interface FactoresRepoArpu {
+  /** ∆ARPU a partir del cual se aplica el multiplicador alto. */
+  corte: number
+  /** Multiplicador cuando el ∆ARPU llega al corte. */
+  alto: number
+  /** Multiplicador por debajo del corte. */
+  bajo: number
+}
+
+export const FACTORES_REPO_ARPU_DEFECTO: FactoresRepoArpu = { corte: 10, alto: 2, bajo: 1.5 }
+
+/** La clave donde vive la tabla de un mes. */
+export const claveFactoresRepoArpu = (periodKey: string) => `repo_arpu_factores_${periodKey}`
+
+/** Lee unos factores guardados (JSON) y completa lo que falte con los de siempre. */
+export function leeFactoresRepoArpu(valor: any): FactoresRepoArpu {
+  try {
+    const d = typeof valor === 'string' ? JSON.parse(valor) : valor
+    const num = (v: any, porDefecto: number) => {
+      const n = Number(String(v ?? '').toString().replace(',', '.'))
+      return Number.isFinite(n) && n > 0 ? n : porDefecto
+    }
+    return {
+      corte: num(d?.corte, FACTORES_REPO_ARPU_DEFECTO.corte),
+      alto: num(d?.alto, FACTORES_REPO_ARPU_DEFECTO.alto),
+      bajo: num(d?.bajo, FACTORES_REPO_ARPU_DEFECTO.bajo),
+    }
+  } catch {
+    return FACTORES_REPO_ARPU_DEFECTO
+  }
+}
+
 /** Número tecleado a la española ('12,50') o a la inglesa ('12.50'). Nunca NaN. */
 function _numArpu(v: any): number {
     const n = parseFloat(String(v ?? '').replace(',', '.'))
@@ -89,15 +136,17 @@ export function esRepoArpuManual(producto?: string | null): boolean {
     return p.includes('reposicionamientos') && p.includes('destinobaf')
 }
 
-/** El multiplicador que toca según el incremento de ARPU tecleado. */
-export function factorRepoArpu(incremento: any): number {
-    return _numArpu(incremento) >= REPO_ARPU_CORTE ? 2 : 1.5
+/** El multiplicador que toca según el incremento de ARPU tecleado.
+ *  Sin `factores` usa los de siempre (×2 desde 10 €, ×1,5 por debajo). */
+export function factorRepoArpu(incremento: any, factores?: FactoresRepoArpu | null): number {
+    const f = factores || FACTORES_REPO_ARPU_DEFECTO
+    return _numArpu(incremento) >= f.corte ? f.alto : f.bajo
 }
 
 /** Lo que se cobra por el repo: el incremento por su multiplicador (2 decimales). */
-export function importeRepoArpu(incremento: any): number {
+export function importeRepoArpu(incremento: any, factores?: FactoresRepoArpu | null): number {
     const inc = Math.max(0, _numArpu(incremento))
-    return Math.round(inc * factorRepoArpu(inc) * 100) / 100
+    return Math.round(inc * factorRepoArpu(inc, factores) * 100) / 100
 }
 
 /**
@@ -106,9 +155,9 @@ export function importeRepoArpu(incremento: any): number {
  * venta solo guarda el resultado, y el tramo ya no viaja en el nombre del
  * producto como pasaba con los cuatro viejos.
  */
-export function rastroRepoArpu(incremento: any): string {
+export function rastroRepoArpu(incremento: any, factores?: FactoresRepoArpu | null): string {
     const inc = Math.max(0, _numArpu(incremento))
-    const factor = String(factorRepoArpu(inc)).replace('.', ',')
+    const factor = String(factorRepoArpu(inc, factores)).replace('.', ',')
     return `Incremento ARPU ${inc.toFixed(2).replace('.', ',')} € × ${factor} (IVA incl.)`
 }
 
