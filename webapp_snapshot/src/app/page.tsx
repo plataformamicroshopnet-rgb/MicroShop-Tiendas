@@ -787,17 +787,31 @@ export default function DashboardPage() {
       />
 
 
-      {/* FILA 1: DOS CARTAS DE TORNEOS, repartidos a MITADES (dueño, 25-ago-2026:
+      {/* FILA 1: LAS CARTAS DE TORNEOS, repartidos a MITADES (dueño, 25-ago-2026:
           el 2º torneo estrena la carta de la derecha, no se apila en la primera).
-          1→1/0 · 2→1/1 · 3→2/1 · 4→2/2 · 5→3/2 · 6→3/3 */}
-      <div className="dash-grid-2" style={{ marginBottom: '16px' }}>
-        {cartaTorneos(torneoColumns.slice(0, Math.ceil(torneoColumns.length / 2)),
-          <>Torneos de Ventas <span style={{ color: 'var(--text-main)' }}>· Ranking</span></>,
-          <>No hay torneos configurados.</>)}
-        {cartaTorneos(torneoColumns.slice(Math.ceil(torneoColumns.length / 2), 6),
-          <>Más Torneos <span style={{ color: 'var(--text-main)' }}>· EXTRAs</span></>,
-          <>🏆 Hueco libre para el próximo torneo o EXTRA.<br/>Créalo en el configurador — ¡los EXTRAs por venta están funcionando!</>)}
-      </div>
+          1→1/0 · 2→1/1 · 3→2/1 · 4→2/2 · 5→3/2 · 6→3/3
+
+          ⚠️ SI NO HAY SEGUNDO TORNEO, LA SEGUNDA CARTA NO SE DIBUJA (dueño,
+          01-sep-2026: «quítame esto de los Torneos»). Antes salía una carta vacía
+          con un «🏆 Hueco libre para el próximo torneo o EXTRA — créalo en el
+          configurador», que era una nota para quien configura, no para quien mira
+          el dashboard: la veía todo el equipo todos los días y no les decía nada.
+          Con una sola carta, esta ocupa la fila entera en vez de quedarse a medias. */}
+      {(() => {
+        const mitad = Math.ceil(torneoColumns.length / 2)
+        const primera = torneoColumns.slice(0, mitad)
+        const segunda = torneoColumns.slice(mitad, 6)
+        return (
+          <div className={segunda.length ? 'dash-grid-2' : undefined} style={{ marginBottom: '16px' }}>
+            {cartaTorneos(primera,
+              <>Torneos de Ventas <span style={{ color: 'var(--text-main)' }}>· Ranking</span></>,
+              <>No hay torneos configurados.</>)}
+            {segunda.length > 0 && cartaTorneos(segunda,
+              <>Más Torneos <span style={{ color: 'var(--text-main)' }}>· EXTRAs</span></>,
+              null)}
+          </div>
+        )
+      })()}
 
 
       {/* FILA 2: TERMÓMETRO DIARIO DE LA EMPRESA (fila entera) */}
