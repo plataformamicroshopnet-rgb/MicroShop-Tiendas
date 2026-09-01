@@ -25,6 +25,11 @@ export async function register() {
     await fixRentColumnas()
     const { fixSeptiembre2026 } = await import('./lib/migrations/septiembre2026Fix')
     await fixSeptiembre2026()
+    // El extra del fútbol a 20 €, en la fila que de verdad lee la API de Nueva
+    // Venta (la de la mañana era una fila retirada). Va DESPUÉS de septiembre2026Fix
+    // a propósito: deshace su paso 1.
+    const { fixFutbolSeptiembre2026 } = await import('./lib/migrations/futbolSeptiembre2026Fix')
+    await fixFutbolSeptiembre2026()
     // Los objetivos del mes en curso se re-derivan de los objetivos por tienda
     // en CADA arranque: así un despliegue de Tiendas no depende de que el ERP
     // vuelva a publicar para que el Dashboard y el Territorial estén al día.

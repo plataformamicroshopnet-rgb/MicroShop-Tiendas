@@ -50,21 +50,13 @@ export async function fixSeptiembre2026() {
       return
     }
 
-    // ── 1 · el extra del fútbol, 10 € → 20 € ────────────────────────────────
-    const extras = await prisma.productCatalog.findMany({
-      where: { periodId: wp.id, producto: { contains: 'estino Fútbol' } },
-      select: { id: true, producto: true, categoria: true, comision: true },
-    })
-    for (const p of extras) {
-      const esElExtra = /extra/i.test(p.producto) || String(p.categoria || '') === 'Repos'
-      const valor = String(p.comision ?? '').replace(',', '.').trim()
-      // Guarda: SOLO si sigue a 10. Si ya está a 20 (o alguien puso otra cosa),
-      // no se toca — así esto se puede volver a ejecutar sin miedo.
-      if (esElExtra && (valor === '10' || valor === '10.00' || valor === '10.0')) {
-        await prisma.productCatalog.update({ where: { id: p.id }, data: { comision: '20.00' } })
-        console.log(`[sept2026] «${p.producto}» (${p.categoria}): 10 € → 20 €`)
-      }
-    }
+    // ── 1 · el extra del fútbol, 10 € → 20 € ── DESACTIVADO ────────────────
+    // Este paso subía «Extra Repos up destino Fútbol» (categoría Repos), que es
+    // una fila RETIRADA que no lee nadie: el precio del extra lo estampa la API
+    // de Nueva Venta desde { categoria: 'Repo Fútbol', producto: 'Repo Up
+    // Destino Fútbol' }, y esa fila no existía. Se descubrió la noche del
+    // 01-sep-2026 con cinco extras del día todavía a 10 €. Lo hace bien —y
+    // deshace esto— futbolSeptiembre2026Fix.ts, que corre justo después.
 
     // ── 2 · los multiplicadores del repo de ARPU ────────────────────────────
     const clave = claveFactoresRepoArpu(MES)
