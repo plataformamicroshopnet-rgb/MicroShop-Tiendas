@@ -25,5 +25,10 @@ export async function register() {
     await fixRentColumnas()
     const { fixSeptiembre2026 } = await import('./lib/migrations/septiembre2026Fix')
     await fixSeptiembre2026()
+    // Los objetivos del mes en curso se re-derivan de los objetivos por tienda
+    // en CADA arranque: así un despliegue de Tiendas no depende de que el ERP
+    // vuelva a publicar para que el Dashboard y el Territorial estén al día.
+    const { fixObjetivosAlDia } = await import('./lib/migrations/objetivosAlDiaFix')
+    await fixObjetivosAlDia()
   }
 }
