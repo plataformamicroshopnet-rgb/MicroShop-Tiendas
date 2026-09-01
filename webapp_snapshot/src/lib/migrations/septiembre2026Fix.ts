@@ -76,6 +76,50 @@ export async function fixSeptiembre2026() {
       console.log('[sept2026] repos de ARPU: ×1,25 desde 35 € y ×1 por debajo')
     }
 
+    // ── 3 · los dispositivos CON COSTE bajan al mismo % que sin coste ───────
+    //
+    // El comunicado baja el DISPOSITIVO RENT CON COSTE de 6 % a 4 % (PREMIUM y
+    // ALTA) y de 3 % a 2 % (el resto). El SIN COSTE ya estaba en 4 % y 2 % y no
+    // se mueve — así que desde septiembre las dos cobran LO MISMO y la cuenta
+    // es directa: la casilla «con coste» pasa a valer lo que la normal.
+    //
+    // Se hace por código y no esperando a la TABLA_DISPOSITIVOS nueva porque esa
+    // tabla trae PRECIOS y altas/bajas de modelos, no los porcentajes (el dueño,
+    // 01-sep-2026), y porque desde el día 1 las operaciones tienen que grabarse
+    // ya con lo nuevo: si no, lo que se liquide no cuadrará con Telefónica.
+    //
+    // ⚠️ Y ARREGLA TAMBIÉN LO YA VENDIDO: la comisión de un Rent NO se congela en
+    // la venta, se busca en el catálogo por nombre y fecha cada vez que se
+    // calcula (lib/saleCommission). Al corregir el catálogo, las ventas de
+    // septiembre que ya estén grabadas pasan a valer lo correcto solas.
+    const rent = await prisma.productCatalog.findMany({
+      where: { periodId: wp.id, categoria: 'Rent' },
+      select: { id: true, comision: true, comisionConCoste: true },
+    })
+    const aNum = (v: any) => {
+      const t = String(v ?? '').replace(',', '.').trim()
+      if (!t || t === '-') return NaN
+      const n = Number(t)
+      return Number.isFinite(n) ? n : NaN
+    }
+    let bajadas = 0
+    for (const p of rent) {
+      const sin = aNum(p.comision)
+      const con = aNum(p.comisionConCoste)
+      // Guardas: solo si las dos son números, la normal es > 0 (nunca se deja un
+      // aparato a cero) y la de con coste sigue por ENCIMA. Si ya están igual
+      // —o alguien las ha tocado— no se hace nada: esto se puede repetir.
+      if (!Number.isFinite(sin) || !Number.isFinite(con) || sin <= 0 || con <= sin) continue
+      await prisma.productCatalog.update({
+        where: { id: p.id },
+        data: { comisionConCoste: String(p.comision) },
+      })
+      bajadas++
+    }
+    if (bajadas > 0) {
+      console.log(`[sept2026] dispositivos: ${bajadas} filas de Rent con la comisión CON COSTE bajada al mismo % que sin coste (6→4 % y 3→2 %)`)
+    }
+
     // ── EL OBJETIVO DE ARPU NO SE TOCA AQUÍ, Y ES A PROPÓSITO ───────────────
     // Iba a bajarlo a la mitad (el multiplicador del tramo más usado pasa de ×2
     // a ×1, así que los mismos repos valen la mitad de euros y dejar el objetivo
