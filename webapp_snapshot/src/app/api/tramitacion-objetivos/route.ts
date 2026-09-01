@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 import { getSession } from '@/lib/auth'
 import { can, canView } from '@/lib/permissions'
+import { recalcularObjetivosDePalanca } from '@/lib/objetivosPalanca'
 
 const prisma = new PrismaClient()
 
@@ -85,7 +86,13 @@ export async function POST(request: Request) {
       results.push(record)
     }
 
-    return NextResponse.json({ success: true, count: results.length })
+    // Y con los objetivos por tienda ya guardados, se ponen los de las PALANCAS,
+    // que es lo que usan las comisiones. Faltaba este paso: la cañería llenaba
+    // el Seguimiento de Tramitación y dejaba las comisiones corriendo contra el
+    // objetivo del mes anterior. Ver src/lib/objetivosPalanca.ts.
+    const cambios = await recalcularObjetivosDePalanca(prisma, periodKey)
+
+    return NextResponse.json({ success: true, count: results.length, objetivosDePalanca: cambios })
   } catch (error) {
     console.error('Error POST tramitacion-objetivos:', error)
     return NextResponse.json({ success: false, error: 'Error al guardar objetivos de tienda' }, { status: 500 })
