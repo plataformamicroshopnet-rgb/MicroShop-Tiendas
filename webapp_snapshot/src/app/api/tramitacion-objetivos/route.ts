@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 import { getSession } from '@/lib/auth'
 import { can, canView } from '@/lib/permissions'
-import { recalcularObjetivosDePalanca } from '@/lib/objetivosPalanca'
+import { recalcularObjetivosDePalanca, recalcularObjetivosTerritorial } from '@/lib/objetivosPalanca'
 
 const prisma = new PrismaClient()
 
@@ -92,7 +92,17 @@ export async function POST(request: Request) {
     // objetivo del mes anterior. Ver src/lib/objetivosPalanca.ts.
     const cambios = await recalcularObjetivosDePalanca(prisma, periodKey)
 
-    return NextResponse.json({ success: true, count: results.length, objetivosDePalanca: cambios })
+    // Y el TERRITORIAL, que lleva sus propios objetivos aparte. Se quedaba con
+    // los del mes anterior por el mismo motivo que las palancas, y con objetivos
+    // más bajos el programa da por cumplido el territorial antes de tiempo.
+    const cambiosTerritorial = await recalcularObjetivosTerritorial(prisma, periodKey)
+
+    return NextResponse.json({
+      success: true,
+      count: results.length,
+      objetivosDePalanca: cambios,
+      objetivosTerritorial: cambiosTerritorial,
+    })
   } catch (error) {
     console.error('Error POST tramitacion-objetivos:', error)
     return NextResponse.json({ success: false, error: 'Error al guardar objetivos de tienda' }, { status: 500 })

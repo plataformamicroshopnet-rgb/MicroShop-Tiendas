@@ -43,6 +43,11 @@ const DE_DONDE_SALE: Record<string, string[]> = {
   'Repo Fútbol': ['tvFutbol', 'repos'],
 }
 
+/** El Territorial nombra alguna palanca distinto que las Comisiones. */
+const ALIAS_TERRITORIAL: Record<string, string> = {
+  'Dispositivos, Seguro': 'Dispositivos + Seguros',
+}
+
 export interface CambioObjetivo {
   palanca: string
   antes: number
@@ -125,6 +130,93 @@ export async function recalcularObjetivosDePalanca(
   } catch (e: any) {
     // Nunca tumba el guardado de los objetivos por tienda, que es lo principal.
     console.error('[objetivos] no se pudieron recalcular los de palanca:', e?.message || e)
+  }
+  return cambios
+}
+
+/**
+ * LO MISMO, PERO PARA EL TERRITORIAL.
+ *
+ * El Territorial (AppSetting `territorial_tiendas_{mes}`) lleva SUS PROPIOS
+ * objetivos, aparte de los de las palancas de comisión. Al clonar el mes se
+ * copian del anterior y se quedan congelados igual que se quedaban los otros:
+ * septiembre-2026 seguía con los de agosto —Altas BAF 102 cuando son 115,
+ * Dispositivos 94.463 € cuando son 118.697— y con objetivos más bajos el
+ * programa da por cumplido el territorial antes de tiempo. Cuando llega la
+ * liquidación de Telefónica, no cuadra.
+ *
+ * Se identifican por `tipoVenta`, que es el nombre de la palanca (salvo
+ * «Dispositivos, Seguro», de ahí el alias). Solo se tocan las filas de objetivo
+ * GLOBAL con una cifra puesta: las de por tienda o vacías se dejan como están.
+ *
+ * El formato del número se respeta: si venía «94463€» se escribe «118697€», y
+ * si venía «102» se escribe «115». Y los tramos 2 y 3 mantienen su proporción,
+ * igual que en las palancas de comisión.
+ */
+export async function recalcularObjetivosTerritorial(
+  prisma: PrismaClient,
+  periodKey: string,
+): Promise<CambioObjetivo[]> {
+  const cambios: CambioObjetivo[] = []
+  try {
+    const tiendas = await prisma.tiendaStoreObjective.findMany({ where: { periodKey } })
+    if (tiendas.length === 0) return cambios
+
+    const clave = `territorial_tiendas_${periodKey}`
+    const setting = await prisma.appSetting.findUnique({ where: { key: clave } })
+    if (!setting?.value) return cambios
+    let filas: any[]
+    try {
+      filas = JSON.parse(setting.value)
+    } catch {
+      console.error('[objetivos] el territorial de', periodKey, 'no se puede leer: no se toca')
+      return cambios
+    }
+    if (!Array.isArray(filas)) return cambios
+
+    // «94463€» → { n: 94463, sufijo: '€' }. Nunca se pierde el sufijo.
+    const parte = (v: any) => {
+      const t = String(v ?? '').trim()
+      const m = t.match(/^([\d.,]+)\s*(\D*)$/)
+      if (!m) return null
+      const n = Number(m[1].replace(/\./g, '').replace(',', '.'))
+      return Number.isFinite(n) && n > 0 ? { n, sufijo: m[2] || '' } : null
+    }
+
+    let tocadas = 0
+    const nuevas = filas.map((f: any) => {
+      const palanca = ALIAS_TERRITORIAL[String(f?.tipoVenta || '')] || String(f?.tipoVenta || '')
+      const casillas = DE_DONDE_SALE[palanca]
+      if (!casillas) return f
+      if (String(f?.obj1Type || 'global') !== 'global') return f     // por tienda: no se toca
+      const actual = parte(f?.obj1Global)
+      if (!actual) return f                                          // vacío: no se inventa
+
+      const suma = tiendas.reduce((acc, t: any) => acc
+        + casillas.reduce((s, c) => s + (Number(t?.[c]) || 0), 0), 0)
+      if (suma <= 0) return f
+      const obj1 = Math.round(suma)
+      if (obj1 === actual.n) return f
+
+      const nueva: any = { ...f, obj1Global: `${obj1}${actual.sufijo}` }
+      for (const [campo, tipoCampo] of [['obj2Global', 'obj2Type'], ['obj3Global', 'obj3Type']] as const) {
+        const otro = parte(f?.[campo])
+        if (otro && String(f?.[tipoCampo] || 'global') === 'global') {
+          nueva[campo] = `${Math.round(obj1 * (otro.n / actual.n))}${otro.sufijo}`
+        }
+      }
+      tocadas++
+      cambios.push({ palanca: `${f?.nombre || palanca} (Territorial)`, antes: actual.n, ahora: obj1 })
+      return nueva
+    })
+
+    if (tocadas > 0) {
+      await prisma.appSetting.update({ where: { key: clave }, data: { value: JSON.stringify(nuevas) } })
+      console.log('[objetivos] %s · territorial: %s', periodKey,
+        cambios.map(c => `${c.palanca} ${c.antes}→${c.ahora}`).join(' · '))
+    }
+  } catch (e: any) {
+    console.error('[objetivos] no se pudo recalcular el territorial:', e?.message || e)
   }
   return cambios
 }
