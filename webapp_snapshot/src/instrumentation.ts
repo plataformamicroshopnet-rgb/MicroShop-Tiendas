@@ -23,5 +23,7 @@ export async function register() {
     await fixTorneosJulioRescate()
     const { fixRentColumnas } = await import('./lib/migrations/rentColumnasFix')
     await fixRentColumnas()
+    const { fixSeptiembre2026 } = await import('./lib/migrations/septiembre2026Fix')
+    await fixSeptiembre2026()
   }
 }
