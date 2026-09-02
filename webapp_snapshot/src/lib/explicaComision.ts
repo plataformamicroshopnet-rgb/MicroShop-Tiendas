@@ -14,6 +14,7 @@
  */
 import { textoCondicionantes } from './condicionantesTexto'
 import { FAMILIAS } from './reposCompatibles'
+import { FACTORES_REPO_ARPU_DEFECTO, type FactoresRepoArpu } from './salesUtils'
 
 const num = (v: any) => {
   const n = Number(String(v ?? '').replace(/[€%\s]/g, '').replace(',', '.'))
@@ -72,7 +73,24 @@ export interface PenalizacionMes { text?: any; amount?: any }
 
 const sinHtml = (v: any) => String(v || '').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
 
-export function explicaReglaComision(rule: any, penalizaciones?: PenalizacionMes[]): ExplicacionComision {
+/**
+ * Cómo se multiplica el repo de ARPU ESTE MES. Los multiplicadores son por mes
+ * (AppSetting `repo_arpu_factores_{mes}`, ver salesUtils): en agosto-2026 eran
+ * ×2 desde 10 € y ×1,5 por debajo; desde septiembre, ×1,25 desde 35 € y ×1 por
+ * debajo. Por eso el librillo no lleva el «78 €» del fútbol escrito a mano: lo
+ * calcula con la tabla que le pasan (39 € × el multiplicador del mes).
+ */
+function textoRepoArpu(factores?: FactoresRepoArpu | null): string {
+  const f = factores || FACTORES_REPO_ARPU_DEFECTO
+  const fx = (x: number) => String(x).replace('.', ',')
+  const xDe = (delta: number) => (delta >= f.corte ? f.alto : f.bajo)
+  const futbol = Math.round(39 * xDe(39) * 100) / 100
+  return 'todos tus Repos (Arpu) en €: lo que sube la cuota del cliente, multiplicado por la tabla del mes '
+    + `(×${fx(f.alto)} si la subida llega a ${fx(f.corte)} €, ×${fx(f.bajo)} por debajo). `
+    + `El repo de fútbol también suma aquí: 39 € × ${fx(xDe(39))} = ${futbol.toFixed(2).replace('.', ',')} €`
+}
+
+export function explicaReglaComision(rule: any, penalizaciones?: PenalizacionMes[], factoresArpu?: FactoresRepoArpu | null): ExplicacionComision {
   const bloques: { etiqueta: string; texto: string }[] = []
   const productos = String(rule?.productosCuentan || '').trim()
   const clave = productos.toLowerCase()
@@ -81,7 +99,7 @@ export function explicaReglaComision(rule: any, penalizaciones?: PenalizacionMes
   // ── qué cuenta ──
   bloques.push({
     etiqueta: 'QUÉ CUENTA',
-    texto: QUE_CUENTA[clave] || `las ventas de: ${productos || rule?.nombre || 'esta palanca'}`,
+    texto: clave === 'arpu' ? textoRepoArpu(factoresArpu) : (QUE_CUENTA[clave] || `las ventas de: ${productos || rule?.nombre || 'esta palanca'}`),
   })
   if (QUE_NO_CUENTA[clave]) {
     bloques.push({ etiqueta: 'QUÉ NO CUENTA', texto: QUE_NO_CUENTA[clave] })

@@ -6,7 +6,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { FilePlus, ShieldPlus } from 'lucide-react'
 import { CODIGOS_TRAMITACION } from '@/lib/constants'
 import { getEffectiveTiendaComerciales, getEffectiveSellers } from '@/lib/comercialRoster'
-import { isVentaWithinDates, esRepoArpuManual, importeRepoArpu, factorRepoArpu, REPO_ARPU_CORTE, PALANCA_REPOS } from '@/lib/salesUtils'
+import { isVentaWithinDates, esRepoArpuManual, importeRepoArpu, factorRepoArpu, REPO_ARPU_CORTE, PALANCA_REPOS, FACTORES_REPO_ARPU_DEFECTO } from '@/lib/salesUtils'
 import type { FactoresRepoArpu } from '@/lib/salesUtils'
 import { useGuard } from '@/hooks/useGuard'
 import { puedeAnadirse, PREGUNTA_PLANTA, AVISO_BAJA_TV } from '@/lib/reposCompatibles'
@@ -1383,7 +1383,10 @@ export default function NuevaVentaPage() {
     // multiplicador que aplicar y la venta entraría con el importe en crudo.
     if (formData.productos.some((p: any) => esRepoArpuManual(p.producto)
         && !(Number(String(p.arpuIncremento ?? '').replace(',', '.')) > 0))) {
-      setError('En el repo de «Reposicionamientos destino BAF miMovistar/Fusión» tienes que teclear el Incremento de ARPU (IVA incl.): el programa lo multiplica solo (×2 desde 10 €, ×1,5 por debajo).')
+      // Los multiplicadores son POR MES (tabla del servidor): el aviso dice los del mes, no los de siempre.
+      const fA = factoresArpu || FACTORES_REPO_ARPU_DEFECTO
+      const fx = (x: number) => String(x).replace('.', ',')
+      setError(`En el repo de «Reposicionamientos destino BAF miMovistar/Fusión» tienes que teclear el Incremento de ARPU (IVA incl.): el programa lo multiplica solo (×${fx(fA.alto)} desde ${fx(fA.corte)} €, ×${fx(fA.bajo)} por debajo).`)
       setLoading(false)
       return
     }
@@ -2379,9 +2382,11 @@ export default function NuevaVentaPage() {
                               {hayInc ? (
                                 <><b>{inc.toFixed(2).replace('.', ',')} € × {String(factor).replace('.', ',')}</b>{' = '}
                                   <b style={{ fontSize: 13 }}>{total.toFixed(2).replace('.', ',')} €</b>
-                                  <span style={{ color: '#777' }}>{' '}(tramo {inc >= REPO_ARPU_CORTE ? `≥ ${REPO_ARPU_CORTE} €` : `< ${REPO_ARPU_CORTE} €`})</span></>
+                                  <span style={{ color: '#777' }}>{' '}(tramo {inc >= (factoresArpu?.corte ?? REPO_ARPU_CORTE) ? `≥ ${String(factoresArpu?.corte ?? REPO_ARPU_CORTE).replace('.', ',')} €` : `< ${String(factoresArpu?.corte ?? REPO_ARPU_CORTE).replace('.', ',')} €`})</span></>
                               ) : (
-                                <>Teclea cuánto sube la factura del cliente: desde {REPO_ARPU_CORTE} € se paga ×2, por debajo ×1,5.</>
+                                // La tabla del MES (viene del servidor con el periodo): antes decía «×2 / ×1,5» a fuego
+                                // y en septiembre-2026 ya era ×1,25 desde 35 € y ×1 por debajo.
+                                <>Teclea cuánto sube la factura del cliente: desde {String((factoresArpu || FACTORES_REPO_ARPU_DEFECTO).corte).replace('.', ',')} € se paga ×{String((factoresArpu || FACTORES_REPO_ARPU_DEFECTO).alto).replace('.', ',')}, por debajo ×{String((factoresArpu || FACTORES_REPO_ARPU_DEFECTO).bajo).replace('.', ',')}.</>
                               )}
                             </div>
                           </div>

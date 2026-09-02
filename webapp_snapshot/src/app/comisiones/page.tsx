@@ -409,7 +409,10 @@ export default function ComisionesDashboardPage() {
     // Las penalizaciones del mes (Condiciones Mensuales): se cargan una vez y
     // viajan al final de cada librillo ℹ.
     const [penalizacionesMes, setPenalizacionesMes] = React.useState<any[]>([]);
-    
+    // Los multiplicadores del repo de ARPU son POR MES: el librillo ℹ de la
+    // palanca ARPU los lee del servidor (antes decía «78 €» del fútbol a fuego).
+    const [factoresArpuMes, setFactoresArpuMes] = React.useState<any>(null);
+
 
     const {
         loading,
@@ -441,6 +444,10 @@ export default function ComisionesDashboardPage() {
                 setPenalizacionesMes(filas.filter((c: any) => String(c?.type) === 'PENALIZACION'))
             })
             .catch(() => setPenalizacionesMes([]))
+        fetch(`/api/tiendas-comisiones?periodKey=${encodeURIComponent(activePeriodKey)}`)
+            .then(r => r.json())
+            .then(d => setFactoresArpuMes(d?.repoArpuFactores || null))
+            .catch(() => setFactoresArpuMes(null))
     }, [activePeriodKey])
 
     const handleReorderTiendaRule = async (index: number, direction: 'up' | 'down') => {
@@ -916,7 +923,7 @@ export default function ComisionesDashboardPage() {
                                                                     size={14}
                                                                     color="#0284c7"
                                                                     style={{ cursor: 'pointer', flexShrink: 0 }}
-                                                                    onClick={(e) => { e.stopPropagation(); setLibrillo(explicaReglaComision(rule, penalizacionesMes)); }}
+                                                                    onClick={(e) => { e.stopPropagation(); setLibrillo(explicaReglaComision(rule, penalizacionesMes, factoresArpuMes)); }}
                                                                     aria-label={`Cómo se cobra ${gName}`}
                                                                   />
                                                                   {gName === 'ARPU' ? 'Repos (Arpu)' : gName}

@@ -30,6 +30,11 @@ export async function register() {
     // a propósito: deshace su paso 1.
     const { fixFutbolSeptiembre2026 } = await import('./lib/migrations/futbolSeptiembre2026Fix')
     await fixFutbolSeptiembre2026()
+    // Los «X» de la pestaña Repos (Arpu) de septiembre venían clonados de agosto
+    // (×2 / ×1,5); la tabla del mes es ×1,25 desde 35 € y ×1 por debajo. Va
+    // después de septiembre2026Fix porque lee la tabla que aquella guarda.
+    const { fixReposArpuSeptiembre2026 } = await import('./lib/migrations/reposArpuSeptiembre2026Fix')
+    await fixReposArpuSeptiembre2026()
     // Los objetivos del mes en curso se re-derivan de los objetivos por tienda
     // en CADA arranque: así un despliegue de Tiendas no depende de que el ERP
     // vuelva a publicar para que el Dashboard y el Territorial estén al día.
