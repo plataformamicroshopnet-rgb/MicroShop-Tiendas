@@ -1269,9 +1269,12 @@ export default function NuevaVentaPage() {
   // · «Repos» (la vieja «Arpu (Repos)») → Telefónica retiró sus productos de
   //   «incremento de ARPU», así que la palanca se queda sin nada que vender; y el
   //   repo de fútbol se teclea desde agosto en «Repos (Arpu)».
-  // Una línea que YA tiene una de las dos la sigue mostrando (ver catsElegibles),
+  // · «Repo Fútbol» (dueño, 03-sep-2026) → es la línea hermana del extra del fútbol,
+  //   que el programa crea SOLO al teclear el repo en «Repos (Arpu)» (api/sales/unified).
+  //   Tecleada a mano duplicaba el extra, así que no se ofrece como tipo de venta.
+  // Una línea que YA tiene una de ellas la sigue mostrando (ver catsElegibles),
   // para poder abrir y editar las ventas antiguas sin que se quede en blanco.
-  const CATS_RETIRADAS = ['Suscripciones TV', 'Repos']
+  const CATS_RETIRADAS = ['Suscripciones TV', 'Repos', 'Repo Fútbol']
   // Productos que ya no se eligen aunque su palanca siga viva.
   const PRODUCTOS_RETIRADOS: Record<string, string[]> = { 'Repos': ['Extra Repos up destino Fútbol'] }
   const CATS_NUNCA = ['Fija', 'Móvil', 'Micro', 'Fija y Móvil', 'Prepago']
@@ -1283,6 +1286,7 @@ export default function NuevaVentaPage() {
     : cat === 'Repos' ? 'Arpu (Repos) — histórico'
     : cat === 'Repos UP' ? 'Repos (Arpu)'
     : cat === 'Suscripciones TV' ? 'Suscripciones TV — histórico'
+    : cat === 'Repo Fútbol' ? 'Repo Fútbol — la crea el programa desde Repos (Arpu)'
     : cat
   const opcionesCat = (actual: string) => catsElegibles(actual)
     .map(cat => <option key={cat} value={cat}>{etiquetaCat(cat)}</option>)
