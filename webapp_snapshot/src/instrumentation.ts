@@ -40,5 +40,10 @@ export async function register() {
     // vuelva a publicar para que el Dashboard y el Territorial estén al día.
     const { fixObjetivosAlDia } = await import('./lib/migrations/objetivosAlDiaFix')
     await fixObjetivosAlDia()
+    // Las PROMO VODAFONE de junio y julio, como las pidió el dueño el 03-sep-2026
+    // para que Gabriel pueda rectificar esas ventas: corrige la fila mal tecleada
+    // del 01/09 y añade las que faltan, sin borrar nada (meses cerrados).
+    const { fixPromosVodafoneJunioJulio } = await import('./lib/migrations/promosVodafoneJunioJulioFix')
+    await fixPromosVodafoneJunioJulio()
   }
 }
